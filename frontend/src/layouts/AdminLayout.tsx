@@ -5,6 +5,13 @@ export default function AdminLayout() {
   const [open, setOpen] = useState(true);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
 
+  function logout() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
+
+    window.location.href = "/login";
+  }
+
   return (
     <div className="flex min-h-screen bg-slate-100">
       <aside
@@ -79,6 +86,15 @@ export default function AdminLayout() {
 
             </div>
           )}
+
+          <button
+            onClick={logout}
+            className="mt-6 flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition hover:bg-red-900 hover:text-white"
+          >
+            <span>🚪</span>
+            {open && <span>Sair</span>}
+          </button>
+
         </nav>
       </aside>
 

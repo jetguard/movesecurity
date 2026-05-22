@@ -1,27 +1,39 @@
 import express from "express";
-import cors from "cors";
-
-import dashboardRoutes from "./routes/dashboard.routes";
-import usuarioRoutes from "./routes/usuario.routes";
+import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
+import ocorrenciaRoutes from "./routes/ocorrencia.routes";
+
+dotenv.config();
 
 const app = express();
 
-app.use(cors());
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://improved-funicular-94g6465ggwp2pjwp-5173.app.github.dev");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(204);
+  }
+
+  next();
+});
+
 app.use(express.json());
 
-
-app.use("/api/dashboard", dashboardRoutes);
-app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/auth", authRoutes);
 
+app.use("/api/ocorrencias", ocorrenciaRoutes);
+
 app.get("/", (req, res) => {
-  res.json({
+  return res.json({
     sistema: "JetGuard API",
     status: "online",
   });
 });
 
-app.listen(3000, () => {
-  console.log("Servidor rodando na porta 3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
 });

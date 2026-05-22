@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -13,4 +13,32 @@ model Usuario {
   email     String   @unique
   senha     String
   createdAt DateTime @default(now())
+}
+
+model Ocorrencia {
+  id              Int      @id @default(autoincrement())
+  numero          Int
+  ano             Int
+  codigo          String   @unique
+  assunto         String
+  status          String   @default("ABERTO")
+  dataOcorrencia  DateTime
+  createdAt       DateTime @default(now())
+
+  envolvidos      EnvolvidoOcorrencia[]
+}
+
+model EnvolvidoOcorrencia {
+  id             Int     @id @default(autoincrement())
+  ocorrenciaId   Int
+  nome           String
+  tipoDocumento  String
+  documento      String
+  empresa        String?
+  possuiVeiculo  Boolean @default(false)
+  placa          String?
+  reboque        String?
+  relato         String
+
+  ocorrencia     Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
 }
