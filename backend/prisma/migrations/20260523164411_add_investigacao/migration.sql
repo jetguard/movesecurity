@@ -1,0 +1,8 @@
+-- CreateTable
+CREATE TABLE "Investigacao" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "titulo" TEXT NOT NULL,
+    "descricao" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'ABERTO',
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

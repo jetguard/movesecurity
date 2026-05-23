@@ -1,11 +1,11 @@
+import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
 import ocorrenciaRoutes from "./routes/ocorrencia.routes";
 import eventoRoutes from "./routes/evento.routes";
-//import investigacaoRoutes from "./routes/investigacao.routes";
-
-dotenv.config();
+import investigacaoRoutes from "./routes/investigacao.routes";
+import naturezaRoutes from "./routes/natureza.routes";
+import usuarioRoutes from "./routes/usuario.routes";
 
 const app = express();
 
@@ -22,12 +22,15 @@ app.use((req, res, next) => {
 });
 
 app.use(express.json());
+app.use("/uploads", express.static("uploads"));
 
 app.use("/api/auth", authRoutes);
+app.use("/api/usuarios", usuarioRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);
-//app.use("/api/investigacoes", investigacaoRoutes);
+app.use("/api/investigacoes", investigacaoRoutes);
+app.use("/api/naturezas", naturezaRoutes);
 
 app.get("/", (req, res) => {
   return res.json({

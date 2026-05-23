@@ -1,5 +1,7 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
+import { AuthRequest } from "../middlewares/auth";
+import { gerarRelatorioPdf } from "../services/relatorioPdf.service";
 
 export async function criarOcorrencia(req: Request, res: Response) {
   try {
@@ -137,6 +139,75 @@ export async function buscarOcorrenciaPorId(req: Request, res: Response) {
 
     return res.status(500).json({
       error: "Erro ao buscar ocorrência",
+    });
+  }
+}
+
+export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+
+    const [ocorrencia, usuario] = await Promise.all([
+      prisma.ocorrencia.findUnique({
+        where: {
+          id: Number(id),
+        },
+        include: {
+          envolvidos: true,
+          anexos: true,
+        },
+      }),
+      prisma.usuario.findUnique({
+        where: {
+          id: req.usuarioId,
+        },
+        select: {
+          nome: true,
+          re: true,
+          cargo: true,
+          setor: true,
+          empresa: true,
+        },
+      }),
+    ]);
+
+    if (!ocorrencia) {
+      return res.status(404).json({
+        error: "Ocorrência não encontrada",
+      });
+    }
+
+    if (!usuario) {
+      return res.status(401).json({
+        error: "Usuário não encontrado",
+      });
+    }
+
+    const pdfUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+
+    return gerarRelatorioPdf(
+      res,
+      {
+        tipo: "Ocorrência",
+        codigo: ocorrencia.codigo,
+        assunto: ocorrencia.assunto,
+        local: ocorrencia.local,
+        natureza: ocorrencia.natureza,
+        subNatureza: ocorrencia.subNatureza,
+        status: ocorrencia.status,
+        data: ocorrencia.dataOcorrencia,
+        relatoSeguranca: ocorrencia.relatoSeguranca,
+        envolvidos: ocorrencia.envolvidos,
+        anexos: ocorrencia.anexos,
+      },
+      usuario,
+      pdfUrl
+    );
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Erro ao gerar PDF da ocorrência",
     });
   }
 }

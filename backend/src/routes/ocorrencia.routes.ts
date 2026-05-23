@@ -6,7 +6,9 @@ import {
   criarOcorrencia,
   listarOcorrencias,
   buscarOcorrenciaPorId,
+  gerarPdfOcorrencia,
 } from "../controllers/ocorrencia.controller";
+import { autenticarUsuario } from "../middlewares/auth";
 
 const router = Router();
 
@@ -22,6 +24,7 @@ const upload = multer({ storage });
 
 router.post("/", upload.array("anexos"), criarOcorrencia);
 router.get("/", listarOcorrencias);
+router.get("/:id/pdf", autenticarUsuario, gerarPdfOcorrencia);
 router.get("/:id", buscarOcorrenciaPorId);
 
 export default router;

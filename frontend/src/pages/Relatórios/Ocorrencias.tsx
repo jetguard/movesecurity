@@ -27,6 +27,15 @@ type Ocorrencia = {
   envolvidos: Envolvido[];
 };
 
+type NaturezaCadastro = {
+  id: number;
+  nome: string;
+  subNaturezas: {
+    id: number;
+    nome: string;
+  }[];
+};
+
 const envolvidoVazio: Envolvido = {
   tipoEnvolvimento: "Condutor",
   nome: "",
@@ -41,6 +50,7 @@ const envolvidoVazio: Envolvido = {
 
 export default function Ocorrencias() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
   const [anexos, setAnexos] = useState<File[]>([]);
 
@@ -60,6 +70,26 @@ export default function Ocorrencias() {
     const response = await api.get("/ocorrencias");
     setOcorrencias(response.data);
   }
+
+  async function carregarNaturezas() {
+    const response = await api.get("/naturezas");
+    setNaturezas(response.data);
+  }
+
+  async function abrirPdfOcorrencia(id: number) {
+    const response = await api.get(`/ocorrencias/${id}/pdf`, {
+      responseType: "blob",
+    });
+
+    const url = URL.createObjectURL(
+      new Blob([response.data], { type: "application/pdf" })
+    );
+
+    window.open(url, "_blank");
+  }
+
+  const subNaturezasDisponiveis =
+    naturezas.find((item) => item.nome === natureza)?.subNaturezas || [];
 
   function alterarQuantidadeEnvolvidos(qtd: number) {
     const quantidade = Math.max(1, qtd);
@@ -150,6 +180,7 @@ export default function Ocorrencias() {
 
   useEffect(() => {
     carregarOcorrencias();
+    carregarNaturezas();
   }, []);
 
   return (
@@ -231,13 +262,18 @@ export default function Ocorrencias() {
                 <select
                   className="w-full border rounded-lg p-3"
                   value={natureza}
-                  onChange={(e) => setNatureza(e.target.value)}
+                  onChange={(e) => {
+                    setNatureza(e.target.value);
+                    setSubNatureza("");
+                  }}
                   required
                 >
                   <option value="">Selecione a natureza</option>
-                  <option value="Segurança">Segurança</option>
-                  <option value="Operacional">Operacional</option>
-                  <option value="Administrativa">Administrativa</option>
+                  {naturezas.map((item) => (
+                    <option key={item.id} value={item.nome}>
+                      {item.nome}
+                    </option>
+                  ))}
                 </select>
 
                 <select
@@ -245,12 +281,14 @@ export default function Ocorrencias() {
                   value={subNatureza}
                   onChange={(e) => setSubNatureza(e.target.value)}
                   required
+                  disabled={!natureza}
                 >
                   <option value="">Selecione a subnatureza</option>
-                  <option value="Acesso indevido">Acesso indevido</option>
-                  <option value="Agressão verbal">Agressão verbal</option>
-                  <option value="Agressão física">Agressão física</option>
-                  <option value="Dano ao patrimônio">Dano ao patrimônio</option>
+                  {subNaturezasDisponiveis.map((item) => (
+                    <option key={item.id} value={item.nome}>
+                      {item.nome}
+                    </option>
+                  ))}
                 </select>
 
                 <input
@@ -553,6 +591,7 @@ export default function Ocorrencias() {
 
                   <button
                     type="button"
+                    onClick={() => abrirPdfOcorrencia(ocorrencia.id)}
                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm"
                   >
                     Ver PDF

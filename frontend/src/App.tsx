@@ -5,7 +5,9 @@ import Dashboard from "./pages/Dashboard";
 import Ocorrencias from "./pages/Relatórios/Ocorrencias";
 import Investigacao from "./pages/Relatórios/Investigacao";
 import Eventos from "./pages/Relatórios/Eventos";
+import Naturezas from "./pages/Cadastros/Naturezas";
 import Login from "./pages/Login";
+import Perfil from "./pages/Perfil";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="ocorrencias" element={<Ocorrencias />} />
           <Route path="investigacao" element={<Investigacao />} />
           <Route path="eventos" element={<Eventos />} />
+          <Route path="naturezas" element={<Naturezas />} />
+          <Route path="perfil" element={<Perfil />} />
         </Route>
 
       </Routes>

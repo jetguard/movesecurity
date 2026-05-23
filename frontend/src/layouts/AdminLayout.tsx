@@ -44,6 +44,14 @@ export default function AdminLayout() {
             {open && <span>Dashboard</span>}
           </Link>
 
+          <Link
+            to="/perfil"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white"
+          >
+            <span>👤</span>
+            {open && <span>Meu Perfil</span>}
+          </Link>
+
           <button
             onClick={() => setRelatoriosOpen(!relatoriosOpen)}
             className="flex items-center justify-between rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white"
@@ -86,6 +94,14 @@ export default function AdminLayout() {
 
             </div>
           )}
+
+          <Link
+            to="/naturezas"
+            className="flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white"
+          >
+            <span>⚙</span>
+            {open && <span>Naturezas</span>}
+          </Link>
 
           <button
             onClick={logout}
