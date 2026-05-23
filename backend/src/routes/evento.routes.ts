@@ -4,6 +4,7 @@ import multer from "multer";
 
 import {
   buscarEventoPorId,
+  atualizarEvento,
   criarEvento,
   gerarPdfEvento,
   listarEventos,
@@ -30,5 +31,6 @@ router.post("/", upload.array("anexos"), criarEvento);
 router.get("/", listarEventos);
 router.get("/:id/pdf", autenticarUsuario, gerarPdfEvento);
 router.get("/:id", buscarEventoPorId);
+router.put("/:id", upload.array("anexos"), atualizarEvento);
 
 export default router;

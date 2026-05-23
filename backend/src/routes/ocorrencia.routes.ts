@@ -7,6 +7,7 @@ import {
   listarOcorrencias,
   buscarOcorrenciaPorId,
   gerarPdfOcorrencia,
+  atualizarOcorrencia,
 } from "../controllers/ocorrencia.controller";
 import { autenticarUsuario } from "../middlewares/auth";
 
@@ -26,5 +27,6 @@ router.post("/", upload.array("anexos"), criarOcorrencia);
 router.get("/", listarOcorrencias);
 router.get("/:id/pdf", autenticarUsuario, gerarPdfOcorrencia);
 router.get("/:id", buscarOcorrenciaPorId);
+router.put("/:id", upload.array("anexos"), atualizarOcorrencia);
 
 export default router;

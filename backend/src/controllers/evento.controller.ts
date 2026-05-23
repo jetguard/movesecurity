@@ -143,6 +143,103 @@ export async function buscarEventoPorId(req: Request, res: Response) {
   }
 }
 
+export async function atualizarEvento(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const {
+      assunto,
+      local,
+      natureza,
+      subNatureza,
+      status = "ABERTO",
+      dataEvento,
+      relatoSeguranca,
+      envolvidos,
+    } = req.body;
+
+    const arquivos = (req.files as Express.Multer.File[]) || [];
+
+    const envolvidosFormatados =
+      typeof envolvidos === "string" ? JSON.parse(envolvidos) : envolvidos;
+
+    if (!assunto || !local || !natureza || !subNatureza || !dataEvento) {
+      return res.status(400).json({
+        error: "Preencha todos os campos obrigatórios do evento.",
+      });
+    }
+
+    if (
+      !envolvidosFormatados ||
+      !Array.isArray(envolvidosFormatados) ||
+      envolvidosFormatados.length === 0
+    ) {
+      return res.status(400).json({
+        error: "Informe pelo menos um envolvido.",
+      });
+    }
+
+    const eventoExiste = await prisma.evento.findUnique({
+      where: {
+        id: Number(id),
+      },
+    });
+
+    if (!eventoExiste) {
+      return res.status(404).json({
+        error: "Evento não encontrado",
+      });
+    }
+
+    const evento = await prisma.$transaction(async (tx) => {
+      await tx.envolvidoEvento.deleteMany({
+        where: {
+          eventoId: Number(id),
+        },
+      });
+
+      return tx.evento.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          assunto,
+          local,
+          natureza,
+          subNatureza,
+          relatoSeguranca,
+          status,
+          dataEvento: new Date(dataEvento),
+
+          envolvidos: {
+            create: envolvidosFormatados.map(({ id, eventoId, ...envolvido }) => envolvido),
+          },
+
+          anexos: {
+            create: arquivos.map((arquivo) => ({
+              nomeOriginal: arquivo.originalname,
+              nomeArquivo: arquivo.filename,
+              caminho: arquivo.path,
+              tipo: arquivo.mimetype,
+            })),
+          },
+        },
+        include: {
+          envolvidos: true,
+          anexos: true,
+        },
+      });
+    });
+
+    return res.json(evento);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Erro ao atualizar evento",
+    });
+  }
+}
+
 export async function gerarPdfEvento(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
@@ -198,7 +295,6 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         data: evento.dataEvento,
         relatoSeguranca: evento.relatoSeguranca,
         envolvidos: evento.envolvidos,
-        anexos: evento.anexos,
       },
       usuario,
       pdfUrl

@@ -143,6 +143,103 @@ export async function buscarOcorrenciaPorId(req: Request, res: Response) {
   }
 }
 
+export async function atualizarOcorrencia(req: Request, res: Response) {
+  try {
+    const { id } = req.params;
+    const {
+      assunto,
+      local,
+      natureza,
+      subNatureza,
+      status = "ABERTO",
+      dataOcorrencia,
+      relatoSeguranca,
+      envolvidos,
+    } = req.body;
+
+    const arquivos = (req.files as Express.Multer.File[]) || [];
+
+    const envolvidosFormatados =
+      typeof envolvidos === "string" ? JSON.parse(envolvidos) : envolvidos;
+
+    if (!assunto || !local || !natureza || !subNatureza || !dataOcorrencia) {
+      return res.status(400).json({
+        error: "Preencha todos os campos obrigatórios da ocorrência.",
+      });
+    }
+
+    if (
+      !envolvidosFormatados ||
+      !Array.isArray(envolvidosFormatados) ||
+      envolvidosFormatados.length === 0
+    ) {
+      return res.status(400).json({
+        error: "Informe pelo menos um envolvido.",
+      });
+    }
+
+    const ocorrenciaExiste = await prisma.ocorrencia.findUnique({
+      where: {
+        id: Number(id),
+      },
+    });
+
+    if (!ocorrenciaExiste) {
+      return res.status(404).json({
+        error: "Ocorrência não encontrada",
+      });
+    }
+
+    const ocorrencia = await prisma.$transaction(async (tx) => {
+      await tx.envolvidoOcorrencia.deleteMany({
+        where: {
+          ocorrenciaId: Number(id),
+        },
+      });
+
+      return tx.ocorrencia.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          assunto,
+          local,
+          natureza,
+          subNatureza,
+          relatoSeguranca,
+          status,
+          dataOcorrencia: new Date(dataOcorrencia),
+
+          envolvidos: {
+            create: envolvidosFormatados.map(({ id, ocorrenciaId, ...envolvido }) => envolvido),
+          },
+
+          anexos: {
+            create: arquivos.map((arquivo) => ({
+              nomeOriginal: arquivo.originalname,
+              nomeArquivo: arquivo.filename,
+              caminho: arquivo.path,
+              tipo: arquivo.mimetype,
+            })),
+          },
+        },
+        include: {
+          envolvidos: true,
+          anexos: true,
+        },
+      });
+    });
+
+    return res.json(ocorrencia);
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      error: "Erro ao atualizar ocorrência",
+    });
+  }
+}
+
 export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
@@ -198,7 +295,6 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         data: ocorrencia.dataOcorrencia,
         relatoSeguranca: ocorrencia.relatoSeguranca,
         envolvidos: ocorrencia.envolvidos,
-        anexos: ocorrencia.anexos,
       },
       usuario,
       pdfUrl

@@ -52,6 +52,7 @@ export default function Eventos() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
+  const [eventoEditando, setEventoEditando] = useState<Evento | null>(null);
   const [anexos, setAnexos] = useState<File[]>([]);
 
   const [assunto, setAssunto] = useState("");
@@ -137,6 +138,7 @@ export default function Eventos() {
   }
 
   function limparFormulario() {
+    setEventoEditando(null);
     setAssunto("");
     setLocal("");
     setNatureza("");
@@ -147,6 +149,31 @@ export default function Eventos() {
     setQuantidadeEnvolvidos(1);
     setEnvolvidos([{ ...envolvidoVazio }]);
     setAnexos([]);
+  }
+
+  function formatarDataParaInput(data: string) {
+    const date = new Date(data);
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60000);
+
+    return localDate.toISOString().slice(0, 16);
+  }
+
+  function editarEvento(evento: Evento) {
+    setEventoEditando(evento);
+    setAssunto(evento.assunto);
+    setLocal(evento.local);
+    setNatureza(evento.natureza);
+    setSubNatureza(evento.subNatureza);
+    setDataEvento(formatarDataParaInput(evento.dataEvento));
+    setRelatoSeguranca(evento.relatoSeguranca || "");
+    setQuantidadeEnvolvidos(evento.envolvidos.length || 1);
+    setEnvolvidos(
+      evento.envolvidos.length ? evento.envolvidos : [{ ...envolvidoVazio }]
+    );
+    setAnexos([]);
+    setEtapaFormulario(1);
+    setAbrirFormulario(true);
   }
 
   async function salvarEvento(e: React.FormEvent) {
@@ -167,7 +194,10 @@ export default function Eventos() {
       formData.append("anexos", arquivo);
     });
 
-    await api.post("/eventos", formData, {
+    const url = eventoEditando ? `/eventos/${eventoEditando.id}` : "/eventos";
+    const request = eventoEditando ? api.put : api.post;
+
+    await request(url, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -194,7 +224,10 @@ export default function Eventos() {
         </div>
 
         <button
-          onClick={() => setAbrirFormulario(true)}
+          onClick={() => {
+            limparFormulario();
+            setAbrirFormulario(true);
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
         >
           Novo Relatório
@@ -206,7 +239,11 @@ export default function Eventos() {
           onSubmit={salvarEvento}
           className="bg-white rounded-xl shadow p-6 mb-6 space-y-5"
         >
-          <h2 className="text-xl font-bold">Novo Evento</h2>
+          <h2 className="text-xl font-bold">
+            {eventoEditando
+              ? `Editar Evento ${eventoEditando.codigo}`
+              : "Novo Evento"}
+          </h2>
 
           <div className="flex flex-wrap gap-2 mb-4">
             <span
@@ -584,6 +621,7 @@ export default function Eventos() {
 
                   <button
                     type="button"
+                    onClick={() => editarEvento(evento)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm"
                   >
                     Editar

@@ -16,11 +16,6 @@ type EnvolvidoPdf = {
   relato: string;
 };
 
-type AnexoPdf = {
-  nomeOriginal: string;
-  tipo: string;
-};
-
 type RelatorioPdf = {
   tipo: "Ocorrência" | "Evento" | "Investigação";
   codigo: string;
@@ -32,7 +27,6 @@ type RelatorioPdf = {
   data: Date;
   relatoSeguranca?: string | null;
   envolvidos?: EnvolvidoPdf[];
-  anexos?: AnexoPdf[];
 };
 
 type UsuarioAssinatura = {
@@ -44,6 +38,16 @@ type UsuarioAssinatura = {
 };
 
 const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
+const page = {
+  left: 45,
+  right: 550,
+  top: 34,
+  headerBottom: 108,
+  contentTop: 132,
+  footerTop: 704,
+  bottom: 804,
+};
+const contentWidth = page.right - page.left;
 
 function formatarData(data: Date) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -61,89 +65,70 @@ function criarToken(relatorio: RelatorioPdf, usuario: UsuarioAssinatura) {
     .toUpperCase();
 }
 
-function escreverLinha(
+function valor(valor?: string | null) {
+  return valor && String(valor).trim() ? valor : "Não informado";
+}
+
+function desenharBasePagina(
   doc: PDFKit.PDFDocument,
-  rotulo: string,
-  valor?: string | null
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
 ) {
-  doc.font("Helvetica-Bold").text(`${rotulo}: `, { continued: true });
-  doc.font("Helvetica").text(valor || "Não informado");
-}
+  doc.save();
 
-function garantirEspaco(doc: PDFKit.PDFDocument, altura = 90) {
-  if (doc.y + altura > doc.page.height - 90) {
-    doc.addPage();
-  }
-}
+  doc
+    .lineWidth(0.7)
+    .strokeColor("#e5e7eb")
+    .roundedRect(28, 24, 539, 792, 8)
+    .stroke();
 
-function desenharCabecalho(doc: PDFKit.PDFDocument, relatorio: RelatorioPdf) {
-  const topo = 38;
-
-  doc.image(logoPath, 45, topo, { width: 150 });
+  doc.image(logoPath, page.left, page.top + 7, { width: 145 });
 
   doc
     .font("Helvetica-Bold")
     .fontSize(16)
-    .text(`Relatório de ${relatorio.tipo}`, 220, topo + 5, {
-      width: 190,
+    .fillColor("#111827")
+    .text(`Relatório de ${relatorio.tipo}`, 215, page.top + 16, {
+      width: 200,
       align: "center",
     });
 
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
-    .text(relatorio.codigo, 430, topo + 7, {
+    .text(relatorio.codigo, 430, page.top + 18, {
       width: 115,
       align: "right",
     });
 
   doc
-    .moveTo(45, 104)
-    .lineTo(550, 104)
-    .strokeColor("#d1d5db")
+    .moveTo(page.left, page.headerBottom)
+    .lineTo(page.right, page.headerBottom)
+    .strokeColor("#cbd5e1")
     .stroke();
 
-  doc.x = 45;
-  doc.y = 124;
-  doc.strokeColor("#000000");
-}
-
-async function desenharRodape(
-  doc: PDFKit.PDFDocument,
-  relatorio: RelatorioPdf,
-  usuario: UsuarioAssinatura,
-  pdfUrl: string
-) {
-  garantirEspaco(doc, 150);
-
-  const token = criarToken(relatorio, usuario);
-  const qrCode = await QRCode.toDataURL(pdfUrl, {
-    margin: 1,
-    width: 120,
-  });
-
-  const y = Math.max(doc.y + 28, doc.page.height - 170);
-
   doc
-    .moveTo(45, y)
-    .lineTo(550, y)
-    .strokeColor("#d1d5db")
+    .moveTo(page.left, page.footerTop)
+    .lineTo(page.right, page.footerTop)
+    .strokeColor("#cbd5e1")
     .stroke();
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(11)
+    .fontSize(10)
     .fillColor("#111827")
-    .text("Assinatura digital", 45, y + 18);
+    .text("Assinatura digital", page.left, page.footerTop + 17);
 
   doc
     .font("Helvetica")
-    .fontSize(9)
+    .fontSize(8.5)
     .fillColor("#374151")
     .text(
       `Documento validado e elaborado por ${usuario.nome}. Token: ${token}`,
-      45,
-      y + 39,
+      page.left,
+      page.footerTop + 38,
       { width: 350 }
     );
 
@@ -157,16 +142,189 @@ async function desenharRodape(
     .join(" | ");
 
   if (detalhesUsuario) {
-    doc.text(detalhesUsuario, 45, y + 68, { width: 350 });
+    doc.text(detalhesUsuario, page.left, page.footerTop + 58, { width: 350 });
   }
 
-  doc.image(qrCode, 445, y + 15, { width: 86 });
+  doc.image(qrCode, 455, page.footerTop + 15, { width: 78 });
   doc
-    .fontSize(8)
+    .fontSize(7.5)
     .fillColor("#6b7280")
-    .text("Acesse o PDF", 435, y + 105, { width: 105, align: "center" });
+    .text("Acesse o PDF", 444, page.footerTop + 96, {
+      width: 100,
+      align: "center",
+    });
 
-  doc.fillColor("#000000").strokeColor("#000000");
+  doc.restore();
+  doc.x = page.left;
+  doc.y = page.contentTop;
+}
+
+function novaPagina(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  doc.addPage();
+  desenharBasePagina(doc, relatorio, usuario, qrCode, token);
+}
+
+function garantirEspaco(
+  doc: PDFKit.PDFDocument,
+  altura: number,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  if (doc.y + altura > page.footerTop - 20) {
+    novaPagina(doc, relatorio, usuario, qrCode, token);
+  }
+}
+
+function escreverTituloSecao(doc: PDFKit.PDFDocument, titulo: string) {
+  doc.moveDown(0.5);
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .fillColor("#0f172a")
+    .text(titulo, page.left, doc.y);
+  doc
+    .moveTo(page.left, doc.y + 4)
+    .lineTo(page.right, doc.y + 4)
+    .strokeColor("#dbe3ef")
+    .stroke();
+  doc.moveDown(0.8);
+}
+
+function escreverCampo(
+  doc: PDFKit.PDFDocument,
+  rotulo: string,
+  conteudo: string,
+  x: number,
+  y: number,
+  width: number
+) {
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .fillColor("#64748b")
+    .text(rotulo.toUpperCase(), x, y, { width });
+
+  doc
+    .font("Helvetica")
+    .fontSize(10)
+    .fillColor("#111827")
+    .text(conteudo, x, y + 14, { width, lineGap: 2 });
+}
+
+function escreverDadosRelatorio(doc: PDFKit.PDFDocument, relatorio: RelatorioPdf) {
+  escreverTituloSecao(doc, "Dados do relatório");
+
+  const y = doc.y;
+  const colunaLargura = 230;
+  const colunaDireitaX = page.left + 270;
+
+  escreverCampo(doc, "Assunto", valor(relatorio.assunto), page.left, y, contentWidth);
+  escreverCampo(doc, "Data", formatarData(relatorio.data), page.left, y + 44, colunaLargura);
+  escreverCampo(doc, "Local", valor(relatorio.local), page.left, y + 84, colunaLargura);
+  escreverCampo(doc, "Status", valor(relatorio.status), page.left, y + 124, colunaLargura);
+
+  escreverCampo(doc, "Natureza", valor(relatorio.natureza), colunaDireitaX, y + 44, colunaLargura);
+  escreverCampo(doc, "Subnatureza", valor(relatorio.subNatureza), colunaDireitaX, y + 84, colunaLargura);
+
+  doc.y = y + 158;
+}
+
+function escreverEnvolvidos(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  escreverTituloSecao(doc, "Envolvidos");
+
+  if (!relatorio.envolvidos?.length) {
+    doc.font("Helvetica").fontSize(10).fillColor("#111827").text("Nenhum envolvido informado.");
+    return;
+  }
+
+  relatorio.envolvidos.forEach((envolvido, index) => {
+    garantirEspaco(doc, 86, relatorio, usuario, qrCode, token);
+
+    const y = doc.y;
+    doc
+      .lineWidth(0.6)
+      .strokeColor("#e5e7eb")
+      .roundedRect(page.left, y, contentWidth, 76, 6)
+      .stroke();
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10.5)
+      .fillColor("#111827")
+      .text(`${index + 1}. ${envolvido.nome}`, page.left + 14, y + 12, {
+        width: 260,
+      });
+
+    doc
+      .font("Helvetica")
+      .fontSize(9)
+      .fillColor("#334155")
+      .text(`Tipo: ${valor(envolvido.tipoEnvolvimento)}`, page.left + 14, y + 32, { width: 210 })
+      .text(`Documento: ${envolvido.tipoDocumento} ${envolvido.documento}`, page.left + 14, y + 47, { width: 250 })
+      .text(`Empresa: ${valor(envolvido.empresa)}`, page.left + 14, y + 62, { width: 250 });
+
+    const veiculo = envolvido.possuiVeiculo
+      ? `Placa: ${valor(envolvido.placa)} | Reboque: ${valor(envolvido.reboque)}`
+      : "Veículo: não informado";
+
+    doc.text(veiculo, page.left + 285, y + 32, { width: 200 });
+    doc.text(`Relato: ${valor(envolvido.relato)}`, page.left + 285, y + 48, {
+      width: 200,
+      height: 28,
+      ellipsis: true,
+    });
+
+    doc.y = y + 88;
+  });
+}
+
+function escreverRelato(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  garantirEspaco(doc, 90, relatorio, usuario, qrCode, token);
+  escreverTituloSecao(doc, "Relato patrimonial");
+
+  const texto = valor(relatorio.relatoSeguranca);
+  const paragrafos = texto.split(/\n+/);
+
+  paragrafos.forEach((paragrafo) => {
+    const altura = doc.heightOfString(paragrafo, {
+      width: contentWidth,
+      align: "justify",
+      lineGap: 3,
+    });
+
+    garantirEspaco(doc, altura + 14, relatorio, usuario, qrCode, token);
+
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor("#111827")
+      .text(paragrafo, page.left, doc.y, {
+        width: contentWidth,
+        align: "justify",
+        lineGap: 3,
+      });
+    doc.moveDown(0.6);
+  });
 }
 
 export async function gerarRelatorioPdf(
@@ -175,10 +333,17 @@ export async function gerarRelatorioPdf(
   usuario: UsuarioAssinatura,
   pdfUrl: string
 ) {
+  const token = criarToken(relatorio, usuario);
+  const qrCode = await QRCode.toDataURL(pdfUrl, {
+    margin: 1,
+    width: 120,
+  });
+
   const doc = new PDFDocument({
     size: "A4",
-    margin: 45,
+    margin: 0,
     bufferPages: true,
+    autoFirstPage: false,
     info: {
       Title: `Relatório de ${relatorio.tipo} ${relatorio.codigo}`,
       Author: usuario.nome,
@@ -193,80 +358,10 @@ export async function gerarRelatorioPdf(
 
   doc.pipe(res);
 
-  desenharCabecalho(doc, relatorio);
-
-  doc.font("Helvetica-Bold").fontSize(13).text("Dados do relatório");
-  doc.moveDown(0.7);
-  doc.fontSize(10);
-
-  escreverLinha(doc, "Assunto", relatorio.assunto);
-  escreverLinha(doc, "Status", relatorio.status);
-  escreverLinha(doc, "Data", formatarData(relatorio.data));
-  escreverLinha(doc, "Local", relatorio.local);
-  escreverLinha(doc, "Natureza", relatorio.natureza);
-  escreverLinha(doc, "Subnatureza", relatorio.subNatureza);
-
-  doc.moveDown();
-  doc.font("Helvetica-Bold").fontSize(13).text("Relato da segurança patrimonial");
-  doc.moveDown(0.5);
-  doc
-    .font("Helvetica")
-    .fontSize(10)
-    .text(relatorio.relatoSeguranca || "Não informado", {
-      align: "justify",
-      lineGap: 3,
-    });
-
-  doc.moveDown();
-  doc.font("Helvetica-Bold").fontSize(13).text("Envolvidos");
-  doc.moveDown(0.5);
-
-  if (!relatorio.envolvidos?.length) {
-    doc.font("Helvetica").fontSize(10).text("Nenhum envolvido informado.");
-  } else {
-    relatorio.envolvidos.forEach((envolvido, index) => {
-      garantirEspaco(doc, 130);
-
-      doc
-        .font("Helvetica-Bold")
-        .fontSize(11)
-        .text(`${index + 1}. ${envolvido.nome}`);
-      doc.fontSize(10);
-      escreverLinha(doc, "Tipo", envolvido.tipoEnvolvimento);
-      escreverLinha(
-        doc,
-        "Documento",
-        `${envolvido.tipoDocumento} ${envolvido.documento}`
-      );
-      escreverLinha(doc, "Empresa", envolvido.empresa);
-
-      if (envolvido.possuiVeiculo) {
-        escreverLinha(doc, "Placa", envolvido.placa);
-        escreverLinha(doc, "Reboque", envolvido.reboque);
-      }
-
-      escreverLinha(doc, "Relato", envolvido.relato);
-      doc.moveDown(0.8);
-    });
-  }
-
-  doc.moveDown();
-  doc.font("Helvetica-Bold").fontSize(13).text("Anexos");
-  doc.moveDown(0.5);
-
-  if (!relatorio.anexos?.length) {
-    doc.font("Helvetica").fontSize(10).text("Nenhum anexo informado.");
-  } else {
-    relatorio.anexos.forEach((anexo, index) => {
-      garantirEspaco(doc, 25);
-      doc
-        .font("Helvetica")
-        .fontSize(10)
-        .text(`${index + 1}. ${anexo.nomeOriginal} (${anexo.tipo})`);
-    });
-  }
-
-  await desenharRodape(doc, relatorio, usuario, pdfUrl);
+  novaPagina(doc, relatorio, usuario, qrCode, token);
+  escreverDadosRelatorio(doc, relatorio);
+  escreverEnvolvidos(doc, relatorio, usuario, qrCode, token);
+  escreverRelato(doc, relatorio, usuario, qrCode, token);
 
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i += 1) {
@@ -275,8 +370,8 @@ export async function gerarRelatorioPdf(
       .font("Helvetica")
       .fontSize(8)
       .fillColor("#6b7280")
-      .text(`Página ${i + 1} de ${range.count}`, 45, 780, {
-        width: 505,
+      .text(`Página ${i + 1} de ${range.count}`, page.left, 786, {
+        width: contentWidth,
         align: "center",
       });
   }

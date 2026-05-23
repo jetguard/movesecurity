@@ -52,6 +52,8 @@ export default function Ocorrencias() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
+  const [ocorrenciaEditando, setOcorrenciaEditando] =
+    useState<Ocorrencia | null>(null);
   const [anexos, setAnexos] = useState<File[]>([]);
 
   const [assunto, setAssunto] = useState("");
@@ -137,6 +139,7 @@ export default function Ocorrencias() {
   }
 
   function limparFormulario() {
+    setOcorrenciaEditando(null);
     setAssunto("");
     setLocal("");
     setNatureza("");
@@ -147,6 +150,33 @@ export default function Ocorrencias() {
     setQuantidadeEnvolvidos(1);
     setEnvolvidos([{ ...envolvidoVazio }]);
     setAnexos([]);
+  }
+
+  function formatarDataParaInput(data: string) {
+    const date = new Date(data);
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - offset * 60000);
+
+    return localDate.toISOString().slice(0, 16);
+  }
+
+  function editarOcorrencia(ocorrencia: Ocorrencia) {
+    setOcorrenciaEditando(ocorrencia);
+    setAssunto(ocorrencia.assunto);
+    setLocal(ocorrencia.local);
+    setNatureza(ocorrencia.natureza);
+    setSubNatureza(ocorrencia.subNatureza);
+    setDataOcorrencia(formatarDataParaInput(ocorrencia.dataOcorrencia));
+    setRelatoSeguranca(ocorrencia.relatoSeguranca || "");
+    setQuantidadeEnvolvidos(ocorrencia.envolvidos.length || 1);
+    setEnvolvidos(
+      ocorrencia.envolvidos.length
+        ? ocorrencia.envolvidos
+        : [{ ...envolvidoVazio }]
+    );
+    setAnexos([]);
+    setEtapaFormulario(1);
+    setAbrirFormulario(true);
   }
 
   async function salvarOcorrencia(e: React.FormEvent) {
@@ -167,7 +197,13 @@ export default function Ocorrencias() {
       formData.append("anexos", arquivo);
     });
 
-    await api.post("/ocorrencias", formData, {
+    const url = ocorrenciaEditando
+      ? `/ocorrencias/${ocorrenciaEditando.id}`
+      : "/ocorrencias";
+
+    const request = ocorrenciaEditando ? api.put : api.post;
+
+    await request(url, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -194,7 +230,10 @@ export default function Ocorrencias() {
         </div>
 
         <button
-          onClick={() => setAbrirFormulario(true)}
+          onClick={() => {
+            limparFormulario();
+            setAbrirFormulario(true);
+          }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
         >
           Novo Relatório
@@ -206,7 +245,11 @@ export default function Ocorrencias() {
           onSubmit={salvarOcorrencia}
           className="bg-white rounded-xl shadow p-6 mb-6 space-y-5"
         >
-          <h2 className="text-xl font-bold">Nova Ocorrência</h2>
+          <h2 className="text-xl font-bold">
+            {ocorrenciaEditando
+              ? `Editar Ocorrência ${ocorrenciaEditando.codigo}`
+              : "Nova Ocorrência"}
+          </h2>
 
           <div className="flex flex-wrap gap-2 mb-4">
             <span
@@ -584,6 +627,7 @@ export default function Ocorrencias() {
 
                   <button
                     type="button"
+                    onClick={() => editarOcorrencia(ocorrencia)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm"
                   >
                     Editar
