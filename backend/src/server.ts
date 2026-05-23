@@ -2,6 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes";
 import ocorrenciaRoutes from "./routes/ocorrencia.routes";
+import eventoRoutes from "./routes/evento.routes";
+//import investigacaoRoutes from "./routes/investigacao.routes";
 
 dotenv.config();
 
@@ -24,6 +26,8 @@ app.use(express.json());
 app.use("/api/auth", authRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
+app.use("/api/eventos", eventoRoutes);
+//app.use("/api/investigacoes", investigacaoRoutes);
 
 app.get("/", (req, res) => {
   return res.json({

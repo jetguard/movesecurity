@@ -16,21 +16,69 @@ model Usuario {
 }
 
 model Ocorrencia {
-  id              Int      @id @default(autoincrement())
-  numero          Int
-  ano             Int
-  codigo          String   @unique
-  assunto         String
-  status          String   @default("ABERTO")
-  dataOcorrencia  DateTime
-  createdAt       DateTime @default(now())
+  id                Int      @id @default(autoincrement())
+  numero            Int
+  ano               Int
+  codigo            String   @unique
+  assunto           String
+  local             String
+  natureza          String
+  subNatureza       String
+  status            String   @default("ABERTO")
+  dataOcorrencia    DateTime
+  relatoSeguranca   String?
+  createdAt         DateTime @default(now())
 
-  envolvidos      EnvolvidoOcorrencia[]
+  envolvidos        EnvolvidoOcorrencia[]
+  anexos            AnexoOcorrencia[]
 }
 
 model EnvolvidoOcorrencia {
+  id                 Int     @id @default(autoincrement())
+  ocorrenciaId       Int
+
+  tipoEnvolvimento   String
+
+  nome               String
+  tipoDocumento      String
+  documento          String
+  empresa            String?
+  possuiVeiculo      Boolean @default(false)
+  placa              String?
+  reboque            String?
+  relato             String
+
+  ocorrencia         Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
+}
+
+model AnexoOcorrencia {
+  id            Int      @id @default(autoincrement())
+  ocorrenciaId  Int
+  nomeOriginal  String
+  nomeArquivo   String
+  caminho       String
+  tipo          String
+  createdAt     DateTime @default(now())
+
+  ocorrencia    Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
+}
+
+model Evento {
+  id          Int      @id @default(autoincrement())
+  numero      Int
+  ano         Int
+  codigo      String   @unique
+  assunto     String
+  status      String   @default("ABERTO")
+  dataEvento  DateTime
+  createdAt   DateTime @default(now())
+
+  envolvidos  EnvolvidoEvento[]
+}
+
+model EnvolvidoEvento {
   id             Int     @id @default(autoincrement())
-  ocorrenciaId   Int
+  eventoId       Int
   nome           String
   tipoDocumento  String
   documento      String
@@ -40,5 +88,5 @@ model EnvolvidoOcorrencia {
   reboque        String?
   relato         String
 
-  ocorrencia     Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
+  evento         Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
 }
