@@ -28,6 +28,7 @@ import {
   Video,
   Menu,
   X,
+  ClipboardList,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -237,6 +238,11 @@ export default function AdminLayout() {
           <Link to="/tarefas" className={item}>
             <CheckCircle2 size={20} />
             {mostrarTextoMenu && <span>Central de Tarefas</span>}
+          </Link>
+
+          <Link to="/minha-jornada" className={item}>
+            <ClipboardList size={20} />
+            {mostrarTextoMenu && <span>Minha Jornada</span>}
           </Link>
 
           <Link to="/cameras" className={item}>

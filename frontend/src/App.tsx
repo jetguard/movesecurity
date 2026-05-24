@@ -31,6 +31,7 @@ const Tarefas = lazy(() => import("./pages/Tarefas"));
 const Historico = lazy(() => import("./pages/Historico"));
 const Cameras = lazy(() => import("./pages/Cameras"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
+const MinhaJornada = lazy(() => import("./pages/MinhaJornada"));
 
 function CarregandoPagina() {
   return (
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="timeline/:tipo/:id" element={<Timeline />} />
             <Route path="mencoes" element={<Mencoes />} />
             <Route path="tarefas" element={<Tarefas />} />
+            <Route path="minha-jornada" element={<MinhaJornada />} />
             <Route path="cameras" element={<Cameras />} />
             <Route path="historico/:tipo/:id" element={<Historico />} />
             <Route
