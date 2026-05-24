@@ -41,6 +41,9 @@ model Usuario {
   mencoesRecebidas Mencao[] @relation("MencaoUsuario")
   mencoesCriadas Mencao[] @relation("MencaoAutor")
   comentarios ComentarioInterno[]
+  anulacoesSolicitadas SolicitacaoAnulacaoRelatorio[] @relation("AnulacaoSolicitante")
+  anulacoesDecididas SolicitacaoAnulacaoRelatorio[] @relation("AnulacaoAdministrador")
+  acordosAnulacao AcordoAnulacaoRelatorio[] @relation("AcordoAnulacaoAnalista")
 }
 
 model Ocorrencia {
@@ -539,4 +542,43 @@ model NotificacaoLida {
   usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([usuarioId, notificacaoId])
+}
+
+model SolicitacaoAnulacaoRelatorio {
+  id              Int      @id @default(autoincrement())
+  modulo          String
+  registroId      Int
+  codigoRegistro  String
+  tituloRegistro  String
+  unidade         String
+  motivo          String
+  status          String   @default("Pendente")
+  solicitanteId   Int
+  decididoPorId   Int?
+  decisaoMotivo   String?
+  decididoEm      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  solicitante     Usuario  @relation("AnulacaoSolicitante", fields: [solicitanteId], references: [id])
+  decididoPor     Usuario? @relation("AnulacaoAdministrador", fields: [decididoPorId], references: [id])
+  acordos         AcordoAnulacaoRelatorio[]
+
+  @@index([modulo, registroId, status])
+}
+
+model AcordoAnulacaoRelatorio {
+  id             Int      @id @default(autoincrement())
+  solicitacaoId  Int
+  analistaId     Int
+  status         String   @default("Pendente")
+  observacao     String?
+  decididoEm     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  solicitacao    SolicitacaoAnulacaoRelatorio @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+  analista       Usuario @relation("AcordoAnulacaoAnalista", fields: [analistaId], references: [id])
+
+  @@unique([solicitacaoId, analistaId])
 }

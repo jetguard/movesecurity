@@ -91,9 +91,11 @@ export default function Ocorrencias() {
   const [usuariosMencao, setUsuariosMencao] = useState<UsuarioMencao[]>([]);
   const [ocorrenciaVisualizando, setOcorrenciaVisualizando] = useState<Ocorrencia | null>(null);
   const [ocorrenciaMencao, setOcorrenciaMencao] = useState<Ocorrencia | null>(null);
+  const [ocorrenciaAnulacao, setOcorrenciaAnulacao] = useState<Ocorrencia | null>(null);
   const [usuarioMencionadoId, setUsuarioMencionadoId] = useState("");
   const [tipoMencao, setTipoMencao] = useState("Acompanhar");
   const [observacaoMencao, setObservacaoMencao] = useState("");
+  const [motivoAnulacao, setMotivoAnulacao] = useState("");
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
@@ -151,6 +153,24 @@ export default function Ocorrencias() {
     setUsuarioMencionadoId("");
     setObservacaoMencao("");
     alert("Usuario mencionado com sucesso");
+  }
+
+  async function solicitarAnulacao() {
+    if (!ocorrenciaAnulacao || !motivoAnulacao.trim()) {
+      alert("Informe o motivo da anulação.");
+      return;
+    }
+
+    await api.post("/anulacoes", {
+      modulo: "Ocorrencia",
+      registroId: ocorrenciaAnulacao.id,
+      motivo: motivoAnulacao,
+    });
+
+    setOcorrenciaAnulacao(null);
+    setMotivoAnulacao("");
+    carregarOcorrencias();
+    alert("Solicitação de anulação enviada aos analistas e administradores.");
   }
 
   async function abrirVisualizacao(ocorrencia: Ocorrencia) {
@@ -951,6 +971,16 @@ export default function Ocorrencias() {
                   >
                     Ver PDF
                   </button>
+
+                  {ocorrencia.status !== "Anulado" && (
+                    <button
+                      type="button"
+                      onClick={() => setOcorrenciaAnulacao(ocorrencia)}
+                      className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded-lg text-sm"
+                    >
+                      Solicitar Anulação
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1063,6 +1093,36 @@ export default function Ocorrencias() {
               <div className="flex gap-3">
                 <button onClick={salvarMencao} className="rounded bg-blue-600 px-4 py-2 text-white">Salvar</button>
                 <button onClick={() => setOcorrenciaMencao(null)} className="rounded bg-slate-200 px-4 py-2">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ocorrenciaAnulacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold">Solicitar anulação</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              {ocorrenciaAnulacao.codigo} - {ocorrenciaAnulacao.assunto}
+            </p>
+            <div className="mt-4 space-y-3">
+              <textarea
+                className="min-h-[140px] w-full rounded-lg border p-3"
+                placeholder="Informe o motivo detalhado da anulação"
+                value={motivoAnulacao}
+                onChange={(e) => setMotivoAnulacao(e.target.value)}
+              />
+              <div className="rounded-lg bg-orange-50 p-3 text-sm text-orange-800">
+                A anulação será enviada para ciência e acordo dos analistas. O relatório não será excluído.
+              </div>
+              <div className="flex gap-3">
+                <button onClick={solicitarAnulacao} className="rounded bg-orange-600 px-4 py-2 text-white">
+                  Enviar solicitação
+                </button>
+                <button onClick={() => setOcorrenciaAnulacao(null)} className="rounded bg-slate-200 px-4 py-2">
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>

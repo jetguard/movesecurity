@@ -32,6 +32,7 @@ function moduloLegivel(tipoRegistro: string) {
     Investigacao: "Investigação",
     AnaliseOcorrencia: "Relatório de Ocorrência",
     AnaliseEvento: "Relatório de Evento",
+    AnulacaoRelatorio: "Solicitação de Anulação",
     Usuario: "Usuário",
     Auth: "Acesso",
   };
@@ -90,6 +91,26 @@ function montarAcaoLegivel(params: {
 
   if (params.acao.includes("Conversão")) {
     return `O usuário ${params.usuarioNome} converteu o ${alvo} para investigação`;
+  }
+
+  if (params.acao.includes("Solicitação de anulação")) {
+    return `O usuário ${params.usuarioNome} solicitou a anulação do ${alvo}`;
+  }
+
+  if (params.acao.includes("Anulação de relatório aprovada")) {
+    return `O administrador ${params.usuarioNome} aprovou a anulação do ${alvo}`;
+  }
+
+  if (params.acao.includes("Anulação de relatório recusada")) {
+    return `O administrador ${params.usuarioNome} recusou a anulação do ${alvo}`;
+  }
+
+  if (params.acao.includes("Aprovado acordo de anulação")) {
+    return `O usuário ${params.usuarioNome} registrou acordo favorável na ${alvo}`;
+  }
+
+  if (params.acao.includes("Recusado acordo de anulação")) {
+    return `O usuário ${params.usuarioNome} recusou acordo na ${alvo}`;
   }
 
   if (params.acao.includes("Atualização")) {

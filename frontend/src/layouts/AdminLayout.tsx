@@ -29,6 +29,7 @@ import {
   Menu,
   X,
   ClipboardList,
+  AlertTriangle,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -255,6 +256,11 @@ export default function AdminLayout() {
           <Link to="/tarefas" className={item}>
             <CheckCircle2 size={20} />
             {mostrarTextoMenu && <span>Central de Tarefas</span>}
+          </Link>
+
+          <Link to="/anulacoes" className={item}>
+            <AlertTriangle size={20} />
+            {mostrarTextoMenu && <span>Anulações</span>}
           </Link>
 
           <Link to="/cameras" className={item}>
