@@ -45,6 +45,7 @@ export default function AdminLayout() {
   const [open, setOpen] = useState(() => window.innerWidth >= 768);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
+  const [meusDadosOpen, setMeusDadosOpen] = useState(true);
   const [segundosSessao, setSegundosSessao] = useState(0);
   const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
@@ -185,10 +186,26 @@ export default function AdminLayout() {
             {mostrarTextoMenu && <span>Dashboard</span>}
           </Link>
 
-          <Link to="/perfil" className={item}>
-            <UserCircle size={20} />
-            {mostrarTextoMenu && <span>Meu Perfil</span>}
-          </Link>
+          <button onClick={() => setMeusDadosOpen(!meusDadosOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+            <div className="flex items-center gap-3">
+              <UserCircle size={20} />
+              {mostrarTextoMenu && <span>Meus Dados</span>}
+            </div>
+            {mostrarTextoMenu && <span>{meusDadosOpen ? "-" : "+"}</span>}
+          </button>
+
+          {meusDadosOpen && mostrarTextoMenu && (
+            <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+              <Link to="/perfil" className={subItem}>
+                <UserCircle size={16} />
+                Meu Perfil
+              </Link>
+              <Link to="/minha-jornada" className={subItem}>
+                <ClipboardList size={16} />
+                Minha Jornada
+              </Link>
+            </div>
+          )}
 
           <Link to="/busca" className={item}>
             <Search size={20} />
@@ -238,11 +255,6 @@ export default function AdminLayout() {
           <Link to="/tarefas" className={item}>
             <CheckCircle2 size={20} />
             {mostrarTextoMenu && <span>Central de Tarefas</span>}
-          </Link>
-
-          <Link to="/minha-jornada" className={item}>
-            <ClipboardList size={20} />
-            {mostrarTextoMenu && <span>Minha Jornada</span>}
           </Link>
 
           <Link to="/cameras" className={item}>
