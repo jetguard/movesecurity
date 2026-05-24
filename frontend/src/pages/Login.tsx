@@ -56,9 +56,11 @@ export default function Login() {
               Plataforma de segurança patrimonial
             </div>
 
-            <h1 className="text-4xl font-bold leading-tight tracking-normal md:text-6xl">
-              JetGuard
-            </h1>
+            <img
+              src="/images/jetguard-login-logo.png"
+              alt="JetGuard"
+              className="w-full max-w-xl rounded-2xl object-contain shadow-2xl shadow-blue-950/40"
+            />
 
             <p className="mt-5 max-w-xl text-lg leading-8 text-slate-200">
               Gestão inteligente de ocorrências, eventos, análises e

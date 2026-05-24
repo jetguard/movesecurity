@@ -427,7 +427,7 @@ export async function timelineRegistro(req: AuthRequest, res: Response) {
 
 export async function centralTarefas(req: AuthRequest, res: Response) {
   try {
-    const [mencoes, planos, workflow, pendencias] = await Promise.all([
+    const [mencoes, planos, workflow, pendencias, anulacoes] = await Promise.all([
       prisma.mencao.findMany({
         where: { usuarioMencionadoId: req.usuarioId },
         orderBy: { createdAt: "desc" },
@@ -446,6 +446,18 @@ export async function centralTarefas(req: AuthRequest, res: Response) {
       prisma.analiseRisco.findMany({
         where: { unidade: req.unidadeAtiva, status: { not: "Concluido" } },
         orderBy: { prazo: "asc" },
+        take: 50,
+      }),
+      prisma.solicitacaoAnulacaoRelatorio.findMany({
+        where: {
+          unidade: req.unidadeAtiva,
+          status: "Pendente",
+          OR: [
+            { solicitanteId: req.usuarioId },
+            { acordos: { some: { analistaId: req.usuarioId, status: "Pendente" } } },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
         take: 50,
       }),
     ]);
@@ -484,6 +496,17 @@ export async function centralTarefas(req: AuthRequest, res: Response) {
         prazo: item.prazo,
         prioridade: item.nivelRisco,
         link: "/riscos",
+      })),
+      ...anulacoes.map((item) => ({
+        id: `anulacao-${item.id}`,
+        origem: "Anulacao",
+        modulo: item.modulo,
+        codigo: item.codigoRegistro,
+        titulo: item.tituloRegistro,
+        status: item.status,
+        prazo: null,
+        prioridade: "Acordo/Decisao",
+        link: "/anulacoes",
       })),
       ...ocorrencias.map((item) => ({
         id: `workflow-ocorrencia-${item.id}`,
