@@ -1,5 +1,6 @@
-﻿import "dotenv/config";
+import "dotenv/config";
 import express from "express";
+import { createServer } from "http";
 import authRoutes from "./routes/auth.routes";
 import ocorrenciaRoutes from "./routes/ocorrencia.routes";
 import eventoRoutes from "./routes/evento.routes";
@@ -18,10 +19,14 @@ import checklistRoutes from "./routes/checklist.routes";
 import matrizRiscoRoutes from "./routes/matrizRisco.routes";
 import mencaoRoutes from "./routes/mencao.routes";
 import comentarioRoutes from "./routes/comentario.routes";
+import cameraRoutes from "./routes/camera.routes";
+import configuracaoRoutes from "./routes/configuracao.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
+import { iniciarRealtime } from "./services/realtime.service";
 
 const app = express();
+const httpServer = createServer(app);
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", corsOrigin());
@@ -52,6 +57,8 @@ app.use("/api/checklists", checklistRoutes);
 app.use("/api/matriz-risco", matrizRiscoRoutes);
 app.use("/api/mencoes", mencaoRoutes);
 app.use("/api/comentarios", comentarioRoutes);
+app.use("/api/cameras", cameraRoutes);
+app.use("/api/configuracoes", configuracaoRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);
@@ -62,6 +69,7 @@ app.get("/", (req, res) => {
   return res.json({
     sistema: "JetGuard API",
     status: "online",
+    realtime: "/ws",
   });
 });
 
@@ -72,8 +80,10 @@ garantirSuperAdmin()
     console.error("Erro ao garantir Super Admin:", error);
   })
   .finally(() => {
-    app.listen(PORT, () => {
+    iniciarRealtime(httpServer);
+    httpServer.listen(PORT, () => {
       console.log(`Servidor rodando na porta ${PORT}`);
     });
   });
 
+export { app, httpServer };

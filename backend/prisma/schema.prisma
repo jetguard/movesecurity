@@ -35,6 +35,9 @@ model Usuario {
   analisesEstrategicas AnaliseEstrategica[]
   planosAcaoResponsavel PlanoAcaoCorporativo[] @relation("PlanoAcaoResponsavel")
   checklistsResponsavel ChecklistInspecao[]
+  camerasCadastradas CameraMonitoramento[] @relation("CameraCriador")
+  cameraChecklists CameraChecklistOperacional[] @relation("CameraChecklistResponsavel")
+  notificacoesLidas NotificacaoLida[]
   mencoesRecebidas Mencao[] @relation("MencaoUsuario")
   mencoesCriadas Mencao[] @relation("MencaoAutor")
   comentarios ComentarioInterno[]
@@ -442,4 +445,98 @@ model ComentarioInterno {
   updatedAt   DateTime @updatedAt
 
   autor       Usuario  @relation(fields: [autorId], references: [id])
+}
+
+model CameraMonitoramento {
+  id                     Int      @id @default(autoincrement())
+  numeroCamera           Int
+  numeroServidor         Int
+  tipoSistema            String   @default("DIGIFORT")
+  periodoGravacaoDias    Int
+  status                 String   @default("Conectada")
+  tecnologia             String
+  tipoCamera             String
+  localInstalado         String
+  areaMonitorada         String
+  infravermelho          String
+  monitoramento          String   @default("Ativo")
+  ultimaManutencao       DateTime?
+  observacoesTecnicas    String?
+  unidade                String   @default("GJA-T1")
+  cadastradoPorId        Int?
+  desconectadaDesde      DateTime?
+  totalIndisponibilidade Int      @default(0)
+  totalFalhas            Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  cadastradoPor          Usuario? @relation("CameraCriador", fields: [cadastradoPorId], references: [id])
+  checklists             CameraChecklistOperacional[]
+  eventos                CameraEventoStatus[]
+
+  @@unique([numeroCamera, unidade])
+}
+
+model CameraChecklistOperacional {
+  id                         Int      @id @default(autoincrement())
+  cameraId                   Int
+  unidade                    String   @default("GJA-T1")
+  responsavelId              Int
+  statusAtual                String
+  tempoGravacaoDisponivel    Int
+  qualidadeImagem            String
+  funcionamentoInfravermelho String
+  funcionamentoGravacao      String
+  comunicacaoServidor        String
+  instabilidadeDetectada     String
+  necessidadeManutencao      String
+  observacoesOperacionais    String?
+  indisponibilidadeMinutos   Int      @default(0)
+  falhaRecorrente            Boolean  @default(false)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
+
+  camera                     CameraMonitoramento @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  responsavel                Usuario @relation("CameraChecklistResponsavel", fields: [responsavelId], references: [id])
+}
+
+model CameraEventoStatus {
+  id                    Int       @id @default(autoincrement())
+  cameraId              Int
+  unidade               String    @default("GJA-T1")
+  statusAnterior        String?
+  statusNovo            String
+  iniciadoEm            DateTime  @default(now())
+  encerradoEm           DateTime?
+  duracaoIndisponivel   Int?
+  responsavelId         Int?
+  observacao            String?
+  createdAt             DateTime  @default(now())
+
+  camera                CameraMonitoramento @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+}
+
+model ConfiguracaoSistema {
+  id                       Int      @id @default(autoincrement())
+  chave                    String   @unique
+  nomeEmpresa              String   @default("Movecta S/A")
+  slaCameras               Int      @default(98)
+  tempoMaximoOffline       Int      @default(60)
+  checklistCameraDias      Int      @default(7)
+  corsPermitido            String?
+  logoUrl                  String?
+  rodapePdf                String?
+  updatedAt                DateTime @updatedAt
+  createdAt                DateTime @default(now())
+}
+
+model NotificacaoLida {
+  id             Int      @id @default(autoincrement())
+  usuarioId      Int
+  notificacaoId  String
+  lidaEm         DateTime @default(now())
+
+  usuario        Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, notificacaoId])
 }

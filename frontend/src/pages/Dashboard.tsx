@@ -1,4 +1,19 @@
 ﻿import { useEffect, useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { api } from "../services/api";
 
 type AnaliseOcorrencia = {
@@ -38,11 +53,24 @@ type Investigacao = {
   createdAt: string;
 };
 
+type TooltipPayloadItem = {
+  name?: string;
+  value?: number | string;
+  color?: string;
+};
+
 const statusPadrao = ["Aberto", "Em Análise", "Concluído"];
+const coresStatus: Record<string, string> = {
+  Aberto: "#2563eb",
+  "Em Análise": "#f59e0b",
+  Concluído: "#10b981",
+};
 
 function normalizarStatus(status: string) {
   if (!status) return "Aberto";
   if (status.toUpperCase() === "ABERTO") return "Aberto";
+  if (status === "Em Analise") return "Em Análise";
+  if (status === "Concluido") return "Concluído";
   return status;
 }
 
@@ -114,6 +142,33 @@ function topRegistros(dados: Record<string, number>, limite = 6) {
     .slice(0, limite);
 }
 
+function TooltipGrafico({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="rounded-xl border border-slate-700/60 bg-slate-950/90 px-3 py-2 text-xs text-slate-100 shadow-xl backdrop-blur">
+      {label && <p className="mb-1 font-semibold text-slate-300">{label}</p>}
+      <div className="space-y-1">
+        {payload.map((item) => (
+          <p key={item.name} className="flex items-center gap-2">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+            <span>{item.name}:</span>
+            <strong>{item.value}</strong>
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Indicador({
   titulo,
   valor,
@@ -145,6 +200,12 @@ function StatusCards({
   total: number;
   status: Record<string, number>;
 }) {
+  const dadosRosca = statusPadrao.map((nome) => ({
+    nome,
+    valor: status[nome] || 0,
+  }));
+  const dadosVisuais = total > 0 ? dadosRosca : [{ nome: "Sem dados", valor: 1 }];
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex items-center justify-between">
@@ -154,13 +215,43 @@ function StatusCards({
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        {statusPadrao.map((item) => (
-          <div key={item} className="rounded-lg bg-slate-50 p-3">
-            <p className="text-xs text-slate-500">{item}</p>
-            <p className="mt-1 text-xl font-bold text-slate-900">{status[item] || 0}</p>
+      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[150px_1fr]">
+        <div className="relative h-36">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={dadosVisuais}
+                dataKey="valor"
+                nameKey="nome"
+                innerRadius={44}
+                outerRadius={64}
+                paddingAngle={total > 0 ? 3 : 0}
+                stroke="none"
+              >
+                {dadosVisuais.map((item) => (
+                  <Cell key={item.nome} fill={total > 0 ? coresStatus[item.nome] : "#e2e8f0"} />
+                ))}
+              </Pie>
+              <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(148, 163, 184, 0.12)" }} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <strong className="text-2xl text-slate-900">{total}</strong>
+            <span className="text-xs text-slate-500">total</span>
           </div>
-        ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
+          {statusPadrao.map((item) => (
+            <div key={item} className="rounded-lg bg-slate-50 p-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: coresStatus[item] }} />
+                <p className="text-xs text-slate-500">{item}</p>
+              </div>
+              <p className="mt-1 text-xl font-bold text-slate-900">{status[item] || 0}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -175,30 +266,25 @@ function BarraHorizontal({
   dados: [string, number][];
   cor: string;
 }) {
-  const maximo = Math.max(...dados.map(([, valor]) => valor), 1);
+  const dadosGrafico = dados.map(([nome, valor]) => ({ nome, valor }));
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="font-bold text-slate-800">{titulo}</h2>
 
-      <div className="mt-5 space-y-4">
+      <div className="mt-5 h-72">
         {dados.length === 0 ? (
           <p className="text-sm text-slate-500">Sem dados no filtro atual.</p>
         ) : (
-          dados.map(([nome, valor]) => (
-            <div key={nome} title={`${nome}: ${valor}`}>
-              <div className="mb-1 flex justify-between gap-4 text-sm">
-                <span className="truncate text-slate-700">{nome}</span>
-                <span className="font-semibold text-slate-900">{valor}</span>
-              </div>
-              <div className="h-3 overflow-hidden rounded-full bg-slate-100">
-                <div
-                  className={`h-full rounded-full ${cor} transition-all duration-500`}
-                  style={{ width: `${(valor / maximo) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={dadosGrafico} layout="vertical" margin={{ top: 8, right: 18, left: 16, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+              <XAxis type="number" allowDecimals={false} />
+              <YAxis dataKey="nome" type="category" width={118} tick={{ fontSize: 12 }} />
+              <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(148, 163, 184, 0.12)" }} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
+              <Bar dataKey="valor" name="Quantidade" radius={[0, 8, 8, 0]} fill={cor} />
+            </BarChart>
+          </ResponsiveContainer>
         )}
       </div>
     </div>
@@ -210,43 +296,48 @@ function GraficoTemporal({
 }: {
   dados: { mes: string; ocorrencias: number; eventos: number }[];
 }) {
-  const maximo = Math.max(...dados.flatMap((item) => [item.ocorrencias, item.eventos]), 1);
-
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="font-bold text-slate-800">Comparativo temporal</h2>
-        <div className="flex gap-4 text-sm">
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-blue-600" /> Ocorrências
-          </span>
-          <span className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded bg-emerald-500" /> Eventos
-          </span>
-        </div>
       </div>
 
-      <div className="mt-6 flex h-72 items-end gap-4 overflow-x-auto pb-2">
+      <div className="mt-6 h-72">
         {dados.length === 0 ? (
           <p className="self-start text-sm text-slate-500">Sem dados no filtro atual.</p>
         ) : (
-          dados.map((item) => (
-            <div key={item.mes} className="flex min-w-20 flex-1 flex-col items-center">
-              <div className="flex h-56 items-end gap-2">
-                <div
-                  title={`Ocorrências em ${item.mes}: ${item.ocorrencias}`}
-                  className="w-5 rounded-t bg-blue-600 transition-all duration-500 hover:bg-blue-700"
-                  style={{ height: `${Math.max((item.ocorrencias / maximo) * 100, 4)}%` }}
-                />
-                <div
-                  title={`Eventos em ${item.mes}: ${item.eventos}`}
-                  className="w-5 rounded-t bg-emerald-500 transition-all duration-500 hover:bg-emerald-600"
-                  style={{ height: `${Math.max((item.eventos / maximo) * 100, 4)}%` }}
-                />
-              </div>
-              <span className="mt-3 text-xs font-medium text-slate-500">{item.mes}</span>
-            </div>
-          ))
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={dados} margin={{ top: 12, right: 24, left: 0, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.22)" />
+              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+              <Tooltip
+                content={<TooltipGrafico />}
+                cursor={{ stroke: "rgba(148, 163, 184, 0.35)", strokeWidth: 1 }}
+                wrapperStyle={{ pointerEvents: "none", outline: "none" }}
+                position={{ y: 8 }}
+              />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="ocorrencias"
+                name="Ocorrências"
+                stroke="#ef4444"
+                strokeWidth={2}
+                dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: "#ef4444", stroke: "#fee2e2", strokeWidth: 2 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="eventos"
+                name="Eventos"
+                stroke="#0ea5e9"
+                strokeWidth={2}
+                dot={{ r: 3, fill: "#0ea5e9", strokeWidth: 0 }}
+                activeDot={{ r: 5, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         )}
       </div>
     </div>
@@ -529,22 +620,22 @@ export default function Dashboard() {
         <BarraHorizontal
           titulo="Naturezas com maior índice de ocorrências"
           dados={topRegistros(agrupar(ocorrenciasFiltradas, (item) => item.natureza))}
-          cor="bg-blue-600"
+          cor="#2563eb"
         />
         <BarraHorizontal
           titulo="Naturezas com maior índice de eventos"
           dados={topRegistros(agrupar(eventosFiltrados, (item) => item.natureza))}
-          cor="bg-emerald-500"
+          cor="#10b981"
         />
         <BarraHorizontal
           titulo="Locais com maior índice de ocorrências"
           dados={topRegistros(agrupar(ocorrenciasFiltradas, (item) => item.local))}
-          cor="bg-indigo-500"
+          cor="#6366f1"
         />
         <BarraHorizontal
           titulo="Locais com maior índice de eventos"
           dados={topRegistros(agrupar(eventosFiltrados, (item) => item.local))}
-          cor="bg-teal-500"
+          cor="#14b8a6"
         />
       </div>
     </div>

@@ -1,1 +1,111 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background: #f1f5f9;
+  }
+
+  html.dark body {
+    background: #020617;
+  }
+}
+
+@layer utilities {
+  .dark .bg-white {
+    background-color: #0f172a;
+  }
+
+  .dark .brand-logo {
+    background-color: #ffffff;
+    filter: none;
+  }
+
+  .dark .bg-slate-50 {
+    background-color: #111827;
+  }
+
+  .dark .bg-slate-100 {
+    background-color: #020617;
+  }
+
+  .dark .bg-slate-200 {
+    background-color: #1e293b;
+  }
+
+  .dark .text-slate-900,
+  .dark .text-gray-900 {
+    color: #f8fafc;
+  }
+
+  .dark .text-slate-800,
+  .dark .text-gray-800 {
+    color: #e2e8f0;
+  }
+
+  .dark .text-slate-700,
+  .dark .text-gray-700 {
+    color: #cbd5e1;
+  }
+
+  .dark .text-slate-600,
+  .dark .text-gray-600 {
+    color: #94a3b8;
+  }
+
+  .dark .text-slate-500,
+  .dark .text-gray-500 {
+    color: #94a3b8;
+  }
+
+  .dark .border-slate-100,
+  .dark .border-slate-200,
+  .dark .border-gray-100,
+  .dark .border-gray-200 {
+    border-color: #1e293b;
+  }
+
+  .dark .border-slate-300,
+  .dark .border-gray-300 {
+    border-color: #334155;
+  }
+
+  .dark .shadow,
+  .dark .shadow-sm,
+  .dark .shadow-lg,
+  .dark .shadow-xl,
+  .dark .shadow-2xl {
+    box-shadow: 0 18px 45px rgb(0 0 0 / 0.28);
+  }
+
+  .dark input,
+  .dark textarea,
+  .dark select {
+    background-color: #111827;
+    border-color: #334155;
+    color: #f8fafc;
+  }
+
+  .dark input::placeholder,
+  .dark textarea::placeholder {
+    color: #64748b;
+  }
+
+  .dark option {
+    background-color: #111827;
+    color: #f8fafc;
+  }
+
+  .dark table {
+    color: #e2e8f0;
+  }
+}

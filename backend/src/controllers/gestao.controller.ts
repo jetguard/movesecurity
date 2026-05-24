@@ -191,29 +191,178 @@ export async function listarPendencias(req: AuthRequest, res: Response) {
 }
 
 export async function listarNotificacoes(req: AuthRequest, res: Response) {
-  const pendenciasReq = { ...req } as AuthRequest;
-  const buffer: unknown[] = [];
-  const fakeRes = {
-    json: (payload: unknown) => {
-      if (Array.isArray(payload)) buffer.push(...payload);
-      return fakeRes;
-    },
-    status: () => fakeRes,
-  } as unknown as Response;
+  try {
+    const incluirLidas = String(req.query.incluirLidas || "") === "true";
+    const pendenciasReq = { ...req } as AuthRequest;
+    const buffer: unknown[] = [];
+    const fakeRes = {
+      json: (payload: unknown) => {
+        if (Array.isArray(payload)) buffer.push(...payload);
+        return fakeRes;
+      },
+      status: () => fakeRes,
+    } as unknown as Response;
 
-  await listarPendencias(pendenciasReq, fakeRes);
-  const pendencias = buffer as Array<{ id: string; modulo: string; codigo: string; titulo: string; dias: number | null; prioridade: string }>;
-  const notificacoes = pendencias
-    .filter((item) => item.dias === null || item.dias <= 7 || ["Critico", "Crítico", "Alto"].includes(item.prioridade))
-    .slice(0, 12)
-    .map((item) => ({
-      id: item.id,
-      titulo: item.dias !== null && item.dias < 0 ? "Prazo vencido" : "Pendencia em aberto",
-      mensagem: `${item.modulo} ${item.codigo} - ${item.titulo}`,
-      severidade: item.dias !== null && item.dias < 0 ? "alta" : "media",
+    const [camerasOffline, checklistsCamera, planos] = await Promise.all([
+      prisma.cameraMonitoramento.findMany({
+        where: { unidade: req.unidadeAtiva, status: "Desconectada" },
+        orderBy: { desconectadaDesde: "asc" },
+      }),
+      prisma.cameraMonitoramento.findMany({
+        where: { unidade: req.unidadeAtiva },
+        include: { checklists: { orderBy: { createdAt: "desc" }, take: 1 } },
+      }),
+      prisma.planoAcaoCorporativo.findMany({
+        where: { unidade: req.unidadeAtiva, status: { not: "Concluido" } },
+        orderBy: { prazo: "asc" },
+        take: 20,
+      }),
+    ]);
+
+    await listarPendencias(pendenciasReq, fakeRes);
+    const pendencias = buffer as Array<{ id: string; modulo: string; codigo: string; titulo: string; dias: number | null; prioridade: string }>;
+
+    const notificacoesPendencias = pendencias
+      .filter((item) => item.dias === null || item.dias <= 7 || ["Critico", "Crítico", "Alto"].includes(item.prioridade))
+      .slice(0, 12)
+      .map((item) => ({
+        id: item.id,
+        tipo: "Pendência",
+        titulo: item.dias !== null && item.dias < 0 ? "Prazo vencido" : "Pendência em aberto",
+        mensagem: `${item.modulo} ${item.codigo} - ${item.titulo}`,
+        severidade: item.dias !== null && item.dias < 0 ? "alta" : "media",
+        link: "/pendencias",
+        createdAt: new Date(),
+      }));
+
+    const notificacoesCameras = camerasOffline.map((camera) => ({
+      id: `camera-offline-${camera.id}`,
+      tipo: "CFTV",
+      titulo: `Câmera ${camera.numeroCamera} desconectada`,
+      mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
+      severidade: "alta",
+      link: "/cameras",
+      createdAt: camera.desconectadaDesde || camera.updatedAt,
     }));
 
-  return res.json(notificacoes);
+    const notificacoesChecklist = checklistsCamera
+      .filter((camera) => {
+        const ultimo = camera.checklists[0]?.createdAt;
+        if (!ultimo) return true;
+        return diasAte(new Date(Date.now() + 7 * 86400000)) !== null && Date.now() - ultimo.getTime() > 7 * 86400000;
+      })
+      .map((camera) => ({
+        id: `checklist-camera-${camera.id}`,
+        tipo: "Checklist CFTV",
+        titulo: `Checklist pendente da câmera ${camera.numeroCamera}`,
+        mensagem: `${camera.areaMonitorada} | último checklist não encontrado ou vencido`,
+        severidade: "media",
+        link: "/cameras",
+        createdAt: camera.updatedAt,
+      }));
+
+    const notificacoesPlanos = planos
+      .filter((plano) => diasAte(plano.prazo) !== null && (diasAte(plano.prazo) as number) <= 7)
+      .map((plano) => ({
+        id: `plano-${plano.id}`,
+        tipo: "Plano de Ação",
+        titulo: diasAte(plano.prazo)! < 0 ? "Plano de ação vencido" : "Plano de ação próximo do prazo",
+        mensagem: `${plano.codigo} - ${plano.titulo}`,
+        severidade: diasAte(plano.prazo)! < 0 ? "alta" : "media",
+        link: "/planos-acao",
+        createdAt: plano.prazo,
+      }));
+
+    const notificacoes = [
+      ...notificacoesCameras,
+      ...notificacoesChecklist,
+      ...notificacoesPlanos,
+      ...notificacoesPendencias,
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const lidas = await prisma.notificacaoLida.findMany({
+      where: { usuarioId: req.usuarioId },
+      select: { notificacaoId: true, lidaEm: true },
+    });
+    const mapaLidas = new Map(lidas.map((item) => [item.notificacaoId, item.lidaEm]));
+
+    const resultado = notificacoes
+      .map((item) => ({
+        ...item,
+        lida: mapaLidas.has(item.id),
+        lidaEm: mapaLidas.get(item.id) || null,
+      }))
+      .filter((item) => incluirLidas || !item.lida);
+
+    return res.json(resultado.slice(0, 50));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar notificações" });
+  }
+}
+
+export async function marcarNotificacaoLida(req: AuthRequest, res: Response) {
+  try {
+    const id = String(req.params.id);
+
+    await prisma.notificacaoLida.upsert({
+      where: {
+        usuarioId_notificacaoId: {
+          usuarioId: req.usuarioId!,
+          notificacaoId: id,
+        },
+      },
+      update: {
+        lidaEm: new Date(),
+      },
+      create: {
+        usuarioId: req.usuarioId!,
+        notificacaoId: id,
+      },
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao marcar notificação como lida" });
+  }
+}
+
+export async function marcarTodasNotificacoesLidas(req: AuthRequest, res: Response) {
+  try {
+    const notificacoesReq = { ...req, query: { ...req.query, incluirLidas: "false" } } as unknown as AuthRequest;
+    const buffer: unknown[] = [];
+    const fakeRes = {
+      json: (payload: unknown) => {
+        if (Array.isArray(payload)) buffer.push(...payload);
+        return fakeRes;
+      },
+      status: () => fakeRes,
+    } as unknown as Response;
+
+    await listarNotificacoes(notificacoesReq, fakeRes);
+    const notificacoes = buffer as Array<{ id: string }>;
+
+    await prisma.$transaction(
+      notificacoes.map((item) =>
+        prisma.notificacaoLida.upsert({
+          where: {
+            usuarioId_notificacaoId: {
+              usuarioId: req.usuarioId!,
+              notificacaoId: item.id,
+            },
+          },
+          update: { lidaEm: new Date() },
+          create: { usuarioId: req.usuarioId!, notificacaoId: item.id },
+        })
+      )
+    );
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao marcar notificações como lidas" });
+  }
 }
 
 export async function buscaGlobal(req: AuthRequest, res: Response) {
