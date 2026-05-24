@@ -1,9 +1,11 @@
-import { Request, Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { gerarRelatorioPdf } from "../services/relatorioPdf.service";
+import { registrarLog } from "../services/auditoria.service";
+import { estaAprovado } from "../utils/status";
 
-export async function criarOcorrencia(req: Request, res: Response) {
+export async function criarOcorrencia(req: AuthRequest, res: Response) {
   try {
     const {
       assunto,
@@ -40,7 +42,7 @@ export async function criarOcorrencia(req: Request, res: Response) {
     const ano = new Date().getFullYear();
 
     const ultimaOcorrencia = await prisma.ocorrencia.findFirst({
-      where: { ano },
+      where: { ano, unidade: req.unidadeAtiva },
       orderBy: { numero: "desc" },
     });
 
@@ -55,6 +57,7 @@ export async function criarOcorrencia(req: Request, res: Response) {
         codigo,
         assunto,
         local,
+        unidade: req.unidadeAtiva || "GJA-T1",
         natureza,
         subNatureza,
         relatoSeguranca,
@@ -81,6 +84,14 @@ export async function criarOcorrencia(req: Request, res: Response) {
       },
     });
 
+    await registrarLog({
+      req,
+      acao: "Criação de ocorrência",
+      tipoRegistro: "Ocorrencia",
+      registroId: ocorrencia.id,
+      dadosNovos: ocorrencia,
+    });
+
     return res.status(201).json(ocorrencia);
   } catch (error) {
     console.error(error);
@@ -91,15 +102,20 @@ export async function criarOcorrencia(req: Request, res: Response) {
   }
 }
 
-export async function listarOcorrencias(req: Request, res: Response) {
+export async function listarOcorrencias(req: AuthRequest, res: Response) {
   try {
     const ocorrencias = await prisma.ocorrencia.findMany({
+      where: {
+        unidade: req.unidadeAtiva,
+      },
       orderBy: {
         createdAt: "desc",
       },
       include: {
         envolvidos: true,
         anexos: true,
+        analise: true,
+        investigacao: true,
       },
     });
 
@@ -113,13 +129,14 @@ export async function listarOcorrencias(req: Request, res: Response) {
   }
 }
 
-export async function buscarOcorrenciaPorId(req: Request, res: Response) {
+export async function buscarOcorrenciaPorId(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
 
-    const ocorrencia = await prisma.ocorrencia.findUnique({
+    const ocorrencia = await prisma.ocorrencia.findFirst({
       where: {
         id: Number(id),
+        unidade: req.unidadeAtiva,
       },
       include: {
         envolvidos: true,
@@ -143,7 +160,7 @@ export async function buscarOcorrenciaPorId(req: Request, res: Response) {
   }
 }
 
-export async function atualizarOcorrencia(req: Request, res: Response) {
+export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     const {
@@ -155,12 +172,17 @@ export async function atualizarOcorrencia(req: Request, res: Response) {
       dataOcorrencia,
       relatoSeguranca,
       envolvidos,
+      anexosRemover,
     } = req.body;
 
     const arquivos = (req.files as Express.Multer.File[]) || [];
 
     const envolvidosFormatados =
       typeof envolvidos === "string" ? JSON.parse(envolvidos) : envolvidos;
+    const anexosParaRemover =
+      typeof anexosRemover === "string" && anexosRemover
+        ? JSON.parse(anexosRemover)
+        : [];
 
     if (!assunto || !local || !natureza || !subNatureza || !dataOcorrencia) {
       return res.status(400).json({
@@ -178,15 +200,28 @@ export async function atualizarOcorrencia(req: Request, res: Response) {
       });
     }
 
-    const ocorrenciaExiste = await prisma.ocorrencia.findUnique({
+    const ocorrenciaExiste = await prisma.ocorrencia.findFirst({
       where: {
         id: Number(id),
+        unidade: req.unidadeAtiva,
+      },
+      include: {
+        envolvidos: true,
+        anexos: true,
+        analise: true,
+        investigacao: true,
       },
     });
 
     if (!ocorrenciaExiste) {
       return res.status(404).json({
         error: "Ocorrência não encontrada",
+      });
+    }
+
+    if (estaAprovado(ocorrenciaExiste) && req.usuarioPerfil !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        error: "Ocorrência aprovada não pode ser editada. Solicite reabertura ao Super Admin.",
       });
     }
 
@@ -197,6 +232,17 @@ export async function atualizarOcorrencia(req: Request, res: Response) {
         },
       });
 
+      if (Array.isArray(anexosParaRemover) && anexosParaRemover.length > 0) {
+        await tx.anexoOcorrencia.deleteMany({
+          where: {
+            id: {
+              in: anexosParaRemover.map(Number),
+            },
+            ocorrenciaId: Number(id),
+          },
+        });
+      }
+
       return tx.ocorrencia.update({
         where: {
           id: Number(id),
@@ -204,6 +250,7 @@ export async function atualizarOcorrencia(req: Request, res: Response) {
         data: {
           assunto,
           local,
+          unidade: req.unidadeAtiva || ocorrenciaExiste.unidade,
           natureza,
           subNatureza,
           relatoSeguranca,
@@ -226,8 +273,19 @@ export async function atualizarOcorrencia(req: Request, res: Response) {
         include: {
           envolvidos: true,
           anexos: true,
+          analise: true,
+          investigacao: true,
         },
       });
+    });
+
+    await registrarLog({
+      req,
+      acao: "Atualização de ocorrência",
+      tipoRegistro: "Ocorrencia",
+      registroId: ocorrencia.id,
+      dadosAnteriores: ocorrenciaExiste,
+      dadosNovos: ocorrencia,
     });
 
     return res.json(ocorrencia);
@@ -245,13 +303,37 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
     const { id } = req.params;
 
     const [ocorrencia, usuario] = await Promise.all([
-      prisma.ocorrencia.findUnique({
+      prisma.ocorrencia.findFirst({
         where: {
           id: Number(id),
+          unidade: req.unidadeAtiva,
         },
         include: {
           envolvidos: true,
           anexos: true,
+          investigacao: {
+            include: {
+              responsavel: {
+                select: {
+                  nome: true,
+                },
+              },
+            },
+          },
+          analise: {
+            include: {
+              responsavel: {
+                select: {
+                  nome: true,
+                },
+              },
+              concluidoPor: {
+                select: {
+                  nome: true,
+                },
+              },
+            },
+          },
         },
       }),
       prisma.usuario.findUnique({
@@ -295,6 +377,8 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         data: ocorrencia.dataOcorrencia,
         relatoSeguranca: ocorrencia.relatoSeguranca,
         envolvidos: ocorrencia.envolvidos,
+        investigacao: ocorrencia.investigacao,
+        analise: ocorrencia.analise,
       },
       usuario,
       pdfUrl
@@ -307,3 +391,4 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
     });
   }
 }
+

@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 
 export async function listarNaturezas(req: Request, res: Response) {
@@ -102,3 +102,4 @@ export async function criarSubNatureza(req: Request, res: Response) {
     });
   }
 }
+

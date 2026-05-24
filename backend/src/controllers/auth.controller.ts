@@ -1,8 +1,9 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { jwtSecret } from "../config/security";
 
 export async function register(req: Request, res: Response) {
   try {
@@ -27,6 +28,22 @@ export async function register(req: Request, res: Response) {
         nome,
         email,
         senha: senhaHash,
+      },
+    });
+
+    await prisma.logAuditoria.create({
+      data: {
+        usuarioId: usuario.id,
+        usuarioNome: usuario.nome,
+        ip: req.ip,
+        acao: "Criação de usuário",
+        tipoRegistro: "Usuario",
+        registroId: usuario.id,
+        dadosNovos: JSON.stringify({
+          id: usuario.id,
+          nome: usuario.nome,
+          email: usuario.email,
+        }),
       },
     });
 
@@ -55,6 +72,12 @@ export async function login(req: Request, res: Response) {
       });
     }
 
+    if (usuario.statusUsuario !== "ATIVO") {
+      return res.status(403).json({
+        error: "Usuário bloqueado ou inativo",
+      });
+    }
+
     const senhaCorreta = await bcrypt.compare(
       senha,
       usuario.senha
@@ -70,19 +93,48 @@ export async function login(req: Request, res: Response) {
       {
         id: usuario.id,
       },
-      "jetguard_secret",
+      jwtSecret(),
       {
         expiresIn: "7d",
       }
     );
 
+    const agora = new Date();
+    await prisma.usuario.update({
+      where: {
+        id: usuario.id,
+      },
+      data: {
+        ultimoAcesso: agora,
+      },
+    });
+
+    await prisma.logAuditoria.create({
+      data: {
+        usuarioId: usuario.id,
+        usuarioNome: usuario.nome,
+        ip: req.ip,
+        acao: "Acesso ao sistema",
+        tipoRegistro: "Auth",
+        registroId: usuario.id,
+        dadosNovos: JSON.stringify({
+          email: usuario.email,
+          acessoEm: agora.toISOString(),
+        }),
+      },
+    });
+
     return res.json({
       token,
       usuario: {
-        id: usuario.id,
-        nome: usuario.nome,
-        email: usuario.email,
-      },
+          id: usuario.id,
+          nome: usuario.nome,
+          apelido: usuario.apelido,
+          fotoPerfil: usuario.fotoPerfil,
+          email: usuario.email,
+          perfilAcesso: usuario.perfilAcesso,
+          unidade: usuario.unidade,
+        },
     });
 
   } catch (error) {
@@ -91,3 +143,4 @@ export async function login(req: Request, res: Response) {
     });
   }
 }
+

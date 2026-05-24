@@ -18,25 +18,56 @@ model Usuario {
   setor     String?
   cargo     String?
   empresa   String?
+  unidade   String?
+  perfilAcesso String @default("USUARIO")
+  statusUsuario String @default("ATIVO")
+  ultimoAcesso DateTime?
   createdAt DateTime @default(now())
+
+  analisesOcorrenciaIniciadas AnaliseOcorrencia[] @relation("AnaliseOcorrenciaResponsavel")
+  analisesOcorrenciaConcluidas AnaliseOcorrencia[] @relation("AnaliseOcorrenciaConclusor")
+  analisesEventoIniciadas AnaliseEvento[] @relation("AnaliseEventoResponsavel")
+  analisesEventoConcluidas AnaliseEvento[] @relation("AnaliseEventoConclusor")
+  investigacoesResponsavel Investigacao[]
+  logs      LogAuditoria[]
+  riscosResponsavel AnaliseRisco[] @relation("RiscoResponsavel")
+  riscosAcao AnaliseRisco[] @relation("RiscoResponsavelAcao")
+  analisesEstrategicas AnaliseEstrategica[]
+  planosAcaoResponsavel PlanoAcaoCorporativo[] @relation("PlanoAcaoResponsavel")
+  checklistsResponsavel ChecklistInspecao[]
+  mencoesRecebidas Mencao[] @relation("MencaoUsuario")
+  mencoesCriadas Mencao[] @relation("MencaoAutor")
+  comentarios ComentarioInterno[]
 }
 
 model Ocorrencia {
   id                Int      @id @default(autoincrement())
   numero            Int
   ano               Int
-  codigo            String   @unique
+  codigo            String
   assunto           String
   local             String
+  unidade           String   @default("GJA-T1")
   natureza          String
   subNatureza       String
   status            String   @default("ABERTO")
   dataOcorrencia    DateTime
   relatoSeguranca   String?
+  fluxoStatus       String   @default("Aguardando Revisao")
+  revisadoPorId     Int?
+  revisadoEm        DateTime?
+  aprovadoPorId     Int?
+  aprovadoEm        DateTime?
+  motivoDevolucao   String?
   createdAt         DateTime @default(now())
 
   envolvidos        EnvolvidoOcorrencia[]
   anexos            AnexoOcorrencia[]
+  analise           AnaliseOcorrencia?
+  investigacao      Investigacao?
+  riscos            AnaliseRisco[]
+
+  @@unique([codigo, unidade])
 }
 
 model EnvolvidoOcorrencia {
@@ -73,18 +104,29 @@ model Evento {
   id              Int      @id @default(autoincrement())
   numero          Int
   ano             Int
-  codigo          String   @unique
+  codigo          String
   assunto         String
   local           String
+  unidade         String   @default("GJA-T1")
   natureza        String
   subNatureza     String
   status          String   @default("ABERTO")
   dataEvento      DateTime
   relatoSeguranca String?
+  fluxoStatus     String   @default("Aguardando Revisao")
+  revisadoPorId   Int?
+  revisadoEm      DateTime?
+  aprovadoPorId   Int?
+  aprovadoEm      DateTime?
+  motivoDevolucao String?
   createdAt       DateTime @default(now())
 
   envolvidos      EnvolvidoEvento[]
   anexos          AnexoEvento[]
+  analise         AnaliseEvento?
+  riscos          AnaliseRisco[]
+
+  @@unique([codigo, unidade])
 }
 
 model EnvolvidoEvento {
@@ -118,11 +160,34 @@ model AnexoEvento {
 }
 
 model Investigacao {
-  id        Int      @id @default(autoincrement())
-  titulo    String
-  descricao String
-  status    String   @default("ABERTO")
-  createdAt DateTime @default(now())
+  id                    Int      @id @default(autoincrement())
+  ocorrenciaId          Int      @unique
+  titulo                String
+  descricao             String
+  status                String   @default("Em Análise")
+  numeroOcorrencia      String
+  assunto               String
+  local                 String
+  unidade               String   @default("GJA-T1")
+  natureza              String
+  subNatureza           String
+  dataOcorrencia        DateTime
+  relatoSeguranca       String?
+  fluxoStatus           String   @default("Aguardando Revisao")
+  revisadoPorId         Int?
+  revisadoEm            DateTime?
+  aprovadoPorId         Int?
+  aprovadoEm            DateTime?
+  motivoDevolucao       String?
+  descricaoInvestigacao String?
+  conclusaoFatos        String?
+  responsavelId         Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  ocorrencia            Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
+  responsavel           Usuario?   @relation(fields: [responsavelId], references: [id])
+  riscos                AnaliseRisco[]
 }
 
 model Natureza {
@@ -142,4 +207,239 @@ model SubNatureza {
   natureza    Natureza @relation(fields: [naturezaId], references: [id], onDelete: Cascade)
 
   @@unique([naturezaId, nome])
+}
+
+model AnaliseOcorrencia {
+  id                  Int       @id @default(autoincrement())
+  ocorrenciaId        Int       @unique
+  responsavelId       Int
+  iniciadoEm          DateTime  @default(now())
+  concluidoEm         DateTime?
+  status              String    @default("Em Análise")
+  prejuizoFinanceiro  String    @default("0,00")
+  conclusaoAnalise    String?
+  concluidoPorId      Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  ocorrencia          Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
+  responsavel         Usuario    @relation("AnaliseOcorrenciaResponsavel", fields: [responsavelId], references: [id])
+  concluidoPor        Usuario?   @relation("AnaliseOcorrenciaConclusor", fields: [concluidoPorId], references: [id])
+}
+
+model AnaliseEvento {
+  id                  Int       @id @default(autoincrement())
+  eventoId            Int       @unique
+  responsavelId       Int
+  iniciadoEm          DateTime  @default(now())
+  concluidoEm         DateTime?
+  status              String    @default("Em Análise")
+  valorRecuperado     String    @default("0,00")
+  conclusaoAnalise    String?
+  concluidoPorId      Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  evento              Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  responsavel         Usuario   @relation("AnaliseEventoResponsavel", fields: [responsavelId], references: [id])
+  concluidoPor        Usuario?  @relation("AnaliseEventoConclusor", fields: [concluidoPorId], references: [id])
+}
+
+model LogAuditoria {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int?
+  usuarioNome     String
+  ip              String?
+  acao            String
+  tipoRegistro    String
+  registroId      Int?
+  dadosAnteriores String?
+  dadosNovos      String?
+  createdAt       DateTime @default(now())
+
+  usuario         Usuario? @relation(fields: [usuarioId], references: [id])
+}
+
+model AnaliseRisco {
+  id                    Int      @id @default(autoincrement())
+  numero                Int
+  ano                   Int
+  codigo                String
+  dataHora              DateTime
+  responsavelId         Int
+  unidade               String
+  setor                 String
+  local                 String
+  tipoRisco             String
+  naturezaRisco         String
+  descricaoRisco        String
+  possivelImpacto       String
+  probabilidade         String
+  severidade            String
+  nivelRisco            String
+  medidasPreventivas    String
+  planoAcao             String
+  responsavelAcaoId     Int?
+  responsavelAcaoNome   String?
+  prazo                 DateTime
+  status                String   @default("Pendente")
+  ocorrenciaId          Int?
+  eventoId              Int?
+  investigacaoId        Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  responsavel           Usuario  @relation("RiscoResponsavel", fields: [responsavelId], references: [id])
+  responsavelAcao       Usuario? @relation("RiscoResponsavelAcao", fields: [responsavelAcaoId], references: [id])
+  ocorrencia            Ocorrencia? @relation(fields: [ocorrenciaId], references: [id], onDelete: SetNull)
+  evento                Evento? @relation(fields: [eventoId], references: [id], onDelete: SetNull)
+  investigacao          Investigacao? @relation(fields: [investigacaoId], references: [id], onDelete: SetNull)
+  fotos                 FotoRisco[]
+
+  @@unique([codigo, unidade])
+}
+
+model FotoRisco {
+  id            Int      @id @default(autoincrement())
+  analiseRiscoId Int
+  nomeOriginal  String
+  nomeArquivo   String
+  caminho       String
+  tipo          String
+  createdAt     DateTime @default(now())
+
+  analiseRisco  AnaliseRisco @relation(fields: [analiseRiscoId], references: [id], onDelete: Cascade)
+}
+
+model AnaliseEstrategica {
+  id                    Int      @id @default(autoincrement())
+  numero                Int
+  ano                   Int
+  codigo                String
+  tipo                  String
+  titulo                String
+  unidade               String
+  setor                 String?
+  local                 String?
+  dataHora              DateTime @default(now())
+  responsavelId         Int
+  status                String   @default("Aberta")
+  descricao             String
+  diagnostico           String?
+  impacto               String?
+  recomendacoes         String?
+  planoAcao             String?
+  responsavelAcao       String?
+  prazo                 DateTime?
+  ocorrenciaId          Int?
+  eventoId              Int?
+  investigacaoId        Int?
+  analiseRiscoId        Int?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  responsavel           Usuario  @relation(fields: [responsavelId], references: [id])
+
+  @@unique([codigo, unidade])
+}
+
+model PlanoAcaoCorporativo {
+  id              Int      @id @default(autoincrement())
+  numero          Int
+  ano             Int
+  codigo          String
+  titulo          String
+  unidade         String
+  origemModulo    String?
+  origemId        Int?
+  prioridade      String   @default("Media")
+  status          String   @default("Pendente")
+  percentual      Int      @default(0)
+  descricao       String
+  acaoCorretiva   String?
+  acaoPreventiva  String?
+  responsavelId   Int?
+  responsavelNome String?
+  prazo           DateTime
+  concluidoEm     DateTime?
+  evidencia       String?
+  comentarios     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  responsavel     Usuario? @relation("PlanoAcaoResponsavel", fields: [responsavelId], references: [id])
+
+  @@unique([codigo, unidade])
+}
+
+model ChecklistInspecao {
+  id              Int      @id @default(autoincrement())
+  numero          Int
+  ano             Int
+  codigo          String
+  titulo          String
+  unidade         String
+  setor           String?
+  local           String
+  tipo            String
+  dataHora        DateTime @default(now())
+  responsavelId   Int
+  status          String   @default("Aberto")
+  pontuacao       Int      @default(0)
+  observacoes     String?
+  planoAcaoGerado Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  responsavel     Usuario  @relation(fields: [responsavelId], references: [id])
+  itens           ChecklistItem[]
+
+  @@unique([codigo, unidade])
+}
+
+model ChecklistItem {
+  id            Int      @id @default(autoincrement())
+  checklistId   Int
+  categoria     String
+  descricao     String
+  conformidade  String   @default("Conforme")
+  criticidade   String   @default("Media")
+  observacao    String?
+  createdAt     DateTime @default(now())
+
+  checklist     ChecklistInspecao @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+}
+
+model Mencao {
+  id                  Int      @id @default(autoincrement())
+  modulo              String
+  registroId          Int
+  codigoRegistro      String
+  tituloRegistro      String
+  unidade             String
+  usuarioMencionadoId Int
+  autorId             Int?
+  tipoMencao          String   @default("Acompanhar")
+  status              String   @default("Pendente")
+  prazo               DateTime?
+  observacao          String?
+  lidaEm              DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  usuarioMencionado   Usuario  @relation("MencaoUsuario", fields: [usuarioMencionadoId], references: [id])
+  autor               Usuario? @relation("MencaoAutor", fields: [autorId], references: [id])
+}
+
+model ComentarioInterno {
+  id          Int      @id @default(autoincrement())
+  modulo      String
+  registroId  Int
+  unidade     String
+  comentario  String
+  autorId     Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  autor       Usuario  @relation(fields: [autorId], references: [id])
 }

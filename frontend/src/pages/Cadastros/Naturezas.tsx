@@ -1,5 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
+import type { AxiosError } from "axios";
 import { api } from "../../services/api";
+
+type ApiError = {
+  error?: string;
+};
 
 type SubNatureza = {
   id: number;
@@ -33,8 +38,9 @@ export default function Naturezas() {
 
       setNomeNatureza("");
       carregarNaturezas();
-    } catch (error: any) {
-      alert(error.response?.data?.error || "Erro ao salvar natureza");
+    } catch (error) {
+      const apiError = error as AxiosError<ApiError>;
+      alert(apiError.response?.data?.error || "Erro ao salvar natureza");
     }
   }
 
@@ -53,8 +59,9 @@ export default function Naturezas() {
 
       setNomeSubNatureza("");
       carregarNaturezas();
-    } catch (error: any) {
-      alert(error.response?.data?.error || "Erro ao salvar subnatureza");
+    } catch (error) {
+      const apiError = error as AxiosError<ApiError>;
+      alert(apiError.response?.data?.error || "Erro ao salvar subnatureza");
     }
   }
 
@@ -158,3 +165,6 @@ export default function Naturezas() {
     </div>
   );
 }
+
+
+

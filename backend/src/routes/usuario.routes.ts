@@ -1,12 +1,18 @@
-import { Router } from "express";
+﻿import { Router } from "express";
 import fs from "fs";
 import multer from "multer";
 import {
   atualizarPerfil,
+  alterarStatusUsuario,
   buscarPerfil,
+  criarUsuario,
+  excluirUsuario,
   listarUsuarios,
+  redefinirSenhaUsuario,
+  atualizarUsuario,
 } from "../controllers/usuario.controller";
-import { autenticarUsuario } from "../middlewares/auth";
+import { acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { uploadLimits } from "../config/security";
 
 const router = Router();
 
@@ -22,10 +28,28 @@ const storage = multer.diskStorage({
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: uploadLimits,
+  fileFilter: (req, file, cb) => {
+    const formatosPermitidos = ["image/jpeg", "image/png", "image/webp"];
 
-router.get("/", listarUsuarios);
+    if (!formatosPermitidos.includes(file.mimetype)) {
+      return cb(new Error("Formato de imagem inválido. Use JPG, PNG ou WEBP."));
+    }
+
+    cb(null, true);
+  },
+});
+
+router.get("/", autenticarUsuario, autorizarPerfis(acessoTotal), listarUsuarios);
+router.post("/", autenticarUsuario, autorizarPerfis(acessoTotal), criarUsuario);
 router.get("/me", autenticarUsuario, buscarPerfil);
 router.put("/me", autenticarUsuario, upload.single("fotoPerfil"), atualizarPerfil);
+router.put("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), atualizarUsuario);
+router.put("/:id/status", autenticarUsuario, autorizarPerfis(acessoTotal), alterarStatusUsuario);
+router.put("/:id/senha", autenticarUsuario, autorizarPerfis(acessoTotal), redefinirSenhaUsuario);
+router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirUsuario);
 
 export default router;
+

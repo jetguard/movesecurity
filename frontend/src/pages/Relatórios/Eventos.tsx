@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import LexicalEditor from "../../components/editor/LexicalEditor";
+import { podeAnalisar } from "../../utils/permissoes";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -25,6 +26,36 @@ type Evento = {
   dataEvento: string;
   relatoSeguranca?: string;
   envolvidos: Envolvido[];
+  anexos?: Anexo[];
+  analise?: AnaliseEvento | null;
+};
+
+type UsuarioMencao = {
+  id: number;
+  nome: string;
+  apelido?: string;
+  email: string;
+};
+
+type ComentarioInterno = {
+  id: number;
+  comentario: string;
+  createdAt: string;
+  autor: { nome: string; apelido?: string };
+};
+
+type Anexo = {
+  id: number;
+  nomeOriginal: string;
+  caminho: string;
+  tipo: string;
+};
+
+type AnaliseEvento = {
+  id: number;
+  status: string;
+  valorRecuperado: string;
+  conclusaoAnalise?: string;
 };
 
 type NaturezaCadastro = {
@@ -50,10 +81,25 @@ const envolvidoVazio: Envolvido = {
 
 export default function Eventos() {
   const [eventos, setEventos] = useState<Evento[]>([]);
+  const [usuariosMencao, setUsuariosMencao] = useState<UsuarioMencao[]>([]);
+  const [eventoVisualizando, setEventoVisualizando] = useState<Evento | null>(null);
+  const [eventoMencao, setEventoMencao] = useState<Evento | null>(null);
+  const [usuarioMencionadoId, setUsuarioMencionadoId] = useState("");
+  const [tipoMencao, setTipoMencao] = useState("Acompanhar");
+  const [observacaoMencao, setObservacaoMencao] = useState("");
+  const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
+  const [novoComentario, setNovoComentario] = useState("");
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
   const [eventoEditando, setEventoEditando] = useState<Evento | null>(null);
+  const [permitirEdicao, setPermitirEdicao] = useState(true);
+  const [anexosExistentes, setAnexosExistentes] = useState<Anexo[]>([]);
+  const [anexosRemover, setAnexosRemover] = useState<number[]>([]);
   const [anexos, setAnexos] = useState<File[]>([]);
+  const [analiseAtual, setAnaliseAtual] = useState<AnaliseEvento | null>(null);
+  const [statusAnalise, setStatusAnalise] = useState("Em Análise");
+  const [valorRecuperado, setValorRecuperado] = useState("0,00");
+  const [conclusaoAnalise, setConclusaoAnalise] = useState("");
 
   const [assunto, setAssunto] = useState("");
   const [local, setLocal] = useState("");
@@ -75,6 +121,43 @@ export default function Eventos() {
   async function carregarNaturezas() {
     const response = await api.get("/naturezas");
     setNaturezas(response.data);
+  }
+
+  async function carregarUsuariosMencao() {
+    const response = await api.get("/mencoes/usuarios");
+    setUsuariosMencao(response.data);
+  }
+
+  async function salvarMencao() {
+    if (!eventoMencao || !usuarioMencionadoId) return;
+    await api.post("/mencoes", {
+      modulo: "Evento",
+      registroId: eventoMencao.id,
+      codigoRegistro: eventoMencao.codigo,
+      tituloRegistro: eventoMencao.assunto,
+      usuarioMencionadoId,
+      tipoMencao,
+      observacao: observacaoMencao,
+    });
+    setEventoMencao(null);
+    setUsuarioMencionadoId("");
+    setObservacaoMencao("");
+    alert("Usuario mencionado com sucesso");
+  }
+
+  async function abrirVisualizacao(evento: Evento) {
+    setEventoVisualizando(evento);
+    const response = await api.get(`/comentarios/Evento/${evento.id}`);
+    setComentarios(response.data);
+  }
+
+  async function salvarComentario() {
+    if (!eventoVisualizando || !novoComentario.trim()) return;
+    const response = await api.post(`/comentarios/Evento/${eventoVisualizando.id}`, {
+      comentario: novoComentario,
+    });
+    setComentarios((atuais) => [response.data, ...atuais]);
+    setNovoComentario("");
   }
 
   async function abrirPdfEvento(id: number) {
@@ -137,8 +220,22 @@ export default function Eventos() {
     );
   }
 
+  function removerAnexoExistente(id: number) {
+    setAnexosExistentes((arquivosAtuais) =>
+      arquivosAtuais.filter((arquivo) => arquivo.id !== id)
+    );
+    setAnexosRemover((ids) => [...ids, id]);
+  }
+
   function limparFormulario() {
     setEventoEditando(null);
+    setPermitirEdicao(true);
+    setAnexosExistentes([]);
+    setAnexosRemover([]);
+    setAnaliseAtual(null);
+    setStatusAnalise("Em Análise");
+    setValorRecuperado("0,00");
+    setConclusaoAnalise("");
     setAssunto("");
     setLocal("");
     setNatureza("");
@@ -174,6 +271,54 @@ export default function Eventos() {
     setAnexos([]);
     setEtapaFormulario(1);
     setAbrirFormulario(true);
+    setPermitirEdicao(false);
+    setAnexosExistentes(evento.anexos || []);
+    setAnexosRemover([]);
+    setAnaliseAtual(evento.analise || null);
+    setStatusAnalise(evento.analise?.status || "Em Análise");
+    setValorRecuperado(evento.analise?.valorRecuperado || "0,00");
+    setConclusaoAnalise(evento.analise?.conclusaoAnalise || "");
+  }
+
+  function cancelarFormulario() {
+    const confirmar = window.confirm(
+      "As alterações não salvas poderão ser perdidas. Deseja continuar?"
+    );
+
+    if (!confirmar) return;
+
+    setAbrirFormulario(false);
+    limparFormulario();
+  }
+
+  async function iniciarAnaliseEvento(id: number) {
+    const response = await api.post(`/analises/eventos/${id}`);
+    setAnaliseAtual(response.data);
+    setStatusAnalise(response.data.status);
+    setValorRecuperado(response.data.valorRecuperado || "0,00");
+    setConclusaoAnalise(response.data.conclusaoAnalise || "");
+    setEventoEditando((atual) =>
+      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+    );
+    carregarEventos();
+    alert("Análise iniciada com sucesso");
+  }
+
+  async function salvarAnaliseEvento() {
+    if (!analiseAtual) return;
+
+    const response = await api.put(`/analises/eventos/${analiseAtual.id}`, {
+      status: statusAnalise,
+      valorRecuperado,
+      conclusaoAnalise,
+    });
+
+    setAnaliseAtual(response.data);
+    setEventoEditando((atual) =>
+      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+    );
+    carregarEventos();
+    alert("Análise salva com sucesso");
   }
 
   async function salvarEvento(e: React.FormEvent) {
@@ -185,10 +330,11 @@ export default function Eventos() {
     formData.append("local", local);
     formData.append("natureza", natureza);
     formData.append("subNatureza", subNatureza);
-    formData.append("status", "ABERTO");
+    formData.append("status", eventoEditando?.status || "Aberto");
     formData.append("dataEvento", dataEvento);
     formData.append("relatoSeguranca", relatoSeguranca);
     formData.append("envolvidos", JSON.stringify(envolvidos));
+    formData.append("anexosRemover", JSON.stringify(anexosRemover));
 
     anexos.forEach((arquivo) => {
       formData.append("anexos", arquivo);
@@ -211,6 +357,7 @@ export default function Eventos() {
   useEffect(() => {
     carregarEventos();
     carregarNaturezas();
+    carregarUsuariosMencao();
   }, []);
 
   return (
@@ -245,6 +392,37 @@ export default function Eventos() {
               : "Novo Evento"}
           </h2>
 
+          {eventoEditando && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPermitirEdicao(true)}
+                  className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+                >
+                  Editar Dados
+                </button>
+
+                {!analiseAtual && podeAnalisar() && (
+                  <button
+                    type="button"
+                    onClick={() => iniciarAnaliseEvento(eventoEditando.id)}
+                    className="bg-amber-600 text-white px-4 py-2 rounded-lg"
+                  >
+                    Iniciar Análise
+                  </button>
+                )}
+              </div>
+
+              {analiseAtual && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                  Este relatório possui uma análise{" "}
+                  {analiseAtual.status === "Concluído" ? "concluída" : "em andamento"}.
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 mb-4">
             <span
               className={`px-3 py-1 rounded-full text-sm ${
@@ -277,6 +455,7 @@ export default function Eventos() {
             </span>
           </div>
 
+          <fieldset disabled={!!eventoEditando && !permitirEdicao}>
           {etapaFormulario === 1 && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -498,10 +677,60 @@ export default function Eventos() {
               <input
                 type="file"
                 multiple
-                accept="image/*,.pdf"
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
                 onChange={selecionarAnexos}
                 className="w-full border rounded-lg p-3"
               />
+
+              {anexosExistentes.length > 0 && (
+                <div className="bg-gray-50 border rounded-lg p-4">
+                  <p className="font-semibold mb-4">Anexos já enviados</p>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {anexosExistentes.map((arquivo) => (
+                      <div
+                        key={arquivo.id}
+                        className="border rounded-xl overflow-hidden bg-white shadow-sm"
+                      >
+                        {arquivo.tipo.startsWith("image/") ? (
+                          <img
+                            src={`/${arquivo.caminho.replaceAll("\\", "/")}`}
+                            alt={arquivo.nomeOriginal}
+                            className="w-full h-32 object-cover"
+                          />
+                        ) : (
+                          <div className="h-32 flex items-center justify-center bg-slate-100 text-slate-700 font-bold text-lg">
+                            ARQ
+                          </div>
+                        )}
+
+                        <div className="p-2 space-y-2">
+                          <p className="text-xs text-gray-600 break-all">
+                            {arquivo.nomeOriginal}
+                          </p>
+
+                          <a
+                            href={`/${arquivo.caminho.replaceAll("\\", "/")}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block text-center bg-slate-900 text-white text-xs py-2 rounded-lg"
+                          >
+                            Visualizar
+                          </a>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => removerAnexoExistente(arquivo.id)}
+                          className="w-full bg-red-600 text-white text-xs py-2 hover:bg-red-700"
+                        >
+                          Remover
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {anexos.length > 0 && (
                 <div className="bg-gray-50 border rounded-lg p-4">
@@ -550,6 +779,47 @@ export default function Eventos() {
             </div>
           )}
 
+          </fieldset>
+
+          {analiseAtual && podeAnalisar() && (
+            <div className="border rounded-xl p-4 space-y-4 bg-amber-50">
+              <h3 className="font-bold text-lg">Análise do Evento</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <select
+                  className="w-full border rounded-lg p-3"
+                  value={statusAnalise}
+                  onChange={(e) => setStatusAnalise(e.target.value)}
+                >
+                  <option value="Em Análise">Em Análise</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
+
+                <input
+                  className="w-full border rounded-lg p-3"
+                  value={valorRecuperado}
+                  onChange={(e) => setValorRecuperado(e.target.value)}
+                  placeholder="Valor recuperado em BRL"
+                />
+              </div>
+
+              <LexicalEditor
+                value={conclusaoAnalise}
+                onChange={setConclusaoAnalise}
+                title="Descrição da análise"
+                placeholder="Descreva a análise do evento..."
+              />
+
+              <button
+                type="button"
+                onClick={salvarAnaliseEvento}
+                className="bg-amber-600 text-white px-4 py-2 rounded-lg"
+              >
+                Salvar Análise
+              </button>
+            </div>
+          )}
+
           <div className="flex gap-3">
             {etapaFormulario > 1 && (
               <button
@@ -579,10 +849,7 @@ export default function Eventos() {
 
             <button
               type="button"
-              onClick={() => {
-                setAbrirFormulario(false);
-                limparFormulario();
-              }}
+              onClick={cancelarFormulario}
               className="bg-gray-300 px-4 py-2 rounded-lg"
             >
               Cancelar
@@ -621,6 +888,22 @@ export default function Eventos() {
 
                   <button
                     type="button"
+                    onClick={() => abrirVisualizacao(evento)}
+                    className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1 rounded-lg text-sm"
+                  >
+                    Visualizar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setEventoMencao(evento)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
+                  >
+                    Mencionar
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => editarEvento(evento)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm"
                   >
@@ -640,6 +923,118 @@ export default function Eventos() {
           ))}
         </div>
       )}
+
+      {eventoVisualizando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold">{eventoVisualizando.codigo}</h2>
+                <p className="text-gray-600">{eventoVisualizando.assunto}</p>
+              </div>
+              <button onClick={() => setEventoVisualizando(null)} className="rounded bg-slate-200 px-3 py-2">Fechar</button>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <p><strong>Local:</strong> {eventoVisualizando.local}</p>
+              <p><strong>Status:</strong> {eventoVisualizando.status}</p>
+              <p><strong>Natureza:</strong> {eventoVisualizando.natureza}</p>
+              <p><strong>Subnatureza:</strong> {eventoVisualizando.subNatureza}</p>
+              <p><strong>Data:</strong> {new Date(eventoVisualizando.dataEvento).toLocaleString("pt-BR")}</p>
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Relato</h3>
+              <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: eventoVisualizando.relatoSeguranca || "Sem relato." }} />
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Envolvidos</h3>
+              <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+                {eventoVisualizando.envolvidos.map((envolvido, index) => (
+                  <div key={index} className="rounded-lg border p-3 text-sm">
+                    <strong>{envolvido.nome}</strong>
+                    <p>{envolvido.tipoEnvolvimento} | {envolvido.documento}</p>
+                    <p>{envolvido.relato}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Anexos</h3>
+              {(!eventoVisualizando.anexos || eventoVisualizando.anexos.length === 0) && (
+                <p className="mt-2 text-sm text-gray-500">Nenhum anexo cadastrado.</p>
+              )}
+              <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                {eventoVisualizando.anexos?.map((arquivo) => {
+                  const url = `/${arquivo.caminho.replaceAll("\\", "/")}`;
+                  const isImagem = arquivo.tipo.startsWith("image/");
+
+                  return (
+                    <div key={arquivo.id} className="overflow-hidden rounded-lg border bg-white">
+                      {isImagem ? (
+                        <a href={url} target="_blank" rel="noreferrer">
+                          <img src={url} alt={arquivo.nomeOriginal} className="h-40 w-full object-cover" />
+                        </a>
+                      ) : (
+                        <div className="flex h-40 items-center justify-center bg-slate-100 text-sm font-bold text-slate-600">
+                          ARQUIVO
+                        </div>
+                      )}
+                      <div className="space-y-2 p-3">
+                        <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>
+                        <a href={url} target="_blank" rel="noreferrer" className="block rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                          Abrir anexo
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Comentarios internos</h3>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+                <input className="flex-1 rounded-lg border p-3" placeholder="Adicionar comentario interno" value={novoComentario} onChange={(e) => setNovoComentario(e.target.value)} />
+                <button onClick={salvarComentario} className="rounded bg-blue-600 px-4 py-2 text-white">Comentar</button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {comentarios.length === 0 && <p className="text-sm text-gray-500">Nenhum comentario interno.</p>}
+                {comentarios.map((comentario) => (
+                  <div key={comentario.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+                    <p>{comentario.comentario}</p>
+                    <p className="mt-1 text-xs text-gray-500">{comentario.autor?.apelido || comentario.autor?.nome} - {new Date(comentario.createdAt).toLocaleString("pt-BR")}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {eventoMencao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold">Mencionar usuario</h2>
+            <p className="mt-1 text-sm text-gray-500">{eventoMencao.codigo} - {eventoMencao.assunto}</p>
+            <div className="mt-4 space-y-3">
+              <select className="w-full rounded-lg border p-3" value={usuarioMencionadoId} onChange={(e) => setUsuarioMencionadoId(e.target.value)}>
+                <option value="">Selecione o usuario</option>
+                {usuariosMencao.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.apelido || usuario.nome} - {usuario.email}</option>)}
+              </select>
+              <select className="w-full rounded-lg border p-3" value={tipoMencao} onChange={(e) => setTipoMencao(e.target.value)}>
+                <option>Responsavel por tratar</option>
+                <option>Acompanhar</option>
+                <option>Apoio</option>
+                <option>Validador</option>
+              </select>
+              <textarea className="w-full rounded-lg border p-3" placeholder="Observacao" value={observacaoMencao} onChange={(e) => setObservacaoMencao(e.target.value)} />
+              <div className="flex gap-3">
+                <button onClick={salvarMencao} className="rounded bg-blue-600 px-4 py-2 text-white">Salvar</button>
+                <button onClick={() => setEventoMencao(null)} className="rounded bg-slate-200 px-4 py-2">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

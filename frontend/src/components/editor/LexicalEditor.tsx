@@ -1,4 +1,4 @@
-import { LexicalComposer } from "@lexical/react/LexicalComposer";
+﻿import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
@@ -6,6 +6,8 @@ import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
+  $createParagraphNode,
+  $createTextNode,
   $getRoot,
   FORMAT_TEXT_COMMAND,
   UNDO_COMMAND,
@@ -21,6 +23,8 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 type Props = {
   value: string;
   onChange: (value: string) => void;
+  title?: string;
+  placeholder?: string;
 };
 
 function ToolbarPlugin() {
@@ -55,7 +59,12 @@ function ToolbarPlugin() {
   );
 }
 
-export default function LexicalEditor({ onChange }: Props) {
+export default function LexicalEditor({
+  value,
+  onChange,
+  title = "Relato Segurança Patrimonial",
+  placeholder = "Digite o relato...",
+}: Props) {
   const initialConfig = {
     namespace: "JetGuardEditor",
     nodes: [ListNode, ListItemNode],
@@ -74,12 +83,24 @@ export default function LexicalEditor({ onChange }: Props) {
     onError(error: Error) {
       console.error(error);
     },
+    editorState: () => {
+      if (!value) return;
+
+      const root = $getRoot();
+      root.clear();
+
+      value.split(/\n+/).forEach((linha) => {
+        const paragrafo = $createParagraphNode();
+        paragrafo.append($createTextNode(linha));
+        root.append(paragrafo);
+      });
+    },
   };
 
   return (
     <div className="border rounded-xl overflow-hidden bg-white">
       <div className="border-b bg-gray-100 px-4 py-2 font-semibold">
-        Relato Segurança Patrimonial
+        {title}
       </div>
 
       <LexicalComposer initialConfig={initialConfig}>
@@ -92,7 +113,7 @@ export default function LexicalEditor({ onChange }: Props) {
             }
             placeholder={
               <div className="absolute left-4 top-4 text-gray-400 pointer-events-none">
-                Digite o relato...
+                {placeholder}
               </div>
             }
             ErrorBoundary={LexicalErrorBoundary}
@@ -114,3 +135,4 @@ export default function LexicalEditor({ onChange }: Props) {
     </div>
   );
 }
+

@@ -1,9 +1,11 @@
-import { Request, Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { gerarRelatorioPdf } from "../services/relatorioPdf.service";
+import { registrarLog } from "../services/auditoria.service";
+import { estaAprovado } from "../utils/status";
 
-export async function criarEvento(req: Request, res: Response) {
+export async function criarEvento(req: AuthRequest, res: Response) {
   try {
     const {
       assunto,
@@ -14,12 +16,17 @@ export async function criarEvento(req: Request, res: Response) {
       dataEvento,
       relatoSeguranca,
       envolvidos,
+      anexosRemover,
     } = req.body;
 
     const arquivos = (req.files as Express.Multer.File[]) || [];
 
     const envolvidosFormatados =
       typeof envolvidos === "string" ? JSON.parse(envolvidos) : envolvidos;
+    const anexosParaRemover =
+      typeof anexosRemover === "string" && anexosRemover
+        ? JSON.parse(anexosRemover)
+        : [];
 
     if (!assunto || !local || !natureza || !subNatureza || !dataEvento) {
       return res.status(400).json({
@@ -40,7 +47,7 @@ export async function criarEvento(req: Request, res: Response) {
     const ano = new Date().getFullYear();
 
     const ultimoEvento = await prisma.evento.findFirst({
-      where: { ano },
+      where: { ano, unidade: req.unidadeAtiva },
       orderBy: { numero: "desc" },
     });
 
@@ -55,6 +62,7 @@ export async function criarEvento(req: Request, res: Response) {
         codigo,
         assunto,
         local,
+        unidade: req.unidadeAtiva || "GJA-T1",
         natureza,
         subNatureza,
         relatoSeguranca,
@@ -78,7 +86,16 @@ export async function criarEvento(req: Request, res: Response) {
       include: {
         envolvidos: true,
         anexos: true,
+        analise: true,
       },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Criação de evento",
+      tipoRegistro: "Evento",
+      registroId: evento.id,
+      dadosNovos: evento,
     });
 
     return res.status(201).json(evento);
@@ -91,15 +108,19 @@ export async function criarEvento(req: Request, res: Response) {
   }
 }
 
-export async function listarEventos(req: Request, res: Response) {
+export async function listarEventos(req: AuthRequest, res: Response) {
   try {
     const eventos = await prisma.evento.findMany({
+      where: {
+        unidade: req.unidadeAtiva,
+      },
       orderBy: {
         createdAt: "desc",
       },
       include: {
         envolvidos: true,
         anexos: true,
+        analise: true,
       },
     });
 
@@ -113,13 +134,14 @@ export async function listarEventos(req: Request, res: Response) {
   }
 }
 
-export async function buscarEventoPorId(req: Request, res: Response) {
+export async function buscarEventoPorId(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
 
-    const evento = await prisma.evento.findUnique({
+    const evento = await prisma.evento.findFirst({
       where: {
         id: Number(id),
+        unidade: req.unidadeAtiva,
       },
       include: {
         envolvidos: true,
@@ -143,7 +165,7 @@ export async function buscarEventoPorId(req: Request, res: Response) {
   }
 }
 
-export async function atualizarEvento(req: Request, res: Response) {
+export async function atualizarEvento(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     const {
@@ -155,12 +177,17 @@ export async function atualizarEvento(req: Request, res: Response) {
       dataEvento,
       relatoSeguranca,
       envolvidos,
+      anexosRemover,
     } = req.body;
 
     const arquivos = (req.files as Express.Multer.File[]) || [];
 
     const envolvidosFormatados =
       typeof envolvidos === "string" ? JSON.parse(envolvidos) : envolvidos;
+    const anexosParaRemover =
+      typeof anexosRemover === "string" && anexosRemover
+        ? JSON.parse(anexosRemover)
+        : [];
 
     if (!assunto || !local || !natureza || !subNatureza || !dataEvento) {
       return res.status(400).json({
@@ -178,15 +205,26 @@ export async function atualizarEvento(req: Request, res: Response) {
       });
     }
 
-    const eventoExiste = await prisma.evento.findUnique({
+    const eventoExiste = await prisma.evento.findFirst({
       where: {
         id: Number(id),
+        unidade: req.unidadeAtiva,
+      },
+      include: {
+        envolvidos: true,
+        anexos: true,
       },
     });
 
     if (!eventoExiste) {
       return res.status(404).json({
         error: "Evento não encontrado",
+      });
+    }
+
+    if (estaAprovado(eventoExiste) && req.usuarioPerfil !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        error: "Evento aprovado não pode ser editado. Solicite reabertura ao Super Admin.",
       });
     }
 
@@ -197,6 +235,17 @@ export async function atualizarEvento(req: Request, res: Response) {
         },
       });
 
+      if (Array.isArray(anexosParaRemover) && anexosParaRemover.length > 0) {
+        await tx.anexoEvento.deleteMany({
+          where: {
+            id: {
+              in: anexosParaRemover.map(Number),
+            },
+            eventoId: Number(id),
+          },
+        });
+      }
+
       return tx.evento.update({
         where: {
           id: Number(id),
@@ -204,6 +253,7 @@ export async function atualizarEvento(req: Request, res: Response) {
         data: {
           assunto,
           local,
+          unidade: req.unidadeAtiva || eventoExiste.unidade,
           natureza,
           subNatureza,
           relatoSeguranca,
@@ -226,8 +276,18 @@ export async function atualizarEvento(req: Request, res: Response) {
         include: {
           envolvidos: true,
           anexos: true,
+          analise: true,
         },
       });
+    });
+
+    await registrarLog({
+      req,
+      acao: "Atualização de evento",
+      tipoRegistro: "Evento",
+      registroId: evento.id,
+      dadosAnteriores: eventoExiste,
+      dadosNovos: evento,
     });
 
     return res.json(evento);
@@ -245,13 +305,28 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
     const { id } = req.params;
 
     const [evento, usuario] = await Promise.all([
-      prisma.evento.findUnique({
+      prisma.evento.findFirst({
         where: {
           id: Number(id),
+          unidade: req.unidadeAtiva,
         },
         include: {
           envolvidos: true,
           anexos: true,
+          analise: {
+            include: {
+              responsavel: {
+                select: {
+                  nome: true,
+                },
+              },
+              concluidoPor: {
+                select: {
+                  nome: true,
+                },
+              },
+            },
+          },
         },
       }),
       prisma.usuario.findUnique({
@@ -295,6 +370,7 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         data: evento.dataEvento,
         relatoSeguranca: evento.relatoSeguranca,
         envolvidos: evento.envolvidos,
+        analise: evento.analise,
       },
       usuario,
       pdfUrl
@@ -307,3 +383,4 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
     });
   }
 }
+

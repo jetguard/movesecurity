@@ -1,6 +1,6 @@
-import { Router } from "express";
+﻿import { Router } from "express";
+import fs from "fs";
 import multer from "multer";
-import path from "path";
 
 import {
   criarOcorrencia,
@@ -9,24 +9,38 @@ import {
   gerarPdfOcorrencia,
   atualizarOcorrencia,
 } from "../controllers/ocorrencia.controller";
-import { autenticarUsuario } from "../middlewares/auth";
+import { acessoRelatorios, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { tiposAnexoPermitidos, uploadLimits } from "../config/security";
 
 const router = Router();
+const uploadDir = "uploads/ocorrencias";
+fs.mkdirSync(uploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
-  destination: "uploads/ocorrencias",
+  destination: uploadDir,
   filename: (req, file, cb) => {
     const nomeUnico = `${Date.now()}-${file.originalname}`;
     cb(null, nomeUnico);
   },
 });
 
-const upload = multer({ storage });
+const upload = multer({
+  storage,
+  limits: uploadLimits,
+  fileFilter: (req, file, cb) => {
+    if (!tiposAnexoPermitidos.includes(file.mimetype)) {
+      return cb(new Error("Tipo de arquivo não permitido."));
+    }
 
-router.post("/", upload.array("anexos"), criarOcorrencia);
-router.get("/", listarOcorrencias);
+    cb(null, true);
+  },
+});
+
+router.post("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), upload.array("anexos"), criarOcorrencia);
+router.get("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarOcorrencias);
 router.get("/:id/pdf", autenticarUsuario, gerarPdfOcorrencia);
-router.get("/:id", buscarOcorrenciaPorId);
-router.put("/:id", upload.array("anexos"), atualizarOcorrencia);
+router.get("/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), buscarOcorrenciaPorId);
+router.put("/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), upload.array("anexos"), atualizarOcorrencia);
 
 export default router;
+

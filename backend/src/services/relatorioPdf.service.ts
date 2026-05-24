@@ -1,4 +1,4 @@
-import crypto from "crypto";
+﻿import crypto from "crypto";
 import path from "path";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
@@ -27,6 +27,24 @@ type RelatorioPdf = {
   data: Date;
   relatoSeguranca?: string | null;
   envolvidos?: EnvolvidoPdf[];
+  investigacao?: {
+    numeroOcorrencia?: string | null;
+    status: string;
+    descricaoInvestigacao?: string | null;
+    conclusaoFatos?: string | null;
+    createdAt: Date;
+    responsavel?: { nome: string } | null;
+  } | null;
+  analise?: {
+    status: string;
+    iniciadoEm: Date;
+    concluidoEm?: Date | null;
+    prejuizoFinanceiro?: string | null;
+    valorRecuperado?: string | null;
+    conclusaoAnalise?: string | null;
+    responsavel?: { nome: string } | null;
+    concluidoPor?: { nome: string } | null;
+  } | null;
 };
 
 type UsuarioAssinatura = {
@@ -292,6 +310,109 @@ function escreverEnvolvidos(
   });
 }
 
+function escreverBlocoTexto(
+  doc: PDFKit.PDFDocument,
+  titulo: string,
+  texto: string,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  garantirEspaco(doc, 55, relatorio, usuario, qrCode, token);
+  doc.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text(titulo, page.left, doc.y);
+  doc.moveDown(0.3);
+
+  texto.split(/\n+/).forEach((paragrafo) => {
+    const altura = doc.heightOfString(paragrafo, {
+      width: contentWidth,
+      align: "justify",
+      lineGap: 3,
+    });
+
+    garantirEspaco(doc, altura + 12, relatorio, usuario, qrCode, token);
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor("#111827")
+      .text(paragrafo, page.left, doc.y, {
+        width: contentWidth,
+        align: "justify",
+        lineGap: 3,
+      });
+    doc.moveDown(0.5);
+  });
+}
+
+function escreverInvestigacao(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  if (!relatorio.investigacao) return;
+
+  garantirEspaco(doc, 150, relatorio, usuario, qrCode, token);
+  escreverTituloSecao(doc, "Dados da investigação");
+
+  const y = doc.y;
+  const colunaLargura = 230;
+  const colunaDireitaX = page.left + 270;
+
+  escreverCampo(doc, "Ocorrência vinculada", valor(relatorio.investigacao.numeroOcorrencia), page.left, y, colunaLargura);
+  escreverCampo(doc, "Solicitação", formatarData(relatorio.investigacao.createdAt), page.left, y + 42, colunaLargura);
+  escreverCampo(doc, "Status", relatorio.investigacao.status, colunaDireitaX, y, colunaLargura);
+  escreverCampo(doc, "Responsável", valor(relatorio.investigacao.responsavel?.nome), colunaDireitaX, y + 42, colunaLargura);
+
+  doc.y = y + 86;
+  escreverBlocoTexto(doc, "Descrição da investigação", valor(relatorio.investigacao.descricaoInvestigacao), relatorio, usuario, qrCode, token);
+  escreverBlocoTexto(doc, "Conclusão dos fatos", valor(relatorio.investigacao.conclusaoFatos), relatorio, usuario, qrCode, token);
+}
+
+function escreverAnalise(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  if (!relatorio.analise) return;
+
+  garantirEspaco(doc, 145, relatorio, usuario, qrCode, token);
+  escreverTituloSecao(doc, "Dados da análise");
+
+  const y = doc.y;
+  const colunaLargura = 230;
+  const colunaDireitaX = page.left + 270;
+  const valorFinanceiro =
+    relatorio.analise.prejuizoFinanceiro || relatorio.analise.valorRecuperado;
+
+  escreverCampo(doc, "Iniciada por", valor(relatorio.analise.responsavel?.nome), page.left, y, colunaLargura);
+  escreverCampo(doc, "Data/hora de início", formatarData(relatorio.analise.iniciadoEm), page.left, y + 42, colunaLargura);
+  escreverCampo(doc, "Status", relatorio.analise.status, colunaDireitaX, y, colunaLargura);
+  escreverCampo(doc, "Concluída por", valor(relatorio.analise.concluidoPor?.nome), colunaDireitaX, y + 42, colunaLargura);
+  escreverCampo(
+    doc,
+    relatorio.analise.prejuizoFinanceiro ? "Prejuízo financeiro" : "Valor recuperado",
+    valorFinanceiro ? `R$ ${valorFinanceiro}` : "Não informado",
+    page.left,
+    y + 84,
+    colunaLargura
+  );
+  escreverCampo(
+    doc,
+    "Data/hora de conclusão",
+    relatorio.analise.concluidoEm ? formatarData(relatorio.analise.concluidoEm) : "Não concluída",
+    colunaDireitaX,
+    y + 84,
+    colunaLargura
+  );
+
+  doc.y = y + 128;
+  escreverBlocoTexto(doc, "Conclusão da análise", valor(relatorio.analise.conclusaoAnalise), relatorio, usuario, qrCode, token);
+}
+
 function escreverRelato(
   doc: PDFKit.PDFDocument,
   relatorio: RelatorioPdf,
@@ -360,6 +481,8 @@ export async function gerarRelatorioPdf(
 
   novaPagina(doc, relatorio, usuario, qrCode, token);
   escreverDadosRelatorio(doc, relatorio);
+  escreverInvestigacao(doc, relatorio, usuario, qrCode, token);
+  escreverAnalise(doc, relatorio, usuario, qrCode, token);
   escreverEnvolvidos(doc, relatorio, usuario, qrCode, token);
   escreverRelato(doc, relatorio, usuario, qrCode, token);
 
@@ -378,3 +501,4 @@ export async function gerarRelatorioPdf(
 
   doc.end();
 }
+

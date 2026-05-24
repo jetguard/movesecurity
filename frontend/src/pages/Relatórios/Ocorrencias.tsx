@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { api } from "../../services/api";
 import LexicalEditor from "../../components/editor/LexicalEditor";
+import { podeAnalisar } from "../../utils/permissoes";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -25,6 +26,43 @@ type Ocorrencia = {
   dataOcorrencia: string;
   relatoSeguranca?: string;
   envolvidos: Envolvido[];
+  anexos?: Anexo[];
+  analise?: AnaliseOcorrencia | null;
+  investigacao?: InvestigacaoVinculada | null;
+};
+
+type UsuarioMencao = {
+  id: number;
+  nome: string;
+  apelido?: string;
+  email: string;
+};
+
+type ComentarioInterno = {
+  id: number;
+  comentario: string;
+  createdAt: string;
+  autor: { nome: string; apelido?: string };
+};
+
+type Anexo = {
+  id: number;
+  nomeOriginal: string;
+  caminho: string;
+  tipo: string;
+};
+
+type AnaliseOcorrencia = {
+  id: number;
+  status: string;
+  prejuizoFinanceiro: string;
+  conclusaoAnalise?: string;
+};
+
+type InvestigacaoVinculada = {
+  id: number;
+  createdAt: string;
+  numeroOcorrencia?: string;
 };
 
 type NaturezaCadastro = {
@@ -50,11 +88,26 @@ const envolvidoVazio: Envolvido = {
 
 export default function Ocorrencias() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
+  const [usuariosMencao, setUsuariosMencao] = useState<UsuarioMencao[]>([]);
+  const [ocorrenciaVisualizando, setOcorrenciaVisualizando] = useState<Ocorrencia | null>(null);
+  const [ocorrenciaMencao, setOcorrenciaMencao] = useState<Ocorrencia | null>(null);
+  const [usuarioMencionadoId, setUsuarioMencionadoId] = useState("");
+  const [tipoMencao, setTipoMencao] = useState("Acompanhar");
+  const [observacaoMencao, setObservacaoMencao] = useState("");
+  const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
+  const [novoComentario, setNovoComentario] = useState("");
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
   const [ocorrenciaEditando, setOcorrenciaEditando] =
     useState<Ocorrencia | null>(null);
+  const [permitirEdicao, setPermitirEdicao] = useState(true);
+  const [anexosExistentes, setAnexosExistentes] = useState<Anexo[]>([]);
+  const [anexosRemover, setAnexosRemover] = useState<number[]>([]);
   const [anexos, setAnexos] = useState<File[]>([]);
+  const [analiseAtual, setAnaliseAtual] = useState<AnaliseOcorrencia | null>(null);
+  const [statusAnalise, setStatusAnalise] = useState("Em Análise");
+  const [prejuizoFinanceiro, setPrejuizoFinanceiro] = useState("0,00");
+  const [conclusaoAnalise, setConclusaoAnalise] = useState("");
 
   const [assunto, setAssunto] = useState("");
   const [local, setLocal] = useState("");
@@ -76,6 +129,43 @@ export default function Ocorrencias() {
   async function carregarNaturezas() {
     const response = await api.get("/naturezas");
     setNaturezas(response.data);
+  }
+
+  async function carregarUsuariosMencao() {
+    const response = await api.get("/mencoes/usuarios");
+    setUsuariosMencao(response.data);
+  }
+
+  async function salvarMencao() {
+    if (!ocorrenciaMencao || !usuarioMencionadoId) return;
+    await api.post("/mencoes", {
+      modulo: "Ocorrencia",
+      registroId: ocorrenciaMencao.id,
+      codigoRegistro: ocorrenciaMencao.codigo,
+      tituloRegistro: ocorrenciaMencao.assunto,
+      usuarioMencionadoId,
+      tipoMencao,
+      observacao: observacaoMencao,
+    });
+    setOcorrenciaMencao(null);
+    setUsuarioMencionadoId("");
+    setObservacaoMencao("");
+    alert("Usuario mencionado com sucesso");
+  }
+
+  async function abrirVisualizacao(ocorrencia: Ocorrencia) {
+    setOcorrenciaVisualizando(ocorrencia);
+    const response = await api.get(`/comentarios/Ocorrencia/${ocorrencia.id}`);
+    setComentarios(response.data);
+  }
+
+  async function salvarComentario() {
+    if (!ocorrenciaVisualizando || !novoComentario.trim()) return;
+    const response = await api.post(`/comentarios/Ocorrencia/${ocorrenciaVisualizando.id}`, {
+      comentario: novoComentario,
+    });
+    setComentarios((atuais) => [response.data, ...atuais]);
+    setNovoComentario("");
   }
 
   async function abrirPdfOcorrencia(id: number) {
@@ -138,8 +228,22 @@ export default function Ocorrencias() {
     );
   }
 
+  function removerAnexoExistente(id: number) {
+    setAnexosExistentes((arquivosAtuais) =>
+      arquivosAtuais.filter((arquivo) => arquivo.id !== id)
+    );
+    setAnexosRemover((ids) => [...ids, id]);
+  }
+
   function limparFormulario() {
     setOcorrenciaEditando(null);
+    setPermitirEdicao(true);
+    setAnexosExistentes([]);
+    setAnexosRemover([]);
+    setAnaliseAtual(null);
+    setStatusAnalise("Em Análise");
+    setPrejuizoFinanceiro("0,00");
+    setConclusaoAnalise("");
     setAssunto("");
     setLocal("");
     setNatureza("");
@@ -160,6 +264,16 @@ export default function Ocorrencias() {
     return localDate.toISOString().slice(0, 16);
   }
 
+  function formatarNumeroInvestigacao(investigacao?: InvestigacaoVinculada | null) {
+    if (!investigacao) return "";
+
+    const ano = investigacao.createdAt
+      ? new Date(investigacao.createdAt).getFullYear()
+      : new Date().getFullYear();
+
+    return `${String(investigacao.id).padStart(4, "0")}/${ano}`;
+  }
+
   function editarOcorrencia(ocorrencia: Ocorrencia) {
     setOcorrenciaEditando(ocorrencia);
     setAssunto(ocorrencia.assunto);
@@ -177,6 +291,69 @@ export default function Ocorrencias() {
     setAnexos([]);
     setEtapaFormulario(1);
     setAbrirFormulario(true);
+    setPermitirEdicao(false);
+    setAnexosExistentes(ocorrencia.anexos || []);
+    setAnexosRemover([]);
+    setAnaliseAtual(ocorrencia.analise || null);
+    setStatusAnalise(ocorrencia.analise?.status || "Em Análise");
+    setPrejuizoFinanceiro(ocorrencia.analise?.prejuizoFinanceiro || "0,00");
+    setConclusaoAnalise(ocorrencia.analise?.conclusaoAnalise || "");
+  }
+
+  function cancelarFormulario() {
+    const confirmar = window.confirm(
+      "As alterações não salvas poderão ser perdidas. Deseja continuar?"
+    );
+
+    if (!confirmar) return;
+
+    setAbrirFormulario(false);
+    limparFormulario();
+  }
+
+  async function iniciarAnaliseOcorrencia(id: number) {
+    const response = await api.post(`/analises/ocorrencias/${id}`);
+    setAnaliseAtual(response.data);
+    setStatusAnalise(response.data.status);
+    setPrejuizoFinanceiro(response.data.prejuizoFinanceiro || "0,00");
+    setConclusaoAnalise(response.data.conclusaoAnalise || "");
+    setOcorrenciaEditando((atual) =>
+      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+    );
+    carregarOcorrencias();
+    alert("Análise iniciada com sucesso");
+  }
+
+  async function salvarAnaliseOcorrencia() {
+    if (!analiseAtual) return;
+
+    const response = await api.put(`/analises/ocorrencias/${analiseAtual.id}`, {
+      status: statusAnalise,
+      prejuizoFinanceiro,
+      conclusaoAnalise,
+    });
+
+    setAnaliseAtual(response.data);
+    setOcorrenciaEditando((atual) =>
+      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+    );
+    carregarOcorrencias();
+    alert("Análise salva com sucesso");
+  }
+
+  async function converterParaInvestigacao(ocorrencia: Ocorrencia) {
+    const confirmar = window.confirm(
+      `Deseja iniciar uma investigação para a Ocorrência Nº ${ocorrencia.codigo}?`
+    );
+
+    if (!confirmar) return;
+
+    const response = await api.post(`/investigacoes/converter/ocorrencias/${ocorrencia.id}`);
+    setOcorrenciaEditando((atual) =>
+      atual ? { ...atual, investigacao: response.data } : atual
+    );
+    carregarOcorrencias();
+    alert("Investigação criada com sucesso");
   }
 
   async function salvarOcorrencia(e: React.FormEvent) {
@@ -188,10 +365,11 @@ export default function Ocorrencias() {
     formData.append("local", local);
     formData.append("natureza", natureza);
     formData.append("subNatureza", subNatureza);
-    formData.append("status", "ABERTO");
+    formData.append("status", ocorrenciaEditando?.status || "Aberto");
     formData.append("dataOcorrencia", dataOcorrencia);
     formData.append("relatoSeguranca", relatoSeguranca);
     formData.append("envolvidos", JSON.stringify(envolvidos));
+    formData.append("anexosRemover", JSON.stringify(anexosRemover));
 
     anexos.forEach((arquivo) => {
       formData.append("anexos", arquivo);
@@ -217,6 +395,7 @@ export default function Ocorrencias() {
   useEffect(() => {
     carregarOcorrencias();
     carregarNaturezas();
+    carregarUsuariosMencao();
   }, []);
 
   return (
@@ -251,6 +430,54 @@ export default function Ocorrencias() {
               : "Nova Ocorrência"}
           </h2>
 
+          {ocorrenciaEditando && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setPermitirEdicao(true)}
+                  className="bg-slate-900 text-white px-4 py-2 rounded-lg"
+                >
+                  Editar Dados
+                </button>
+
+                {!analiseAtual && podeAnalisar() && (
+                  <button
+                    type="button"
+                    onClick={() => iniciarAnaliseOcorrencia(ocorrenciaEditando.id)}
+                    className="bg-amber-600 text-white px-4 py-2 rounded-lg"
+                  >
+                    Iniciar Análise
+                  </button>
+                )}
+
+                {!ocorrenciaEditando.investigacao && podeAnalisar() && (
+                  <button
+                    type="button"
+                    onClick={() => converterParaInvestigacao(ocorrenciaEditando)}
+                    className="bg-purple-700 text-white px-4 py-2 rounded-lg"
+                  >
+                    CONVERTER PARA R.I
+                  </button>
+                )}
+              </div>
+
+              {analiseAtual && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
+                  Este relatório possui uma análise{" "}
+                  {analiseAtual.status === "Concluído" ? "concluída" : "em andamento"}.
+                </div>
+              )}
+
+              {ocorrenciaEditando.investigacao && (
+                <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-800">
+                  Este relatório foi convertido para R.I Nº{" "}
+                  {formatarNumeroInvestigacao(ocorrenciaEditando.investigacao)}.
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-wrap gap-2 mb-4">
             <span
               className={`px-3 py-1 rounded-full text-sm ${
@@ -283,6 +510,7 @@ export default function Ocorrencias() {
             </span>
           </div>
 
+          <fieldset disabled={!!ocorrenciaEditando && !permitirEdicao}>
           {etapaFormulario === 1 && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -509,6 +737,35 @@ export default function Ocorrencias() {
                 className="w-full border rounded-lg p-3"
               />
 
+              {anexosExistentes.length > 0 && (
+                <div className="bg-white border rounded-lg p-4">
+                  <p className="font-semibold mb-4">Anexos já enviados</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {anexosExistentes.map((arquivo) => (
+                      <div key={arquivo.id} className="border rounded-xl p-3 bg-gray-50">
+                        <p className="text-sm break-all mb-3">{arquivo.nomeOriginal}</p>
+                        <div className="flex gap-2">
+                          <a
+                            href={`/${arquivo.caminho.replaceAll("\\", "/")}`}
+                            target="_blank"
+                            className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs"
+                          >
+                            Visualizar
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => removerAnexoExistente(arquivo.id)}
+                            className="bg-red-600 text-white px-3 py-2 rounded-lg text-xs"
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {anexos.length > 0 && (
                 <div className="bg-gray-50 border rounded-lg p-4">
                   <p className="font-semibold mb-4">Arquivos selecionados</p>
@@ -556,6 +813,47 @@ export default function Ocorrencias() {
             </div>
           )}
 
+          </fieldset>
+
+          {analiseAtual && podeAnalisar() && (
+            <div className="border rounded-xl p-4 space-y-4 bg-amber-50">
+              <h3 className="font-bold text-lg">Análise da Ocorrência</h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <select
+                  className="w-full border rounded-lg p-3"
+                  value={statusAnalise}
+                  onChange={(e) => setStatusAnalise(e.target.value)}
+                >
+                  <option value="Em Análise">Em Análise</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
+
+                <input
+                  className="w-full border rounded-lg p-3"
+                  value={prejuizoFinanceiro}
+                  onChange={(e) => setPrejuizoFinanceiro(e.target.value)}
+                  placeholder="Prejuízo financeiro em BRL"
+                />
+              </div>
+
+              <LexicalEditor
+                value={conclusaoAnalise}
+                onChange={setConclusaoAnalise}
+                title="Descrição da análise"
+                placeholder="Descreva a análise da ocorrência..."
+              />
+
+              <button
+                type="button"
+                onClick={salvarAnaliseOcorrencia}
+                className="bg-amber-600 text-white px-4 py-2 rounded-lg"
+              >
+                Salvar Análise
+              </button>
+            </div>
+          )}
+
           <div className="flex gap-3">
             {etapaFormulario > 1 && (
               <button
@@ -585,10 +883,7 @@ export default function Ocorrencias() {
 
             <button
               type="button"
-              onClick={() => {
-                setAbrirFormulario(false);
-                limparFormulario();
-              }}
+              onClick={cancelarFormulario}
               className="bg-gray-300 px-4 py-2 rounded-lg"
             >
               Cancelar
@@ -627,6 +922,22 @@ export default function Ocorrencias() {
 
                   <button
                     type="button"
+                    onClick={() => abrirVisualizacao(ocorrencia)}
+                    className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1 rounded-lg text-sm"
+                  >
+                    Visualizar
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setOcorrenciaMencao(ocorrencia)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
+                  >
+                    Mencionar
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => editarOcorrencia(ocorrencia)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm"
                   >
@@ -646,6 +957,118 @@ export default function Ocorrencias() {
           ))}
         </div>
       )}
+
+      {ocorrenciaVisualizando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-bold">{ocorrenciaVisualizando.codigo}</h2>
+                <p className="text-gray-600">{ocorrenciaVisualizando.assunto}</p>
+              </div>
+              <button onClick={() => setOcorrenciaVisualizando(null)} className="rounded bg-slate-200 px-3 py-2">Fechar</button>
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <p><strong>Local:</strong> {ocorrenciaVisualizando.local}</p>
+              <p><strong>Status:</strong> {ocorrenciaVisualizando.status}</p>
+              <p><strong>Natureza:</strong> {ocorrenciaVisualizando.natureza}</p>
+              <p><strong>Subnatureza:</strong> {ocorrenciaVisualizando.subNatureza}</p>
+              <p><strong>Data:</strong> {new Date(ocorrenciaVisualizando.dataOcorrencia).toLocaleString("pt-BR")}</p>
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Relato</h3>
+              <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: ocorrenciaVisualizando.relatoSeguranca || "Sem relato." }} />
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Envolvidos</h3>
+              <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+                {ocorrenciaVisualizando.envolvidos.map((envolvido, index) => (
+                  <div key={index} className="rounded-lg border p-3 text-sm">
+                    <strong>{envolvido.nome}</strong>
+                    <p>{envolvido.tipoEnvolvimento} | {envolvido.documento}</p>
+                    <p>{envolvido.relato}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Anexos</h3>
+              {(!ocorrenciaVisualizando.anexos || ocorrenciaVisualizando.anexos.length === 0) && (
+                <p className="mt-2 text-sm text-gray-500">Nenhum anexo cadastrado.</p>
+              )}
+              <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                {ocorrenciaVisualizando.anexos?.map((arquivo) => {
+                  const url = `/${arquivo.caminho.replaceAll("\\", "/")}`;
+                  const isImagem = arquivo.tipo.startsWith("image/");
+
+                  return (
+                    <div key={arquivo.id} className="overflow-hidden rounded-lg border bg-white">
+                      {isImagem ? (
+                        <a href={url} target="_blank" rel="noreferrer">
+                          <img src={url} alt={arquivo.nomeOriginal} className="h-40 w-full object-cover" />
+                        </a>
+                      ) : (
+                        <div className="flex h-40 items-center justify-center bg-slate-100 text-sm font-bold text-slate-600">
+                          ARQUIVO
+                        </div>
+                      )}
+                      <div className="space-y-2 p-3">
+                        <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>
+                        <a href={url} target="_blank" rel="noreferrer" className="block rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                          Abrir anexo
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Comentarios internos</h3>
+              <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+                <input className="flex-1 rounded-lg border p-3" placeholder="Adicionar comentario interno" value={novoComentario} onChange={(e) => setNovoComentario(e.target.value)} />
+                <button onClick={salvarComentario} className="rounded bg-blue-600 px-4 py-2 text-white">Comentar</button>
+              </div>
+              <div className="mt-3 space-y-2">
+                {comentarios.length === 0 && <p className="text-sm text-gray-500">Nenhum comentario interno.</p>}
+                {comentarios.map((comentario) => (
+                  <div key={comentario.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+                    <p>{comentario.comentario}</p>
+                    <p className="mt-1 text-xs text-gray-500">{comentario.autor?.apelido || comentario.autor?.nome} - {new Date(comentario.createdAt).toLocaleString("pt-BR")}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {ocorrenciaMencao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
+            <h2 className="text-xl font-bold">Mencionar usuario</h2>
+            <p className="mt-1 text-sm text-gray-500">{ocorrenciaMencao.codigo} - {ocorrenciaMencao.assunto}</p>
+            <div className="mt-4 space-y-3">
+              <select className="w-full rounded-lg border p-3" value={usuarioMencionadoId} onChange={(e) => setUsuarioMencionadoId(e.target.value)}>
+                <option value="">Selecione o usuario</option>
+                {usuariosMencao.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.apelido || usuario.nome} - {usuario.email}</option>)}
+              </select>
+              <select className="w-full rounded-lg border p-3" value={tipoMencao} onChange={(e) => setTipoMencao(e.target.value)}>
+                <option>Responsavel por tratar</option>
+                <option>Acompanhar</option>
+                <option>Apoio</option>
+                <option>Validador</option>
+              </select>
+              <textarea className="w-full rounded-lg border p-3" placeholder="Observacao" value={observacaoMencao} onChange={(e) => setObservacaoMencao(e.target.value)} />
+              <div className="flex gap-3">
+                <button onClick={salvarMencao} className="rounded bg-blue-600 px-4 py-2 text-white">Salvar</button>
+                <button onClick={() => setOcorrenciaMencao(null)} className="rounded bg-slate-200 px-4 py-2">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
