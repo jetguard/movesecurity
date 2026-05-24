@@ -205,6 +205,10 @@ export default function AdminLayout() {
                 <ClipboardList size={16} />
                 Minha Jornada
               </Link>
+              <Link to="/mencoes" className={subItem}>
+                <AtSign size={16} />
+                Minhas Menções
+              </Link>
             </div>
           )}
 
@@ -266,11 +270,6 @@ export default function AdminLayout() {
           <Link to="/cameras" className={item}>
             <Video size={20} />
             {mostrarTextoMenu && <span>Câmeras CFTV</span>}
-          </Link>
-
-          <Link to="/mencoes" className={item}>
-            <AtSign size={20} />
-            {mostrarTextoMenu && <span>Mencoes</span>}
           </Link>
 
           {podeGerenciarRiscos() && (
