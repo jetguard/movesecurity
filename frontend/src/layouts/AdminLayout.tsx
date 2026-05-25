@@ -48,6 +48,9 @@ export default function AdminLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
   const [meusDadosOpen, setMeusDadosOpen] = useState(true);
+  const [operacaoOpen, setOperacaoOpen] = useState(true);
+  const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
+  const [administracaoOpen, setAdministracaoOpen] = useState(false);
   const [segundosSessao, setSegundosSessao] = useState(0);
   const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
@@ -243,114 +246,129 @@ export default function AdminLayout() {
             </div>
           )}
 
-          <Link to="/evidencias" className={item}>
-            <Paperclip size={20} />
-            {mostrarTextoMenu && <span>Evidencias</span>}
-          </Link>
+          <button onClick={() => setOperacaoOpen(!operacaoOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+            <div className="flex items-center gap-3">
+              <ListChecks size={20} />
+              {mostrarTextoMenu && <span>Operação</span>}
+            </div>
+            {mostrarTextoMenu && <span>{operacaoOpen ? "-" : "+"}</span>}
+          </button>
 
-          <Link to="/pendencias" className={item}>
-            <ListChecks size={20} />
-            {mostrarTextoMenu && <span>Pendencias</span>}
-          </Link>
-
-          <Link to="/notificacoes" className={item}>
-            <Bell size={20} />
-            {mostrarTextoMenu && <span>Notificações</span>}
-          </Link>
-
-          <Link to="/tarefas" className={item}>
-            <CheckCircle2 size={20} />
-            {mostrarTextoMenu && <span>Central de Tarefas</span>}
-          </Link>
-
-          <Link to="/anulacoes" className={item}>
-            <AlertTriangle size={20} />
-            {mostrarTextoMenu && <span>Anulações</span>}
-          </Link>
-
-          <Link to="/cameras" className={item}>
-            <Video size={20} />
-            {mostrarTextoMenu && <span>Câmeras CFTV</span>}
-          </Link>
-
-          {podeGerenciarRiscos() && (
-            <Link to="/gestao-patrimonial" className={item}>
-              <MapPinned size={20} />
-              {mostrarTextoMenu && <span>Gestão Patrimonial</span>}
-            </Link>
+          {operacaoOpen && mostrarTextoMenu && (
+            <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+              <Link to="/cameras" className={subItem}>
+                <Video size={16} />
+                Câmeras CFTV
+              </Link>
+              <Link to="/tarefas" className={subItem}>
+                <CheckCircle2 size={16} />
+                Central de Tarefas
+              </Link>
+              <Link to="/notificacoes" className={subItem}>
+                <Bell size={16} />
+                Notificações
+              </Link>
+              <Link to="/pendencias" className={subItem}>
+                <ListChecks size={16} />
+                Pendências
+              </Link>
+              <Link to="/evidencias" className={subItem}>
+                <Paperclip size={16} />
+                Evidências
+              </Link>
+              <Link to="/anulacoes" className={subItem}>
+                <AlertTriangle size={16} />
+                Anulações
+              </Link>
+            </div>
           )}
 
           {podeGerenciarRiscos() && (
-            <Link to="/riscos" className={item}>
-              <ShieldAlert size={20} />
-              {mostrarTextoMenu && <span>Analise de Risco</span>}
-            </Link>
-          )}
-
-          {podeGerenciarRiscos() && (
-            <Link to="/analises-estrategicas" className={item}>
-              <ShieldCheck size={20} />
-              {mostrarTextoMenu && <span>Analises Estrategicas</span>}
-            </Link>
-          )}
-
-          {podeGerenciarRiscos() && (
-            <Link to="/inteligencia" className={item}>
-              <BrainCircuit size={20} />
-              {mostrarTextoMenu && <span>Inteligencia</span>}
-            </Link>
-          )}
-
-          {podeGerenciarRiscos() && (
-            <Link to="/aprovacoes" className={item}>
-              <CheckCircle2 size={20} />
-              {mostrarTextoMenu && <span>Aprovacoes</span>}
-            </Link>
-          )}
-
-          {podeGerenciarRiscos() && (
-            <Link to="/planos-acao" className={item}>
-              <Target size={20} />
-              {mostrarTextoMenu && <span>Planos de Acao</span>}
-            </Link>
-          )}
-
-          {podeGerenciarRiscos() && (
-            <Link to="/matriz-risco" className={item}>
-              <Grid3X3 size={20} />
-              {mostrarTextoMenu && <span>Matriz 5x5</span>}
-            </Link>
-          )}
-
-          {podeGerenciarRiscos() && (
-            <Link to="/checklists" className={item}>
-              <ClipboardCheck size={20} />
-              {mostrarTextoMenu && <span>Checklists</span>}
-            </Link>
-          )}
-
-          {podeAdministrar() && (
             <>
-              <Link to="/usuarios" className={item}>
-                <Users size={20} />
-                {mostrarTextoMenu && <span>Usuarios</span>}
-              </Link>
-              <Link to="/naturezas" className={item}>
-                <Settings size={20} />
-                {mostrarTextoMenu && <span>Naturezas</span>}
-              </Link>
-              <Link to="/configuracoes" className={item}>
-                <Settings size={20} />
-                {mostrarTextoMenu && <span>Configurações</span>}
-              </Link>
+              <button onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+                <div className="flex items-center gap-3">
+                  <BrainCircuit size={20} />
+                  {mostrarTextoMenu && <span>Gestão Avançada</span>}
+                </div>
+                {mostrarTextoMenu && <span>{gestaoAvancadaOpen ? "-" : "+"}</span>}
+              </button>
+
+              {gestaoAvancadaOpen && mostrarTextoMenu && (
+                <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+                  <Link to="/gestao-patrimonial" className={subItem}>
+                    <MapPinned size={16} />
+                    Gestão Patrimonial
+                  </Link>
+                  <Link to="/riscos" className={subItem}>
+                    <ShieldAlert size={16} />
+                    Análise de Risco
+                  </Link>
+                  <Link to="/analises-estrategicas" className={subItem}>
+                    <ShieldCheck size={16} />
+                    Análises Estratégicas
+                  </Link>
+                  <Link to="/inteligencia" className={subItem}>
+                    <BrainCircuit size={16} />
+                    Inteligência
+                  </Link>
+                  <Link to="/matriz-risco" className={subItem}>
+                    <Grid3X3 size={16} />
+                    Matriz 5x5
+                  </Link>
+                  <Link to="/planos-acao" className={subItem}>
+                    <Target size={16} />
+                    Planos de Ação
+                  </Link>
+                  <Link to="/checklists" className={subItem}>
+                    <ClipboardCheck size={16} />
+                    Checklists
+                  </Link>
+                  <Link to="/aprovacoes" className={subItem}>
+                    <CheckCircle2 size={16} />
+                    Aprovações
+                  </Link>
+                </div>
+              )}
             </>
           )}
 
-          {podeVerLogs() && (
-            <Link to="/logs" className={item}>
-              <ScrollText size={20} />
-              {mostrarTextoMenu && <span>Logs</span>}
-            </Link>
+          {(podeAdministrar() || podeVerLogs()) && (
+            <>
+              <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+                <div className="flex items-center gap-3">
+                  <Settings size={20} />
+                  {mostrarTextoMenu && <span>Administração</span>}
+                </div>
+                {mostrarTextoMenu && <span>{administracaoOpen ? "-" : "+"}</span>}
+              </button>
+
+              {administracaoOpen && mostrarTextoMenu && (
+                <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+                  {podeAdministrar() && (
+                    <>
+                      <Link to="/usuarios" className={subItem}>
+                        <Users size={16} />
+                        Usuários
+                      </Link>
+                      <Link to="/naturezas" className={subItem}>
+                        <Settings size={16} />
+                        Naturezas
+                      </Link>
+                      <Link to="/configuracoes" className={subItem}>
+                        <Settings size={16} />
+                        Configurações
+                      </Link>
+                    </>
+                  )}
+                  {podeVerLogs() && (
+                    <Link to="/logs" className={subItem}>
+                      <ScrollText size={16} />
+                      Logs
+                    </Link>
+                  )}
+                </div>
+              )}
+            </>
           )}
 
           <button onClick={logout} className="mt-6 flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition hover:bg-red-900 hover:text-white">
