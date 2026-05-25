@@ -48,6 +48,214 @@ Principais informações:
 - evolução temporal;
 - geração de relatório conforme filtros.
 
+## Gráficos e Indicadores do Dashboard
+
+Os gráficos do JetGuard foram criados para transformar registros operacionais em visão gerencial. Eles ajudam a identificar volume, tendência, recorrência, impacto financeiro, locais críticos e riscos prioritários.
+
+### Cards por Status
+
+Mostram a quantidade de relatórios, eventos e investigações separados por status.
+
+Função:
+
+- identificar rapidamente o volume aberto;
+- acompanhar registros em análise;
+- visualizar registros concluídos;
+- apoiar priorização da equipe.
+
+Como interpretar:
+
+- muitos itens abertos indicam demanda operacional acumulada;
+- muitos itens em análise indicam concentração de trabalho técnico;
+- poucos itens concluídos podem indicar necessidade de revisão de fluxo.
+
+### Gráficos de Rosca
+
+Apresentam a distribuição visual dos registros por status, normalmente aberto, em análise e concluído.
+
+Função:
+
+- comparar proporcionalmente os status;
+- facilitar leitura rápida em reuniões;
+- identificar desequilíbrio entre criação e conclusão.
+
+Como interpretar:
+
+- rosca com maior parte em aberto indica fila de atendimento;
+- rosca com maior parte concluída indica bom avanço operacional;
+- crescimento da parte em análise pode indicar necessidade de reforço analítico.
+
+### Gráfico Financeiro
+
+Mostra valores de prejuízo, valor recuperado e diferença entre perdas e recuperação.
+
+Função:
+
+- medir impacto financeiro;
+- acompanhar recuperação;
+- demonstrar resultado das ações preventivas e corretivas;
+- apoiar apresentação gerencial.
+
+Como interpretar:
+
+- prejuízo alto com baixa recuperação indica ponto de atenção;
+- aumento de recuperação demonstra efetividade das ações;
+- diferença elevada entre perda e recuperação exige plano de ação.
+
+### Gráfico por Natureza
+
+Mostra quais naturezas aparecem com maior frequência em ocorrências e eventos.
+
+Função:
+
+- identificar tipos de problemas recorrentes;
+- apoiar criação de campanhas preventivas;
+- orientar treinamentos;
+- direcionar fiscalização.
+
+Como interpretar:
+
+- uma natureza muito recorrente indica padrão operacional;
+- aumento de determinada natureza pode indicar falha de processo;
+- queda após ação corretiva indica melhoria.
+
+### Gráfico por Local
+
+Aponta os locais com maior concentração de ocorrências ou eventos.
+
+Função:
+
+- identificar áreas críticas;
+- reforçar patrulhamento;
+- priorizar câmeras;
+- direcionar planos de ação.
+
+Como interpretar:
+
+- local com alto volume precisa de análise específica;
+- reincidência em área monitorada pode indicar necessidade de ajuste no CFTV;
+- redução após tratativa demonstra efetividade operacional.
+
+### Gráfico Temporal
+
+Mostra a evolução de ocorrências e eventos por período, mês ou ano.
+
+Função:
+
+- acompanhar crescimento ou redução;
+- identificar sazonalidade;
+- comparar períodos;
+- apoiar análise de tendência.
+
+Como interpretar:
+
+- linha ascendente indica aumento de volume;
+- picos isolados indicam eventos pontuais;
+- repetição de picos em horários ou meses específicos indica padrão.
+
+### Ranking de Câmeras Instáveis
+
+Mostra quais câmeras apresentam maior número de falhas ou maior tempo offline.
+
+Função:
+
+- priorizar manutenção;
+- identificar equipamentos críticos;
+- avaliar desempenho de servidores;
+- reduzir indisponibilidade.
+
+Como interpretar:
+
+- câmera no topo do ranking precisa de inspeção;
+- várias câmeras do mesmo servidor indicam possível falha de infraestrutura;
+- falhas repetidas exigem plano de manutenção.
+
+### Indicador de Disponibilidade CFTV
+
+Mostra o percentual de câmeras conectadas e desconectadas.
+
+Função:
+
+- acompanhar saúde do parque de câmeras;
+- medir SLA operacional;
+- identificar indisponibilidade;
+- apoiar tomada de decisão rápida.
+
+Como interpretar:
+
+- disponibilidade alta indica estabilidade;
+- indisponibilidade crescente exige ação imediata;
+- SLA abaixo da meta deve gerar tratativa.
+
+### Mapa ou Painel Operacional de Câmeras
+
+Apresenta visão por área monitorada, status e criticidade.
+
+Função:
+
+- facilitar monitoramento em tempo real;
+- orientar operadores;
+- destacar áreas sem cobertura ou com falha;
+- apoiar tomada de decisão no Centro de Operações.
+
+Como interpretar:
+
+- áreas com alerta indicam necessidade de verificação;
+- concentração de falhas em uma área indica risco operacional;
+- áreas críticas devem ter prioridade de manutenção.
+
+### Heatmap de Risco
+
+Mostra a concentração de riscos por probabilidade e severidade.
+
+Função:
+
+- destacar riscos críticos;
+- apoiar priorização de planos de ação;
+- facilitar apresentação executiva;
+- mostrar evolução da exposição operacional.
+
+Como interpretar:
+
+- concentração em alto/crítico exige ação imediata;
+- concentração em baixo/moderado indica risco controlado;
+- deslocamento para níveis menores indica melhoria.
+
+### Tendência Mensal
+
+Mostra a evolução mensal dos registros, riscos ou falhas.
+
+Função:
+
+- comparar meses;
+- visualizar tendência;
+- identificar aumento ou redução;
+- apoiar planejamento.
+
+Como interpretar:
+
+- tendência crescente exige investigação;
+- tendência estável indica padrão previsível;
+- tendência decrescente após ação mostra resultado.
+
+### Filtros dos Gráficos
+
+Os filtros permitem refinar os indicadores por período, unidade, status, local, natureza e outros campos.
+
+Função:
+
+- analisar somente uma unidade;
+- comparar períodos;
+- verificar status específicos;
+- gerar relatórios gerenciais mais precisos.
+
+Boa prática:
+
+- antes de apresentar os números, confirme os filtros aplicados;
+- utilize período mensal para reuniões operacionais;
+- utilize período anual para análise estratégica;
+- salve ou gere PDF quando precisar compartilhar o resultado.
+
 ## Relatórios de Ocorrência
 
 Utilizado para registrar fatos de Segurança Patrimonial com impacto operacional, patrimonial ou disciplinar.
