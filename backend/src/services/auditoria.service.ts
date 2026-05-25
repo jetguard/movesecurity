@@ -36,6 +36,7 @@ function moduloLegivel(tipoRegistro: string) {
     Usuario: "Usuário",
     Auth: "Acesso",
     Governanca: "Governança",
+    Planejamento: "Planejamento Operacional",
   };
 
   return mapa[tipoRegistro] || tipoRegistro;

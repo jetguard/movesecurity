@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   MapPinned,
   Server,
+  Columns3,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -293,6 +294,10 @@ export default function AdminLayout() {
               <Link to="/tarefas" className={subItem}>
                 <CheckCircle2 size={16} />
                 Central de Tarefas
+              </Link>
+              <Link to="/planejamento" className={subItem}>
+                <Columns3 size={16} />
+                Planejamento
               </Link>
               <Link to="/notificacoes" className={subItem}>
                 <Bell size={16} />

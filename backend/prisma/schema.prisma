@@ -44,6 +44,8 @@ model Usuario {
   anulacoesSolicitadas SolicitacaoAnulacaoRelatorio[] @relation("AnulacaoSolicitante")
   anulacoesDecididas SolicitacaoAnulacaoRelatorio[] @relation("AnulacaoAdministrador")
   acordosAnulacao AcordoAnulacaoRelatorio[] @relation("AcordoAnulacaoAnalista")
+  planejamentoCardsCriados PlanejamentoCard[] @relation("PlanejamentoCriador")
+  planejamentoCardsResponsavel PlanejamentoCard[] @relation("PlanejamentoResponsavel")
 }
 
 model Ocorrencia {
@@ -581,4 +583,46 @@ model AcordoAnulacaoRelatorio {
   analista       Usuario @relation("AcordoAnulacaoAnalista", fields: [analistaId], references: [id])
 
   @@unique([solicitacaoId, analistaId])
+}
+
+model PlanejamentoColuna {
+  id        Int      @id @default(autoincrement())
+  titulo    String
+  unidade   String
+  ordem     Int      @default(0)
+  cor       String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cards     PlanejamentoCard[]
+
+  @@index([unidade, ordem])
+}
+
+model PlanejamentoCard {
+  id              Int      @id @default(autoincrement())
+  titulo          String
+  descricao       String?
+  prioridade      String   @default("Media")
+  prazo           DateTime?
+  unidade         String
+  setor           String?
+  local           String?
+  moduloVinculado String?
+  registroId      Int?
+  codigoRegistro  String?
+  ordem           Int      @default(0)
+  status          String   @default("Ativo")
+  colunaId        Int
+  responsavelId   Int?
+  criadoPorId     Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  coluna          PlanejamentoColuna @relation(fields: [colunaId], references: [id], onDelete: Cascade)
+  responsavel     Usuario? @relation("PlanejamentoResponsavel", fields: [responsavelId], references: [id])
+  criadoPor       Usuario @relation("PlanejamentoCriador", fields: [criadoPorId], references: [id])
+
+  @@index([unidade, colunaId, ordem])
+  @@index([responsavelId])
 }

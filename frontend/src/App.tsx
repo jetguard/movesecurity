@@ -35,6 +35,7 @@ const MinhaJornada = lazy(() => import("./pages/MinhaJornada"));
 const Anulacoes = lazy(() => import("./pages/Anulacoes"));
 const GestaoPatrimonialAvancada = lazy(() => import("./pages/GestaoPatrimonialAvancada"));
 const Governanca = lazy(() => import("./pages/Governanca"));
+const Planejamento = lazy(() => import("./pages/Planejamento"));
 
 function CarregandoPagina() {
   return (
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="minha-jornada" element={<MinhaJornada />} />
             <Route path="anulacoes" element={<Anulacoes />} />
             <Route path="cameras" element={<Cameras />} />
+            <Route path="planejamento" element={<Planejamento />} />
             <Route
               path="gestao-patrimonial"
               element={
