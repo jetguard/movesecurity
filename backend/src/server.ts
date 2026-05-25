@@ -26,6 +26,7 @@ import anulacaoRoutes from "./routes/anulacao.routes";
 import patrimonioAvancadoRoutes from "./routes/patrimonioAvancado.routes";
 import governancaRoutes from "./routes/governanca.routes";
 import planejamentoRoutes from "./routes/planejamento.routes";
+import quadraSegurancaRoutes from "./routes/quadraSeguranca.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -68,6 +69,7 @@ app.use("/api/anulacoes", anulacaoRoutes);
 app.use("/api/patrimonio-avancado", patrimonioAvancadoRoutes);
 app.use("/api/governanca", governancaRoutes);
 app.use("/api/planejamento", planejamentoRoutes);
+app.use("/api/quadra-seguranca", quadraSegurancaRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);

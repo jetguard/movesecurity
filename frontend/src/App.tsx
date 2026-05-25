@@ -38,6 +38,7 @@ const Anulacoes = lazy(() => import("./pages/Anulacoes"));
 const GestaoPatrimonialAvancada = lazy(() => import("./pages/GestaoPatrimonialAvancada"));
 const Governanca = lazy(() => import("./pages/Governanca"));
 const Planejamento = lazy(() => import("./pages/Planejamento"));
+const QuadraSeguranca = lazy(() => import("./pages/QuadraSeguranca"));
 
 function CarregandoPagina() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="anulacoes" element={<Anulacoes />} />
             <Route path="cameras" element={<Cameras />} />
             <Route path="planejamento" element={<Planejamento />} />
+            <Route path="quadra-seguranca" element={<QuadraSeguranca />} />
             <Route
               path="gestao-patrimonial"
               element={

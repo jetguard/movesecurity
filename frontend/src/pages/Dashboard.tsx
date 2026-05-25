@@ -15,6 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import { api } from "../services/api";
+import { PERFIS, usuarioAtual } from "../utils/permissoes";
 
 type AnaliseOcorrencia = {
   prejuizoFinanceiro?: string;
@@ -51,6 +52,36 @@ type Investigacao = {
   local: string;
   status: string;
   createdAt: string;
+};
+
+type PlanejamentoCard = {
+  id: number;
+  titulo: string;
+  descricao?: string | null;
+  prioridade: string;
+  prazo?: string | null;
+  status: string;
+  responsavel?: { id: number; nome: string; apelido?: string | null } | null;
+};
+
+type PlanejamentoColuna = {
+  titulo: string;
+  cards?: PlanejamentoCard[];
+};
+
+type CamerasResumo = {
+  totalConectadas?: number;
+  totalDesconectadas?: number;
+  online?: number;
+  offline?: number;
+};
+
+type QuadraResumo = {
+  noTerminal?: number;
+  armazenados?: number;
+  previstos?: number;
+  saidos?: number;
+  permanenciaCritica?: number;
 };
 
 type TooltipPayloadItem = {
@@ -348,25 +379,43 @@ export default function Dashboard() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [investigacoes, setInvestigacoes] = useState<Investigacao[]>([]);
+  const [camerasResumo, setCamerasResumo] = useState<CamerasResumo>({});
+  const [quadraResumo, setQuadraResumo] = useState<QuadraResumo>({});
+  const [tarefasAbertas, setTarefasAbertas] = useState<PlanejamentoCard[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [periodo, setPeriodo] = useState("todos");
   const [mes, setMes] = useState("");
   const [ano, setAno] = useState("");
   const [status, setStatus] = useState("");
   const [local, setLocal] = useState("");
+  const usuario = usuarioAtual();
+  const isOperador = usuario?.perfilAcesso === PERFIS.OPERADOR;
 
   async function carregarDashboard() {
     setCarregando(true);
-    const [ocorrenciasResponse, eventosResponse, investigacoesResponse] =
+    const [ocorrenciasResponse, eventosResponse, investigacoesResponse, camerasResponse, quadraResponse, planejamentoResponse] =
       await Promise.all([
         api.get("/ocorrencias"),
         api.get("/eventos"),
         api.get("/investigacoes"),
+        api.get("/cameras/dashboard").catch(() => ({ data: {} })),
+        api.get(`/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`).catch(() => ({ data: {} })),
+        api.get("/planejamento").catch(() => ({ data: { colunas: [] } })),
       ]);
 
     setOcorrencias(ocorrenciasResponse.data);
     setEventos(eventosResponse.data);
     setInvestigacoes(investigacoesResponse.data);
+    setCamerasResumo(camerasResponse.data);
+    setQuadraResumo(quadraResponse.data);
+    const cards = ((planejamentoResponse.data.colunas || []) as PlanejamentoColuna[]).flatMap((coluna) =>
+      (coluna.cards || []).map((card: PlanejamentoCard) => ({ ...card, status: coluna.titulo }))
+    );
+    setTarefasAbertas(cards.filter((card: PlanejamentoCard) => {
+      const responsavelAtual = !card.responsavel?.id || card.responsavel.id === usuario?.id;
+      const statusAberto = !["Concluido", "Concluído", "Arquivado"].includes(card.status);
+      return responsavelAtual && statusAberto;
+    }).slice(0, 6));
     setCarregando(false);
   }
 
@@ -374,7 +423,15 @@ export default function Dashboard() {
     carregarDashboard();
     const intervalo = window.setInterval(carregarDashboard, 30000);
     return () => window.clearInterval(intervalo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isOperador) return;
+    api.get(`/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`)
+      .then((response) => setQuadraResumo(response.data))
+      .catch(() => setQuadraResumo({}));
+  }, [ano, isOperador]);
 
   const locais = useMemo(() => {
     const lista = new Set<string>();
@@ -492,9 +549,11 @@ export default function Dashboard() {
             <div class="card"><div class="label">Ocorrências</div><div class="value">${ocorrenciasFiltradas.length}</div></div>
             <div class="card"><div class="label">Eventos</div><div class="value">${eventosFiltrados.length}</div></div>
             <div class="card"><div class="label">Investigações</div><div class="value">${investigacoesFiltradas.length}</div></div>
-            <div class="card"><div class="label">Prejuízo total</div><div class="value">${formatarMoeda(totalPrejuizo)}</div></div>
-            <div class="card"><div class="label">Valor recuperado</div><div class="value">${formatarMoeda(totalRecuperado)}</div></div>
-            <div class="card"><div class="label">Diferença</div><div class="value">${formatarMoeda(diferenca)}</div></div>
+            ${isOperador ? "" : `
+              <div class="card"><div class="label">Prejuízo total</div><div class="value">${formatarMoeda(totalPrejuizo)}</div></div>
+              <div class="card"><div class="label">Valor recuperado</div><div class="value">${formatarMoeda(totalRecuperado)}</div></div>
+              <div class="card"><div class="label">Diferença</div><div class="value">${formatarMoeda(diferenca)}</div></div>
+            `}
           </div>
           <table>
             <thead><tr><th>Mês</th><th>Ocorrências</th><th>Eventos</th></tr></thead>
@@ -511,9 +570,9 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Dashboard Administrativo</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{isOperador ? "Dashboard Operacional CFTV" : "Dashboard Administrativo"}</h1>
           <p className="mt-1 text-slate-500">
-            Indicadores operacionais, financeiros e tendências dos relatórios.
+            {isOperador ? "Monitoramento operacional, CFTV, relatórios, tarefas e quadra de segurança." : "Indicadores operacionais, financeiros e tendências dos relatórios."}
           </p>
         </div>
 
@@ -608,12 +667,43 @@ export default function Dashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        <Indicador titulo="Prejuízo total" valor={formatarMoeda(totalPrejuizo)} subtitulo="Somatório das análises de ocorrência" destaque="text-red-600" />
-        <Indicador titulo="Valor recuperado" valor={formatarMoeda(totalRecuperado)} subtitulo="Somatório das análises de eventos" destaque="text-emerald-600" />
-        <Indicador titulo="Diferença financeira" valor={formatarMoeda(diferenca)} subtitulo="Prejuízo menos recuperação" destaque={diferenca > 0 ? "text-amber-600" : "text-emerald-600"} />
-        <Indicador titulo="Tendência" valor={variacao > 0 ? `+${variacao}` : variacao} subtitulo="Variação contra período anterior" destaque={variacao > 0 ? "text-blue-600" : "text-slate-700"} />
-      </div>
+      {isOperador ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Indicador titulo="Câmeras conectadas" valor={camerasResumo.totalConectadas || camerasResumo.online || 0} subtitulo="Disponíveis no monitoramento" destaque="text-emerald-600" />
+            <Indicador titulo="Câmeras desconectadas" valor={camerasResumo.totalDesconectadas || camerasResumo.offline || 0} subtitulo="Exigem atenção operacional" destaque="text-red-600" />
+            <Indicador titulo="Tarefas em aberto" valor={tarefasAbertas.length} subtitulo="Atribuídas ao usuário conectado" destaque="text-blue-600" />
+            <Indicador titulo="Contêineres armazenados" valor={quadraResumo.armazenados || quadraResumo.noTerminal || 0} subtitulo={`${quadraResumo.permanenciaCritica || 0} em permanência crítica no ano`} destaque="text-amber-600" />
+            <Indicador titulo="Previsão de chegada" valor={quadraResumo.previstos || 0} subtitulo={`Filtro anual: ${ano || new Date().getFullYear()}`} destaque="text-blue-600" />
+            <Indicador titulo="Contêineres que saíram" valor={quadraResumo.saidos || 0} subtitulo={`Saídas/finalizados em ${ano || new Date().getFullYear()}`} destaque="text-emerald-600" />
+          </div>
+
+          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 text-lg font-bold text-slate-900">Tarefas em Aberto</h2>
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {tarefasAbertas.map((tarefa) => (
+                <div key={tarefa.id} className="rounded-xl border border-slate-200 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-bold text-slate-900">{tarefa.titulo}</h3>
+                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-700">{tarefa.prioridade || "Normal"}</span>
+                  </div>
+                  <p className="mt-2 line-clamp-2 text-sm text-slate-500">{tarefa.descricao || "Sem descrição."}</p>
+                  <p className="mt-3 text-xs text-slate-500">Status: {tarefa.status}</p>
+                  <p className="text-xs text-slate-500">Prazo: {tarefa.prazo ? new Date(tarefa.prazo).toLocaleDateString("pt-BR") : "Sem prazo"}</p>
+                </div>
+              ))}
+              {tarefasAbertas.length === 0 && <p className="text-sm text-slate-500">Nenhuma tarefa em aberto atribuída.</p>}
+            </div>
+          </section>
+        </>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          <Indicador titulo="Prejuízo total" valor={formatarMoeda(totalPrejuizo)} subtitulo="Somatório das análises de ocorrência" destaque="text-red-600" />
+          <Indicador titulo="Valor recuperado" valor={formatarMoeda(totalRecuperado)} subtitulo="Somatório das análises de eventos" destaque="text-emerald-600" />
+          <Indicador titulo="Diferença financeira" valor={formatarMoeda(diferenca)} subtitulo="Prejuízo menos recuperação" destaque={diferenca > 0 ? "text-amber-600" : "text-emerald-600"} />
+          <Indicador titulo="Tendência" valor={variacao > 0 ? `+${variacao}` : variacao} subtitulo="Variação contra período anterior" destaque={variacao > 0 ? "text-blue-600" : "text-slate-700"} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <GraficoTemporal dados={temporal} />
