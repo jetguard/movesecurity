@@ -1,4 +1,4 @@
-# Treinamento Operacional JetGuard - Movecta Patrimonial
+# Manual de Funções Operacionais JetGuard - Movecta Patrimonial
 
 ## Objetivo do Sistema
 
@@ -110,7 +110,7 @@ Função:
 
 - identificar tipos de problemas recorrentes;
 - apoiar criação de campanhas preventivas;
-- orientar treinamentos;
+- orientar capacitações e ações preventivas;
 - direcionar fiscalização.
 
 Como interpretar:
@@ -405,6 +405,35 @@ Pode incluir:
 - anulações pendentes;
 - fluxos de revisão.
 
+## Planejamento Operacional
+
+Funciona como um quadro colaborativo no estilo Kanban para organizar demandas, lembretes e tratativas entre operadores, analistas e administradores.
+
+Principais recursos:
+
+- criação de colunas por unidade;
+- criação de cards com título, descrição, prioridade, prazo, setor, local e responsável;
+- exibição do usuário que criou cada card;
+- movimentação de cards entre colunas por arrastar e soltar;
+- reorganização das colunas;
+- exclusão segura de colunas vazias;
+- arquivamento de cards;
+- filtros por prioridade, responsável e texto.
+
+Uso recomendado:
+
+1. Acesse Operação > Planejamento.
+2. Crie uma coluna quando precisar representar uma etapa específica do fluxo.
+3. Cadastre o card com responsável e prazo.
+4. Arraste o card conforme a evolução da tratativa.
+5. Arquive o card quando a atividade for encerrada.
+
+Boa prática:
+
+- use cards para tarefas operacionais que precisam de acompanhamento;
+- evite excluir colunas com fluxo ativo;
+- mantenha responsáveis e prazos atualizados para não perder rastreabilidade.
+
 ## Central de Notificações
 
 Exibe alertas operacionais e pendências críticas.
@@ -492,6 +521,35 @@ Ajuda a classificar riscos como:
 - alto;
 - crítico.
 
+## Gestão Patrimonial Avançada
+
+Consolida informações estratégicas da operação patrimonial para apoiar decisões de segurança, prevenção e governança.
+
+O módulo reúne:
+
+- cadeia de custódia de evidências;
+- SLA operacional;
+- mapa operacional do terminal;
+- reincidência e inteligência de padrões;
+- criticidade automática;
+- relatórios executivos patrimoniais.
+
+Funções principais:
+
+- identificar áreas mais críticas;
+- verificar padrões de recorrência;
+- acompanhar indicadores de SLA;
+- gerar relatório executivo em PDF;
+- apoiar reuniões gerenciais e auditorias internas.
+
+Uso recomendado:
+
+1. Acesse Gestão Avançada > Gestão Patrimonial.
+2. Verifique os indicadores consolidados.
+3. Analise reincidências e criticidades.
+4. Gere o relatório executivo quando necessário.
+5. Utilize os dados para orientar planos de ação e ações preventivas.
+
 ## Planos de Ação
 
 Controla tratativas preventivas e corretivas.
@@ -548,6 +606,39 @@ Exemplos:
 - login;
 - alteração de perfil;
 - mudança de status.
+
+## Governança e Produção
+
+Área administrativa para acompanhar a saúde técnica do sistema e preparar o ambiente para operação profissional.
+
+O módulo apresenta:
+
+- status da API;
+- status do banco de dados;
+- situação da pasta de uploads;
+- configuração de variáveis sensíveis;
+- política de expiração de sessão;
+- limite de tentativas de login;
+- status de backup local;
+- recomendações de produção;
+- automações executivas sugeridas.
+
+Funções principais:
+
+- gerar backup local do banco SQLite;
+- verificar pendências de configuração;
+- confirmar se a segurança básica está aplicada;
+- apoiar implantação em produção;
+- orientar migração futura para PostgreSQL;
+- acompanhar indicadores executivos do ambiente.
+
+Uso recomendado:
+
+1. Acesse Administração > Governança.
+2. Confira os cards de saúde do ambiente.
+3. Verifique se `JWT_SECRET`, `SUPER_ADMIN_PASSWORD` e `DATABASE_URL` estão configurados.
+4. Gere backup antes de alterações importantes.
+5. Use as recomendações como checklist de produção.
 
 ## Usuários e Permissões
 
