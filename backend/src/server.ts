@@ -22,6 +22,7 @@ import comentarioRoutes from "./routes/comentario.routes";
 import cameraRoutes from "./routes/camera.routes";
 import configuracaoRoutes from "./routes/configuracao.routes";
 import anulacaoRoutes from "./routes/anulacao.routes";
+import patrimonioAvancadoRoutes from "./routes/patrimonioAvancado.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -61,6 +62,7 @@ app.use("/api/comentarios", comentarioRoutes);
 app.use("/api/cameras", cameraRoutes);
 app.use("/api/configuracoes", configuracaoRoutes);
 app.use("/api/anulacoes", anulacaoRoutes);
+app.use("/api/patrimonio-avancado", patrimonioAvancadoRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);

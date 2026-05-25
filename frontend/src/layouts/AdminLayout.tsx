@@ -30,6 +30,7 @@ import {
   X,
   ClipboardList,
   AlertTriangle,
+  MapPinned,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -271,6 +272,13 @@ export default function AdminLayout() {
             <Video size={20} />
             {mostrarTextoMenu && <span>Câmeras CFTV</span>}
           </Link>
+
+          {podeGerenciarRiscos() && (
+            <Link to="/gestao-patrimonial" className={item}>
+              <MapPinned size={20} />
+              {mostrarTextoMenu && <span>Gestão Patrimonial</span>}
+            </Link>
+          )}
 
           {podeGerenciarRiscos() && (
             <Link to="/riscos" className={item}>

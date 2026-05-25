@@ -33,6 +33,7 @@ const Cameras = lazy(() => import("./pages/Cameras"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazy(() => import("./pages/MinhaJornada"));
 const Anulacoes = lazy(() => import("./pages/Anulacoes"));
+const GestaoPatrimonialAvancada = lazy(() => import("./pages/GestaoPatrimonialAvancada"));
 
 function CarregandoPagina() {
   return (
@@ -71,6 +72,14 @@ export default function App() {
             <Route path="minha-jornada" element={<MinhaJornada />} />
             <Route path="anulacoes" element={<Anulacoes />} />
             <Route path="cameras" element={<Cameras />} />
+            <Route
+              path="gestao-patrimonial"
+              element={
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                  <GestaoPatrimonialAvancada />
+                </ProtectedRoute>
+              }
+            />
             <Route path="historico/:tipo/:id" element={<Historico />} />
             <Route
               path="inteligencia"
