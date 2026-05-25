@@ -60,6 +60,7 @@ export default function AlterarSenhaPrimeiroAcesso() {
             <span className="mb-2 block text-sm font-semibold text-slate-200">Senha provisória</span>
             <input
               type="password"
+              placeholder="Digite a senha provisória recebida"
               value={senhaAtual}
               onChange={(event) => setSenhaAtual(event.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
@@ -71,6 +72,7 @@ export default function AlterarSenhaPrimeiroAcesso() {
             <span className="mb-2 block text-sm font-semibold text-slate-200">Nova senha</span>
             <input
               type="password"
+              placeholder="Crie uma nova senha definitiva"
               value={novaSenha}
               onChange={(event) => setNovaSenha(event.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
@@ -83,6 +85,7 @@ export default function AlterarSenhaPrimeiroAcesso() {
             <span className="mb-2 block text-sm font-semibold text-slate-200">Confirmar nova senha</span>
             <input
               type="password"
+              placeholder="Repita a nova senha"
               value={confirmarSenha}
               onChange={(event) => setConfirmarSenha(event.target.value)}
               className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"

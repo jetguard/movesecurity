@@ -76,7 +76,7 @@ export default function Aprovacoes() {
             <AlertTriangle size={16} /> Anulações pendentes: {anulacoesPendentes}
           </Link>
           <select className="rounded-lg border bg-white p-3" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="">Todos</option>
+            <option value="">Filtrar por status da aprovação</option>
             <option>Aguardando Revisao</option>
             <option>Em Revisao</option>
             <option>Aprovado</option>
@@ -95,9 +95,9 @@ export default function Aprovacoes() {
 
       <div className="rounded-xl bg-white p-4 shadow">
         <label className="text-sm font-semibold text-slate-700">Motivo padrão para devolução</label>
-        <input className="mt-2 w-full rounded-lg border p-3" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
+        <input className="mt-2 w-full rounded-lg border p-3" placeholder="Descreva o motivo usado ao devolver um item" value={motivo} onChange={(e) => setMotivo(e.target.value)} />
         <label className="mt-4 block text-sm font-semibold text-slate-700">Justificativa para reabertura pelo Super Admin</label>
-        <input className="mt-2 w-full rounded-lg border p-3" value={motivoReabertura} onChange={(e) => setMotivoReabertura(e.target.value)} />
+        <input className="mt-2 w-full rounded-lg border p-3" placeholder="Informe a justificativa para reabrir um registro aprovado" value={motivoReabertura} onChange={(e) => setMotivoReabertura(e.target.value)} />
       </div>
 
       <div className="space-y-4">

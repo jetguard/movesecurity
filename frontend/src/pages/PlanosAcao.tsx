@@ -108,20 +108,20 @@ export default function PlanosAcao() {
         <form onSubmit={salvar} className="space-y-4 rounded-xl bg-white p-4 shadow sm:p-6">
           <h2 className="text-xl font-bold">{editando ? `Editar ${editando.codigo}` : "Novo plano de acao"}</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <input className="rounded-lg border p-3" placeholder="Titulo" value={form.titulo} onChange={(e) => campo("titulo", e.target.value)} required />
-            <input type="datetime-local" className="rounded-lg border p-3" value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} required />
-            <select className="rounded-lg border p-3" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}><option>Baixa</option><option>Media</option><option>Alta</option><option>Critica</option></select>
-            <select className="rounded-lg border p-3" value={form.status} onChange={(e) => campo("status", e.target.value)}><option>Pendente</option><option>Em andamento</option><option>Concluido</option><option>Atrasado</option></select>
-            <input className="rounded-lg border p-3" placeholder="Responsavel" value={form.responsavelNome} onChange={(e) => campo("responsavelNome", e.target.value)} />
-            <input type="number" min="0" max="100" className="rounded-lg border p-3" placeholder="Percentual" value={form.percentual} onChange={(e) => campo("percentual", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="Modulo de origem" value={form.origemModulo} onChange={(e) => campo("origemModulo", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="ID de origem" value={form.origemId} onChange={(e) => campo("origemId", e.target.value)} />
+            <input className="rounded-lg border p-3" placeholder="Título do plano de ação" value={form.titulo} onChange={(e) => campo("titulo", e.target.value)} required />
+            <input type="datetime-local" className="rounded-lg border p-3" placeholder="Prazo de conclusão" value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} required />
+            <select className="rounded-lg border p-3" title="Selecione a prioridade do plano" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}><option>Baixa</option><option>Media</option><option>Alta</option><option>Critica</option></select>
+            <select className="rounded-lg border p-3" title="Selecione o status do plano" value={form.status} onChange={(e) => campo("status", e.target.value)}><option>Pendente</option><option>Em andamento</option><option>Concluido</option><option>Atrasado</option></select>
+            <input className="rounded-lg border p-3" placeholder="Responsável pela execução" value={form.responsavelNome} onChange={(e) => campo("responsavelNome", e.target.value)} />
+            <input type="number" min="0" max="100" className="rounded-lg border p-3" placeholder="Percentual de conclusão" value={form.percentual} onChange={(e) => campo("percentual", e.target.value)} />
+            <input className="rounded-lg border p-3" placeholder="Módulo de origem, ex: Ocorrência" value={form.origemModulo} onChange={(e) => campo("origemModulo", e.target.value)} />
+            <input className="rounded-lg border p-3" placeholder="ID do registro de origem" value={form.origemId} onChange={(e) => campo("origemId", e.target.value)} />
           </div>
-          <textarea className="min-h-24 w-full rounded-lg border p-3" placeholder="Descricao" value={form.descricao} onChange={(e) => campo("descricao", e.target.value)} required />
-          <textarea className="min-h-24 w-full rounded-lg border p-3" placeholder="Acao corretiva" value={form.acaoCorretiva} onChange={(e) => campo("acaoCorretiva", e.target.value)} />
-          <textarea className="min-h-24 w-full rounded-lg border p-3" placeholder="Acao preventiva" value={form.acaoPreventiva} onChange={(e) => campo("acaoPreventiva", e.target.value)} />
-          <input className="w-full rounded-lg border p-3" placeholder="Link ou descricao da evidencia de conclusao" value={form.evidencia} onChange={(e) => campo("evidencia", e.target.value)} />
-          <textarea className="min-h-20 w-full rounded-lg border p-3" placeholder="Comentarios" value={form.comentarios} onChange={(e) => campo("comentarios", e.target.value)} />
+          <textarea className="min-h-24 w-full rounded-lg border p-3" placeholder="Descrição do problema ou necessidade tratada" value={form.descricao} onChange={(e) => campo("descricao", e.target.value)} required />
+          <textarea className="min-h-24 w-full rounded-lg border p-3" placeholder="Ação corretiva planejada" value={form.acaoCorretiva} onChange={(e) => campo("acaoCorretiva", e.target.value)} />
+          <textarea className="min-h-24 w-full rounded-lg border p-3" placeholder="Ação preventiva para evitar recorrência" value={form.acaoPreventiva} onChange={(e) => campo("acaoPreventiva", e.target.value)} />
+          <input className="w-full rounded-lg border p-3" placeholder="Link ou descrição da evidência de conclusão" value={form.evidencia} onChange={(e) => campo("evidencia", e.target.value)} />
+          <textarea className="min-h-20 w-full rounded-lg border p-3" placeholder="Comentários complementares do plano" value={form.comentarios} onChange={(e) => campo("comentarios", e.target.value)} />
           <div className="flex flex-col gap-3 sm:flex-row"><button className="rounded bg-green-600 px-4 py-2 text-white">Salvar</button><button type="button" onClick={() => setAbrir(false)} className="rounded bg-slate-200 px-4 py-2">Cancelar</button></div>
         </form>
       )}

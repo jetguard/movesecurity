@@ -153,6 +153,49 @@ export async function atualizarColuna(req: AuthRequest, res: Response) {
   }
 }
 
+export async function excluirColuna(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const unidade = unidadeAtual(req);
+    const coluna = await prisma.planejamentoColuna.findUnique({
+      where: { id },
+      include: {
+        cards: {
+          where: { status: { not: "Arquivado" } },
+          select: { id: true },
+        },
+      },
+    });
+
+    if (!coluna || coluna.unidade !== unidade) {
+      return res.status(404).json({ error: "Coluna nao encontrada." });
+    }
+
+    const totalColunas = await prisma.planejamentoColuna.count({ where: { unidade } });
+    if (totalColunas <= 1) {
+      return res.status(400).json({ error: "O planejamento precisa manter pelo menos uma coluna." });
+    }
+
+    if (coluna.cards.length > 0) {
+      return res.status(400).json({ error: "Mova ou arquive os cards antes de excluir esta coluna." });
+    }
+
+    await prisma.planejamentoColuna.delete({ where: { id } });
+
+    await registrarLog({
+      req,
+      acao: "Exclusao de coluna de planejamento",
+      tipoRegistro: "Planejamento",
+      registroId: coluna.id,
+      dadosAnteriores: coluna,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao excluir coluna" });
+  }
+}
+
 export async function reordenarColunas(req: AuthRequest, res: Response) {
   try {
     const unidade = unidadeAtual(req);

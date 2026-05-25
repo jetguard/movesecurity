@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DragEvent, FormEvent } from "react";
-import { Archive, CalendarClock, GripVertical, Plus, RefreshCw, UserRound } from "lucide-react";
+import { Archive, CalendarClock, GripVertical, Plus, RefreshCw, Trash2, UserRound } from "lucide-react";
 import { api } from "../services/api";
 
 type Usuario = {
@@ -60,7 +60,7 @@ type FormCard = {
 const inicial: FormCard = {
   titulo: "",
   descricao: "",
-  prioridade: "Media",
+  prioridade: "",
   prazo: "",
   setor: "",
   local: "",
@@ -77,6 +77,10 @@ const prioridadeClasse: Record<string, string> = {
 
 function nomeUsuario(usuario?: Card["responsavel"] | Usuario | null) {
   return usuario?.apelido || usuario?.nome || "Sem responsavel";
+}
+
+function nomeCriador(card: Card) {
+  return card.criadoPor?.apelido || card.criadoPor?.nome || "Criador nao informado";
 }
 
 function prazoTexto(prazo: string | null | undefined, agora: number) {
@@ -163,6 +167,17 @@ export default function Planejamento() {
     await carregar();
   }
 
+  async function excluirColuna(coluna: Coluna) {
+    if (coluna.cards.length > 0) {
+      alert("Mova ou arquive todos os cards antes de excluir esta coluna.");
+      return;
+    }
+
+    if (!confirm(`Deseja excluir a coluna "${coluna.titulo}"?`)) return;
+    await api.delete(`/planejamento/colunas/${coluna.id}`);
+    await carregar();
+  }
+
   async function moverCard(colunaId: number) {
     if (!dragCardId) return;
     const colunaDestino = colunas.find((coluna) => coluna.id === colunaId);
@@ -231,24 +246,26 @@ export default function Planejamento() {
 
       <section className="rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-900">
         <form onSubmit={criarCard} className="grid grid-cols-1 gap-3 lg:grid-cols-12">
-          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-3" placeholder="Titulo do card" value={form.titulo} onChange={(e) => campo("titulo", e.target.value)} required />
-          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-3" placeholder="Descricao breve" value={form.descricao} onChange={(e) => campo("descricao", e.target.value)} />
+          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-3" placeholder="Titulo do card ou lembrete operacional" value={form.titulo} onChange={(e) => campo("titulo", e.target.value)} required />
+          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-3" placeholder="Descricao resumida da atividade" value={form.descricao} onChange={(e) => campo("descricao", e.target.value)} />
           <select className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-2" value={form.responsavelId} onChange={(e) => campo("responsavelId", e.target.value)}>
-            <option value="">Responsavel</option>
+            <option value="">Selecione o responsavel</option>
             {usuarios.map((usuario) => <option key={usuario.id} value={usuario.id}>{nomeUsuario(usuario)}</option>)}
           </select>
           <select className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-2" value={form.colunaId} onChange={(e) => campo("colunaId", e.target.value)} required>
+            <option value="">Selecione a coluna</option>
             {colunas.map((coluna) => <option key={coluna.id} value={coluna.id}>{coluna.titulo}</option>)}
           </select>
           <select className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>
+            <option value="">Prioridade</option>
             <option>Baixa</option>
             <option>Media</option>
             <option>Alta</option>
             <option>Critica</option>
           </select>
           <input type="date" className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950" value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} />
-          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-2" placeholder="Setor" value={form.setor} onChange={(e) => campo("setor", e.target.value)} />
-          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-3" placeholder="Local" value={form.local} onChange={(e) => campo("local", e.target.value)} />
+          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-2" placeholder="Setor relacionado" value={form.setor} onChange={(e) => campo("setor", e.target.value)} />
+          <input className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-3" placeholder="Local ou area da atividade" value={form.local} onChange={(e) => campo("local", e.target.value)} />
           <button className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white hover:bg-blue-700 lg:col-span-2">
             <Plus size={18} />
             Criar card
@@ -257,7 +274,7 @@ export default function Planejamento() {
       </section>
 
       <section className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm dark:bg-slate-900 lg:flex-row">
-        <input className="min-w-0 flex-1 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950" placeholder="Pesquisar no planejamento" value={busca} onChange={(e) => setBusca(e.target.value)} />
+        <input className="min-w-0 flex-1 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950" placeholder="Pesquisar por titulo, descricao, setor ou local" value={busca} onChange={(e) => setBusca(e.target.value)} />
         <select className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950" value={prioridade} onChange={(e) => setPrioridade(e.target.value)}>
           <option value="">Todas as prioridades</option>
           <option>Baixa</option>
@@ -270,7 +287,7 @@ export default function Planejamento() {
           {usuarios.map((usuario) => <option key={usuario.id} value={usuario.id}>{nomeUsuario(usuario)}</option>)}
         </select>
         <div className="flex gap-2">
-          <input className="w-full rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950" placeholder="Nova coluna" value={novaColuna} onChange={(e) => setNovaColuna(e.target.value)} />
+          <input className="w-full rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-800 dark:bg-slate-950" placeholder="Nome da nova coluna" value={novaColuna} onChange={(e) => setNovaColuna(e.target.value)} />
           <button type="button" onClick={criarColuna} className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white dark:bg-blue-600">
             <Plus size={18} />
           </button>
@@ -293,7 +310,17 @@ export default function Planejamento() {
                   <GripVertical size={18} className="shrink-0 text-slate-400" />
                   <h2 className="truncate font-bold">{coluna.titulo}</h2>
                 </div>
-                <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-300">{coluna.cards.length}</span>
+                <div className="flex items-center gap-1">
+                  <span className="rounded-full bg-white px-2 py-1 text-xs font-bold text-slate-500 dark:bg-slate-900 dark:text-slate-300">{coluna.cards.length}</span>
+                  <button
+                    type="button"
+                    onClick={() => excluirColuna(coluna)}
+                    className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40"
+                    title="Excluir coluna vazia"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
               </div>
 
               <div className="flex flex-1 flex-col gap-3">
@@ -321,7 +348,8 @@ export default function Planejamento() {
                       {card.codigoRegistro && <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-200">{card.codigoRegistro}</span>}
                     </div>
                     <div className="mt-4 space-y-2 text-xs text-slate-500 dark:text-slate-400">
-                      <p className="flex items-center gap-2"><UserRound size={14} /> {nomeUsuario(card.responsavel)}</p>
+                      <p className="flex items-center gap-2"><UserRound size={14} /> Responsavel: {nomeUsuario(card.responsavel)}</p>
+                      <p>Criado por: {nomeCriador(card)}</p>
                       <p className="flex items-center gap-2"><CalendarClock size={14} /> {prazoTexto(card.prazo, agora)}</p>
                       {(card.setor || card.local) && <p>{[card.setor, card.local].filter(Boolean).join(" - ")}</p>}
                     </div>

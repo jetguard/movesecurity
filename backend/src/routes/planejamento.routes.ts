@@ -5,6 +5,7 @@ import {
   atualizarColuna,
   criarCard,
   criarColuna,
+  excluirColuna,
   listarPlanejamento,
   moverCard,
   reordenarColunas,
@@ -17,6 +18,7 @@ router.get("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarPlan
 router.post("/colunas", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarColuna);
 router.put("/colunas/ordem", autenticarUsuario, autorizarPerfis(acessoRelatorios), reordenarColunas);
 router.put("/colunas/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), atualizarColuna);
+router.delete("/colunas/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), excluirColuna);
 router.post("/cards", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarCard);
 router.put("/cards/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), atualizarCard);
 router.put("/cards/:id/mover", autenticarUsuario, autorizarPerfis(acessoRelatorios), moverCard);

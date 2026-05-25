@@ -223,17 +223,17 @@ export default function Riscos() {
         <form ref={formularioRef} onSubmit={salvarRisco} className="scroll-mt-28 rounded-xl bg-white p-4 shadow space-y-5 sm:p-6">
           <h2 className="text-xl font-bold">{editando ? `Editar ${editando.codigo}` : "Nova análise de risco"}</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <input type="datetime-local" className="rounded-lg border p-3" value={form.dataHora} onChange={(e) => campo("dataHora", e.target.value)} required />
-            <select className="rounded-lg border p-3" value={form.unidade} onChange={(e) => campo("unidade", e.target.value)}>{unidades.map((u) => <option key={u}>{u}</option>)}</select>
-            <input className="rounded-lg border p-3" placeholder="Setor" value={form.setor} onChange={(e) => campo("setor", e.target.value)} required />
-            <input className="rounded-lg border p-3" placeholder="Local" value={form.local} onChange={(e) => campo("local", e.target.value)} required />
-            <select className="rounded-lg border p-3" value={form.tipoRisco} onChange={(e) => campo("tipoRisco", e.target.value)}>{tipos.map((t) => <option key={t}>{t}</option>)}</select>
-            <input className="rounded-lg border p-3" placeholder="Natureza do risco" value={form.naturezaRisco} onChange={(e) => campo("naturezaRisco", e.target.value)} required />
-            <select className="rounded-lg border p-3" value={form.probabilidade} onChange={(e) => campo("probabilidade", e.target.value)}>{niveis.map((n) => <option key={n}>{n}</option>)}</select>
-            <select className="rounded-lg border p-3" value={form.severidade} onChange={(e) => campo("severidade", e.target.value)}>{niveis.map((n) => <option key={n}>{n}</option>)}</select>
+            <input type="datetime-local" className="rounded-lg border p-3" placeholder="Data e hora da análise" value={form.dataHora} onChange={(e) => campo("dataHora", e.target.value)} required />
+            <select className="rounded-lg border p-3" title="Selecione a unidade da análise" value={form.unidade} onChange={(e) => campo("unidade", e.target.value)}>{unidades.map((u) => <option key={u}>{u}</option>)}</select>
+            <input className="rounded-lg border p-3" placeholder="Setor onde o risco foi identificado" value={form.setor} onChange={(e) => campo("setor", e.target.value)} required />
+            <input className="rounded-lg border p-3" placeholder="Local exato do risco" value={form.local} onChange={(e) => campo("local", e.target.value)} required />
+            <select className="rounded-lg border p-3" title="Selecione o tipo de risco operacional" value={form.tipoRisco} onChange={(e) => campo("tipoRisco", e.target.value)}>{tipos.map((t) => <option key={t}>{t}</option>)}</select>
+            <input className="rounded-lg border p-3" placeholder="Natureza do risco identificado" value={form.naturezaRisco} onChange={(e) => campo("naturezaRisco", e.target.value)} required />
+            <select className="rounded-lg border p-3" title="Selecione a probabilidade do risco" value={form.probabilidade} onChange={(e) => campo("probabilidade", e.target.value)}>{niveis.map((n) => <option key={n}>{n}</option>)}</select>
+            <select className="rounded-lg border p-3" title="Selecione a severidade do risco" value={form.severidade} onChange={(e) => campo("severidade", e.target.value)}>{niveis.map((n) => <option key={n}>{n}</option>)}</select>
             <div className={`rounded-lg border p-3 font-bold ${corNivel(nivelCalculado)}`}>Nível de risco: {nivelCalculado}</div>
-            <select className="rounded-lg border p-3" value={form.status} onChange={(e) => campo("status", e.target.value)}>{statusPlano.map((s) => <option key={s}>{s}</option>)}</select>
-            <input type="datetime-local" className="rounded-lg border p-3" value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} required />
+            <select className="rounded-lg border p-3" title="Selecione o status do plano de ação" value={form.status} onChange={(e) => campo("status", e.target.value)}>{statusPlano.map((s) => <option key={s}>{s}</option>)}</select>
+            <input type="datetime-local" className="rounded-lg border p-3" placeholder="Prazo para tratativa" value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Responsável pela ação" value={form.responsavelAcaoNome} onChange={(e) => campo("responsavelAcaoNome", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="ID da ocorrência vinculada" value={form.ocorrenciaId} onChange={(e) => campo("ocorrenciaId", e.target.value)} />
             <input className="rounded-lg border p-3" placeholder="ID do evento vinculado" value={form.eventoId} onChange={(e) => campo("eventoId", e.target.value)} />
