@@ -23,6 +23,7 @@ import cameraRoutes from "./routes/camera.routes";
 import configuracaoRoutes from "./routes/configuracao.routes";
 import anulacaoRoutes from "./routes/anulacao.routes";
 import patrimonioAvancadoRoutes from "./routes/patrimonioAvancado.routes";
+import governancaRoutes from "./routes/governanca.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -63,6 +64,7 @@ app.use("/api/cameras", cameraRoutes);
 app.use("/api/configuracoes", configuracaoRoutes);
 app.use("/api/anulacoes", anulacaoRoutes);
 app.use("/api/patrimonio-avancado", patrimonioAvancadoRoutes);
+app.use("/api/governanca", governancaRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);
@@ -74,6 +76,14 @@ app.get("/", (req, res) => {
     sistema: "JetGuard API",
     status: "online",
     realtime: "/ws",
+  });
+});
+
+app.get("/api/health", (req, res) => {
+  return res.json({
+    sistema: "JetGuard API",
+    status: "online",
+    timestamp: new Date().toISOString(),
   });
 });
 

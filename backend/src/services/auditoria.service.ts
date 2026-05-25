@@ -35,6 +35,7 @@ function moduloLegivel(tipoRegistro: string) {
     AnulacaoRelatorio: "Solicitação de Anulação",
     Usuario: "Usuário",
     Auth: "Acesso",
+    Governanca: "Governança",
   };
 
   return mapa[tipoRegistro] || tipoRegistro;
@@ -119,6 +120,10 @@ function montarAcaoLegivel(params: {
 
   if (params.acao.includes("Acesso")) {
     return `O usuário ${params.usuarioNome} acessou o sistema`;
+  }
+
+  if (params.acao.includes("Logout")) {
+    return `O usuário ${params.usuarioNome} encerrou a sessão no sistema`;
   }
 
   return `O usuário ${params.usuarioNome} executou "${params.acao}" no ${alvo}`;

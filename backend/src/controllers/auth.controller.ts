@@ -1,9 +1,73 @@
-﻿import { Request, Response } from "express";
-import { prisma } from "../lib/prisma";
-
+import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { jwtSecret } from "../config/security";
+import { prisma } from "../lib/prisma";
+import { jwtExpiresIn, jwtSecret, loginPolicy } from "../config/security";
+import { AuthRequest } from "../middlewares/auth";
+import { registrarLog } from "../services/auditoria.service";
+
+type TentativaLogin = {
+  quantidade: number;
+  bloqueadoAte?: number;
+};
+
+const tentativasLogin = new Map<string, TentativaLogin>();
+
+function chaveLogin(email: string, ip?: string) {
+  return `${email.toLowerCase().trim()}::${ip || "sem-ip"}`;
+}
+
+function registrarFalhaLogin(email: string, ip?: string) {
+  const chave = chaveLogin(email, ip);
+  const tentativa = tentativasLogin.get(chave) || { quantidade: 0 };
+  const quantidade = tentativa.quantidade + 1;
+  const bloqueadoAte =
+    quantidade >= loginPolicy.maxAttempts
+      ? Date.now() + loginPolicy.lockMinutes * 60 * 1000
+      : tentativa.bloqueadoAte;
+
+  tentativasLogin.set(chave, {
+    quantidade,
+    bloqueadoAte,
+  });
+}
+
+function obterBloqueio(email: string, ip?: string) {
+  const tentativa = tentativasLogin.get(chaveLogin(email, ip));
+
+  if (!tentativa?.bloqueadoAte) return null;
+
+  if (tentativa.bloqueadoAte <= Date.now()) {
+    tentativasLogin.delete(chaveLogin(email, ip));
+    return null;
+  }
+
+  return tentativa.bloqueadoAte;
+}
+
+function limparTentativas(email: string, ip?: string) {
+  tentativasLogin.delete(chaveLogin(email, ip));
+}
+
+async function registrarFalhaAuditoria(req: Request, email: string, motivo: string) {
+  try {
+    await prisma.logAuditoria.create({
+      data: {
+        usuarioNome: email || "Tentativa sem e-mail",
+        ip: req.ip,
+        acao: `Tentativa de login recusada: ${motivo}`,
+        tipoRegistro: "Auth",
+        dadosNovos: JSON.stringify({
+          email,
+          motivo,
+          dataHora: new Date().toISOString(),
+        }),
+      },
+    });
+  } catch (error) {
+    console.error("Erro ao registrar falha de login:", error);
+  }
+}
 
 export async function register(req: Request, res: Response) {
   try {
@@ -59,20 +123,33 @@ export async function register(req: Request, res: Response) {
 export async function login(req: Request, res: Response) {
   try {
     const { email, senha } = req.body;
+    const emailLogin = String(email || "");
+    const bloqueadoAte = obterBloqueio(emailLogin, req.ip);
+
+    if (bloqueadoAte) {
+      const minutos = Math.ceil((bloqueadoAte - Date.now()) / 60000);
+      await registrarFalhaAuditoria(req, emailLogin, "excesso de tentativas");
+      return res.status(429).json({
+        error: `Muitas tentativas de login. Tente novamente em ${minutos} minuto(s).`,
+      });
+    }
 
     const usuario = await prisma.usuario.findUnique({
       where: {
-        email,
+        email: emailLogin,
       },
     });
 
     if (!usuario) {
+      registrarFalhaLogin(emailLogin, req.ip);
+      await registrarFalhaAuditoria(req, emailLogin, "usuário não encontrado");
       return res.status(400).json({
         error: "Usuário não encontrado",
       });
     }
 
     if (usuario.statusUsuario !== "ATIVO") {
+      await registrarFalhaAuditoria(req, emailLogin, "usuário bloqueado ou inativo");
       return res.status(403).json({
         error: "Usuário bloqueado ou inativo",
       });
@@ -84,10 +161,14 @@ export async function login(req: Request, res: Response) {
     );
 
     if (!senhaCorreta) {
+      registrarFalhaLogin(emailLogin, req.ip);
+      await registrarFalhaAuditoria(req, emailLogin, "senha inválida");
       return res.status(400).json({
         error: "Senha inválida",
       });
     }
+
+    limparTentativas(emailLogin, req.ip);
 
     const token = jwt.sign(
       {
@@ -95,7 +176,7 @@ export async function login(req: Request, res: Response) {
       },
       jwtSecret(),
       {
-        expiresIn: "7d",
+        expiresIn: jwtExpiresIn() as jwt.SignOptions["expiresIn"],
       }
     );
 
@@ -120,6 +201,7 @@ export async function login(req: Request, res: Response) {
         dadosNovos: JSON.stringify({
           email: usuario.email,
           acessoEm: agora.toISOString(),
+          expiraEm: jwtExpiresIn(),
         }),
       },
     });
@@ -127,14 +209,14 @@ export async function login(req: Request, res: Response) {
     return res.json({
       token,
       usuario: {
-          id: usuario.id,
-          nome: usuario.nome,
-          apelido: usuario.apelido,
-          fotoPerfil: usuario.fotoPerfil,
-          email: usuario.email,
-          perfilAcesso: usuario.perfilAcesso,
-          unidade: usuario.unidade,
-        },
+        id: usuario.id,
+        nome: usuario.nome,
+        apelido: usuario.apelido,
+        fotoPerfil: usuario.fotoPerfil,
+        email: usuario.email,
+        perfilAcesso: usuario.perfilAcesso,
+        unidade: usuario.unidade,
+      },
     });
 
   } catch (error) {
@@ -144,3 +226,13 @@ export async function login(req: Request, res: Response) {
   }
 }
 
+export async function logout(req: AuthRequest, res: Response) {
+  await registrarLog({
+    req,
+    acao: "Logout do sistema",
+    tipoRegistro: "Auth",
+    registroId: req.usuarioId,
+  });
+
+  return res.status(204).send();
+}

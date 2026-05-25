@@ -31,6 +31,7 @@ import {
   ClipboardList,
   AlertTriangle,
   MapPinned,
+  Server,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -79,6 +80,31 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
+    const limiteInatividade = 30 * 60 * 1000;
+    const atualizarAtividade = () => sessionStorage.setItem("ultimaAtividade", String(Date.now()));
+    const eventos = ["click", "keydown", "mousemove", "touchstart"];
+
+    atualizarAtividade();
+    eventos.forEach((evento) => window.addEventListener(evento, atualizarAtividade));
+
+    const interval = window.setInterval(() => {
+      const ultimaAtividade = Number(sessionStorage.getItem("ultimaAtividade") || Date.now());
+      if (Date.now() - ultimaAtividade > limiteInatividade) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("usuario");
+        sessionStorage.removeItem("loginInicio");
+        sessionStorage.removeItem("ultimaAtividade");
+        window.location.href = "/login";
+      }
+    }, 30000);
+
+    return () => {
+      eventos.forEach((evento) => window.removeEventListener(evento, atualizarAtividade));
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  useEffect(() => {
     function carregarNotificacoes() {
       api.get("/gestao/notificacoes")
       .then((response) => setNotificacoes(response.data))
@@ -120,11 +146,15 @@ export default function AdminLayout() {
     return () => socket.close();
   }, []);
 
-  function logout() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("usuario");
-    sessionStorage.removeItem("loginInicio");
-    window.location.href = "/login";
+  async function logout() {
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("usuario");
+      sessionStorage.removeItem("loginInicio");
+      window.location.href = "/login";
+    }
   }
 
   function formatarSessao(segundos: number) {
@@ -357,6 +387,10 @@ export default function AdminLayout() {
                       <Link to="/configuracoes" className={subItem}>
                         <Settings size={16} />
                         Configurações
+                      </Link>
+                      <Link to="/governanca" className={subItem}>
+                        <Server size={16} />
+                        Governança
                       </Link>
                     </>
                   )}

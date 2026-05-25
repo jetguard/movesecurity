@@ -34,6 +34,7 @@ const Configuracoes = lazy(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazy(() => import("./pages/MinhaJornada"));
 const Anulacoes = lazy(() => import("./pages/Anulacoes"));
 const GestaoPatrimonialAvancada = lazy(() => import("./pages/GestaoPatrimonialAvancada"));
+const Governanca = lazy(() => import("./pages/Governanca"));
 
 function CarregandoPagina() {
   return (
@@ -150,6 +151,14 @@ export default function App() {
               element={
                 <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
                   <Configuracoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="governanca"
+              element={
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                  <Governanca />
                 </ProtectedRoute>
               }
             />
