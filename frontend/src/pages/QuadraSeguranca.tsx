@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Camera, Download, Eye, FileText, PackageSearch, Pencil, Trash2 } from "lucide-react";
+import { Camera, ChevronDown, Download, Eye, FileText, PackageSearch, Pencil, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
 
@@ -122,6 +122,7 @@ export default function QuadraSeguranca() {
   const [filtroScanner, setFiltroScanner] = useState("");
   const [filtroEstufado, setFiltroEstufado] = useState("");
   const [carregando, setCarregando] = useState(true);
+  const [formularioAberto, setFormularioAberto] = useState(false);
   const podeExcluir = podeAdministrar() || podeAnalisar();
   const usuario = usuarioAtual();
 
@@ -174,6 +175,7 @@ export default function QuadraSeguranca() {
       ...inicial,
       dataHoraEntrada: inputData(new Date().toISOString()),
     });
+    setFormularioAberto(true);
   }
 
   function editar(item: ContainerQuadra) {
@@ -206,6 +208,7 @@ export default function QuadraSeguranca() {
       observacoesSaida: item.observacoesSaida || "",
       categoriaAnexo: "Evidências Operacionais",
     });
+    setFormularioAberto(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -271,68 +274,85 @@ export default function QuadraSeguranca() {
         </div>
       </div>
 
-      <form onSubmit={salvar} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="mb-4 flex items-center gap-2">
-          <PackageSearch className="text-blue-600" />
-          <h2 className="text-xl font-bold">{editando ? `Editar ${editando.numeroContainer}` : "Cadastro de Entrada"}</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Número do Contêiner" value={form.numeroContainer} onChange={(e) => campo("numeroContainer", e.target.value)} required />
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraEntrada} onChange={(e) => campo("dataHoraEntrada", e.target.value)} required />
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.tipoContainer} onChange={(e) => campo("tipoContainer", e.target.value)}>
-            {tipoContainer.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.dimensao} onChange={(e) => campo("dimensao", e.target.value)}>
-            {dimensoes.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.destino} onChange={(e) => campo("destino", e.target.value)}>
-            {destinos.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerEntrada} onChange={(e) => campo("scannerEntrada", e.target.value)}>
-            <option value="Não">Scanner entrada: Não</option>
-            <option value="Sim">Scanner entrada: Sim</option>
-          </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.estufadoTerminal} onChange={(e) => campo("estufadoTerminal", e.target.value)}>
-            <option value="Não">Estufado no terminal: Não</option>
-            <option value="Sim">Estufado no terminal: Sim</option>
-          </select>
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Número do lacre" value={form.numeroLacre} onChange={(e) => campo("numeroLacre", e.target.value)} />
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Armador" value={form.armador} onChange={(e) => campo("armador", e.target.value)} />
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Transportadora" value={form.transportadora} onChange={(e) => campo("transportadora", e.target.value)} />
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Motorista responsável" value={form.motoristaResponsavel} onChange={(e) => campo("motoristaResponsavel", e.target.value)} />
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Documento do motorista" value={form.documentoMotorista} onChange={(e) => campo("documentoMotorista", e.target.value)} />
-          <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Placa do cavalo mecânico" value={form.placaCavalo} onChange={(e) => campo("placaCavalo", e.target.value)} />
-          <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Placa da carreta" value={form.placaCarreta} onChange={(e) => campo("placaCarreta", e.target.value)} />
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Tipo de carga" value={form.tipoCarga} onChange={(e) => campo("tipoCarga", e.target.value)} />
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Peso da carga" value={form.pesoCarga} onChange={(e) => campo("pesoCarga", e.target.value)} />
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>
-            {prioridades.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.statusOperacional} onChange={(e) => campo("statusOperacional", e.target.value)}>
-            {statusOperacionais.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraSaida} onChange={(e) => campo("dataHoraSaida", e.target.value)} placeholder="Data e hora da saída" />
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerSaida} onChange={(e) => campo("scannerSaida", e.target.value)}>
-            <option value="">Scanner saída: não informado</option>
-            <option value="Não">Scanner saída: Não</option>
-            <option value="Sim">Scanner saída: Sim</option>
-          </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.statusFinal} onChange={(e) => campo("statusFinal", e.target.value)}>
-            {statusFinais.map((item) => <option key={item || "vazio"} value={item}>{item || "Status final não informado"}</option>)}
-          </select>
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Novo lacre na saída" value={form.novoLacre} onChange={(e) => campo("novoLacre", e.target.value)} />
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.categoriaAnexo} onChange={(e) => campo("categoriaAnexo", e.target.value)}>
-            {categorias.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="file" multiple accept="image/*,.pdf" onChange={(e) => setArquivos(Array.from(e.target.files || []))} />
-          <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações da entrada" value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} />
-          <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações da saída" value={form.observacoesSaida} onChange={(e) => campo("observacoesSaida", e.target.value)} />
-        </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <button className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">Salvar</button>
-          {editando && <button type="button" onClick={novo} className="rounded-lg bg-slate-200 px-4 py-2 dark:bg-slate-800">Cancelar edição</button>}
-        </div>
-      </form>
+      <section className="rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <button
+          type="button"
+          onClick={() => setFormularioAberto((aberto) => !aberto)}
+          className="flex w-full items-center justify-between gap-4 p-5 text-left"
+        >
+          <div className="flex items-center gap-2">
+            <PackageSearch className="text-blue-600" />
+            <div>
+              <h2 className="text-xl font-bold">{editando ? `Editar ${editando.numeroContainer}` : "Cadastro de Entrada"}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {formularioAberto ? "Preencha os dados operacionais do contêiner." : "Clique para expandir o formulário."}
+              </p>
+            </div>
+          </div>
+          <ChevronDown className={`text-slate-500 transition ${formularioAberto ? "rotate-180" : ""}`} />
+        </button>
+
+        {formularioAberto && (
+          <form onSubmit={salvar} className="border-t border-slate-200 p-5 dark:border-slate-800">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Número do Contêiner" value={form.numeroContainer} onChange={(e) => campo("numeroContainer", e.target.value)} required />
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraEntrada} onChange={(e) => campo("dataHoraEntrada", e.target.value)} required />
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.tipoContainer} onChange={(e) => campo("tipoContainer", e.target.value)}>
+                {tipoContainer.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.dimensao} onChange={(e) => campo("dimensao", e.target.value)}>
+                {dimensoes.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.destino} onChange={(e) => campo("destino", e.target.value)}>
+                {destinos.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerEntrada} onChange={(e) => campo("scannerEntrada", e.target.value)}>
+                <option value="Não">Scanner entrada: Não</option>
+                <option value="Sim">Scanner entrada: Sim</option>
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.estufadoTerminal} onChange={(e) => campo("estufadoTerminal", e.target.value)}>
+                <option value="Não">Estufado no terminal: Não</option>
+                <option value="Sim">Estufado no terminal: Sim</option>
+              </select>
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Número do lacre" value={form.numeroLacre} onChange={(e) => campo("numeroLacre", e.target.value)} />
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Armador" value={form.armador} onChange={(e) => campo("armador", e.target.value)} />
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Transportadora" value={form.transportadora} onChange={(e) => campo("transportadora", e.target.value)} />
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Motorista responsável" value={form.motoristaResponsavel} onChange={(e) => campo("motoristaResponsavel", e.target.value)} />
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Documento do motorista" value={form.documentoMotorista} onChange={(e) => campo("documentoMotorista", e.target.value)} />
+              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Placa do cavalo mecânico" value={form.placaCavalo} onChange={(e) => campo("placaCavalo", e.target.value)} />
+              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Placa da carreta" value={form.placaCarreta} onChange={(e) => campo("placaCarreta", e.target.value)} />
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Tipo de carga" value={form.tipoCarga} onChange={(e) => campo("tipoCarga", e.target.value)} />
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Peso da carga" value={form.pesoCarga} onChange={(e) => campo("pesoCarga", e.target.value)} />
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>
+                {prioridades.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.statusOperacional} onChange={(e) => campo("statusOperacional", e.target.value)}>
+                {statusOperacionais.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraSaida} onChange={(e) => campo("dataHoraSaida", e.target.value)} placeholder="Data e hora da saída" />
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerSaida} onChange={(e) => campo("scannerSaida", e.target.value)}>
+                <option value="">Scanner saída: não informado</option>
+                <option value="Não">Scanner saída: Não</option>
+                <option value="Sim">Scanner saída: Sim</option>
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.statusFinal} onChange={(e) => campo("statusFinal", e.target.value)}>
+                {statusFinais.map((item) => <option key={item || "vazio"} value={item}>{item || "Status final não informado"}</option>)}
+              </select>
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Novo lacre na saída" value={form.novoLacre} onChange={(e) => campo("novoLacre", e.target.value)} />
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.categoriaAnexo} onChange={(e) => campo("categoriaAnexo", e.target.value)}>
+                {categorias.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="file" multiple accept="image/*,.pdf" onChange={(e) => setArquivos(Array.from(e.target.files || []))} />
+              <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações da entrada" value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} />
+              <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações da saída" value={form.observacoesSaida} onChange={(e) => campo("observacoesSaida", e.target.value)} />
+            </div>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">Salvar</button>
+              {editando && <button type="button" onClick={novo} className="rounded-lg bg-slate-200 px-4 py-2 dark:bg-slate-800">Cancelar edição</button>}
+            </div>
+          </form>
+        )}
+      </section>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
