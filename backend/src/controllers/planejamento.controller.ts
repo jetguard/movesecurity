@@ -67,7 +67,9 @@ export async function listarPlanejamento(req: AuthRequest, res: Response) {
           statusUsuario: "ATIVO",
           OR: [
             { unidade },
+            { unidadesPermitidas: { contains: unidade } },
             { unidade: null },
+            { perfilAcesso: "SUPER_ADMIN" },
           ],
         },
         orderBy: { nome: "asc" },

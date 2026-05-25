@@ -107,6 +107,21 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
       });
     }
 
+    const local = req.body.local ? String(req.body.local).trim() : anterior.local;
+    const localCadastro = await prisma.localTerminal.findFirst({
+      where: {
+        nome: local,
+        unidade: req.unidadeAtiva,
+        status: "Ativo",
+      },
+    });
+
+    if (!localCadastro) {
+      return res.status(400).json({
+        error: "Selecione um local ativo cadastrado para esta unidade.",
+      });
+    }
+
     const investigacao = await prisma.investigacao.update({
       where: {
         id: Number(id),
@@ -114,6 +129,7 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
       data: {
         descricaoInvestigacao: req.body.descricaoInvestigacao,
         conclusaoFatos: req.body.conclusaoFatos,
+        local: localCadastro.nome,
         status: req.body.status || anterior.status,
       },
       include: {

@@ -7,7 +7,11 @@ export async function listarUsuariosMencao(req: AuthRequest, res: Response) {
   const usuarios = await prisma.usuario.findMany({
     where: {
       statusUsuario: "ATIVO",
-      OR: [{ unidade: req.unidadeAtiva }, { perfilAcesso: "SUPER_ADMIN" }],
+      OR: [
+        { unidade: req.unidadeAtiva },
+        { unidadesPermitidas: { contains: req.unidadeAtiva } },
+        { perfilAcesso: "SUPER_ADMIN" },
+      ],
     },
     orderBy: { nome: "asc" },
     select: { id: true, nome: true, apelido: true, email: true, cargo: true, unidade: true },

@@ -1,5 +1,6 @@
 ﻿import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
+import { serializarUnidadesPermitidas, UNIDADES_SISTEMA } from "../config/unidades";
 
 export async function garantirSuperAdmin() {
   const email = "fertechbyte@hotmail.com";
@@ -22,6 +23,8 @@ export async function garantirSuperAdmin() {
         email,
         senha: await bcrypt.hash(senhaPadrao, 10),
         empresa: "Movecta S/A",
+        unidade: "GJA-T1",
+        unidadesPermitidas: serializarUnidadesPermitidas(UNIDADES_SISTEMA, "GJA-T1"),
         perfilAcesso: "SUPER_ADMIN",
         statusUsuario: "ATIVO",
         deveAlterarSenha: false,
@@ -31,7 +34,7 @@ export async function garantirSuperAdmin() {
     return;
   }
 
-  if (usuario.perfilAcesso !== "SUPER_ADMIN" || usuario.statusUsuario !== "ATIVO" || usuario.deveAlterarSenha) {
+  if (usuario.perfilAcesso !== "SUPER_ADMIN" || usuario.statusUsuario !== "ATIVO" || usuario.deveAlterarSenha || !usuario.unidadesPermitidas) {
     await prisma.usuario.update({
       where: {
         id: usuario.id,
@@ -39,6 +42,8 @@ export async function garantirSuperAdmin() {
       data: {
         nome: usuario.nome || "Fernando Nunes",
         empresa: usuario.empresa || "Movecta S/A",
+        unidade: usuario.unidade || "GJA-T1",
+        unidadesPermitidas: serializarUnidadesPermitidas(UNIDADES_SISTEMA, usuario.unidade || "GJA-T1"),
         perfilAcesso: "SUPER_ADMIN",
         statusUsuario: "ATIVO",
         deveAlterarSenha: false,

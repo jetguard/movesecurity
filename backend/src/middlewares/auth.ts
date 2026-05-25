@@ -2,6 +2,7 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { jwtSecret } from "../config/security";
+import { normalizarUnidadesPermitidas, UNIDADES_SISTEMA } from "../config/unidades";
 
 export type AuthRequest = Request & {
   usuarioId?: number;
@@ -40,6 +41,7 @@ export async function autenticarUsuario(
         perfilAcesso: true,
         statusUsuario: true,
         unidade: true,
+        unidadesPermitidas: true,
         deveAlterarSenha: true,
       },
     });
@@ -73,16 +75,18 @@ export async function autenticarUsuario(
     }
 
     const unidadeSolicitada = String(req.headers["x-unidade-ativa"] || "");
-    const podeTrocarAmbiente = [
-      PERFIS.SUPER_ADMIN,
-      PERFIS.ADMINISTRADOR,
-      PERFIS.ANALISTA,
-    ].includes(usuario.perfilAcesso);
+    const unidadesPermitidas =
+      usuario.perfilAcesso === PERFIS.SUPER_ADMIN
+        ? UNIDADES_SISTEMA
+        : normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade);
 
-    req.unidadeAtiva =
-      podeTrocarAmbiente && unidadeSolicitada
-        ? unidadeSolicitada
-        : usuario.unidade || "GJA-T1";
+    if (unidadeSolicitada && !unidadesPermitidas.includes(unidadeSolicitada)) {
+      return res.status(403).json({
+        error: "Usuário não possui acesso a esta unidade",
+      });
+    }
+
+    req.unidadeAtiva = unidadeSolicitada || usuario.unidade || unidadesPermitidas[0] || "GJA-T1";
 
     return next();
   } catch (error) {

@@ -5,6 +5,19 @@ import { gerarRelatorioPdf } from "../services/relatorioPdf.service";
 import { registrarLog } from "../services/auditoria.service";
 import { estaAprovado } from "../utils/status";
 
+async function validarLocalAtivo(local: string, unidade?: string) {
+  const nome = String(local || "").trim();
+  if (!nome) return null;
+
+  return prisma.localTerminal.findFirst({
+    where: {
+      nome,
+      unidade,
+      status: "Ativo",
+    },
+  });
+}
+
 export async function criarEvento(req: AuthRequest, res: Response) {
   try {
     const {
@@ -31,6 +44,13 @@ export async function criarEvento(req: AuthRequest, res: Response) {
     if (!assunto || !local || !natureza || !subNatureza || !dataEvento) {
       return res.status(400).json({
         error: "Preencha todos os campos obrigatórios do evento.",
+      });
+    }
+
+    const localCadastro = await validarLocalAtivo(local, req.unidadeAtiva);
+    if (!localCadastro) {
+      return res.status(400).json({
+        error: "Selecione um local ativo cadastrado para esta unidade.",
       });
     }
 
@@ -61,7 +81,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
         ano,
         codigo,
         assunto,
-        local,
+        local: localCadastro.nome,
         unidade: req.unidadeAtiva || "GJA-T1",
         natureza,
         subNatureza,
@@ -195,6 +215,13 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       });
     }
 
+    const localCadastro = await validarLocalAtivo(local, req.unidadeAtiva);
+    if (!localCadastro) {
+      return res.status(400).json({
+        error: "Selecione um local ativo cadastrado para esta unidade.",
+      });
+    }
+
     if (
       !envolvidosFormatados ||
       !Array.isArray(envolvidosFormatados) ||
@@ -252,7 +279,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
         },
         data: {
           assunto,
-          local,
+          local: localCadastro.nome,
           unidade: req.unidadeAtiva || eventoExiste.unidade,
           natureza,
           subNatureza,

@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import type { AxiosError } from "axios";
 import { api } from "../../services/api";
+import { podeAdministrar } from "../../utils/permissoes";
 
 type ApiError = {
   error?: string;
@@ -22,6 +23,7 @@ export default function Naturezas() {
   const [nomeNatureza, setNomeNatureza] = useState("");
   const [naturezaSelecionada, setNaturezaSelecionada] = useState("");
   const [nomeSubNatureza, setNomeSubNatureza] = useState("");
+  const podeEditar = podeAdministrar();
 
   async function carregarNaturezas() {
     const response = await api.get("/naturezas");
@@ -78,59 +80,65 @@ export default function Naturezas() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <form
-          onSubmit={salvarNatureza}
-          className="bg-white rounded-xl shadow p-6 space-y-4"
-        >
-          <h2 className="text-xl font-bold">Nova Natureza</h2>
-
-          <input
-            className="w-full border rounded-lg p-3"
-            placeholder="Ex: Intempéries"
-            value={nomeNatureza}
-            onChange={(e) => setNomeNatureza(e.target.value)}
-            required
-          />
-
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
-            Salvar Natureza
-          </button>
-        </form>
-
-        <form
-          onSubmit={salvarSubNatureza}
-          className="bg-white rounded-xl shadow p-6 space-y-4"
-        >
-          <h2 className="text-xl font-bold">Nova Subnatureza</h2>
-
-          <select
-            className="w-full border rounded-lg p-3"
-            value={naturezaSelecionada}
-            onChange={(e) => setNaturezaSelecionada(e.target.value)}
-            required
+      {podeEditar ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <form
+            onSubmit={salvarNatureza}
+            className="bg-white rounded-xl shadow p-6 space-y-4"
           >
-            <option value="">Selecione a natureza</option>
-            {naturezas.map((natureza) => (
-              <option key={natureza.id} value={natureza.id}>
-                {natureza.nome}
-              </option>
-            ))}
-          </select>
+            <h2 className="text-xl font-bold">Nova Natureza</h2>
 
-          <input
-            className="w-full border rounded-lg p-3"
-            placeholder="Ex: Alagamentos"
-            value={nomeSubNatureza}
-            onChange={(e) => setNomeSubNatureza(e.target.value)}
-            required
-          />
+            <input
+              className="w-full border rounded-lg p-3"
+              placeholder="Ex: Intempéries"
+              value={nomeNatureza}
+              onChange={(e) => setNomeNatureza(e.target.value)}
+              required
+            />
 
-          <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
-            Salvar Subnatureza
-          </button>
-        </form>
-      </div>
+            <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
+              Salvar Natureza
+            </button>
+          </form>
+
+          <form
+            onSubmit={salvarSubNatureza}
+            className="bg-white rounded-xl shadow p-6 space-y-4"
+          >
+            <h2 className="text-xl font-bold">Nova Subnatureza</h2>
+
+            <select
+              className="w-full border rounded-lg p-3"
+              value={naturezaSelecionada}
+              onChange={(e) => setNaturezaSelecionada(e.target.value)}
+              required
+            >
+              <option value="">Selecione a natureza</option>
+              {naturezas.map((natureza) => (
+                <option key={natureza.id} value={natureza.id}>
+                  {natureza.nome}
+                </option>
+              ))}
+            </select>
+
+            <input
+              className="w-full border rounded-lg p-3"
+              placeholder="Ex: Alagamentos"
+              value={nomeSubNatureza}
+              onChange={(e) => setNomeSubNatureza(e.target.value)}
+              required
+            />
+
+            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg">
+              Salvar Subnatureza
+            </button>
+          </form>
+        </div>
+      ) : (
+        <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
+          Você pode consultar as naturezas e subnaturezas cadastradas. Alterações ficam disponíveis somente para administradores.
+        </div>
+      )}
 
       {naturezas.length === 0 ? (
         <div className="bg-white rounded-xl p-8 shadow text-center text-gray-500">

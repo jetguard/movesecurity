@@ -5,6 +5,7 @@ import { prisma } from "../lib/prisma";
 import { jwtExpiresIn, jwtSecret, loginPolicy } from "../config/security";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
 
 type TentativaLogin = {
   quantidade: number;
@@ -92,6 +93,8 @@ export async function register(req: Request, res: Response) {
         nome,
         email,
         senha: senhaHash,
+        unidade: "GJA-T1",
+        unidadesPermitidas: serializarUnidadesPermitidas(["GJA-T1"], "GJA-T1"),
       },
     });
 
@@ -216,6 +219,7 @@ export async function login(req: Request, res: Response) {
         email: usuario.email,
         perfilAcesso: usuario.perfilAcesso,
         unidade: usuario.unidade,
+        unidadesPermitidas: normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade),
         deveAlterarSenha: usuario.deveAlterarSenha,
       },
     });
@@ -276,6 +280,7 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
         email: true,
         perfilAcesso: true,
         unidade: true,
+        unidadesPermitidas: true,
         deveAlterarSenha: true,
       },
     });
@@ -294,7 +299,10 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
 
     return res.json({
       mensagem: "Senha alterada com sucesso.",
-      usuario: atualizado,
+      usuario: {
+        ...atualizado,
+        unidadesPermitidas: normalizarUnidadesPermitidas(atualizado.unidadesPermitidas, atualizado.unidade),
+      },
     });
   } catch (error) {
     return res.status(500).json({ error: "Erro ao alterar senha" });

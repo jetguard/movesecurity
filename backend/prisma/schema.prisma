@@ -19,6 +19,7 @@ model Usuario {
   cargo     String?
   empresa   String?
   unidade   String?
+  unidadesPermitidas String?
   perfilAcesso String @default("USUARIO")
   statusUsuario String @default("ATIVO")
   deveAlterarSenha Boolean @default(true)
@@ -217,6 +218,21 @@ model SubNatureza {
   natureza    Natureza @relation(fields: [naturezaId], references: [id], onDelete: Cascade)
 
   @@unique([naturezaId, nome])
+}
+
+model LocalTerminal {
+  id            Int      @id @default(autoincrement())
+  nome          String
+  descricao     String?
+  tipo          String
+  areaSensivel  Boolean  @default(false)
+  status        String   @default("Ativo")
+  unidade       String   @default("GJA-T1")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([nome, unidade])
+  @@index([unidade, status])
 }
 
 model AnaliseOcorrencia {

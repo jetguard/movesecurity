@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
+import { useMemo } from "react";
 import type { MouseEvent } from "react";
 import {
   CalendarDays,
@@ -39,11 +40,11 @@ import {
   podeAdministrar,
   podeGerenciarRiscos,
   podeTrocarAmbiente,
+  podeVerNaturezas,
   podeVerLogs,
+  unidadesPermitidasUsuario,
   usuarioAtual,
 } from "../utils/permissoes";
-
-const unidades = ["GJA-T1", "GJA-T2", "ITAJAI-SC", "SUAPE-T1", "SUAPE-T2", "ANHANGUERA"];
 
 export default function AdminLayout() {
   const [open, setOpen] = useState(() => window.innerWidth >= 768);
@@ -61,15 +62,27 @@ export default function AdminLayout() {
     if (salvo === "dark" || salvo === "light") return salvo;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
-  const [unidadeAtiva, setUnidadeAtiva] = useState(
-    sessionStorage.getItem("unidadeAtiva") || usuarioAtual()?.unidade || "GJA-T1"
-  );
   const usuario = usuarioAtual();
+  const unidadesDisponiveis = useMemo(() => unidadesPermitidasUsuario(), []);
+  const unidadeSalva = sessionStorage.getItem("unidadeAtiva");
+  const unidadeInicial =
+    unidadeSalva && unidadesDisponiveis.includes(unidadeSalva)
+      ? unidadeSalva
+      : usuario?.unidade || unidadesDisponiveis[0] || "GJA-T1";
+  const [unidadeAtiva, setUnidadeAtiva] = useState(unidadeInicial);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", tema === "dark");
     localStorage.setItem("tema", tema);
   }, [tema]);
+
+  useEffect(() => {
+    if (!unidadesDisponiveis.includes(unidadeAtiva)) {
+      const proximaUnidade = unidadesDisponiveis[0] || usuario?.unidade || "GJA-T1";
+      setUnidadeAtiva(proximaUnidade);
+      sessionStorage.setItem("unidadeAtiva", proximaUnidade);
+    }
+  }, [unidadeAtiva, unidadesDisponiveis, usuario?.unidade]);
 
   useEffect(() => {
     const inicio = Number(sessionStorage.getItem("loginInicio") || Date.now());
@@ -367,7 +380,7 @@ export default function AdminLayout() {
             </>
           )}
 
-          {(podeAdministrar() || podeVerLogs()) && (
+          {(podeAdministrar() || podeVerLogs() || podeVerNaturezas()) && (
             <>
               <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
@@ -380,15 +393,25 @@ export default function AdminLayout() {
               {administracaoOpen && mostrarTextoMenu && (
                 <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
                   {podeAdministrar() && (
+                    <Link to="/usuarios" className={subItem}>
+                      <Users size={16} />
+                      Usuários
+                    </Link>
+                  )}
+                  {podeVerNaturezas() && (
                     <>
-                      <Link to="/usuarios" className={subItem}>
-                        <Users size={16} />
-                        Usuários
-                      </Link>
                       <Link to="/naturezas" className={subItem}>
                         <Settings size={16} />
                         Naturezas
                       </Link>
+                      <Link to="/locais" className={subItem}>
+                        <MapPinned size={16} />
+                        Locais
+                      </Link>
+                    </>
+                  )}
+                  {podeAdministrar() && (
+                    <>
                       <Link to="/configuracoes" className={subItem}>
                         <Settings size={16} />
                         Configurações
@@ -479,7 +502,7 @@ export default function AdminLayout() {
                 onChange={(e) => alterarUnidade(e.target.value)}
                 className="mt-1 w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-900"
               >
-                {unidades.map((unidade) => (
+                {unidadesDisponiveis.map((unidade) => (
                   <option key={unidade} value={unidade}>
                     Unidade: {unidade}
                   </option>

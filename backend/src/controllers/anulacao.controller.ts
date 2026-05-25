@@ -92,6 +92,7 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
         statusUsuario: "ATIVO",
         OR: [
           { unidade: req.unidadeAtiva },
+          { unidadesPermitidas: { contains: req.unidadeAtiva } },
           { perfilAcesso: PERFIS.SUPER_ADMIN },
         ],
         perfilAcesso: { in: [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA] },

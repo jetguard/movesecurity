@@ -40,12 +40,20 @@ type InvestigacaoItem = {
   ocorrencia: OcorrenciaVinculada;
 };
 
+type LocalCadastro = {
+  id: number;
+  nome: string;
+  areaSensivel: boolean;
+};
+
 export default function Investigacao() {
   const [investigacoes, setInvestigacoes] = useState<InvestigacaoItem[]>([]);
   const [investigacaoEditando, setInvestigacaoEditando] =
     useState<InvestigacaoItem | null>(null);
   const [permitirEdicao, setPermitirEdicao] = useState(false);
   const [status, setStatus] = useState("Em Análise");
+  const [local, setLocal] = useState("");
+  const [locais, setLocais] = useState<LocalCadastro[]>([]);
   const [descricaoInvestigacao, setDescricaoInvestigacao] = useState("");
   const [conclusaoFatos, setConclusaoFatos] = useState("");
 
@@ -54,10 +62,16 @@ export default function Investigacao() {
     setInvestigacoes(response.data);
   }
 
+  async function carregarLocais() {
+    const response = await api.get("/locais?status=ativo");
+    setLocais(response.data);
+  }
+
   function abrirEdicao(item: InvestigacaoItem) {
     setInvestigacaoEditando(item);
     setPermitirEdicao(false);
     setStatus(item.status);
+    setLocal(item.local);
     setDescricaoInvestigacao(item.descricaoInvestigacao || "");
     setConclusaoFatos(item.conclusaoFatos || "");
   }
@@ -79,6 +93,7 @@ export default function Investigacao() {
 
     await api.put(`/investigacoes/${investigacaoEditando.id}`, {
       status,
+      local,
       descricaoInvestigacao,
       conclusaoFatos,
     });
@@ -90,7 +105,10 @@ export default function Investigacao() {
 
   useEffect(() => {
     carregarInvestigacoes();
+    carregarLocais();
   }, []);
+
+  const localSelecionado = locais.find((item) => item.nome === local);
 
   return (
     <div className="p-6">
@@ -140,11 +158,26 @@ export default function Investigacao() {
                 <option value="Concluído">Concluído</option>
               </select>
 
-              <input
-                className="w-full border rounded-lg p-3"
-                value={investigacaoEditando.local}
-                readOnly
-              />
+              {permitirEdicao ? (
+                <select
+                  className="w-full border rounded-lg p-3"
+                  value={local}
+                  onChange={(e) => setLocal(e.target.value)}
+                >
+                  <option value="">Selecione o local investigado</option>
+                  {locais.map((item) => (
+                    <option key={item.id} value={item.nome}>
+                      {item.nome}{item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  className="w-full border rounded-lg p-3"
+                  value={local}
+                  readOnly
+                />
+              )}
 
               <input
                 className="w-full border rounded-lg p-3"
@@ -152,6 +185,12 @@ export default function Investigacao() {
                 readOnly
               />
             </div>
+
+            {localSelecionado?.areaSensivel && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">
+                Local classificado como área sensível. A investigação deve receber atenção operacional especial.
+              </div>
+            )}
 
             <div className="space-y-2">
               <h3 className="font-bold">Descrição da Investigação</h3>

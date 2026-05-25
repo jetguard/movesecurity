@@ -6,6 +6,7 @@ import ocorrenciaRoutes from "./routes/ocorrencia.routes";
 import eventoRoutes from "./routes/evento.routes";
 import investigacaoRoutes from "./routes/investigacao.routes";
 import naturezaRoutes from "./routes/natureza.routes";
+import localRoutes from "./routes/local.routes";
 import usuarioRoutes from "./routes/usuario.routes";
 import analiseRoutes from "./routes/analise.routes";
 import analiseEstrategicaRoutes from "./routes/analiseEstrategica.routes";
@@ -72,6 +73,7 @@ app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);
 app.use("/api/investigacoes", investigacaoRoutes);
 app.use("/api/naturezas", naturezaRoutes);
+app.use("/api/locais", localRoutes);
 
 app.get("/", (req, res) => {
   return res.json({

@@ -9,6 +9,7 @@ type Usuario = {
   setor?: string;
   cargo?: string;
   unidade?: string;
+  unidadesPermitidas?: string[];
   empresa?: string;
   perfilAcesso: string;
   statusUsuario: string;
@@ -29,6 +30,7 @@ const vazio = {
   setor: "",
   cargo: "",
   unidade: "GJA-T1",
+  unidadesPermitidas: ["GJA-T1"],
   empresa: "Movecta S/A",
   perfilAcesso: "OPERADOR",
   statusUsuario: "ATIVO",
@@ -72,8 +74,22 @@ export default function Usuarios() {
     });
   }, [busca, filtroPerfil, filtroStatus, usuarios]);
 
-  function atualizarCampo(campo: string, valor: string) {
+  function atualizarCampo(campo: string, valor: string | string[]) {
     setFormulario((atual) => ({ ...atual, [campo]: valor }));
+  }
+
+  function alternarUnidadePermitida(unidade: string) {
+    setFormulario((atual) => {
+      const selecionadas = atual.unidadesPermitidas.includes(unidade)
+        ? atual.unidadesPermitidas.filter((item) => item !== unidade)
+        : [...atual.unidadesPermitidas, unidade];
+      const unidadesValidas = selecionadas.length > 0 ? selecionadas : [unidade];
+      return {
+        ...atual,
+        unidadesPermitidas: unidadesValidas,
+        unidade: unidadesValidas.includes(atual.unidade) ? atual.unidade : unidadesValidas[0],
+      };
+    });
   }
 
   function novoUsuario() {
@@ -94,6 +110,7 @@ export default function Usuarios() {
       setor: usuario.setor || "",
       cargo: usuario.cargo || "",
       unidade: usuario.unidade || "GJA-T1",
+      unidadesPermitidas: usuario.unidadesPermitidas?.length ? usuario.unidadesPermitidas : [usuario.unidade || "GJA-T1"],
       empresa: usuario.empresa || "Movecta S/A",
       perfilAcesso: usuario.perfilAcesso,
       statusUsuario: usuario.statusUsuario,
@@ -194,8 +211,24 @@ export default function Usuarios() {
             <input className="rounded-lg border p-3" placeholder="R.E" value={formulario.re} onChange={(e) => atualizarCampo("re", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Setor" value={formulario.setor} onChange={(e) => atualizarCampo("setor", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Cargo" value={formulario.cargo} onChange={(e) => atualizarCampo("cargo", e.target.value)} required />
+            <div className="rounded-lg border p-3 md:col-span-2">
+              <p className="mb-3 text-sm font-semibold text-slate-700">Unidades permitidas para acesso</p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {unidades.map((unidade) => (
+                  <label key={unidade} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={formulario.unidadesPermitidas.includes(unidade)}
+                      onChange={() => alternarUnidadePermitida(unidade)}
+                    />
+                    {unidade}
+                  </label>
+                ))}
+              </div>
+            </div>
             <select className="rounded-lg border p-3" value={formulario.unidade} onChange={(e) => atualizarCampo("unidade", e.target.value)} required>
-              {unidades.map((unidade) => <option key={unidade} value={unidade}>{unidade}</option>)}
+              <option value="">Selecione a unidade principal</option>
+              {formulario.unidadesPermitidas.map((unidade) => <option key={unidade} value={unidade}>{unidade}</option>)}
             </select>
             <input className="rounded-lg border bg-gray-100 p-3 text-gray-600" value="Movecta S/A" readOnly />
             <select className="rounded-lg border p-3" value={formulario.perfilAcesso} onChange={(e) => atualizarCampo("perfilAcesso", e.target.value)} required disabled={editando?.perfilAcesso === "SUPER_ADMIN"}>
@@ -257,7 +290,7 @@ export default function Usuarios() {
                 <td className="p-3">{usuario.re}</td>
                 <td className="p-3">{usuario.cargo}</td>
                 <td className="p-3">{usuario.setor}</td>
-                <td className="p-3">{usuario.unidade}</td>
+                <td className="p-3">{usuario.unidadesPermitidas?.join(", ") || usuario.unidade}</td>
                 <td className="p-3">{usuario.perfilAcesso}</td>
                 <td className="p-3">{usuario.statusUsuario}</td>
                 <td className="p-3">{usuario.ultimoAcesso ? new Date(usuario.ultimoAcesso).toLocaleString() : "Nunca"}</td>

@@ -10,6 +10,7 @@ const Ocorrencias = lazy(() => import("./pages/Relatórios/Ocorrencias"));
 const Investigacao = lazy(() => import("./pages/Relatórios/Investigacao"));
 const Eventos = lazy(() => import("./pages/Relatórios/Eventos"));
 const Naturezas = lazy(() => import("./pages/Cadastros/Naturezas"));
+const Locais = lazy(() => import("./pages/Cadastros/Locais"));
 const Login = lazy(() => import("./pages/Login"));
 const AlterarSenhaPrimeiroAcesso = lazy(() => import("./pages/AlterarSenhaPrimeiroAcesso"));
 const Perfil = lazy(() => import("./pages/Perfil"));
@@ -152,8 +153,16 @@ export default function App() {
             <Route
               path="naturezas"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA, PERFIS.OPERADOR]}>
                   <Naturezas />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="locais"
+              element={
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA, PERFIS.OPERADOR]}>
+                  <Locais />
                 </ProtectedRoute>
               }
             />

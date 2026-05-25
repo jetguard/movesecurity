@@ -74,6 +74,12 @@ type NaturezaCadastro = {
   }[];
 };
 
+type LocalCadastro = {
+  id: number;
+  nome: string;
+  areaSensivel: boolean;
+};
+
 const envolvidoVazio: Envolvido = {
   tipoEnvolvimento: "Condutor",
   nome: "",
@@ -99,6 +105,7 @@ export default function Ocorrencias() {
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
+  const [locais, setLocais] = useState<LocalCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
   const [ocorrenciaEditando, setOcorrenciaEditando] =
     useState<Ocorrencia | null>(null);
@@ -131,6 +138,11 @@ export default function Ocorrencias() {
   async function carregarNaturezas() {
     const response = await api.get("/naturezas");
     setNaturezas(response.data);
+  }
+
+  async function carregarLocais() {
+    const response = await api.get("/locais?status=ativo");
+    setLocais(response.data);
   }
 
   async function carregarUsuariosMencao() {
@@ -202,6 +214,7 @@ export default function Ocorrencias() {
 
   const subNaturezasDisponiveis =
     naturezas.find((item) => item.nome === natureza)?.subNaturezas || [];
+  const localSelecionado = locais.find((item) => item.nome === local);
 
   function alterarQuantidadeEnvolvidos(qtd: number) {
     const quantidade = Math.max(1, qtd);
@@ -415,6 +428,7 @@ export default function Ocorrencias() {
   useEffect(() => {
     carregarOcorrencias();
     carregarNaturezas();
+    carregarLocais();
     carregarUsuariosMencao();
   }, []);
 
@@ -542,13 +556,25 @@ export default function Ocorrencias() {
                   required
                 />
 
-                <input
+                <select
                   className="w-full border rounded-lg p-3"
-                  placeholder="Local da ocorrência"
                   value={local}
                   onChange={(e) => setLocal(e.target.value)}
                   required
-                />
+                >
+                  <option value="">Selecione o local da ocorrência</option>
+                  {locais.map((item) => (
+                    <option key={item.id} value={item.nome}>
+                      {item.nome}{item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                {localSelecionado?.areaSensivel && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 md:col-span-2">
+                    Local classificado como área sensível. A ocorrência receberá atenção operacional especial.
+                  </div>
+                )}
 
                 <select
                   className="w-full border rounded-lg p-3"

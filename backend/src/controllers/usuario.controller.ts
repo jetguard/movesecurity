@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
 
 const selectUsuario = {
   id: true,
@@ -15,6 +16,7 @@ const selectUsuario = {
   cargo: true,
   empresa: true,
   unidade: true,
+  unidadesPermitidas: true,
   perfilAcesso: true,
   statusUsuario: true,
   deveAlterarSenha: true,
@@ -22,6 +24,14 @@ const selectUsuario = {
   ultimoAcesso: true,
   createdAt: true,
 };
+
+function formatarUsuario(usuario: any) {
+  if (!usuario) return usuario;
+  return {
+    ...usuario,
+    unidadesPermitidas: normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade),
+  };
+}
 
 function normalizarPerfil(perfil: string) {
   const mapa: Record<string, string> = {
@@ -51,7 +61,7 @@ export async function listarUsuarios(req: Request, res: Response) {
     select: selectUsuario,
   });
 
-  return res.json(usuarios);
+  return res.json(usuarios.map(formatarUsuario));
 }
 
 export async function criarUsuario(req: AuthRequest, res: Response) {
@@ -63,12 +73,16 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       setor,
       cargo,
       unidade,
+      unidadesPermitidas,
       perfilAcesso,
       senha,
       confirmarSenha,
     } = req.body;
 
-    if (!nome || !email || !re || !setor || !cargo || !unidade || !perfilAcesso || !senha) {
+    const unidadesDoUsuario = normalizarUnidadesPermitidas(unidadesPermitidas, unidade);
+    const unidadePrincipal = unidade && unidadesDoUsuario.includes(unidade) ? unidade : unidadesDoUsuario[0];
+
+    if (!nome || !email || !re || !setor || !cargo || !unidadePrincipal || !perfilAcesso || !senha) {
       return res.status(400).json({ error: "Preencha todos os campos obrigatórios." });
     }
 
@@ -88,7 +102,8 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         re,
         setor,
         cargo,
-        unidade,
+        unidade: unidadePrincipal,
+        unidadesPermitidas: serializarUnidadesPermitidas(unidadesDoUsuario, unidadePrincipal),
         empresa: "Movecta S/A",
         perfilAcesso: normalizarPerfil(perfilAcesso),
         statusUsuario: "ATIVO",
@@ -106,7 +121,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       dadosNovos: usuario,
     });
 
-    return res.status(201).json(usuario);
+    return res.status(201).json(formatarUsuario(usuario));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao criar usuário" });
@@ -136,9 +151,12 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       setor,
       cargo,
       unidade,
+      unidadesPermitidas,
       perfilAcesso,
       statusUsuario,
     } = req.body;
+    const unidadesDoUsuario = normalizarUnidadesPermitidas(unidadesPermitidas, unidade || usuarioAnterior.unidade);
+    const unidadePrincipal = unidade && unidadesDoUsuario.includes(unidade) ? unidade : unidadesDoUsuario[0];
 
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
@@ -148,7 +166,8 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
         re,
         setor,
         cargo,
-        unidade,
+        unidade: unidadePrincipal,
+        unidadesPermitidas: serializarUnidadesPermitidas(unidadesDoUsuario, unidadePrincipal),
         empresa: "Movecta S/A",
         perfilAcesso: normalizarPerfil(perfilAcesso),
         statusUsuario: validarStatus(statusUsuario),
@@ -168,7 +187,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       dadosNovos: usuario,
     });
 
-    return res.json(usuario);
+    return res.json(formatarUsuario(usuario));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao atualizar usuário" });
@@ -215,7 +234,7 @@ export async function redefinirSenhaUsuario(req: AuthRequest, res: Response) {
       dadosNovos: { id: usuario.id, email: usuario.email },
     });
 
-    return res.json(usuario);
+    return res.json(formatarUsuario(usuario));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao redefinir senha" });
@@ -257,7 +276,7 @@ export async function alterarStatusUsuario(req: AuthRequest, res: Response) {
       dadosNovos: usuario,
     });
 
-    return res.json(usuario);
+    return res.json(formatarUsuario(usuario));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao alterar status do usuário" });
@@ -312,7 +331,7 @@ export async function buscarPerfil(req: AuthRequest, res: Response) {
       });
     }
 
-    return res.json(usuario);
+    return res.json(formatarUsuario(usuario));
   } catch (error) {
     console.error(error);
 
@@ -390,7 +409,7 @@ export async function atualizarPerfil(req: AuthRequest, res: Response) {
       });
     }
 
-    return res.json(usuario);
+    return res.json(formatarUsuario(usuario));
   } catch (error) {
     console.error(error);
 
