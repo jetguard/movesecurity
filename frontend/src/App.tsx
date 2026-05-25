@@ -11,6 +11,7 @@ const Investigacao = lazy(() => import("./pages/Relatórios/Investigacao"));
 const Eventos = lazy(() => import("./pages/Relatórios/Eventos"));
 const Naturezas = lazy(() => import("./pages/Cadastros/Naturezas"));
 const Login = lazy(() => import("./pages/Login"));
+const AlterarSenhaPrimeiroAcesso = lazy(() => import("./pages/AlterarSenhaPrimeiroAcesso"));
 const Perfil = lazy(() => import("./pages/Perfil"));
 const Logs = lazy(() => import("./pages/Logs"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
@@ -51,6 +52,14 @@ export default function App() {
       <Suspense fallback={<CarregandoPagina />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route
+            path="/alterar-senha"
+            element={
+              <ProtectedRoute>
+                <AlterarSenhaPrimeiroAcesso />
+              </ProtectedRoute>
+            }
+          />
 
           <Route
             path="/"

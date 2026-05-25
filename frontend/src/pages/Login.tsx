@@ -31,7 +31,7 @@ export default function Login() {
       localStorage.setItem("usuario", JSON.stringify(response.data.usuario));
       sessionStorage.setItem("loginInicio", String(Date.now()));
 
-      window.location.href = "/";
+      window.location.href = response.data.usuario?.deveAlterarSenha ? "/alterar-senha" : "/";
     } catch (error) {
       const apiError = error as AxiosError<ApiError>;
       alert(apiError.response?.data?.error || "Erro ao fazer login");

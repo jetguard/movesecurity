@@ -40,6 +40,7 @@ export async function autenticarUsuario(
         perfilAcesso: true,
         statusUsuario: true,
         unidade: true,
+        deveAlterarSenha: true,
       },
     });
 
@@ -58,6 +59,18 @@ export async function autenticarUsuario(
     req.usuarioId = usuario.id;
     req.usuarioPerfil = usuario.perfilAcesso;
     req.usuarioUnidade = usuario.unidade;
+
+    const rotaLiberadaParaTrocaSenha = [
+      "/api/auth/alterar-senha",
+      "/api/auth/logout",
+    ].includes(req.originalUrl);
+
+    if (usuario.deveAlterarSenha && !rotaLiberadaParaTrocaSenha) {
+      return res.status(403).json({
+        error: "Alteração de senha obrigatória no primeiro acesso.",
+        code: "TROCA_SENHA_OBRIGATORIA",
+      });
+    }
 
     const unidadeSolicitada = String(req.headers["x-unidade-ativa"] || "");
     const podeTrocarAmbiente = [

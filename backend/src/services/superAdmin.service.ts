@@ -24,12 +24,14 @@ export async function garantirSuperAdmin() {
         empresa: "Movecta S/A",
         perfilAcesso: "SUPER_ADMIN",
         statusUsuario: "ATIVO",
+        deveAlterarSenha: false,
+        senhaAlteradaEm: new Date(),
       },
     });
     return;
   }
 
-  if (usuario.perfilAcesso !== "SUPER_ADMIN" || usuario.statusUsuario !== "ATIVO") {
+  if (usuario.perfilAcesso !== "SUPER_ADMIN" || usuario.statusUsuario !== "ATIVO" || usuario.deveAlterarSenha) {
     await prisma.usuario.update({
       where: {
         id: usuario.id,
@@ -39,6 +41,8 @@ export async function garantirSuperAdmin() {
         empresa: usuario.empresa || "Movecta S/A",
         perfilAcesso: "SUPER_ADMIN",
         statusUsuario: "ATIVO",
+        deveAlterarSenha: false,
+        senhaAlteradaEm: usuario.senhaAlteradaEm || new Date(),
       },
     });
   }

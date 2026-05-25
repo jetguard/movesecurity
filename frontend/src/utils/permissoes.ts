@@ -13,6 +13,7 @@ export type UsuarioLocal = {
   perfilAcesso?: string;
   unidade?: string;
   fotoPerfil?: string;
+  deveAlterarSenha?: boolean;
 };
 
 export function usuarioAtual(): UsuarioLocal | null {

@@ -17,6 +17,8 @@ const selectUsuario = {
   unidade: true,
   perfilAcesso: true,
   statusUsuario: true,
+  deveAlterarSenha: true,
+  senhaAlteradaEm: true,
   ultimoAcesso: true,
   createdAt: true,
 };
@@ -90,6 +92,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         empresa: "Movecta S/A",
         perfilAcesso: normalizarPerfil(perfilAcesso),
         statusUsuario: "ATIVO",
+        deveAlterarSenha: true,
         senha: await bcrypt.hash(senha, 10),
       },
       select: selectUsuario,
@@ -198,6 +201,8 @@ export async function redefinirSenhaUsuario(req: AuthRequest, res: Response) {
       where: { id: Number(id) },
       data: {
         senha: await bcrypt.hash(senha, 10),
+        deveAlterarSenha: true,
+        senhaAlteradaEm: null,
       },
       select: selectUsuario,
     });

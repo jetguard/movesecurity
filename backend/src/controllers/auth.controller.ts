@@ -216,6 +216,7 @@ export async function login(req: Request, res: Response) {
         email: usuario.email,
         perfilAcesso: usuario.perfilAcesso,
         unidade: usuario.unidade,
+        deveAlterarSenha: usuario.deveAlterarSenha,
       },
     });
 
@@ -223,6 +224,80 @@ export async function login(req: Request, res: Response) {
     return res.status(500).json({
       error: "Erro ao fazer login",
     });
+  }
+}
+
+export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
+  try {
+    const { senhaAtual, novaSenha, confirmarSenha } = req.body;
+
+    if (!senhaAtual || !novaSenha || !confirmarSenha) {
+      return res.status(400).json({ error: "Preencha todos os campos." });
+    }
+
+    if (novaSenha !== confirmarSenha) {
+      return res.status(400).json({ error: "As senhas não coincidem." });
+    }
+
+    if (String(novaSenha).length < 8) {
+      return res.status(400).json({ error: "A nova senha deve possuir pelo menos 8 caracteres." });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    const senhaCorreta = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaCorreta) {
+      return res.status(400).json({ error: "Senha atual inválida." });
+    }
+
+    const mesmaSenha = await bcrypt.compare(novaSenha, usuario.senha);
+    if (mesmaSenha) {
+      return res.status(400).json({ error: "A nova senha deve ser diferente da senha provisória." });
+    }
+
+    const atualizado = await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        senha: await bcrypt.hash(novaSenha, 10),
+        deveAlterarSenha: false,
+        senhaAlteradaEm: new Date(),
+      },
+      select: {
+        id: true,
+        nome: true,
+        apelido: true,
+        fotoPerfil: true,
+        email: true,
+        perfilAcesso: true,
+        unidade: true,
+        deveAlterarSenha: true,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Alteração de senha no primeiro acesso",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosNovos: {
+        id: usuario.id,
+        email: usuario.email,
+        senhaAlteradaEm: atualizado.deveAlterarSenha ? null : new Date().toISOString(),
+      },
+    });
+
+    return res.json({
+      mensagem: "Senha alterada com sucesso.",
+      usuario: atualizado,
+    });
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao alterar senha" });
   }
 }
 

@@ -21,6 +21,8 @@ model Usuario {
   unidade   String?
   perfilAcesso String @default("USUARIO")
   statusUsuario String @default("ATIVO")
+  deveAlterarSenha Boolean @default(true)
+  senhaAlteradaEm DateTime?
   ultimoAcesso DateTime?
   createdAt DateTime @default(now())
 

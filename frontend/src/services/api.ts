@@ -22,6 +22,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response?.status === 403 && error.response?.data?.code === "TROCA_SENHA_OBRIGATORIA") {
+      if (window.location.pathname !== "/alterar-senha") {
+        window.location.href = "/alterar-senha";
+      }
+    }
+
     if (error.response?.status === 401 && window.location.pathname !== "/login") {
       localStorage.removeItem("token");
       localStorage.removeItem("usuario");
