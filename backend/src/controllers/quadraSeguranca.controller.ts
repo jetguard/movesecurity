@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { calcularHashArquivo } from "../utils/arquivoHash";
 
 const STATUS_ARMAZENADOS = ["Dentro do terminal", "Pendente de verificação", "Bloqueado"];
 const STATUS_SAIDA = ["Liberado"];
@@ -167,6 +168,7 @@ export async function criarContainer(req: AuthRequest, res: Response) {
             nomeArquivo: arquivo.filename,
             caminho: arquivo.path,
             tipo: arquivo.mimetype,
+            hashArquivo: calcularHashArquivo(arquivo.path),
             usuarioId: req.usuarioId,
           })),
         },
@@ -251,6 +253,7 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
             nomeArquivo: arquivo.filename,
             caminho: arquivo.path,
             tipo: arquivo.mimetype,
+            hashArquivo: calcularHashArquivo(arquivo.path),
             usuarioId: req.usuarioId,
           })),
         },

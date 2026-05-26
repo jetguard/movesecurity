@@ -9,6 +9,7 @@ import {
   excluirUsuario,
   listarUsuarios,
   redefinirSenhaUsuario,
+  resetarDispositivoUsuario,
   atualizarUsuario,
 } from "../controllers/usuario.controller";
 import { acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
@@ -49,6 +50,7 @@ router.put("/me", autenticarUsuario, upload.single("fotoPerfil"), atualizarPerfi
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), atualizarUsuario);
 router.put("/:id/status", autenticarUsuario, autorizarPerfis(acessoTotal), alterarStatusUsuario);
 router.put("/:id/senha", autenticarUsuario, autorizarPerfis(acessoTotal), redefinirSenhaUsuario);
+router.put("/:id/dispositivo/reset", autenticarUsuario, autorizarPerfis(acessoTotal), resetarDispositivoUsuario);
 router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirUsuario);
 
 export default router;

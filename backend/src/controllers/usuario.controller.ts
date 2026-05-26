@@ -241,6 +241,52 @@ export async function redefinirSenhaUsuario(req: AuthRequest, res: Response) {
   }
 }
 
+export async function resetarDispositivoUsuario(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const { motivo } = req.body;
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: Number(id) },
+      select: selectUsuario,
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+
+    await prisma.dispositivoAutorizado.updateMany({
+      where: {
+        usuarioId: usuario.id,
+        status: "Autorizado",
+      },
+      data: {
+        status: "Resetado",
+        resetadoEm: new Date(),
+        resetadoPorId: req.usuarioId,
+        motivoReset: motivo || "Reset administrativo de dispositivo",
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Reset de dispositivo autorizado",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosNovos: {
+        usuarioId: usuario.id,
+        email: usuario.email,
+        motivo: motivo || "Reset administrativo de dispositivo",
+      },
+    });
+
+    return res.json({ mensagem: "Dispositivo resetado. O próximo acesso vinculará um novo computador." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao resetar dispositivo" });
+  }
+}
+
 export async function alterarStatusUsuario(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;

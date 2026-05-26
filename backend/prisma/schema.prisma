@@ -53,6 +53,7 @@ model Usuario {
   quadraContainersAtualizados  QuadraSegurancaContainer[]     @relation("QuadraContainerAtualizador")
   quadraAnexos                 QuadraSegurancaAnexo[]         @relation("QuadraAnexoUsuario")
   quadraHistorico              QuadraSegurancaHistorico[]     @relation("QuadraHistoricoUsuario")
+  dispositivosAutorizados      DispositivoAutorizado[]
 }
 
 model Ocorrencia {
@@ -110,6 +111,7 @@ model AnexoOcorrencia {
   nomeArquivo  String
   caminho      String
   tipo         String
+  hashArquivo  String?
   createdAt    DateTime @default(now())
 
   ocorrencia Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
@@ -169,6 +171,7 @@ model AnexoEvento {
   nomeArquivo  String
   caminho      String
   tipo         String
+  hashArquivo  String?
   createdAt    DateTime @default(now())
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -289,11 +292,33 @@ model QuadraSegurancaAnexo {
   nomeArquivo  String
   caminho      String
   tipo         String
+  hashArquivo  String?
   usuarioId    Int?
   createdAt    DateTime @default(now())
 
   container QuadraSegurancaContainer @relation(fields: [containerId], references: [id], onDelete: Cascade)
   usuario   Usuario?                 @relation("QuadraAnexoUsuario", fields: [usuarioId], references: [id])
+}
+
+model DispositivoAutorizado {
+  id             Int       @id @default(autoincrement())
+  usuarioId      Int
+  identificador  String
+  navegador      String?
+  sistema        String?
+  ipCadastro     String?
+  ipUltimoAcesso String?
+  status         String    @default("Autorizado")
+  primeiroAcesso DateTime  @default(now())
+  ultimoAcesso   DateTime?
+  resetadoEm     DateTime?
+  resetadoPorId  Int?
+  motivoReset    String?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, identificador])
+  @@index([usuarioId, status])
 }
 
 model QuadraSegurancaHistorico {

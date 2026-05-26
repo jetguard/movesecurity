@@ -161,6 +161,15 @@ export default function Usuarios() {
     alert("Senha redefinida com sucesso");
   }
 
+  async function resetarDispositivo() {
+    if (!editando) return;
+    const motivo = prompt("Informe o motivo do reset de dispositivo:", "Troca de computador ou limpeza de navegador");
+    if (motivo === null) return;
+
+    await api.put(`/usuarios/${editando.id}/dispositivo/reset`, { motivo });
+    alert("Dispositivo resetado. O próximo login do usuário vinculará o novo computador.");
+  }
+
   async function excluirUsuario(usuario: Usuario) {
     if (!confirm(`Deseja excluir o usuário ${usuario.nome}?`)) return;
     await api.delete(`/usuarios/${usuario.id}`);
@@ -256,6 +265,18 @@ export default function Usuarios() {
                 <input className="rounded-lg border p-3" placeholder="Confirmar senha" type="password" value={confirmarReset} onChange={(e) => setConfirmarReset(e.target.value)} />
                 <button type="button" onClick={redefinirSenha} className="rounded-lg bg-slate-900 px-4 py-2 text-white">Redefinir</button>
               </div>
+            </div>
+          )}
+
+          {editando && ["OPERADOR", "ANALISTA"].includes(editando.perfilAcesso) && (
+            <div className="rounded-lg border bg-blue-50 p-4">
+              <p className="font-semibold mb-2">Dispositivo autorizado</p>
+              <p className="mb-3 text-sm text-slate-600">
+                Operadores e analistas acessam por dispositivo vinculado no primeiro login. Use o reset quando houver troca de computador ou limpeza dos dados do navegador.
+              </p>
+              <button type="button" onClick={resetarDispositivo} className="rounded-lg bg-blue-700 px-4 py-2 text-white">
+                Resetar dispositivo
+              </button>
             </div>
           )}
 

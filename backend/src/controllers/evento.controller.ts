@@ -4,6 +4,7 @@ import { AuthRequest } from "../middlewares/auth";
 import { gerarRelatorioPdf } from "../services/relatorioPdf.service";
 import { registrarLog } from "../services/auditoria.service";
 import { estaAprovado } from "../utils/status";
+import { calcularHashArquivo } from "../utils/arquivoHash";
 
 async function validarLocalAtivo(local: string, unidade?: string) {
   const nome = String(local || "").trim();
@@ -99,6 +100,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
             nomeArquivo: arquivo.filename,
             caminho: arquivo.path,
             tipo: arquivo.mimetype,
+            hashArquivo: calcularHashArquivo(arquivo.path),
           })),
         },
       },
@@ -297,6 +299,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
               nomeArquivo: arquivo.filename,
               caminho: arquivo.path,
               tipo: arquivo.mimetype,
+              hashArquivo: calcularHashArquivo(arquivo.path),
             })),
           },
         },

@@ -6,6 +6,7 @@ import { jwtExpiresIn, jwtSecret, loginPolicy } from "../config/security";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
+import { hashIdentificadorDispositivo } from "../utils/arquivoHash";
 
 type TentativaLogin = {
   quantidade: number;
@@ -48,6 +49,72 @@ function obterBloqueio(email: string, ip?: string) {
 
 function limparTentativas(email: string, ip?: string) {
   tentativasLogin.delete(chaveLogin(email, ip));
+}
+
+function perfilExigeDispositivo(perfil?: string) {
+  return perfil === "OPERADOR" || perfil === "ANALISTA";
+}
+
+async function validarDispositivoAutorizado(req: Request, usuario: { id: number; perfilAcesso: string }) {
+  if (!perfilExigeDispositivo(usuario.perfilAcesso)) return null;
+
+  const deviceId = String(req.body.deviceId || req.headers["x-device-id"] || "").trim();
+  if (!deviceId) {
+    return "Dispositivo não identificado. Solicite orientação do administrador.";
+  }
+
+  const identificador = hashIdentificadorDispositivo(deviceId);
+  const dispositivos = await prisma.dispositivoAutorizado.findMany({
+    where: {
+      usuarioId: usuario.id,
+      status: "Autorizado",
+    },
+  });
+
+  const userAgent = String(req.headers["user-agent"] || "");
+  const sistema = userAgent.includes("Windows")
+    ? "Windows"
+    : userAgent.includes("Mac")
+      ? "macOS"
+      : userAgent.includes("Linux")
+        ? "Linux"
+        : userAgent.includes("Android")
+          ? "Android"
+          : userAgent.includes("iPhone")
+            ? "iOS"
+            : "Não identificado";
+
+  if (dispositivos.length === 0) {
+    await prisma.dispositivoAutorizado.create({
+      data: {
+        usuarioId: usuario.id,
+        identificador,
+        navegador: userAgent.slice(0, 250),
+        sistema,
+        ipCadastro: req.ip,
+        ipUltimoAcesso: req.ip,
+        ultimoAcesso: new Date(),
+      },
+    });
+    return null;
+  }
+
+  const dispositivo = dispositivos.find((item) => item.identificador === identificador);
+  if (!dispositivo) {
+    return "Dispositivo não autorizado. Solicite reset de acesso ao administrador.";
+  }
+
+  await prisma.dispositivoAutorizado.update({
+    where: { id: dispositivo.id },
+    data: {
+      ipUltimoAcesso: req.ip,
+      ultimoAcesso: new Date(),
+      navegador: userAgent.slice(0, 250),
+      sistema,
+    },
+  });
+
+  return null;
 }
 
 async function registrarFalhaAuditoria(req: Request, email: string, motivo: string) {
@@ -168,6 +235,15 @@ export async function login(req: Request, res: Response) {
       await registrarFalhaAuditoria(req, emailLogin, "senha inválida");
       return res.status(400).json({
         error: "Senha inválida",
+      });
+    }
+
+    const erroDispositivo = await validarDispositivoAutorizado(req, usuario);
+    if (erroDispositivo) {
+      await registrarFalhaAuditoria(req, emailLogin, erroDispositivo);
+      return res.status(403).json({
+        error: erroDispositivo,
+        code: "DISPOSITIVO_NAO_AUTORIZADO",
       });
     }
 

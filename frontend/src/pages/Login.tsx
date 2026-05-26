@@ -6,6 +6,17 @@ type ApiError = {
   error?: string;
 };
 
+function obterDeviceId() {
+  const existente = localStorage.getItem("jetguardDeviceId");
+  if (existente) return existente;
+
+  const novo = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem("jetguardDeviceId", novo);
+  return novo;
+}
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +36,7 @@ export default function Login() {
       const response = await api.post("/auth/login", {
         email,
         senha: password,
+        deviceId: obterDeviceId(),
       });
 
       localStorage.setItem("token", response.data.token);
