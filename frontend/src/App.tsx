@@ -39,6 +39,7 @@ const GestaoPatrimonialAvancada = lazy(() => import("./pages/GestaoPatrimonialAv
 const Governanca = lazy(() => import("./pages/Governanca"));
 const Planejamento = lazy(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazy(() => import("./pages/QuadraSeguranca"));
+const OperacaoSOC = lazy(() => import("./pages/OperacaoSOC"));
 
 function CarregandoPagina() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
             <Route path="minha-jornada" element={<MinhaJornada />} />
             <Route path="anulacoes" element={<Anulacoes />} />
             <Route path="cameras" element={<Cameras />} />
+            <Route path="operacao-soc" element={<OperacaoSOC />} />
             <Route path="planejamento" element={<Planejamento />} />
             <Route path="quadra-seguranca" element={<QuadraSeguranca />} />
             <Route

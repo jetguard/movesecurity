@@ -235,6 +235,13 @@ export default function QuadraSeguranca() {
     setDossie(response.data);
   }
 
+  async function baixarDossiePdf(item: ContainerQuadra) {
+    const response = await api.get(`/quadra-seguranca/${item.id}/pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(response.data);
+    window.open(url, "_blank", "noopener,noreferrer");
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  }
+
   async function excluir(item: ContainerQuadra) {
     if (!confirm(`Deseja excluir o contêiner ${item.numeroContainer}?`)) return;
     await api.delete(`/quadra-seguranca/${item.id}`);
@@ -442,7 +449,13 @@ export default function QuadraSeguranca() {
                 <h2 className="text-2xl font-bold">Dossiê {dossie.numeroContainer}</h2>
                 <p className="text-slate-500">Responsável atual: {nomeUsuario(dossie.historico?.[0]?.usuario)}</p>
               </div>
-              <button onClick={() => setDossie(null)} className="rounded-lg bg-slate-100 px-4 py-2 dark:bg-slate-800">Fechar</button>
+              <div className="flex gap-2">
+                <button onClick={() => baixarDossiePdf(dossie)} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white">
+                  <Download size={16} />
+                  Dossiê PDF
+                </button>
+                <button onClick={() => setDossie(null)} className="rounded-lg bg-slate-100 px-4 py-2 dark:bg-slate-800">Fechar</button>
+              </div>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">

@@ -270,13 +270,23 @@ function escreverEnvolvidos(
   }
 
   relatorio.envolvidos.forEach((envolvido, index) => {
-    garantirEspaco(doc, 86, relatorio, usuario, qrCode, token);
+    const relato = valor(envolvido.relato);
+    const alturaRelato = Math.max(
+      22,
+      doc.heightOfString(relato, {
+        width: contentWidth - 28,
+        lineGap: 3,
+      })
+    );
+    const alturaCard = Math.max(116, 92 + alturaRelato);
+
+    garantirEspaco(doc, alturaCard + 12, relatorio, usuario, qrCode, token);
 
     const y = doc.y;
     doc
       .lineWidth(0.6)
       .strokeColor("#e5e7eb")
-      .roundedRect(page.left, y, contentWidth, 76, 6)
+      .roundedRect(page.left, y, contentWidth, alturaCard, 6)
       .stroke();
 
     doc
@@ -293,20 +303,30 @@ function escreverEnvolvidos(
       .fillColor("#334155")
       .text(`Tipo: ${valor(envolvido.tipoEnvolvimento)}`, page.left + 14, y + 32, { width: 210 })
       .text(`Documento: ${envolvido.tipoDocumento} ${envolvido.documento}`, page.left + 14, y + 47, { width: 250 })
-      .text(`Empresa: ${valor(envolvido.empresa)}`, page.left + 14, y + 62, { width: 250 });
+      .text(`Empresa: ${valor(envolvido.empresa)}`, page.left + 285, y + 32, { width: 200 });
 
     const veiculo = envolvido.possuiVeiculo
       ? `Placa: ${valor(envolvido.placa)} | Reboque: ${valor(envolvido.reboque)}`
       : "Veículo: não informado";
 
-    doc.text(veiculo, page.left + 285, y + 32, { width: 200 });
-    doc.text(`Relato: ${valor(envolvido.relato)}`, page.left + 285, y + 48, {
-      width: 200,
-      height: 28,
-      ellipsis: true,
-    });
+    doc.text(veiculo, page.left + 14, y + 62, { width: 470 });
 
-    doc.y = y + 88;
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(8.5)
+      .fillColor("#64748b")
+      .text("RELATO DO ENVOLVIDO", page.left + 14, y + 84, { width: contentWidth - 28 });
+
+    doc
+      .font("Helvetica")
+      .fontSize(9.2)
+      .fillColor("#111827")
+      .text(relato, page.left + 14, y + 98, {
+        width: contentWidth - 28,
+        lineGap: 3,
+      });
+
+    doc.y = y + alturaCard + 12;
   });
 }
 

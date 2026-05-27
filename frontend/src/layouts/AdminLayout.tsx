@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import type { MouseEvent } from "react";
 import {
   CalendarDays,
+  Activity,
   Bell,
   AtSign,
   BrainCircuit,
@@ -304,6 +305,10 @@ export default function AdminLayout() {
               <Link to="/cameras" className={subItem}>
                 <Video size={16} />
                 Câmeras CFTV
+              </Link>
+              <Link to="/operacao-soc" className={subItem}>
+                <Activity size={16} />
+                Operação SOC
               </Link>
               <Link to="/tarefas" className={subItem}>
                 <CheckCircle2 size={16} />

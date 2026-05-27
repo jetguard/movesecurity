@@ -108,6 +108,27 @@ export async function statusGovernanca(req: Request, res: Response) {
         },
       ],
       indicadores: await coletarIndicadores(),
+      producao: {
+        backupAutomatico: {
+          status: backupExiste ? "Backup local encontrado" : "Pendente de agendamento",
+          recomendacao: "Agendar backup diário do banco e da pasta uploads no cron da VPS.",
+        },
+        postgres: {
+          status: (process.env.DATABASE_URL || "").startsWith("postgres")
+            ? "PostgreSQL ativo"
+            : "Preparado para migração futura",
+          recomendacao: "Manter SQLite em operação leve e migrar para PostgreSQL quando houver maior volume ou múltiplos acessos simultâneos.",
+        },
+        testesAutomatizados: {
+          status: "Base ativa",
+          comandos: ["npm test", "npm run typecheck", "npm run lint", "npm run build"],
+        },
+        monitoramentoSaude: {
+          api: "online",
+          banco: "online",
+          uploads: fs.existsSync(uploadPath) ? "online" : "atenção",
+        },
+      },
       recomendacoes: [
         "Configurar JWT_SECRET e SUPER_ADMIN_PASSWORD próprios em produção.",
         "Usar CORS_ORIGIN restrito ao domínio oficial do sistema.",

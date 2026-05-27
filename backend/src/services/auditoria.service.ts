@@ -38,6 +38,10 @@ function moduloLegivel(tipoRegistro: string) {
     Governanca: "Governança",
     Planejamento: "Planejamento Operacional",
     QuadraSeguranca: "Quadra de Segurança",
+    Operacao: "Operação",
+    ChecklistInspecao: "Checklist Operacional",
+    CameraMonitoramento: "CFTV",
+    CameraChecklistOperacional: "Checklist CFTV",
   };
 
   return mapa[tipoRegistro] || tipoRegistro;

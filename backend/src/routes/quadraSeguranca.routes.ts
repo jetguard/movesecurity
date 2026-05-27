@@ -7,6 +7,7 @@ import {
   criarContainer,
   dashboardQuadra,
   excluirContainer,
+  exportarDossieContainerPdf,
   listarContainers,
 } from "../controllers/quadraSeguranca.controller";
 import { acessoRelatorios, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
@@ -37,6 +38,7 @@ const upload = multer({
 
 router.get("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarContainers);
 router.get("/dashboard", autenticarUsuario, autorizarPerfis(acessoRelatorios), dashboardQuadra);
+router.get("/:id/pdf", autenticarUsuario, autorizarPerfis(acessoRelatorios), exportarDossieContainerPdf);
 router.get("/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), buscarContainer);
 router.post("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), upload.array("anexos"), criarContainer);
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), upload.array("anexos"), atualizarContainer);

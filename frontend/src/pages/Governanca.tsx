@@ -35,6 +35,7 @@ type GovernancaStatus = {
     camerasOffline: number;
     logsHoje: number;
   };
+  producao?: Record<string, { status: string; recomendacao?: string; comandos?: string[]; api?: string; banco?: string; uploads?: string }>;
   recomendacoes: string[];
   atualizadoEm: string;
 };
@@ -233,6 +234,25 @@ export default function Governanca() {
           </p>
         </div>
       </section>
+
+      {dados.producao && (
+        <section className={indicadorClasses}>
+          <div className="mb-5 flex items-center gap-3">
+            <Server className="text-blue-600 dark:text-blue-300" size={22} />
+            <h2 className="text-lg font-bold">Produção e infraestrutura</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {Object.entries(dados.producao).map(([chave, item]) => (
+              <div key={chave} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">{chave}</p>
+                <p className="mt-1 font-bold">{item.status || [item.api, item.banco, item.uploads].filter(Boolean).join(" | ")}</p>
+                {item.recomendacao && <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{item.recomendacao}</p>}
+                {item.comandos && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{item.comandos.join(" | ")}</p>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

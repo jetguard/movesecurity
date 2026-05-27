@@ -1,4 +1,5 @@
 import { Response } from "express";
+import PDFDocument from "pdfkit";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
@@ -54,6 +55,12 @@ function serializarContainer(container: any) {
       : tempoPermanencia(container.dataHoraEntrada),
     nivelPermanencia: nivelPermanencia(container.dataHoraEntrada, container.dataHoraSaida),
   };
+}
+
+function lacreDivergente(container: { numeroLacre?: string | null; novoLacre?: string | null }) {
+  const entrada = texto(container.numeroLacre).toLocaleUpperCase("pt-BR");
+  const saida = texto(container.novoLacre).toLocaleUpperCase("pt-BR");
+  return Boolean(entrada && saida && entrada !== saida);
 }
 
 async function registrarHistorico(params: {
@@ -125,6 +132,85 @@ export async function buscarContainer(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao buscar dossiê" });
+  }
+}
+
+export async function exportarDossieContainerPdf(req: AuthRequest, res: Response) {
+  try {
+    const container = await prisma.quadraSegurancaContainer.findFirst({
+      where: {
+        id: Number(req.params.id),
+        unidade: req.unidadeAtiva,
+      },
+      include: {
+        criadoPor: { select: { nome: true, apelido: true } },
+        atualizadoPor: { select: { nome: true, apelido: true } },
+        anexos: {
+          orderBy: { createdAt: "desc" },
+          include: { usuario: { select: { nome: true, apelido: true } } },
+        },
+        historico: {
+          orderBy: { createdAt: "desc" },
+          include: { usuario: { select: { nome: true, apelido: true } } },
+        },
+      },
+    });
+
+    if (!container) {
+      return res.status(404).json({ error: "Contêiner não encontrado" });
+    }
+
+    const doc = new PDFDocument({ margin: 44, size: "A4" });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=dossie-container-${container.numeroContainer}.pdf`);
+    doc.pipe(res);
+
+    doc.font("Helvetica-Bold").fontSize(18).fillColor("#0f172a").text("Dossiê do Contêiner");
+    doc.font("Helvetica").fontSize(10).fillColor("#475569").text(`Quadra de Segurança | Unidade ${container.unidade}`);
+    doc.moveDown();
+
+    const linha = (titulo: string, conteudo: unknown) => {
+      doc.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text(titulo.toUpperCase());
+      doc.font("Helvetica").fontSize(11).fillColor("#111827").text(String(conteudo || "Não informado"));
+      doc.moveDown(0.35);
+    };
+
+    linha("Contêiner", container.numeroContainer);
+    linha("Status operacional", container.statusOperacional);
+    linha("Tempo no terminal", serializarContainer(container).tempoTerminal);
+    linha("Entrada", container.dataHoraEntrada.toLocaleString("pt-BR"));
+    linha("Saída", container.dataHoraSaida?.toLocaleString("pt-BR") || "Em aberto");
+    linha("Tipo / dimensão / destino", `${container.tipoContainer} | ${container.dimensao} | ${container.destino}`);
+    linha("Lacre de entrada", container.numeroLacre);
+    linha("Lacre de saída", container.novoLacre || "Não informado");
+    linha("Divergência de lacre", lacreDivergente(container) ? "Sim" : "Não");
+    linha("Scanner", `Entrada: ${container.scannerEntrada ? "Sim" : "Não"} | Saída: ${container.scannerSaida ? "Sim" : "Não"}`);
+    linha("Transportadora / motorista", `${container.transportadora || "Não informado"} | ${container.motoristaResponsavel || "Não informado"}`);
+    linha("Observações", container.observacoes || "Sem observações");
+    linha("Observações de saída", container.observacoesSaida || "Sem observações");
+
+    doc.addPage();
+    doc.font("Helvetica-Bold").fontSize(14).fillColor("#0f172a").text("Timeline operacional");
+    doc.moveDown();
+    container.historico.forEach((item) => {
+      doc.font("Helvetica-Bold").fontSize(10).fillColor("#111827").text(`${item.createdAt.toLocaleString("pt-BR")} - ${item.acao}`);
+      doc.font("Helvetica").fontSize(9).fillColor("#475569").text(`${item.usuario?.apelido || item.usuario?.nome || "Sistema"} | ${item.detalhes || "Sem detalhes"}`);
+      doc.moveDown(0.6);
+    });
+
+    doc.addPage();
+    doc.font("Helvetica-Bold").fontSize(14).fillColor("#0f172a").text("Anexos e evidências");
+    doc.moveDown();
+    container.anexos.forEach((anexo) => {
+      doc.font("Helvetica-Bold").fontSize(10).fillColor("#111827").text(`${anexo.categoria} - ${anexo.nomeOriginal}`);
+      doc.font("Helvetica").fontSize(9).fillColor("#475569").text(`Responsável: ${anexo.usuario?.apelido || anexo.usuario?.nome || "Não informado"} | Hash: ${anexo.hashArquivo || "Não calculado"}`);
+      doc.moveDown(0.6);
+    });
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao gerar dossiê PDF do contêiner" });
   }
 }
 
@@ -344,6 +430,14 @@ export async function dashboardQuadra(req: AuthRequest, res: Response) {
       ["Liberado", "Retido", "Encaminhado para verificação", "Finalizado"].includes(item.statusFinal || "")
     );
     const criticos = armazenados.filter((item) => nivelPermanencia(item.dataHoraEntrada, item.dataHoraSaida) === "critico");
+    const porArea = containers.reduce<Record<string, { total: number; criticos: number; bloqueados: number }>>((acc, item) => {
+      const area = item.destino || item.tipoCarga || "Não informado";
+      acc[area] ||= { total: 0, criticos: 0, bloqueados: 0 };
+      acc[area].total += 1;
+      if (nivelPermanencia(item.dataHoraEntrada, item.dataHoraSaida) === "critico") acc[area].criticos += 1;
+      if (item.statusOperacional === "Bloqueado") acc[area].bloqueados += 1;
+      return acc;
+    }, {});
 
     return res.json({
       ano,
@@ -354,6 +448,23 @@ export async function dashboardQuadra(req: AuthRequest, res: Response) {
       saidos: saidos.length,
       permanenciaCritica: criticos.length,
       bloqueados: containers.filter((item) => item.statusOperacional === "Bloqueado").length,
+      alertaPermanencia: criticos.map((item) => ({
+        id: item.id,
+        numeroContainer: item.numeroContainer,
+        tempoTerminal: tempoPermanencia(item.dataHoraEntrada, item.dataHoraSaida),
+        prioridade: item.prioridade,
+        status: item.statusOperacional,
+      })),
+      lacresDivergentes: containers.filter(lacreDivergente).map((item) => ({
+        id: item.id,
+        numeroContainer: item.numeroContainer,
+        lacreEntrada: item.numeroLacre,
+        lacreSaida: item.novoLacre,
+      })),
+      mapaStatusArea: Object.entries(porArea).map(([area, dados]) => ({
+        area,
+        ...dados,
+      })),
       pendentes: containers.filter((item) => item.statusOperacional === "Pendente de verificação").length,
     });
   } catch (error) {

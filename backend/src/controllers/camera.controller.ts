@@ -360,7 +360,7 @@ export async function listarChecklistCamera(req: AuthRequest, res: Response) {
 
 export async function dashboardCameras(req: AuthRequest, res: Response) {
   try {
-    const [cameras, checklists, eventos] = await Promise.all([
+    const [cameras, checklists, eventos, configuracao] = await Promise.all([
       prisma.cameraMonitoramento.findMany({ where: { unidade: req.unidadeAtiva } }),
       prisma.cameraChecklistOperacional.findMany({
         where: { unidade: req.unidadeAtiva },
@@ -372,6 +372,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         include: { camera: true },
         orderBy: { iniciadoEm: "desc" },
       }),
+      prisma.configuracaoSistema.findFirst(),
     ]);
 
     const agora = new Date();
@@ -390,6 +391,14 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         : 0;
     const totalOfflineHistorico = cameras.reduce((soma, camera) => soma + camera.totalIndisponibilidade, 0) + indisponibilidadeAtual;
     const sla = total === 0 ? 100 : Math.max(0, Math.round((online / total) * 100));
+    const metaSla = configuracao?.slaCameras || 98;
+    const tempoMaximoOffline = configuracao?.tempoMaximoOffline || 60;
+    const checklistCameraDias = configuracao?.checklistCameraDias || 7;
+    const limiteChecklist = new Date(Date.now() - checklistCameraDias * 24 * 60 * 60 * 1000);
+    const camerasSemChecklist = cameras.filter((camera) => {
+      const ultimo = checklists.find((checklist) => checklist.cameraId === camera.id);
+      return !ultimo || ultimo.createdAt < limiteChecklist;
+    });
 
     const instabilidadePorCamera = ranking(
       cameras.reduce<Record<string, number>>((acc, camera) => {
@@ -444,7 +453,13 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
       mediaOfflinePorCamera: total === 0 ? 0 : Math.round(totalOfflineHistorico / total),
       totalOfflineHistorico,
       sla,
-      indicadorSla: sla >= 98 ? "Dentro do SLA" : sla >= 90 ? "Atenção" : "Crítico",
+      metaSla,
+      indicadorSla: sla >= metaSla ? "Dentro do SLA" : sla >= 90 ? "Atenção" : "Crítico",
+      digifort: {
+        statusIntegracao: "Preparado para integração futura",
+        tipoSistemaPadrao: "DIGIFORT",
+        camposMapeados: ["numeroCamera", "numeroServidor", "status", "areaMonitorada", "eventos"],
+      },
       porTipoCamera: agrupar(cameras, (camera) => camera.tipoCamera),
       porTecnologia: agrupar(cameras, (camera) => camera.tecnologia),
       porUnidade: agrupar(cameras, (camera) => camera.unidade),
@@ -485,7 +500,22 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
           titulo: `Câmera ${camera.numeroCamera} desconectada`,
           mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
           minutos: camera.desconectadaDesde ? minutosEntre(camera.desconectadaDesde, agora) : 0,
+          slaViolado: camera.desconectadaDesde ? minutosEntre(camera.desconectadaDesde, agora) > tempoMaximoOffline : false,
         })),
+      alertasAutomaticos: [
+        ...cameras
+          .filter((camera) => camera.status === STATUS_DESCONECTADA && camera.desconectadaDesde && minutosEntre(camera.desconectadaDesde, agora) > tempoMaximoOffline)
+          .map((camera) => ({
+            tipo: "SLA violado",
+            mensagem: `Câmera ${camera.numeroCamera} offline acima de ${tempoMaximoOffline} minutos`,
+            severidade: "Crítica",
+          })),
+        ...camerasSemChecklist.map((camera) => ({
+          tipo: "Checklist vencido",
+          mensagem: `Câmera ${camera.numeroCamera} sem checklist nos últimos ${checklistCameraDias} dias`,
+          severidade: "Atenção",
+        })),
+      ],
     });
   } catch (error) {
     console.error(error);
