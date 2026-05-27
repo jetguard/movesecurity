@@ -58,65 +58,72 @@ function perfilExigeDispositivo(perfil?: string) {
 async function validarDispositivoAutorizado(req: Request, usuario: { id: number; perfilAcesso: string }) {
   if (!perfilExigeDispositivo(usuario.perfilAcesso)) return null;
 
-  const deviceId = String(req.body.deviceId || req.headers["x-device-id"] || "").trim();
-  if (!deviceId) {
-    return "Dispositivo não identificado. Solicite orientação do administrador.";
-  }
+  try {
+    const deviceId = String(req.body.deviceId || req.headers["x-device-id"] || "").trim();
+    const userAgent = String(req.headers["user-agent"] || "");
+    const sistema = userAgent.includes("Windows")
+      ? "Windows"
+      : userAgent.includes("Mac")
+        ? "macOS"
+        : userAgent.includes("Linux")
+          ? "Linux"
+          : userAgent.includes("Android")
+            ? "Android"
+            : userAgent.includes("iPhone")
+              ? "iOS"
+              : "Não identificado";
 
-  const identificador = hashIdentificadorDispositivo(deviceId);
-  const dispositivos = await prisma.dispositivoAutorizado.findMany({
-    where: {
-      usuarioId: usuario.id,
-      status: "Autorizado",
-    },
-  });
-
-  const userAgent = String(req.headers["user-agent"] || "");
-  const sistema = userAgent.includes("Windows")
-    ? "Windows"
-    : userAgent.includes("Mac")
-      ? "macOS"
-      : userAgent.includes("Linux")
-        ? "Linux"
-        : userAgent.includes("Android")
-          ? "Android"
-          : userAgent.includes("iPhone")
-            ? "iOS"
-            : "Não identificado";
-
-  if (dispositivos.length === 0) {
-    await prisma.dispositivoAutorizado.create({
-      data: {
+    const dispositivos = await prisma.dispositivoAutorizado.findMany({
+      where: {
         usuarioId: usuario.id,
-        identificador,
-        navegador: userAgent.slice(0, 250),
-        sistema,
-        ipCadastro: req.ip,
-        ipUltimoAcesso: req.ip,
-        ultimoAcesso: new Date(),
+        status: "Autorizado",
       },
     });
+
+    if (!deviceId && dispositivos.length > 0) {
+      return "Dispositivo não identificado. Solicite reset de acesso ao administrador.";
+    }
+
+    const identificador = hashIdentificadorDispositivo(
+      deviceId || `${usuario.id}:${userAgent}:${req.ip || "sem-ip"}`
+    );
+
+    if (dispositivos.length === 0) {
+      await prisma.dispositivoAutorizado.create({
+        data: {
+          usuarioId: usuario.id,
+          identificador,
+          navegador: userAgent.slice(0, 250),
+          sistema,
+          ipCadastro: req.ip,
+          ipUltimoAcesso: req.ip,
+          ultimoAcesso: new Date(),
+        },
+      });
+      return null;
+    }
+
+    const dispositivo = dispositivos.find((item) => item.identificador === identificador);
+    if (!dispositivo) {
+      return "Dispositivo não autorizado. Solicite reset de acesso ao administrador.";
+    }
+
+    await prisma.dispositivoAutorizado.update({
+      where: { id: dispositivo.id },
+      data: {
+        ipUltimoAcesso: req.ip,
+        ultimoAcesso: new Date(),
+        navegador: userAgent.slice(0, 250),
+        sistema,
+      },
+    });
+
+    return null;
+  } catch (error) {
+    console.error("Erro ao validar dispositivo autorizado:", error);
     return null;
   }
-
-  const dispositivo = dispositivos.find((item) => item.identificador === identificador);
-  if (!dispositivo) {
-    return "Dispositivo não autorizado. Solicite reset de acesso ao administrador.";
-  }
-
-  await prisma.dispositivoAutorizado.update({
-    where: { id: dispositivo.id },
-    data: {
-      ipUltimoAcesso: req.ip,
-      ultimoAcesso: new Date(),
-      navegador: userAgent.slice(0, 250),
-      sistema,
-    },
-  });
-
-  return null;
 }
-
 async function registrarFalhaAuditoria(req: Request, email: string, motivo: string) {
   try {
     await prisma.logAuditoria.create({
@@ -395,3 +402,4 @@ export async function logout(req: AuthRequest, res: Response) {
 
   return res.status(204).send();
 }
+
