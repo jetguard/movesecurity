@@ -50,7 +50,7 @@ import {
 } from "../utils/permissoes";
 
 export default function AdminLayout() {
-  const [open, setOpen] = useState(() => window.innerWidth >= 768);
+  const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
   const [meusDadosOpen, setMeusDadosOpen] = useState(true);
@@ -209,7 +209,7 @@ export default function AdminLayout() {
 
   const mostrarTextoMenu = open || mobileMenuOpen;
   const sidebarWidth = open ? "md:w-64" : "md:w-20";
-  const mainOffset = open ? "md:ml-64" : "md:ml-20";
+  const mainOffset = "md:ml-20";
   const item =
     "flex items-center gap-3 rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4";
   const subItem =
@@ -226,7 +226,11 @@ export default function AdminLayout() {
         />
       )}
 
-      <aside className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} overflow-y-auto bg-slate-950 text-white shadow-2xl transition-all duration-300 ease-in-out ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}>
+      <aside
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} overflow-y-auto bg-slate-950 text-white shadow-2xl transition-all duration-300 ease-in-out ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}
+      >
         <div className={`flex h-20 items-center border-b border-slate-800 p-4 ${mostrarTextoMenu ? "justify-between" : "justify-center"}`}>
           {mostrarTextoMenu && (
             <Link to="/" className="flex min-w-0 items-center">
