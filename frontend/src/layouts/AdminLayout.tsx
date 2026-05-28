@@ -211,9 +211,12 @@ export default function AdminLayout() {
   const sidebarWidth = open ? "md:w-64" : "md:w-20";
   const mainOffset = "md:ml-20";
   const item =
-    "flex items-center gap-3 rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4";
+    "flex h-11 items-center gap-3 rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4";
   const subItem =
     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-slate-800 hover:text-white";
+  const menuText = `whitespace-nowrap transition-all duration-200 ${mostrarTextoMenu ? "w-auto opacity-100" : "w-0 overflow-hidden opacity-0"}`;
+  const menuToggle = `ml-auto transition-all duration-200 ${mostrarTextoMenu ? "w-auto opacity-100" : "w-0 overflow-hidden opacity-0"}`;
+  const submenuClass = `ml-6 flex flex-col gap-2 overflow-hidden border-l border-slate-800 pl-4 transition-all duration-200 ${mostrarTextoMenu ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"}`;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -232,11 +235,11 @@ export default function AdminLayout() {
         className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} overflow-y-auto bg-slate-950 text-white shadow-2xl transition-all duration-300 ease-in-out ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}
       >
         <div className={`flex h-20 items-center border-b border-slate-800 p-4 ${mostrarTextoMenu ? "justify-between" : "justify-center"}`}>
-          {mostrarTextoMenu && (
+          <div className={`overflow-hidden transition-all duration-200 ${mostrarTextoMenu ? "w-40 opacity-100" : "w-0 opacity-0"}`}>
             <Link to="/" className="flex min-w-0 items-center">
               <img src="/images/movecta-logo.png" alt="Movecta" className="brand-logo h-10 w-40 rounded bg-white object-contain px-3 py-2" />
             </Link>
-          )}
+          </div>
 
           <button onClick={() => setOpen(!open)} className="hidden rounded-lg bg-slate-800 px-2 py-2 text-sm hover:bg-slate-700 sm:px-3 md:block">
             {open ? "<" : ">"}
@@ -248,20 +251,20 @@ export default function AdminLayout() {
 
         <nav onClick={fecharMenuMobileAoNavegar} className="mt-6 flex flex-col gap-2 px-2 pb-6 sm:px-3">
           <Link to="/" className={item}>
-            <LayoutDashboard size={20} />
-            {mostrarTextoMenu && <span>Dashboard</span>}
+            <LayoutDashboard size={20} className="shrink-0" />
+            <span className={menuText}>Dashboard</span>
           </Link>
 
-          <button onClick={() => setMeusDadosOpen(!meusDadosOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+          <button onClick={() => setMeusDadosOpen(!meusDadosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
             <div className="flex items-center gap-3">
-              <UserCircle size={20} />
-              {mostrarTextoMenu && <span>Meus Dados</span>}
+              <UserCircle size={20} className="shrink-0" />
+              <span className={menuText}>Meus Dados</span>
             </div>
-            {mostrarTextoMenu && <span>{meusDadosOpen ? "-" : "+"}</span>}
+            <span className={menuToggle}>{meusDadosOpen ? "-" : "+"}</span>
           </button>
 
-          {meusDadosOpen && mostrarTextoMenu && (
-            <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+          {meusDadosOpen && (
+            <div className={submenuClass}>
               <Link to="/perfil" className={subItem}>
                 <UserCircle size={16} />
                 Meu Perfil
@@ -278,20 +281,20 @@ export default function AdminLayout() {
           )}
 
           <Link to="/busca" className={item}>
-            <Search size={20} />
-            {mostrarTextoMenu && <span>Busca Global</span>}
+            <Search size={20} className="shrink-0" />
+            <span className={menuText}>Busca Global</span>
           </Link>
 
-          <button onClick={() => setRelatoriosOpen(!relatoriosOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+          <button onClick={() => setRelatoriosOpen(!relatoriosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
             <div className="flex items-center gap-3">
-              <FolderOpen size={20} />
-              {mostrarTextoMenu && <span>Relatorios</span>}
+              <FolderOpen size={20} className="shrink-0" />
+              <span className={menuText}>Relatorios</span>
             </div>
-            {mostrarTextoMenu && <span>{relatoriosOpen ? "-" : "+"}</span>}
+            <span className={menuToggle}>{relatoriosOpen ? "-" : "+"}</span>
           </button>
 
-          {relatoriosOpen && mostrarTextoMenu && (
-            <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+          {relatoriosOpen && (
+            <div className={submenuClass}>
               <Link to="/ocorrencias" className={subItem}>
                 <FileText size={16} />
                 Ocorrencias
@@ -311,16 +314,16 @@ export default function AdminLayout() {
             </div>
           )}
 
-          <button onClick={() => setOperacaoOpen(!operacaoOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+          <button onClick={() => setOperacaoOpen(!operacaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
             <div className="flex items-center gap-3">
-              <ListChecks size={20} />
-              {mostrarTextoMenu && <span>Operação</span>}
+              <ListChecks size={20} className="shrink-0" />
+              <span className={menuText}>Operação</span>
             </div>
-            {mostrarTextoMenu && <span>{operacaoOpen ? "-" : "+"}</span>}
+            <span className={menuToggle}>{operacaoOpen ? "-" : "+"}</span>
           </button>
 
-          {operacaoOpen && mostrarTextoMenu && (
-            <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+          {operacaoOpen && (
+            <div className={submenuClass}>
               <Link to="/cameras" className={subItem}>
                 <Video size={16} />
                 Câmeras CFTV
@@ -358,16 +361,16 @@ export default function AdminLayout() {
 
           {podeGerenciarRiscos() && (
             <>
-              <button onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+              <button onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
-                  <BrainCircuit size={20} />
-                  {mostrarTextoMenu && <span>Gestão Avançada</span>}
+                  <BrainCircuit size={20} className="shrink-0" />
+                  <span className={menuText}>Gestão Avançada</span>
                 </div>
-                {mostrarTextoMenu && <span>{gestaoAvancadaOpen ? "-" : "+"}</span>}
+                <span className={menuToggle}>{gestaoAvancadaOpen ? "-" : "+"}</span>
               </button>
 
-              {gestaoAvancadaOpen && mostrarTextoMenu && (
-                <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+              {gestaoAvancadaOpen && (
+                <div className={submenuClass}>
                   <Link to="/gestao-patrimonial" className={subItem}>
                     <MapPinned size={16} />
                     Gestão Patrimonial
@@ -407,16 +410,16 @@ export default function AdminLayout() {
 
           {(podeAdministrar() || podeVerLogs() || podeVerNaturezas()) && (
             <>
-              <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex items-center justify-between rounded-xl px-3 py-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+              <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
-                  <Settings size={20} />
-                  {mostrarTextoMenu && <span>Administração</span>}
+                  <Settings size={20} className="shrink-0" />
+                  <span className={menuText}>Administração</span>
                 </div>
-                {mostrarTextoMenu && <span>{administracaoOpen ? "-" : "+"}</span>}
+                <span className={menuToggle}>{administracaoOpen ? "-" : "+"}</span>
               </button>
 
-              {administracaoOpen && mostrarTextoMenu && (
-                <div className="ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4">
+              {administracaoOpen && (
+                <div className={submenuClass}>
                   {podeAdministrar() && (
                     <Link to="/usuarios" className={subItem}>
                       <Users size={16} />
@@ -467,8 +470,8 @@ export default function AdminLayout() {
           )}
 
           <button onClick={logout} className="mt-6 flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition hover:bg-red-900 hover:text-white">
-            <LogOut size={20} />
-            {mostrarTextoMenu && <span>Sair</span>}
+            <LogOut size={20} className="shrink-0" />
+            <span className={menuText}>Sair</span>
           </button>
         </nav>
       </aside>
