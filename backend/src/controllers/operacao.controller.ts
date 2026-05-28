@@ -587,14 +587,28 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     if (passagem.statusPostoGocil === "Incompleto") paragraph(`Observações do Posto Gocil:\n${passagem.observacaoPostoGocil || "Não informado"}`);
     if (passagem.statusPostoScanner === "Incompleto") paragraph(`Observações do Posto Scanner:\n${passagem.observacaoPostoScanner || "Não informado"}`);
 
-    section("Checklist de equipamentos da portaria e segurança");
     if (!equipamentos.length) {
+      section("Checklist de equipamentos da portaria e segurança");
       paragraph("Nenhum equipamento avaliado no plantão.");
     } else {
       const categorias = Array.from(new Set(equipamentos.map((item) => item.categoria || "Equipamentos")));
+      const alturaChecklist = categorias.reduce((total, categoria) => {
+        const itens = equipamentos.filter((item) => (item.categoria || "Equipamentos") === categoria);
+        return total + 18 + 18 + itens.length * 18 + 10;
+      }, 34);
+
+      if (doc.y + Math.min(alturaChecklist, 360) > pageBottom) {
+        doc.addPage();
+      }
+
+      section("Checklist de equipamentos da portaria e segurança");
+
       categorias.forEach((categoria) => {
         const itens = equipamentos.filter((item) => (item.categoria || "Equipamentos") === categoria);
-        ensure(42 + itens.length * 18);
+        if (doc.y + 42 + itens.length * 18 > pageBottom) {
+          doc.addPage();
+          section("Checklist de equipamentos da portaria e segurança");
+        }
         doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#0f172a").text(categoria, 36, doc.y, { width: 523 });
         doc.y += 14;
         const yTable = doc.y;
