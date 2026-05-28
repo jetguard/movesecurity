@@ -33,7 +33,9 @@ type DashboardCameras = {
   mediaOfflinePorCamera: number;
   totalOfflineHistorico: number;
   sla: number;
+  metaSla?: number;
   indicadorSla: string;
+  digifort?: { statusIntegracao: string; tipoSistemaPadrao: string; camposMapeados: string[] };
   porTipoCamera: Record<string, number>;
   porTecnologia: Record<string, number>;
   porServidor: Record<string, number>;
@@ -44,7 +46,8 @@ type DashboardCameras = {
   falhasPorDia: [string, number][];
   timeline: Array<{ id: number; camera: number; area: string; status: string; iniciadoEm: string; encerradoEm?: string; duracao?: number; observacao?: string }>;
   mapaOperacional: Array<{ id: number; numeroCamera: number; servidor: number; area: string; local: string; status: string; tipoCamera: string; tecnologia: string; offlineMinutos: number }>;
-  alertas: Array<{ id: number; titulo: string; mensagem: string; minutos: number }>;
+  alertas: Array<{ id: number; titulo: string; mensagem: string; minutos: number; slaViolado?: boolean }>;
+  alertasAutomaticos?: Array<{ tipo: string; mensagem: string; severidade: string }>;
 };
 
 const cameraInicial = {
@@ -249,7 +252,7 @@ export default function Cameras() {
               <CardSoc titulo="Câmeras cadastradas" valor={dashboard.total} subtitulo="Inventário ativo da unidade" icon={Camera} tom="text-white" />
               <CardSoc titulo="Online" valor={dashboard.online} subtitulo={`${dashboard.disponibilidade}% de disponibilidade`} icon={Wifi} tom="text-emerald-300" />
               <CardSoc titulo="Offline" valor={dashboard.offline} subtitulo={`${dashboard.indisponibilidade}% indisponível`} icon={WifiOff} tom="text-red-300" />
-              <CardSoc titulo="SLA operacional" valor={`${dashboard.sla}%`} subtitulo={dashboard.indicadorSla} icon={ShieldCheck} tom={dashboard.sla >= 98 ? "text-emerald-300" : dashboard.sla >= 90 ? "text-amber-300" : "text-red-300"} />
+              <CardSoc titulo="SLA operacional" valor={`${dashboard.sla}%`} subtitulo={`${dashboard.indicadorSla} | meta ${dashboard.metaSla || 98}%`} icon={ShieldCheck} tom={dashboard.sla >= (dashboard.metaSla || 98) ? "text-emerald-300" : dashboard.sla >= 90 ? "text-amber-300" : "text-red-300"} />
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -283,10 +286,17 @@ export default function Cameras() {
                       <div key={alerta.id} className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
                         <p className="font-bold text-red-200">{alerta.titulo}</p>
                         <p className="text-sm text-slate-300">{alerta.mensagem}</p>
-                        <p className="mt-1 text-xs text-red-300">Indisponível há {minutos(alerta.minutos)}</p>
+                        <p className="mt-1 text-xs text-red-300">Indisponível há {minutos(alerta.minutos)} {alerta.slaViolado ? "| SLA violado" : ""}</p>
                       </div>
                     ))
                   )}
+                  {(dashboard.alertasAutomaticos || []).map((alerta, index) => (
+                    <div key={`${alerta.tipo}-${index}`} className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+                      <p className="font-bold text-amber-200">{alerta.tipo}</p>
+                      <p className="text-sm text-slate-300">{alerta.mensagem}</p>
+                      <p className="mt-1 text-xs text-amber-300">{alerta.severidade}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -327,6 +337,18 @@ export default function Cameras() {
                 </div>
               </div>
             </div>
+
+            {dashboard.digifort && (
+              <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
+                <h2 className="font-bold text-cyan-100">Preparação para integração Digifort</h2>
+                <p className="mt-2 text-sm text-slate-300">{dashboard.digifort.statusIntegracao} | Sistema padrão: {dashboard.digifort.tipoSistemaPadrao}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {dashboard.digifort.camposMapeados.map((campo) => (
+                    <span key={campo} className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-cyan-100">{campo}</span>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">

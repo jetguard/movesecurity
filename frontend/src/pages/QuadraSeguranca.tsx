@@ -157,6 +157,16 @@ export default function QuadraSeguranca() {
     terminal: containers.filter((item) => ["Dentro do terminal", "Pendente de verificação", "Bloqueado"].includes(item.statusOperacional)).length,
     criticos: containers.filter((item) => item.nivelPermanencia === "critico" || item.prioridade === "Crítica").length,
     scannerPendente: containers.filter((item) => !item.scannerEntrada).length,
+    lacresDivergentes: containers.filter((item) => item.numeroLacre && item.novoLacre && item.numeroLacre !== item.novoLacre),
+    permanenciaCritica: containers.filter((item) => item.nivelPermanencia === "critico"),
+    mapaAreas: Object.entries(containers.reduce<Record<string, { total: number; criticos: number; bloqueados: number }>>((acc, item) => {
+      const area = item.destino || item.tipoCarga || "Não informado";
+      acc[area] ||= { total: 0, criticos: 0, bloqueados: 0 };
+      acc[area].total += 1;
+      if (item.nivelPermanencia === "critico") acc[area].criticos += 1;
+      if (item.statusOperacional === "Bloqueado") acc[area].bloqueados += 1;
+      return acc;
+    }, {})).map(([area, dados]) => ({ area, ...dados })).sort((a, b) => b.criticos - a.criticos || b.total - a.total),
   }), [containers]);
 
   function campo(nome: string, valor: string) {
@@ -278,6 +288,49 @@ export default function QuadraSeguranca() {
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p className="text-sm text-slate-500">Sem scanner entrada</p>
           <p className="mt-2 text-3xl font-bold text-amber-600">{resumo.scannerPendente}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr_1.2fr]">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/30">
+          <h2 className="font-bold text-red-800 dark:text-red-100">Alerta de permanência</h2>
+          <div className="mt-3 space-y-2">
+            {resumo.permanenciaCritica.slice(0, 4).map((item) => (
+              <div key={item.id} className="rounded-lg bg-white/70 p-3 text-sm dark:bg-slate-900/60">
+                <strong>{item.numeroContainer}</strong>
+                <p>{item.tempoTerminal} | {item.statusOperacional}</p>
+              </div>
+            ))}
+            {resumo.permanenciaCritica.length === 0 && <p className="text-sm text-red-700 dark:text-red-100">Nenhum contêiner em permanência crítica.</p>}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
+          <h2 className="font-bold text-amber-800 dark:text-amber-100">Lacre divergente</h2>
+          <div className="mt-3 space-y-2">
+            {resumo.lacresDivergentes.slice(0, 4).map((item) => (
+              <div key={item.id} className="rounded-lg bg-white/70 p-3 text-sm dark:bg-slate-900/60">
+                <strong>{item.numeroContainer}</strong>
+                <p>Entrada: {item.numeroLacre} | Saída: {item.novoLacre}</p>
+              </div>
+            ))}
+            {resumo.lacresDivergentes.length === 0 && <p className="text-sm text-amber-700 dark:text-amber-100">Sem divergência de lacre registrada.</p>}
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <h2 className="font-bold">Mapa/status por área</h2>
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {resumo.mapaAreas.slice(0, 6).map((item) => (
+              <div key={item.area} className="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-950">
+                <div className="flex justify-between gap-2">
+                  <strong>{item.area}</strong>
+                  <span>{item.total}</span>
+                </div>
+                <p className="text-xs text-slate-500">Críticos: {item.criticos} | Bloqueados: {item.bloqueados}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 

@@ -61,7 +61,7 @@ const page = {
   right: 550,
   top: 34,
   headerBottom: 108,
-  contentTop: 132,
+  contentTop: 124,
   footerTop: 704,
   bottom: 804,
 };
@@ -100,6 +100,13 @@ function desenharBasePagina(
     .lineWidth(0.7)
     .strokeColor("#e5e7eb")
     .roundedRect(28, 24, 539, 792, 8)
+    .stroke();
+
+  doc
+    .lineWidth(3)
+    .strokeColor("#0b74ff")
+    .moveTo(36, 30)
+    .lineTo(559, 30)
     .stroke();
 
   doc.image(logoPath, page.left, page.top + 7, { width: 145 });
@@ -203,17 +210,22 @@ function garantirEspaco(
 
 function escreverTituloSecao(doc: PDFKit.PDFDocument, titulo: string) {
   doc.moveDown(0.5);
+  const y = doc.y;
+  doc
+    .roundedRect(page.left, y - 3, contentWidth, 22, 5)
+    .fillColor("#f8fafc")
+    .fill();
   doc
     .font("Helvetica-Bold")
     .fontSize(12)
     .fillColor("#0f172a")
-    .text(titulo, page.left, doc.y);
+    .text(titulo, page.left + 10, y + 2);
   doc
-    .moveTo(page.left, doc.y + 4)
-    .lineTo(page.right, doc.y + 4)
+    .moveTo(page.left, y + 20)
+    .lineTo(page.right, y + 20)
     .strokeColor("#dbe3ef")
     .stroke();
-  doc.moveDown(0.8);
+  doc.y = y + 28;
 }
 
 function escreverCampo(
@@ -271,22 +283,13 @@ function escreverEnvolvidos(
 
   relatorio.envolvidos.forEach((envolvido, index) => {
     const relato = valor(envolvido.relato);
-    const alturaRelato = Math.max(
-      22,
-      doc.heightOfString(relato, {
-        width: contentWidth - 28,
-        lineGap: 3,
-      })
-    );
-    const alturaCard = Math.max(116, 92 + alturaRelato);
-
-    garantirEspaco(doc, alturaCard + 12, relatorio, usuario, qrCode, token);
+    garantirEspaco(doc, 96, relatorio, usuario, qrCode, token);
 
     const y = doc.y;
     doc
       .lineWidth(0.6)
       .strokeColor("#e5e7eb")
-      .roundedRect(page.left, y, contentWidth, alturaCard, 6)
+      .roundedRect(page.left, y, contentWidth, 82, 6)
       .stroke();
 
     doc
@@ -309,24 +312,36 @@ function escreverEnvolvidos(
       ? `Placa: ${valor(envolvido.placa)} | Reboque: ${valor(envolvido.reboque)}`
       : "Veículo: não informado";
 
-    doc.text(veiculo, page.left + 14, y + 62, { width: 470 });
+    doc.text(veiculo, page.left + 14, y + 62, { width: 245 });
 
+    doc.y = y + 96;
+    garantirEspaco(doc, 52, relatorio, usuario, qrCode, token);
     doc
       .font("Helvetica-Bold")
       .fontSize(8.5)
       .fillColor("#64748b")
-      .text("RELATO DO ENVOLVIDO", page.left + 14, y + 84, { width: contentWidth - 28 });
+      .text(`RELATO DO ENVOLVIDO ${index + 1}`, page.left, doc.y, { width: contentWidth });
+    doc.moveDown(0.25);
 
-    doc
-      .font("Helvetica")
-      .fontSize(9.2)
-      .fillColor("#111827")
-      .text(relato, page.left + 14, y + 98, {
-        width: contentWidth - 28,
+    relato.split(/\n+/).forEach((paragrafo) => {
+      const altura = doc.heightOfString(paragrafo, {
+        width: contentWidth,
+        align: "justify",
         lineGap: 3,
       });
 
-    doc.y = y + alturaCard + 12;
+      garantirEspaco(doc, altura + 10, relatorio, usuario, qrCode, token);
+      doc
+        .font("Helvetica")
+        .fontSize(9.5)
+        .fillColor("#111827")
+        .text(paragrafo, page.left, doc.y, {
+          width: contentWidth,
+          align: "justify",
+          lineGap: 3,
+        });
+      doc.moveDown(0.45);
+    });
   });
 }
 
