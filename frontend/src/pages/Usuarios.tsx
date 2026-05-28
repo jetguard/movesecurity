@@ -35,7 +35,7 @@ const vazio = {
   unidade: "GJA-T1",
   unidadesPermitidas: ["GJA-T1"],
   empresa: "Movecta S/A",
-  perfilAcesso: "OPERADOR",
+  perfilAcesso: "",
   statusUsuario: "ATIVO",
   senha: "",
   confirmarSenha: "",
@@ -129,15 +129,30 @@ export default function Usuarios() {
   async function salvarUsuario(e: React.FormEvent) {
     e.preventDefault();
 
+    if (!formulario.perfilAcesso) {
+      alert("Selecione o perfil de acesso do usuário.");
+      return;
+    }
+
+    if (!formulario.unidadesPermitidas.length) {
+      alert("Selecione ao menos uma unidade permitida.");
+      return;
+    }
+
+    const payload = {
+      ...formulario,
+      unidade: formulario.unidadesPermitidas[0],
+    };
+
     if (!editando && formulario.senha !== formulario.confirmarSenha) {
       alert("As senhas não coincidem.");
       return;
     }
 
     if (editando) {
-      await api.put(`/usuarios/${editando.id}`, formulario);
+      await api.put(`/usuarios/${editando.id}`, payload);
     } else {
-      await api.post("/usuarios", formulario);
+      await api.post("/usuarios", payload);
     }
 
     setAbrirFormulario(false);
@@ -242,13 +257,13 @@ export default function Usuarios() {
                   </label>
                 ))}
               </div>
+              <p className="mt-2 text-xs text-slate-500">
+                A primeira unidade selecionada será usada como unidade principal do usuário.
+              </p>
             </div>
-            <select className="rounded-lg border p-3" value={formulario.unidade} onChange={(e) => atualizarCampo("unidade", e.target.value)} required>
-              <option value="">Selecione a unidade principal</option>
-              {formulario.unidadesPermitidas.map((unidade) => <option key={unidade} value={unidade}>{unidade}</option>)}
-            </select>
             <input className="rounded-lg border bg-gray-100 p-3 text-gray-600" value="Movecta S/A" readOnly />
             <select className="rounded-lg border p-3" value={formulario.perfilAcesso} onChange={(e) => atualizarCampo("perfilAcesso", e.target.value)} required disabled={editando?.perfilAcesso === "SUPER_ADMIN"}>
+              {!editando && <option value="">Selecione o perfil de acesso</option>}
               {editando?.perfilAcesso === "SUPER_ADMIN" && <option value="SUPER_ADMIN">Super Admin</option>}
               {perfis.map((perfil) => <option key={perfil.value} value={perfil.value}>{perfil.label}</option>)}
             </select>

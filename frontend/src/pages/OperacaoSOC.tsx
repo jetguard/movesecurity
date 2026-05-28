@@ -216,9 +216,34 @@ export default function OperacaoSOC() {
     }));
   }
 
+  function alternarColaborador(id: number) {
+    if (!podeEditarPassagem) return;
+    setForm((atual) => ({
+      ...atual,
+      colaboradoresIds: atual.colaboradoresIds.includes(id)
+        ? atual.colaboradoresIds.filter((item) => item !== id)
+        : [...atual.colaboradoresIds, id],
+    }));
+  }
+
   const informacoesPlantao = separarInformacoes(form.informacoesComplementares);
 
   async function abrirNovaPassagem() {
+    const passagemAbertaDia = dados?.passagensTurno.find((item) => {
+      const mesmaData = dataInput(item.dataPassagem) === form.dataPassagem;
+      const mesmaEquipe = !equipeAtual || item.equipe === equipeAtual;
+      return item.status === "Aberto" && mesmaData && mesmaEquipe;
+    });
+
+    if (passagemAbertaDia) {
+      preencherPassagem(passagemAbertaDia);
+      alert(`Já existe um Relatório CCOS aberto para este dia: ${passagemAbertaDia.codigo}.`);
+      return;
+    }
+
+    const confirmar = window.confirm("Deseja realmente abrir um novo Relatório CCOS?");
+    if (!confirmar) return;
+
     setSalvando(true);
     try {
       const response = await api.post("/operacao/passagens-turno", {
@@ -265,6 +290,7 @@ export default function OperacaoSOC() {
       const response = await api.post(`/operacao/passagens-turno/${passagemSelecionada.id}/finalizar`);
       preencherPassagem(response.data);
       await carregar();
+      alert("Relatório enviado com sucesso. Obrigado!");
       baixarPdf(response.data.id);
     } finally {
       setSalvando(false);
@@ -387,7 +413,8 @@ export default function OperacaoSOC() {
     return Math.max(1, ...Object.values(dados.reincidencia).flat().map((item) => item.total));
   }, [dados]);
 
-  const podeEditarPassagem = passagemSelecionada?.status !== "Enviado" || gerenciaPassagem;
+  const relatorioEmAberto = passagemSelecionada?.status === "Aberto";
+  const podeEditarPassagem = Boolean(relatorioEmAberto);
 
   if (!dados) {
     return <div className="p-6 text-slate-500">Carregando painel SOC operacional...</div>;
@@ -455,7 +482,7 @@ export default function OperacaoSOC() {
             </div>
             <button type="button" onClick={abrirNovaPassagem} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:bg-slate-400">
               <Plus size={16} />
-              Nova passagem
+              Novo Relatório
             </button>
           </div>
           <div className="grid gap-3">
@@ -507,7 +534,7 @@ export default function OperacaoSOC() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => salvarPassagem()} disabled={salvando || !podeEditarPassagem} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-400 dark:bg-blue-600">
+            <button type="button" onClick={() => salvarPassagem()} disabled={salvando || !relatorioEmAberto} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-400 dark:bg-blue-600">
               <Save size={16} />
               Salvar
             </button>
@@ -540,15 +567,32 @@ export default function OperacaoSOC() {
           </label>
           <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
             Colaboradores da equipe
-            <select
-              multiple
-              value={form.colaboradoresIds.map(String)}
-              onChange={(e) => setForm((atual) => ({ ...atual, colaboradoresIds: Array.from(e.target.selectedOptions).map((option) => Number(option.value)) }))}
-              disabled={!podeEditarPassagem}
-              className="mt-2 min-h-24 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white"
-            >
-              {usuariosEquipe.map((item) => <option key={item.id} value={item.id}>{item.apelido || item.nome}</option>)}
-            </select>
+            <div className="mt-2 min-h-24 rounded-xl border border-slate-300 bg-white p-2 font-normal dark:border-slate-700 dark:bg-slate-950">
+              {usuariosEquipe.length === 0 ? (
+                <p className="p-2 text-sm text-slate-500">Nenhum colaborador encontrado para esta equipe.</p>
+              ) : (
+                <div className="grid gap-2">
+                  {usuariosEquipe.map((item) => {
+                    const selecionado = form.colaboradoresIds.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => alternarColaborador(item.id)}
+                        disabled={!podeEditarPassagem}
+                        className={`rounded-lg border px-3 py-2 text-left text-sm transition ${
+                          selecionado
+                            ? "border-blue-500 bg-blue-50 font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-100"
+                            : "border-slate-200 text-slate-700 hover:border-blue-300 dark:border-slate-800 dark:text-slate-200"
+                        } disabled:opacity-60`}
+                      >
+                        {item.apelido || item.nome}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </label>
         </div>
 

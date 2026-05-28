@@ -1032,20 +1032,28 @@ export default function Ocorrencias() {
 
       {ocorrenciaVisualizando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
               <div>
-                <h2 className="text-2xl font-bold">{ocorrenciaVisualizando.codigo}</h2>
-                <p className="text-gray-600">{ocorrenciaVisualizando.assunto}</p>
+                <p className="text-xs font-bold uppercase text-blue-600">Visualização do relatório</p>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{ocorrenciaVisualizando.codigo}</h2>
+                <p className="text-gray-600 dark:text-slate-300">{ocorrenciaVisualizando.assunto}</p>
               </div>
               <button onClick={() => setOcorrenciaVisualizando(null)} className="rounded bg-slate-200 px-3 py-2">Fechar</button>
             </div>
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <p><strong>Local:</strong> {ocorrenciaVisualizando.local}</p>
-              <p><strong>Status:</strong> {ocorrenciaVisualizando.status}</p>
-              <p><strong>Natureza:</strong> {ocorrenciaVisualizando.natureza}</p>
-              <p><strong>Subnatureza:</strong> {ocorrenciaVisualizando.subNatureza}</p>
-              <p><strong>Data:</strong> {new Date(ocorrenciaVisualizando.dataOcorrencia).toLocaleString("pt-BR")}</p>
+            <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+              {[
+                ["Local", ocorrenciaVisualizando.local],
+                ["Status", ocorrenciaVisualizando.status],
+                ["Natureza", ocorrenciaVisualizando.natureza],
+                ["Subnatureza", ocorrenciaVisualizando.subNatureza],
+                ["Data", new Date(ocorrenciaVisualizando.dataOcorrencia).toLocaleString("pt-BR")],
+              ].map(([rotulo, valor]) => (
+                <div key={rotulo} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950">
+                  <p className="text-xs font-bold uppercase text-slate-500">{rotulo}</p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{valor}</p>
+                </div>
+              ))}
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Relato</h3>
@@ -1057,12 +1065,15 @@ export default function Ocorrencias() {
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Envolvidos</h3>
-              <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div className="mt-2 grid grid-cols-1 gap-3">
                 {ocorrenciaVisualizando.envolvidos.map((envolvido, index) => (
-                  <div key={index} className="rounded-lg border p-3 text-sm">
-                    <strong>{envolvido.nome}</strong>
-                    <p>{envolvido.tipoEnvolvimento} | {envolvido.documento}</p>
-                    <p>{envolvido.relato}</p>
+                  <div key={index} className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <strong className="text-base text-slate-900 dark:text-white">{envolvido.nome}</strong>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{envolvido.tipoEnvolvimento}</span>
+                    </div>
+                    <p className="mt-2 text-slate-600 dark:text-slate-300">{envolvido.documento}</p>
+                    <p className="mt-3 whitespace-pre-line rounded-lg bg-slate-50 p-3 leading-relaxed text-slate-700 dark:bg-slate-900 dark:text-slate-200">{envolvido.relato || "Sem relato informado."}</p>
                   </div>
                 ))}
               </div>

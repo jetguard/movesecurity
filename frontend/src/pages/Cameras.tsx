@@ -296,20 +296,20 @@ export default function Cameras() {
               <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
                 <Radio size={16} /> Centro de Operações CFTV
               </p>
-              <h1 className="mt-3 text-3xl font-black tracking-normal sm:text-4xl">Gestão e Monitoramento de Câmeras</h1>
+              <h1 className="mt-3 text-2xl font-black tracking-normal sm:text-3xl">Gestão e Monitoramento de Câmeras</h1>
               <p className="mt-2 max-w-3xl text-sm text-slate-300">
                 Monitoramento operacional por unidade, status em tempo real, checklist semanal, indisponibilidade e indicadores SOC.
               </p>
             </div>
             {podeAnalisar() && (
               <div className="flex flex-wrap gap-3">
-                <button onClick={() => exportar("inventario")} className="rounded-xl border border-cyan-400/40 px-5 py-3 font-bold text-cyan-100 transition hover:bg-cyan-400/10">
+                <button onClick={() => exportar("inventario")} className="rounded-xl border border-cyan-400/40 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-400/10">
                   Exportar Inventário
                 </button>
-                <button onClick={() => exportar("historico")} className="rounded-xl border border-cyan-400/40 px-5 py-3 font-bold text-cyan-100 transition hover:bg-cyan-400/10">
+                <button onClick={() => exportar("historico")} className="rounded-xl border border-cyan-400/40 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-400/10">
                   Exportar Histórico
                 </button>
-                <button onClick={novaCamera} className="rounded-xl bg-cyan-400 px-5 py-3 font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:bg-cyan-300">
+                <button onClick={novaCamera} className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:bg-cyan-300">
                   Nova Câmera
                 </button>
               </div>
