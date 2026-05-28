@@ -96,7 +96,28 @@ function normalizarChecklistEquipamentos(valor: unknown) {
   }
 }
 
+function normalizarRondas(valor: unknown) {
+  if (Array.isArray(valor)) return JSON.stringify(valor);
+  if (!valor) return null;
+  try {
+    const parsed = JSON.parse(String(valor));
+    return Array.isArray(parsed) ? JSON.stringify(parsed) : null;
+  } catch {
+    return null;
+  }
+}
+
 function checklistEquipamentos(valor: unknown): Array<{ categoria: string; nome: string; funcionando: string; observacao?: string; chamado?: string }> {
+  if (!valor) return [];
+  try {
+    const parsed = Array.isArray(valor) ? valor : JSON.parse(String(valor));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function rondasPassagem(valor: unknown): Array<{ ponto: string; horaInicio?: string; horaTermino?: string; nome?: string; alteracao?: string; observacoes?: string }> {
   if (!valor) return [];
   try {
     const parsed = Array.isArray(valor) ? valor : JSON.parse(String(valor));
@@ -111,6 +132,7 @@ function serializarPassagem(passagem: any) {
     ...passagem,
     colaboradoresIds: idsColaboradores(passagem.colaboradoresIds),
     checklistEquipamentos: checklistEquipamentos(passagem.checklistEquipamentos),
+    rondas: rondasPassagem(passagem.rondas),
   };
 }
 
@@ -364,6 +386,7 @@ export async function criarPassagemTurno(req: AuthRequest, res: Response) {
         observacaoPostoScanner: req.body.observacaoPostoScanner || null,
         informacoesComplementares: req.body.informacoesComplementares || "",
         checklistEquipamentos: normalizarChecklistEquipamentos(req.body.checklistEquipamentos),
+        rondas: normalizarRondas(req.body.rondas),
         postos: { create: normalizarPostos(req.body.postos || []) },
       },
       include: { responsavel: true, postos: true },
@@ -399,6 +422,7 @@ export async function atualizarPassagemTurno(req: AuthRequest, res: Response) {
           observacaoPostoScanner: req.body.observacaoPostoScanner || null,
           informacoesComplementares: req.body.informacoesComplementares || "",
           checklistEquipamentos: normalizarChecklistEquipamentos(req.body.checklistEquipamentos),
+          rondas: normalizarRondas(req.body.rondas),
           postos: { create: normalizarPostos(req.body.postos || []) },
         },
         include: { responsavel: { select: { id: true, nome: true, apelido: true, equipe: true } }, postos: true },
@@ -497,6 +521,7 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
       containersArmazenados: passagem.containersArmazenados || 0,
     };
     const equipamentos = checklistEquipamentos(passagem.checklistEquipamentos);
+    const rondas = rondasPassagem(passagem.rondas);
 
     const doc = new PDFDocument({ size: "A4", bufferPages: true, margins: { top: 98, left: 36, right: 36, bottom: 58 } });
     const dataArquivo = passagem.dataPassagem.toLocaleDateString("pt-BR").replace(/\//g, ".");
@@ -610,6 +635,53 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     doc.y = yStatus + 50;
     if (passagem.statusPostoGocil === "Incompleto") paragraph(`Observações do Posto Gocil:\n${passagem.observacaoPostoGocil || "Não informado"}`);
     if (passagem.statusPostoScanner === "Incompleto") paragraph(`Observações do Posto Scanner:\n${passagem.observacaoPostoScanner || "Não informado"}`);
+
+    if (!rondas.length) {
+      if (doc.y + 86 > pageBottom) doc.addPage();
+      section("Rondas operacionais");
+      paragraph("Nenhuma ronda registrada no plantão.");
+    } else {
+      const alturaRondas = 34 + 20 + rondas.length * 32 + 10;
+      if (doc.y + Math.min(alturaRondas, 220) > pageBottom) {
+        doc.addPage();
+      }
+
+      const desenharCabecalhoRondas = () => {
+        section("Rondas operacionais");
+        const yTableHeader = doc.y;
+        doc.rect(36, yTableHeader, 523, 20).fillAndStroke("#e0f2fe", "#94a3b8");
+        headers.forEach((headerItem, i) => {
+          doc.font("Helvetica-Bold").fontSize(7.2).fillColor("#0f172a").text(headerItem, xs[i] + 4, yTableHeader + 6, { width: widths[i] - 8 });
+        });
+        doc.y = yTableHeader + 20;
+      };
+
+      const widths = [92, 60, 60, 120, 72, 119];
+      const xs = [36, 128, 188, 248, 368, 440];
+      const headers = ["Ponto", "Início", "Término", "Responsável", "Alteração", "Observações"];
+      desenharCabecalhoRondas();
+      rondas.forEach((ronda) => {
+        if (doc.y + 32 > pageBottom) {
+          doc.addPage();
+          desenharCabecalhoRondas();
+        }
+        const y = doc.y;
+        doc.rect(36, y, 523, 32).strokeColor("#cbd5e1").stroke();
+        xs.slice(1).forEach((xLine) => doc.moveTo(xLine, y).lineTo(xLine, y + 32).strokeColor("#cbd5e1").stroke());
+        [
+          ronda.ponto || "-",
+          ronda.horaInicio || "-",
+          ronda.horaTermino || "-",
+          ronda.nome || "-",
+          ronda.alteracao || "Não",
+          ronda.observacoes || "-",
+        ].forEach((valor, i) => {
+          doc.font(i === 0 ? "Helvetica-Bold" : "Helvetica").fontSize(7.2).fillColor("#111827").text(String(valor), xs[i] + 4, y + 7, { width: widths[i] - 8, height: 22 });
+        });
+        doc.y = y + 32;
+      });
+      doc.moveDown(0.6);
+    }
 
     if (!equipamentos.length) {
       section("Checklist de equipamentos da portaria e segurança");

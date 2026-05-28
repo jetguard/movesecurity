@@ -39,6 +39,15 @@ type ChecklistEquipamento = {
   chamado: string;
 };
 
+type RondaOperacional = {
+  ponto: string;
+  horaInicio: string;
+  horaTermino: string;
+  nome: string;
+  alteracao: string;
+  observacoes: string;
+};
+
 type PassagemTurno = {
   id: number;
   codigo: string;
@@ -55,6 +64,7 @@ type PassagemTurno = {
   observacaoPostoScanner?: string | null;
   informacoesComplementares?: string | null;
   checklistEquipamentos?: ChecklistEquipamento[];
+  rondas?: RondaOperacional[];
   cftvConectadas?: number | null;
   cftvDesconectadas?: number | null;
   containersArmazenados?: number | null;
@@ -109,6 +119,14 @@ const checklistEquipamentosPadrao: ChecklistEquipamento[] = [
   ...["Catracas", "Leitoras de crachá", "Leitora facial", "Urnas coletoras", "Totens", "Cancelas", "Torniquetes", "Lanternas", "Portais detectores", "Bastões detectores", "Scanner(s) de bagagem", "Ar-condicionado", "Botão de pânico", "Impressora(s)"].map((nome) => ({ categoria: "Equipamentos de apoio", nome, funcionando: "N/A", observacao: "", chamado: "" })),
   ...["PC's", "Monitores", "Mesas Controladoras", "Teclados/Mouses", "Vídeo Wall / Telas", "Mobília"].map((nome) => ({ categoria: "Equipamentos essenciais", nome, funcionando: "N/A", observacao: "", chamado: "" })),
 ];
+const rondasPadrao: RondaOperacional[] = ["Perímetro", "Pátio", "Armazém", "Pontos Sensíveis", "Extra 01", "Extra 02"].map((ponto) => ({
+  ponto,
+  horaInicio: "",
+  horaTermino: "",
+  nome: "",
+  alteracao: "Não",
+  observacoes: "",
+}));
 
 function dataInput(data?: string | null) {
   if (!data) return new Date().toISOString().slice(0, 10);
@@ -131,6 +149,12 @@ function montarInformacao(titulo: string, local: string, observacoes: string) {
   return linhas.join("\n");
 }
 
+function mascaraHora(valor: string) {
+  const numeros = valor.replace(/\D/g, "").slice(0, 4);
+  if (numeros.length <= 2) return numeros;
+  return `${numeros.slice(0, 2)}:${numeros.slice(2)}`;
+}
+
 export default function OperacaoSOC() {
   const usuario = usuarioAtual();
   const gerenciaPassagem = podeAnalisar();
@@ -144,6 +168,7 @@ export default function OperacaoSOC() {
   const [observacoes, setObservacoes] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [editandoInformacao, setEditandoInformacao] = useState<number | null>(null);
+  const [rondasAberto, setRondasAberto] = useState(false);
   const [form, setForm] = useState({
     dataPassagem: dataInput(),
     colaboradoresIds: [] as number[],
@@ -154,6 +179,7 @@ export default function OperacaoSOC() {
     observacaoPostoScanner: "",
     informacoesComplementares: "",
     checklistEquipamentos: checklistEquipamentosPadrao,
+    rondas: rondasPadrao,
   });
 
   const equipeAtual = filtroEquipe || usuario?.equipe || "";
@@ -191,6 +217,7 @@ export default function OperacaoSOC() {
       observacaoPostoScanner: passagem.observacaoPostoScanner || "",
       informacoesComplementares: passagem.informacoesComplementares || "",
       checklistEquipamentos: passagem.checklistEquipamentos?.length ? passagem.checklistEquipamentos : checklistEquipamentosPadrao,
+      rondas: passagem.rondas?.length ? passagem.rondas : rondasPadrao,
     });
   }
 
@@ -213,6 +240,13 @@ export default function OperacaoSOC() {
     setForm((atual) => ({
       ...atual,
       checklistEquipamentos: atual.checklistEquipamentos.map((item, i) => (i === index ? { ...item, [campo]: valor } : item)),
+    }));
+  }
+
+  function atualizarRonda(index: number, campo: keyof RondaOperacional, valor: string) {
+    setForm((atual) => ({
+      ...atual,
+      rondas: atual.rondas.map((item, i) => (i === index ? { ...item, [campo]: campo.includes("hora") ? mascaraHora(valor) : valor } : item)),
     }));
   }
 
@@ -323,6 +357,7 @@ export default function OperacaoSOC() {
           observacaoPostoScanner: "",
           informacoesComplementares: "",
           checklistEquipamentos: checklistEquipamentosPadrao,
+          rondas: rondasPadrao,
         });
       }
       await carregar();
@@ -537,6 +572,10 @@ export default function OperacaoSOC() {
             <button type="button" onClick={() => salvarPassagem()} disabled={salvando || !relatorioEmAberto} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-400 dark:bg-blue-600">
               <Save size={16} />
               Salvar
+            </button>
+            <button type="button" onClick={() => setRondasAberto(true)} disabled={!relatorioEmAberto} className="inline-flex items-center gap-2 rounded-xl border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:border-slate-200 disabled:text-slate-400 dark:border-blue-900 dark:text-blue-100">
+              <ClipboardCheck size={16} />
+              Rondas
             </button>
             <button type="button" onClick={finalizarPassagem} disabled={salvando || !passagemSelecionada || passagemSelecionada.status === "Enviado"} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-400">
               <Send size={16} />
@@ -803,6 +842,42 @@ export default function OperacaoSOC() {
           ))}
         </div>
       </div>
+
+      {rondasAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
+              <div>
+                <p className="text-xs font-bold uppercase text-blue-600">Relatório CCOS</p>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white">Rondas Operacionais</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Registre horários, responsável, alteração e observações das rondas do turno.</p>
+              </div>
+              <button type="button" onClick={() => setRondasAberto(false)} className="rounded-lg bg-slate-100 px-4 py-2 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-100">Fechar</button>
+            </div>
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              {form.rondas.map((ronda, index) => (
+                <div key={ronda.ponto} className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+                  <h3 className="font-black uppercase text-slate-900 dark:text-white">{ronda.ponto}</h3>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <input value={ronda.horaInicio} onChange={(e) => atualizarRonda(index, "horaInicio", e.target.value)} placeholder="Hora início 22:10" maxLength={5} className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+                    <input value={ronda.horaTermino} onChange={(e) => atualizarRonda(index, "horaTermino", e.target.value)} placeholder="Hora término 22:40" maxLength={5} className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+                    <input value={ronda.nome} onChange={(e) => atualizarRonda(index, "nome", e.target.value)} placeholder="Nome do responsável" className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white sm:col-span-2" />
+                    <select value={ronda.alteracao} onChange={(e) => atualizarRonda(index, "alteracao", e.target.value)} className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white">
+                      <option>Não</option>
+                      <option>Sim</option>
+                    </select>
+                    <input value={ronda.observacoes} onChange={(e) => atualizarRonda(index, "observacoes", e.target.value)} placeholder="Observações da ronda" className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-900 dark:text-white" />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex justify-end gap-3">
+              <button type="button" onClick={() => setRondasAberto(false)} className="rounded-xl bg-slate-200 px-4 py-2 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-100">Continuar editando</button>
+              <button type="button" onClick={() => { setRondasAberto(false); salvarPassagem(); }} className="rounded-xl bg-blue-600 px-4 py-2 font-bold text-white">Salvar rondas</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

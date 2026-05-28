@@ -589,6 +589,7 @@ model PassagemTurno {
   observacaoPostoScanner    String?
   informacoesComplementares String?
   checklistEquipamentos     String?
+  rondas                    String?
   cftvConectadas            Int?
   cftvDesconectadas         Int?
   containersArmazenados     Int?
