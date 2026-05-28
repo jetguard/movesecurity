@@ -61,6 +61,7 @@ type UsuarioAssinatura = {
 export type TipoRelatorioPublico = "ocorrencias" | "eventos";
 
 const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
+const watermarkPath = path.resolve(process.cwd(), "assets", "jetguard-watermark.png");
 const page = {
   left: 45,
   right: 550,
@@ -71,6 +72,14 @@ const page = {
   bottom: 804,
 };
 const contentWidth = page.right - page.left;
+
+function desenharMarcaDagua(doc: PDFKit.PDFDocument) {
+  doc
+    .save()
+    .opacity(0.045)
+    .image(watermarkPath, 177, 300, { width: 240 })
+    .restore();
+}
 
 function decodificarEntidadeHtml(entidade: string) {
   const mapa: Record<string, string> = {
@@ -214,6 +223,8 @@ function desenharBasePagina(
   token: string
 ) {
   doc.save();
+
+  desenharMarcaDagua(doc);
 
   doc
     .lineWidth(0.7)

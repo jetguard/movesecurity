@@ -60,6 +60,7 @@ export default function AdminLayout() {
   const [segundosSessao, setSegundosSessao] = useState(0);
   const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
+  const [passagensAbertas, setPassagensAbertas] = useState(0);
   const [tema, setTema] = useState(() => {
     const salvo = localStorage.getItem("tema");
     if (salvo === "dark" || salvo === "light") return salvo;
@@ -134,6 +135,15 @@ export default function AdminLayout() {
     api.get("/mencoes/contador")
       .then((response) => setMencoesPendentes(response.data.total || 0))
       .catch(() => setMencoesPendentes(0));
+
+    api.get("/operacao/passagens-turno")
+      .then((response) => {
+        const abertas = Array.isArray(response.data)
+          ? response.data.filter((item) => item.status === "Aberto").length
+          : 0;
+        setPassagensAbertas(abertas);
+      })
+      .catch(() => setPassagensAbertas(0));
 
     return () => window.removeEventListener("notificacoes-atualizadas", carregarNotificacoes);
   }, []);
@@ -488,6 +498,18 @@ export default function AdminLayout() {
                   </span>
                 )}
               </Link>
+              <Link
+                to="/operacao-soc"
+                className="relative rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200"
+                title={passagensAbertas > 0 ? "Há relatório operacional de passagem de turno em aberto" : "Operações SOC"}
+              >
+                <Activity size={17} />
+                {passagensAbertas > 0 && (
+                  <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+                    {passagensAbertas}
+                  </span>
+                )}
+              </Link>
               <button
                 type="button"
                 onClick={alternarTema}
@@ -546,6 +568,18 @@ export default function AdminLayout() {
               {mencoesPendentes > 0 && (
                 <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-xs font-bold text-white">
                   {mencoesPendentes}
+                </span>
+              )}
+            </Link>
+            <Link
+              to="/operacao-soc"
+              className="relative rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200"
+              title={passagensAbertas > 0 ? "Há relatório operacional de passagem de turno em aberto" : "Operações SOC"}
+            >
+              <Activity size={18} />
+              {passagensAbertas > 0 && (
+                <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">
+                  {passagensAbertas}
                 </span>
               )}
             </Link>

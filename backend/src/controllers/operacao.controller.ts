@@ -483,9 +483,14 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     doc.pipe(res);
 
     const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
+    const watermarkPath = path.resolve(process.cwd(), "assets", "jetguard-watermark.png");
     const responsavel = passagem.responsavel.apelido || passagem.responsavel.nome;
     const colaboradoresTexto = colaboradores.map((item) => item.apelido || item.nome).join(", ") || "Não informado";
     const pageBottom = 742;
+
+    const watermark = () => {
+      doc.save().opacity(0.045).image(watermarkPath, 177, 300, { width: 240 }).restore();
+    };
 
     const header = () => {
       doc.image(logoPath, 36, 28, { width: 125 });
@@ -501,6 +506,14 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
         .text(`Emitido em ${new Date().toLocaleString("pt-BR")} por ${responsavel}`, 36, 770, { align: "left", width: 360 })
         .text(`Página ${pagina} de ${total}`, 430, 770, { align: "right", width: 129 });
     };
+
+    const decorarPagina = () => {
+      watermark();
+      header();
+      doc.y = 102;
+    };
+
+    doc.on("pageAdded", decorarPagina);
 
     const ensure = (height: number) => {
       if (doc.y + height > pageBottom) doc.addPage();
@@ -529,8 +542,7 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
       doc.y += height + 4;
     };
 
-    header();
-    doc.y = 102;
+    decorarPagina();
 
     section("Dados do turno");
     const yResumo = doc.y;
