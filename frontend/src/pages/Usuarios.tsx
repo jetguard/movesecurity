@@ -139,9 +139,14 @@ export default function Usuarios() {
       return;
     }
 
+    if (!formulario.unidade || !formulario.unidadesPermitidas.includes(formulario.unidade)) {
+      alert("Selecione uma unidade preferencial entre as unidades permitidas.");
+      return;
+    }
+
     const payload = {
       ...formulario,
-      unidade: formulario.unidadesPermitidas[0],
+      unidade: formulario.unidade,
     };
 
     if (!editando && formulario.senha !== formulario.confirmarSenha) {
@@ -258,9 +263,13 @@ export default function Usuarios() {
                 ))}
               </div>
               <p className="mt-2 text-xs text-slate-500">
-                A primeira unidade selecionada será usada como unidade principal do usuário.
+                Selecione todos os ambientes que este usuário poderá acessar.
               </p>
             </div>
+            <select className="rounded-lg border p-3" value={formulario.unidade} onChange={(e) => atualizarCampo("unidade", e.target.value)} required>
+              <option value="">Selecione a unidade preferencial</option>
+              {formulario.unidadesPermitidas.map((unidade) => <option key={unidade} value={unidade}>{unidade}</option>)}
+            </select>
             <input className="rounded-lg border bg-gray-100 p-3 text-gray-600" value="Movecta S/A" readOnly />
             <select className="rounded-lg border p-3" value={formulario.perfilAcesso} onChange={(e) => atualizarCampo("perfilAcesso", e.target.value)} required disabled={editando?.perfilAcesso === "SUPER_ADMIN"}>
               {!editando && <option value="">Selecione o perfil de acesso</option>}
