@@ -246,8 +246,8 @@ function StatusCards({
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[150px_1fr]">
-        <div className="relative h-36">
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-[150px_1fr]">
+        <div className="relative h-32 w-36">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
@@ -272,14 +272,14 @@ function StatusCards({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
+        <div className="grid grid-cols-3 gap-4 self-start pt-2">
           {statusPadrao.map((item) => (
-            <div key={item} className="rounded-lg bg-slate-50 p-3">
+            <div key={item} className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: coresStatus[item] }} />
-                <p className="text-xs text-slate-500">{item}</p>
+                <p className="truncate text-xs font-medium text-slate-500">{item}</p>
               </div>
-              <p className="mt-1 text-xl font-bold text-slate-900">{status[item] || 0}</p>
+              <p className="mt-2 text-xl font-bold text-slate-900">{status[item] || 0}</p>
             </div>
           ))}
         </div>
