@@ -300,6 +300,10 @@ export default function AdminLayout() {
                 <CalendarDays size={16} />
                 Eventos
               </Link>
+              <Link to="/operacao-soc" className={subItem}>
+                <Activity size={16} />
+                Relatório CCOS
+              </Link>
             </div>
           )}
 
@@ -316,10 +320,6 @@ export default function AdminLayout() {
               <Link to="/cameras" className={subItem}>
                 <Video size={16} />
                 Câmeras CFTV
-              </Link>
-              <Link to="/operacao-soc" className={subItem}>
-                <Activity size={16} />
-                Operação SOC
               </Link>
               <Link to="/tarefas" className={subItem}>
                 <CheckCircle2 size={16} />
@@ -501,7 +501,7 @@ export default function AdminLayout() {
               <Link
                 to="/operacao-soc"
                 className="relative rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200"
-                title={passagensAbertas > 0 ? "Há relatório operacional de passagem de turno em aberto" : "Operações SOC"}
+                title={passagensAbertas > 0 ? "Há Relatório CCOS em aberto" : "Relatório CCOS"}
               >
                 <Activity size={17} />
                 {passagensAbertas > 0 && (
@@ -574,7 +574,7 @@ export default function AdminLayout() {
             <Link
               to="/operacao-soc"
               className="relative rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200"
-              title={passagensAbertas > 0 ? "Há relatório operacional de passagem de turno em aberto" : "Operações SOC"}
+              title={passagensAbertas > 0 ? "Há Relatório CCOS em aberto" : "Relatório CCOS"}
             >
               <Activity size={18} />
               {passagensAbertas > 0 && (

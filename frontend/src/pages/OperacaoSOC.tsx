@@ -14,7 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { api } from "../services/api";
-import { podeAnalisar, usuarioAtual } from "../utils/permissoes";
+import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
 
 type UsuarioEquipe = {
   id: number;
@@ -134,6 +134,7 @@ function montarInformacao(titulo: string, local: string, observacoes: string) {
 export default function OperacaoSOC() {
   const usuario = usuarioAtual();
   const gerenciaPassagem = podeAnalisar();
+  const podeExcluirPassagem = podeAdministrar();
   const [dados, setDados] = useState<SocData | null>(null);
   const [usuariosEquipe, setUsuariosEquipe] = useState<UsuarioEquipe[]>([]);
   const [passagemSelecionada, setPassagemSelecionada] = useState<PassagemTurno | null>(null);
@@ -278,6 +279,32 @@ export default function OperacaoSOC() {
     window.setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
+  async function excluirPassagem(passagem: PassagemTurno) {
+    const confirmar = window.confirm(`Deseja realmente excluir o Relatório CCOS ${passagem.codigo}? Esta ação não poderá ser desfeita.`);
+    if (!confirmar) return;
+    setSalvando(true);
+    try {
+      await api.delete(`/operacao/passagens-turno/${passagem.id}`);
+      if (passagemSelecionada?.id === passagem.id) {
+        setPassagemSelecionada(null);
+        setForm({
+          dataPassagem: dataInput(),
+          colaboradoresIds: [],
+          postos: [{ ...postoVazio }],
+          statusPostoGocil: "Completo",
+          observacaoPostoGocil: "",
+          statusPostoScanner: "Completo",
+          observacaoPostoScanner: "",
+          informacoesComplementares: "",
+          checklistEquipamentos: checklistEquipamentosPadrao,
+        });
+      }
+      await carregar();
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function carregarUltimoChecklistEquipamentos() {
     if (!equipeAtual) {
       alert("Selecione a equipe para buscar o checklist anterior.");
@@ -370,7 +397,7 @@ export default function OperacaoSOC() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Operação SOC</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Relatório CCOS</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
             Passagem de turno, livro eletrônico, informações do plantão e inteligência operacional da unidade {dados.unidade}.
           </p>
@@ -424,7 +451,7 @@ export default function OperacaoSOC() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <ClipboardCheck className="text-cyan-600" size={20} />
-              <h2 className="font-bold text-slate-900 dark:text-white">Relatório de Passagem de Serviço</h2>
+              <h2 className="font-bold text-slate-900 dark:text-white">Relatório CCOS</h2>
             </div>
             <button type="button" onClick={abrirNovaPassagem} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:bg-slate-400">
               <Plus size={16} />
@@ -438,22 +465,33 @@ export default function OperacaoSOC() {
               </p>
             ) : (
               dados.passagensTurno.map((passagem) => (
-                <button
-                  type="button"
+                <div
                   key={passagem.id}
-                  onClick={() => preencherPassagem(passagem)}
                   className={`rounded-xl border p-4 text-left text-sm transition hover:border-blue-500 ${passagemSelecionada?.id === passagem.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-100 dark:border-slate-800"}`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <strong className="text-slate-900 dark:text-white">{passagem.codigo}</strong>
-                    <span className={`rounded-full px-2 py-1 text-xs font-bold ${passagem.status === "Aberto" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>
-                      {passagem.status}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-slate-600 dark:text-slate-300">{passagem.unidade} | {passagem.equipe}</p>
-                  <p className="text-slate-500 dark:text-slate-400">Responsável: {passagem.responsavel?.apelido || passagem.responsavel?.nome || "Não informado"}</p>
-                  <p className="mt-1 text-xs text-slate-500">Aberto em {new Date(passagem.horaAbertura).toLocaleString("pt-BR")}</p>
-                </button>
+                  <button type="button" onClick={() => preencherPassagem(passagem)} className="w-full text-left">
+                    <div className="flex items-center justify-between gap-3">
+                      <strong className="text-slate-900 dark:text-white">{passagem.codigo}</strong>
+                      <span className={`rounded-full px-2 py-1 text-xs font-bold ${passagem.status === "Aberto" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>
+                        {passagem.status}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-slate-600 dark:text-slate-300">{passagem.unidade} | {passagem.equipe}</p>
+                    <p className="text-slate-500 dark:text-slate-400">Responsável: {passagem.responsavel?.apelido || passagem.responsavel?.nome || "Não informado"}</p>
+                    <p className="mt-1 text-xs text-slate-500">Aberto em {new Date(passagem.horaAbertura).toLocaleString("pt-BR")}</p>
+                  </button>
+                  {podeExcluirPassagem && (
+                    <button
+                      type="button"
+                      onClick={() => excluirPassagem(passagem)}
+                      disabled={salvando}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:text-slate-400 dark:border-red-900 dark:text-red-200 dark:hover:bg-red-950/40"
+                    >
+                      <Trash2 size={14} />
+                      Excluir relatório
+                    </button>
+                  )}
+                </div>
               ))
             )}
           </div>
@@ -463,7 +501,7 @@ export default function OperacaoSOC() {
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Passagem de Turno em tempo real</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Relatório CCOS em tempo real</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {passagemSelecionada ? `${passagemSelecionada.codigo} | ${passagemSelecionada.status}` : "Abra ou selecione uma passagem para alimentar o relatório durante o plantão."}
             </p>

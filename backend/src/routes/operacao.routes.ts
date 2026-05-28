@@ -4,6 +4,7 @@ import {
   atualizarPassagemTurno,
   criarPassagemTurno,
   criarRegistroOperacional,
+  excluirPassagemTurno,
   finalizarPassagemTurno,
   gerarPdfPassagemTurno,
   listarPassagensTurno,
@@ -11,7 +12,7 @@ import {
   ultimoChecklistEquipamentosPassagem,
   painelOperacionalSoc,
 } from "../controllers/operacao.controller";
-import { acessoRelatorios, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { acessoRelatorios, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.post("/passagens-turno/adicionar-informacao", autenticarUsuario, autoriza
 router.put("/passagens-turno/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), atualizarPassagemTurno);
 router.post("/passagens-turno/:id/finalizar", autenticarUsuario, autorizarPerfis(acessoRelatorios), finalizarPassagemTurno);
 router.get("/passagens-turno/:id/pdf", autenticarUsuario, autorizarPerfis(acessoRelatorios), gerarPdfPassagemTurno);
+router.delete("/passagens-turno/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirPassagemTurno);
 
 export default router;

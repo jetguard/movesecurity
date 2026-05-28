@@ -434,6 +434,30 @@ export async function finalizarPassagemTurno(req: AuthRequest, res: Response) {
   }
 }
 
+export async function excluirPassagemTurno(req: AuthRequest, res: Response) {
+  try {
+    const passagem = await prisma.passagemTurno.findFirst({
+      where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
+      include: { postos: true, responsavel: { select: { nome: true, apelido: true, equipe: true } } },
+    });
+    if (!passagem) return res.status(404).json({ error: "Relatório CCOS não encontrado" });
+
+    await prisma.passagemTurno.delete({ where: { id: passagem.id } });
+    await registrarLog({
+      req,
+      acao: `Exclusão do Relatório CCOS ${passagem.codigo}`,
+      tipoRegistro: "PassagemTurno",
+      registroId: passagem.id,
+      dadosAnteriores: passagem,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir Relatório CCOS" });
+  }
+}
+
 export async function adicionarInformacaoPassagem(req: AuthRequest, res: Response) {
   try {
     const usuario = await usuarioSolicitante(req.usuarioId);
