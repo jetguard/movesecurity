@@ -15,6 +15,7 @@ const selectUsuario = {
   setor: true,
   cargo: true,
   empresa: true,
+  equipe: true,
   unidade: true,
   unidadesPermitidas: true,
   perfilAcesso: true,
@@ -53,6 +54,11 @@ function validarStatus(status?: string) {
   return ["ATIVO", "INATIVO", "BLOQUEADO"].includes(status) ? status : "ATIVO";
 }
 
+function validarEquipe(equipe?: string) {
+  if (!equipe) return null;
+  return ["Equipe A", "Equipe B", "Equipe C", "Equipe D"].includes(equipe) ? equipe : null;
+}
+
 export async function listarUsuarios(req: Request, res: Response) {
   const usuarios = await prisma.usuario.findMany({
     orderBy: {
@@ -72,6 +78,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       re,
       setor,
       cargo,
+      equipe,
       unidade,
       unidadesPermitidas,
       perfilAcesso,
@@ -102,6 +109,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         re,
         setor,
         cargo,
+        equipe: validarEquipe(equipe),
         unidade: unidadePrincipal,
         unidadesPermitidas: serializarUnidadesPermitidas(unidadesDoUsuario, unidadePrincipal),
         empresa: "Movecta S/A",
@@ -150,6 +158,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       re,
       setor,
       cargo,
+      equipe,
       unidade,
       unidadesPermitidas,
       perfilAcesso,
@@ -166,6 +175,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
         re,
         setor,
         cargo,
+        equipe: validarEquipe(equipe),
         unidade: unidadePrincipal,
         unidadesPermitidas: serializarUnidadesPermitidas(unidadesDoUsuario, unidadePrincipal),
         empresa: "Movecta S/A",

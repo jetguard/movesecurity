@@ -23,6 +23,7 @@ type OcorrenciaVinculada = {
 
 type InvestigacaoItem = {
   id: number;
+  codigo?: string | null;
   titulo: string;
   descricao: string;
   status: string;
@@ -109,6 +110,10 @@ export default function Investigacao() {
   }, []);
 
   const localSelecionado = locais.find((item) => item.nome === local);
+  const numeroInvestigacao = (item: InvestigacaoItem) => {
+    if (item.codigo) return item.codigo;
+    return `${String(item.id).padStart(4, "0")}/${new Date(item.createdAt).getFullYear()}`;
+  };
 
   return (
     <div className="p-6">
@@ -127,7 +132,7 @@ export default function Investigacao() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold">
-                Investigação da ocorrência {investigacaoEditando.numeroOcorrencia}
+                R.I. {numeroInvestigacao(investigacaoEditando)} - ocorrência {investigacaoEditando.numeroOcorrencia}
               </h2>
               <p className="text-gray-500">{investigacaoEditando.assunto}</p>
             </div>
@@ -145,7 +150,7 @@ export default function Investigacao() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <input
                 className="w-full border rounded-lg p-3"
-                value={investigacaoEditando.numeroOcorrencia}
+                value={`R.I. ${numeroInvestigacao(investigacaoEditando)}`}
                 readOnly
               />
 
@@ -273,9 +278,11 @@ export default function Investigacao() {
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                   <h2 className="text-xl font-bold">
-                    Ocorrência {item.numeroOcorrencia}
+                    R.I. {numeroInvestigacao(item)}
                   </h2>
-                  <p className="text-gray-700 mt-1">{item.titulo}</p>
+                  <p className="text-gray-700 mt-1">
+                    Ocorrência vinculada {item.numeroOcorrencia} - {item.titulo}
+                  </p>
                   <p className="text-sm text-gray-500 mt-1">
                     Solicitada em: {new Date(item.createdAt).toLocaleString()}
                   </p>

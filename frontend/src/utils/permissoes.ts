@@ -11,6 +11,7 @@ export type UsuarioLocal = {
   apelido?: string;
   email: string;
   perfilAcesso?: string;
+  equipe?: string;
   unidade?: string;
   unidadesPermitidas?: string[];
   fotoPerfil?: string;

@@ -7,6 +7,7 @@ import { calcularHashArquivo } from "../utils/arquivoHash";
 
 const STATUS_ARMAZENADOS = ["Dentro do terminal", "Pendente de verificação", "Bloqueado"];
 const STATUS_SAIDA = ["Liberado"];
+const STATUS_VALIDOS = ["Previsão para chegada", "No terminal", "Liberado"];
 
 function bool(valor: unknown) {
   return valor === true || valor === "true" || valor === "Sim" || valor === "sim";
@@ -20,6 +21,11 @@ function numeroContainer(valor: unknown) {
   return texto(valor).toLocaleUpperCase("pt-BR");
 }
 
+function statusOperacional(valor: unknown) {
+  const status = texto(valor);
+  return STATUS_VALIDOS.includes(status) ? status : "Previsão para chegada";
+}
+
 function categoriaArquivos(valor: unknown) {
   const categoria = texto(valor);
   return ["Entrada", "Saída", "Evidências Operacionais"].includes(categoria)
@@ -30,20 +36,13 @@ function categoriaArquivos(valor: unknown) {
 function tempoPermanencia(entrada: Date, saida?: Date | null) {
   const fim = saida || new Date();
   const ms = Math.max(0, fim.getTime() - entrada.getTime());
-  const horas = Math.floor(ms / 3600000);
-  const dias = Math.floor(horas / 24);
-  const restoHoras = horas % 24;
+  const dias = Math.max(0, Math.floor(ms / 86400000));
 
-  if (dias <= 0) return `${Math.max(1, horas)} hora(s)`;
-  if (restoHoras <= 0) return `${dias} dia(s)`;
-  return `${dias} dia(s) e ${restoHoras} hora(s)`;
+  return `${dias} dia(s)`;
 }
 
-function nivelPermanencia(entrada: Date, saida?: Date | null) {
+function nivelPermanencia(entrada: Date, saida?: Date | null): string {
   if (saida) return "finalizado";
-  const horas = (Date.now() - entrada.getTime()) / 3600000;
-  if (horas >= 72) return "critico";
-  if (horas >= 24) return "atencao";
   return "normal";
 }
 
@@ -228,6 +227,8 @@ export async function criarContainer(req: AuthRequest, res: Response) {
         numeroContainer: numero,
         unidade: req.unidadeAtiva || "GJA-T1",
         dataHoraEntrada: new Date(req.body.dataHoraEntrada),
+        dataHoraSaida: req.body.dataHoraSaida ? new Date(req.body.dataHoraSaida) : undefined,
+        posicionamento: texto(req.body.posicionamento).toLocaleUpperCase("pt-BR"),
         tipoContainer: texto(req.body.tipoContainer),
         dimensao: texto(req.body.dimensao),
         destino: texto(req.body.destino),
@@ -235,15 +236,8 @@ export async function criarContainer(req: AuthRequest, res: Response) {
         estufadoTerminal: bool(req.body.estufadoTerminal),
         numeroLacre: texto(req.body.numeroLacre),
         armador: texto(req.body.armador),
-        transportadora: texto(req.body.transportadora),
-        motoristaResponsavel: texto(req.body.motoristaResponsavel),
-        documentoMotorista: texto(req.body.documentoMotorista),
-        placaCavalo: texto(req.body.placaCavalo).toLocaleUpperCase("pt-BR"),
-        placaCarreta: texto(req.body.placaCarreta).toLocaleUpperCase("pt-BR"),
-        tipoCarga: texto(req.body.tipoCarga),
-        pesoCarga: texto(req.body.pesoCarga),
         prioridade: texto(req.body.prioridade) || "Baixa",
-        statusOperacional: texto(req.body.statusOperacional) || "Dentro do terminal",
+        statusOperacional: statusOperacional(req.body.statusOperacional),
         observacoes: texto(req.body.observacoes),
         criadoPorId: req.usuarioId,
         atualizadoPorId: req.usuarioId,
@@ -310,6 +304,7 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
         numeroContainer: numeroContainer(req.body.numeroContainer || anterior.numeroContainer),
         dataHoraEntrada: req.body.dataHoraEntrada ? new Date(req.body.dataHoraEntrada) : anterior.dataHoraEntrada,
         dataHoraSaida: req.body.dataHoraSaida ? new Date(req.body.dataHoraSaida) : anterior.dataHoraSaida,
+        posicionamento: texto(req.body.posicionamento).toLocaleUpperCase("pt-BR"),
         tipoContainer: texto(req.body.tipoContainer) || anterior.tipoContainer,
         dimensao: texto(req.body.dimensao) || anterior.dimensao,
         destino: texto(req.body.destino) || anterior.destino,
@@ -317,18 +312,9 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
         scannerSaida: req.body.scannerSaida === undefined ? anterior.scannerSaida : bool(req.body.scannerSaida),
         estufadoTerminal: req.body.estufadoTerminal === undefined ? anterior.estufadoTerminal : bool(req.body.estufadoTerminal),
         numeroLacre: texto(req.body.numeroLacre),
-        novoLacre: texto(req.body.novoLacre),
         armador: texto(req.body.armador),
-        transportadora: texto(req.body.transportadora),
-        motoristaResponsavel: texto(req.body.motoristaResponsavel),
-        documentoMotorista: texto(req.body.documentoMotorista),
-        placaCavalo: texto(req.body.placaCavalo).toLocaleUpperCase("pt-BR"),
-        placaCarreta: texto(req.body.placaCarreta).toLocaleUpperCase("pt-BR"),
-        tipoCarga: texto(req.body.tipoCarga),
-        pesoCarga: texto(req.body.pesoCarga),
         prioridade: texto(req.body.prioridade) || anterior.prioridade,
-        statusOperacional: texto(req.body.statusOperacional) || anterior.statusOperacional,
-        statusFinal: texto(req.body.statusFinal),
+        statusOperacional: statusOperacional(req.body.statusOperacional || anterior.statusOperacional),
         observacoes: texto(req.body.observacoes),
         observacoesSaida: texto(req.body.observacoesSaida),
         atualizadoPorId: req.usuarioId,

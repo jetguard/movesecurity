@@ -29,6 +29,7 @@ export async function criarOcorrencia(req: AuthRequest, res: Response) {
       status = "ABERTO",
       dataOcorrencia,
       relatoSeguranca,
+      acoesTomadas,
       envolvidos,
     } = req.body;
 
@@ -82,6 +83,7 @@ export async function criarOcorrencia(req: AuthRequest, res: Response) {
         natureza,
         subNatureza,
         relatoSeguranca,
+        acoesTomadas,
         status,
         dataOcorrencia: new Date(dataOcorrencia),
 
@@ -193,6 +195,7 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
       status = "ABERTO",
       dataOcorrencia,
       relatoSeguranca,
+      acoesTomadas,
       envolvidos,
       anexosRemover,
     } = req.body;
@@ -283,6 +286,7 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
           natureza,
           subNatureza,
           relatoSeguranca,
+          acoesTomadas,
           status,
           dataOcorrencia: new Date(dataOcorrencia),
 
@@ -411,6 +415,7 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         status: ocorrencia.status,
         data: ocorrencia.dataOcorrencia,
         relatoSeguranca: ocorrencia.relatoSeguranca,
+        acoesTomadas: ocorrencia.acoesTomadas,
         envolvidos: ocorrencia.envolvidos,
         investigacao: ocorrencia.investigacao,
         analise: ocorrencia.analise,

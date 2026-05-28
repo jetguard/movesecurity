@@ -27,8 +27,10 @@ type RelatorioPdf = {
   status: string;
   data: Date;
   relatoSeguranca?: string | null;
+  acoesTomadas?: string | null;
   envolvidos?: EnvolvidoPdf[];
   investigacao?: {
+    codigo?: string | null;
     numeroOcorrencia?: string | null;
     status: string;
     descricaoInvestigacao?: string | null;
@@ -502,6 +504,66 @@ function escreverBlocoTexto(
   });
 }
 
+function escreverTextoPaginado(
+  doc: PDFKit.PDFDocument,
+  texto: string,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  const paragrafos = textoPdf(texto).split(/\n+/);
+
+  paragrafos.forEach((paragrafo) => {
+    const textoParagrafo = textoPdf(paragrafo);
+    if (!textoParagrafo) return;
+
+    const palavras = textoParagrafo.split(/\s+/);
+    let trecho = "";
+
+    palavras.forEach((palavra) => {
+      const tentativa = trecho ? `${trecho} ${palavra}` : palavra;
+      const altura = doc.heightOfString(tentativa, {
+        width: contentWidth,
+        align: "justify",
+        lineGap: 3,
+      });
+      const espacoDisponivel = page.footerTop - 18 - doc.y;
+
+      if (altura > espacoDisponivel && trecho) {
+        doc
+          .font("Helvetica")
+          .fontSize(10)
+          .fillColor("#111827")
+          .text(trecho, page.left, doc.y, {
+            width: contentWidth,
+            align: "justify",
+            lineGap: 3,
+          });
+        novaPagina(doc, relatorio, usuario, qrCode, token);
+        trecho = palavra;
+        return;
+      }
+
+      trecho = tentativa;
+    });
+
+    if (trecho) {
+      garantirEspaco(doc, 24, relatorio, usuario, qrCode, token);
+      doc
+        .font("Helvetica")
+        .fontSize(10)
+        .fillColor("#111827")
+        .text(trecho, page.left, doc.y, {
+          width: contentWidth,
+          align: "justify",
+          lineGap: 3,
+        });
+      doc.moveDown(0.6);
+    }
+  });
+}
+
 function escreverInvestigacao(
   doc: PDFKit.PDFDocument,
   relatorio: RelatorioPdf,
@@ -511,21 +573,31 @@ function escreverInvestigacao(
 ) {
   if (!relatorio.investigacao) return;
 
-  garantirEspaco(doc, 150, relatorio, usuario, qrCode, token);
-  escreverTituloSecao(doc, "Dados da investigação");
+  const numeroInvestigacao = relatorio.investigacao.codigo || relatorio.investigacao.numeroOcorrencia || relatorio.codigo;
+  const relatorioInvestigacao: RelatorioPdf = {
+    ...relatorio,
+    tipo: "Investigação",
+    codigo: numeroInvestigacao,
+  };
+
+  novaPagina(doc, relatorioInvestigacao, usuario, qrCode, token);
+  escreverTituloSecao(doc, "Relatório de investigação");
 
   const y = doc.y;
   const colunaLargura = 230;
   const colunaDireitaX = page.left + 270;
 
-  escreverCampo(doc, "Ocorrência vinculada", valor(relatorio.investigacao.numeroOcorrencia), page.left, y, colunaLargura);
-  escreverCampo(doc, "Solicitação", formatarData(relatorio.investigacao.createdAt), page.left, y + 42, colunaLargura);
-  escreverCampo(doc, "Status", relatorio.investigacao.status, colunaDireitaX, y, colunaLargura);
+  escreverCampo(doc, "Número da R.I.", valor(numeroInvestigacao), page.left, y, colunaLargura);
+  escreverCampo(doc, "Data da conversão", formatarData(relatorio.investigacao.createdAt), page.left, y + 42, colunaLargura);
+  escreverCampo(doc, "Ocorrência vinculada", valor(relatorio.investigacao.numeroOcorrencia), colunaDireitaX, y, colunaLargura);
   escreverCampo(doc, "Responsável", valor(relatorio.investigacao.responsavel?.nome), colunaDireitaX, y + 42, colunaLargura);
+  escreverCampo(doc, "Status", relatorio.investigacao.status, page.left, y + 84, colunaLargura);
 
-  doc.y = y + 86;
-  escreverBlocoTexto(doc, "Descrição da investigação", valor(relatorio.investigacao.descricaoInvestigacao), relatorio, usuario, qrCode, token);
-  escreverBlocoTexto(doc, "Conclusão dos fatos", valor(relatorio.investigacao.conclusaoFatos), relatorio, usuario, qrCode, token);
+  doc.y = y + 128;
+  const fraseAbertura = `O usuário ${valor(relatorio.investigacao.responsavel?.nome)} iniciou a investigação do Relatório de Ocorrência nº ${relatorio.codigo}.`;
+  escreverBlocoTexto(doc, "Abertura da investigação", fraseAbertura, relatorioInvestigacao, usuario, qrCode, token);
+  escreverBlocoTexto(doc, "Descrição da investigação", valor(relatorio.investigacao.descricaoInvestigacao), relatorioInvestigacao, usuario, qrCode, token);
+  escreverBlocoTexto(doc, "Conclusão dos fatos", valor(relatorio.investigacao.conclusaoFatos), relatorioInvestigacao, usuario, qrCode, token);
 }
 
 function escreverAnalise(
@@ -537,7 +609,7 @@ function escreverAnalise(
 ) {
   if (!relatorio.analise) return;
 
-  garantirEspaco(doc, 145, relatorio, usuario, qrCode, token);
+  novaPagina(doc, relatorio, usuario, qrCode, token);
   escreverTituloSecao(doc, "Dados da análise");
 
   const y = doc.y;
@@ -581,32 +653,21 @@ function escreverRelato(
   garantirEspaco(doc, 90, relatorio, usuario, qrCode, token);
   escreverTituloSecao(doc, "Relato patrimonial");
 
-  const texto = valor(relatorio.relatoSeguranca);
-  const paragrafos = textoPdf(texto).split(/\n+/);
+  escreverTextoPaginado(doc, valor(relatorio.relatoSeguranca), relatorio, usuario, qrCode, token);
+}
 
-  paragrafos.forEach((paragrafo) => {
-    const textoParagrafo = textoPdf(paragrafo);
-    if (!textoParagrafo) return;
+function escreverAcoesTomadas(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  if (!textoPdf(relatorio.acoesTomadas)) return;
 
-    const altura = doc.heightOfString(textoParagrafo, {
-      width: contentWidth,
-      align: "justify",
-      lineGap: 3,
-    });
-
-    garantirEspaco(doc, altura + 14, relatorio, usuario, qrCode, token);
-
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .fillColor("#111827")
-      .text(textoParagrafo, page.left, doc.y, {
-        width: contentWidth,
-        align: "justify",
-        lineGap: 3,
-      });
-    doc.moveDown(0.6);
-  });
+  garantirEspaco(doc, 90, relatorio, usuario, qrCode, token);
+  escreverTituloSecao(doc, "Ações tomadas");
+  escreverTextoPaginado(doc, valor(relatorio.acoesTomadas), relatorio, usuario, qrCode, token);
 }
 
 export async function gerarRelatorioPdf(
@@ -642,10 +703,11 @@ export async function gerarRelatorioPdf(
 
   novaPagina(doc, relatorio, usuario, qrCode, token);
   escreverDadosRelatorio(doc, relatorio);
-  escreverInvestigacao(doc, relatorio, usuario, qrCode, token);
-  escreverAnalise(doc, relatorio, usuario, qrCode, token);
   escreverEnvolvidos(doc, relatorio, usuario, qrCode, token);
   escreverRelato(doc, relatorio, usuario, qrCode, token);
+  escreverAcoesTomadas(doc, relatorio, usuario, qrCode, token);
+  escreverAnalise(doc, relatorio, usuario, qrCode, token);
+  escreverInvestigacao(doc, relatorio, usuario, qrCode, token);
 
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i += 1) {

@@ -4,6 +4,81 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.0.7] - 2026-05-28
+
+### Melhorado
+
+- Informações do Plantão agora possuem apenas o fluxo correto de "Informação do Plantão", sem seleção de Checklist ou Passagem de Serviço.
+- Informações adicionadas ao relatório de passagem podem ser editadas ou excluídas em cards antes do envio final.
+- PDF da Passagem de Turno passa a exibir o cabeçalho do relatório em duas colunas, com melhor distribuição visual.
+- Conteúdo do PDF da Passagem de Turno corrigido para ficar alinhado à esquerda, sem herdar centralização do cabeçalho.
+
+## [1.0.6] - 2026-05-28
+
+### Adicionado
+
+- Módulo completo de Passagem de Turno em Operação SOC.
+- Card "Relatório de Passagem de Serviço" ao lado do Livro Eletrônico de Ocorrências.
+- Abertura de passagem em tempo real com status "Aberto" e edição contínua durante o plantão.
+- Cadastro dinâmico de postos operacionais, colaboradores, R.E e escala.
+- Controle de status dos postos Gocil e Scanner com observação obrigatória quando incompleto.
+- Seleção de múltiplos colaboradores da mesma unidade/equipe.
+- Finalização por botão "Enviar Relatório", com bloqueio de edição e data/hora de encerramento.
+- PDF profissional de passagem de turno com cabeçalho, postos, status, informações complementares, CFTV e contêineres na quadra.
+
+### Melhorado
+
+- Informações do Plantão podem ser vinculadas automaticamente à passagem de turno aberta.
+- Menu "Checklists" renomeado para "Informações do Plantão" para ficar mais claro para a operação.
+- Painel SOC passa a exibir passagens estruturadas, mantendo histórico e rastreabilidade por equipe.
+
+## [1.0.5] - 2026-05-28
+
+### Adicionado
+
+- Página "Sugestão de melhorias" em Administração.
+- Envio de sugestões por Operador, Analista, Administrador e Super Admin.
+- Campos de assunto, descrição da sugestão e print de tela/PDF.
+- Acompanhamento por status: Recebida, Em análise, Aprovada, Implementada e Recusada.
+- Resposta administrativa e logs de criação/atualização das sugestões.
+
+## [1.0.4] - 2026-05-28
+
+### Melhorado
+
+- Formulário da Quadra de Segurança simplificado para uso operacional.
+- Máscara no número do contêiner no padrão `AAAA 123.456-7`.
+- Inclusão do campo Posicionamento para registrar posições como `E13A01`.
+- Status operacional reduzido para `Previsão para chegada`, `No terminal` e `Liberado`.
+- Tempo no terminal passa a ser exibido apenas em dias, sem classificação crítica por prazo.
+- Remoção visual dos campos de transportadora, motorista, documento, placas, tipo/peso de carga, novo lacre, status final e categoria de evidência.
+
+## [1.0.3] - 2026-05-28
+
+### Adicionado
+
+- Campo WYSIWYG "Ações tomadas" em Relatórios de Ocorrência e Relatórios de Eventos.
+- Exibição das ações tomadas na visualização rápida e nos PDFs dos relatórios.
+
+### Melhorado
+
+- PDF dos relatórios com paginação mais contínua para textos longos do relato patrimonial, reduzindo espaços em branco entre páginas.
+- Dados da análise passam a ser emitidos em página própria após relatos, relato patrimonial e ações tomadas.
+
+## [1.0.2] - 2026-05-28
+
+### Adicionado
+
+- Página administrativa de Últimas Atualizações, exibindo versão atual e changelog do sistema.
+- Campo de equipe operacional no cadastro de usuários: Equipe A, Equipe B, Equipe C e Equipe D.
+- Filtro por equipe no Painel Operação SOC e relatório de passagem de turno com operador e equipe.
+- Numeração própria e sequencial para Relatórios de Investigação, independente da numeração das ocorrências.
+
+### Melhorado
+
+- PDF de ocorrência convertida para R.I. agora inclui o relatório de investigação em página separada, com número da R.I., ocorrência vinculada, data da conversão, responsável, descrição e conclusão dos fatos.
+- Listagens e avisos de ocorrência passam a exibir o número formal da R.I. quando existir.
+
 ## [1.0.1] - 2026-05-28
 
 ### Corrigido

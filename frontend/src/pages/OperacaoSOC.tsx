@@ -1,13 +1,66 @@
-import { useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, BookOpen, ClipboardCheck, RadioTower, RefreshCw, Send } from "lucide-react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  BookOpen,
+  ClipboardCheck,
+  FileDown,
+  Pencil,
+  Plus,
+  RadioTower,
+  RefreshCw,
+  Save,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { api } from "../services/api";
+import { podeAnalisar, usuarioAtual } from "../utils/permissoes";
+
+type UsuarioEquipe = {
+  id: number;
+  nome: string;
+  apelido?: string;
+  equipe?: string | null;
+};
+
+type PostoPassagem = {
+  id?: number;
+  posto: string;
+  colaborador: string;
+  re: string;
+  escala: string;
+};
+
+type PassagemTurno = {
+  id: number;
+  codigo: string;
+  dataPassagem: string;
+  horaAbertura: string;
+  horaEncerramento?: string | null;
+  unidade: string;
+  equipe: string;
+  status: string;
+  colaboradoresIds: number[];
+  statusPostoGocil: string;
+  observacaoPostoGocil?: string | null;
+  statusPostoScanner: string;
+  observacaoPostoScanner?: string | null;
+  informacoesComplementares?: string | null;
+  cftvConectadas?: number | null;
+  cftvDesconectadas?: number | null;
+  containersArmazenados?: number | null;
+  responsavel?: { id?: number; nome: string; apelido?: string; equipe?: string | null };
+  postos: PostoPassagem[];
+};
 
 type SocData = {
   unidade: string;
+  filtroEquipe?: string | null;
+  equipes: string[];
   atualizadoEm: string;
   soc: Record<string, number>;
-  checklistTurno?: { codigo: string; titulo: string; status: string; dataHora: string } | null;
-  passagensServico: Array<{ id: number; codigo: string; titulo: string; observacoes?: string; dataHora: string; responsavel?: { nome: string; apelido?: string } }>;
+  passagensTurno: PassagemTurno[];
+  passagensServico: Array<{ id: number; codigo: string; titulo: string; observacoes?: string; dataHora: string; responsavel?: { nome: string; apelido?: string; equipe?: string | null } }>;
   livroEletronico: Array<{ tipo: string; titulo: string; detalhe: string; data: string }>;
   reincidencia: Record<string, Array<{ nome: string; total: number }>>;
   indicadoresMensais: Record<string, number>;
@@ -16,62 +69,246 @@ type SocData = {
 };
 
 const metricas = [
-  ["ocorrenciasAbertas", "Ocorrências abertas"],
+  ["ocorrenciasAbertas", "OcorrÃªncias abertas"],
   ["eventosAbertos", "Eventos abertos"],
-  ["investigacoesAbertas", "Investigações"],
-  ["camerasOffline", "Câmeras offline"],
-  ["containersCriticos", "Contêineres críticos"],
+  ["investigacoesAbertas", "InvestigaÃ§Ãµes"],
+  ["camerasOffline", "CÃ¢meras offline"],
+  ["containersCriticos", "ContÃªineres no terminal"],
   ["tarefasAbertas", "Tarefas abertas"],
-  ["checklistsHoje", "Checklists hoje"],
+  ["checklistsHoje", "Registros hoje"],
 ];
 
+const postosDisponiveis = [
+  "Gate 1",
+  "Gate 2",
+  "Gate 3",
+  "Portaria de ServiÃ§o",
+  "Portaria Social",
+  "BalanÃ§a de SaÃ­da",
+  "BalanÃ§a de Entrada",
+  "RotatÃ³ria",
+  "Scanner",
+  "Scanner Novo",
+];
+
+const escalas = ["06x18", "18x06", "07x19", "19x07", "07x15", "15x23", "23x07"];
+const equipesPadrao = ["Equipe A", "Equipe B", "Equipe C", "Equipe D"];
+
+const postoVazio: PostoPassagem = { posto: "", colaborador: "", re: "", escala: "" };
+
+function dataInput(data?: string | null) {
+  if (!data) return new Date().toISOString().slice(0, 10);
+  return new Date(data).toISOString().slice(0, 10);
+}
+
+function separarInformacoes(texto: string) {
+  return texto
+    .split(/\n\n---\n\n|\n{2,}/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function montarInformacao(titulo: string, local: string, observacoes: string) {
+  const linhas = [
+    `TÃ­tulo: ${titulo.trim() || "InformaÃ§Ã£o do PlantÃ£o"}`,
+    `Local: ${local.trim() || "Centro de OperaÃ§Ãµes"}`,
+    `DescriÃ§Ã£o: ${observacoes.trim() || "Sem descriÃ§Ã£o informada"}`,
+  ];
+  return linhas.join("\n");
+}
+
 export default function OperacaoSOC() {
+  const usuario = usuarioAtual();
+  const gerenciaPassagem = podeAnalisar();
   const [dados, setDados] = useState<SocData | null>(null);
-  const [tipo, setTipo] = useState("Checklist de Turno");
+  const [usuariosEquipe, setUsuariosEquipe] = useState<UsuarioEquipe[]>([]);
+  const [passagemSelecionada, setPassagemSelecionada] = useState<PassagemTurno | null>(null);
+  const [filtroEquipe, setFiltroEquipe] = useState("");
   const [titulo, setTitulo] = useState("");
-  const [local, setLocal] = useState("Centro de Operações");
+  const [local, setLocal] = useState("Centro de OperaÃ§Ãµes");
   const [observacoes, setObservacoes] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [editandoInformacao, setEditandoInformacao] = useState<number | null>(null);
+  const [form, setForm] = useState({
+    dataPassagem: dataInput(),
+    colaboradoresIds: [] as number[],
+    postos: [{ ...postoVazio }],
+    statusPostoGocil: "Completo",
+    observacaoPostoGocil: "",
+    statusPostoScanner: "Completo",
+    observacaoPostoScanner: "",
+    informacoesComplementares: "",
+  });
 
-  async function carregar() {
-    const response = await api.get("/operacao/soc");
+  const equipeAtual = filtroEquipe || usuario?.equipe || "";
+
+  const carregar = useCallback(async () => {
+    const response = await api.get("/operacao/soc", { params: filtroEquipe ? { equipe: filtroEquipe } : {} });
     setDados(response.data);
+    const passagemAberta = response.data.passagensTurno?.find((item: PassagemTurno) => item.status === "Aberto");
+    if (!passagemSelecionada && passagemAberta) preencherPassagem(passagemAberta);
+  }, [filtroEquipe, passagemSelecionada]);
+
+  const carregarUsuariosEquipe = useCallback(async () => {
+    const response = await api.get("/operacao/usuarios-equipe", { params: equipeAtual ? { equipe: equipeAtual } : {} });
+    setUsuariosEquipe(response.data);
+  }, [equipeAtual]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  useEffect(() => {
+    carregarUsuariosEquipe();
+  }, [carregarUsuariosEquipe]);
+
+  function preencherPassagem(passagem: PassagemTurno) {
+    setPassagemSelecionada(passagem);
+    setForm({
+      dataPassagem: dataInput(passagem.dataPassagem),
+      colaboradoresIds: passagem.colaboradoresIds || [],
+      postos: passagem.postos?.length ? passagem.postos.map((posto) => ({ ...posto, re: posto.re || "" })) : [{ ...postoVazio }],
+      statusPostoGocil: passagem.statusPostoGocil || "Completo",
+      observacaoPostoGocil: passagem.observacaoPostoGocil || "",
+      statusPostoScanner: passagem.statusPostoScanner || "Completo",
+      observacaoPostoScanner: passagem.observacaoPostoScanner || "",
+      informacoesComplementares: passagem.informacoesComplementares || "",
+    });
   }
 
-  async function salvarRegistro(e: React.FormEvent) {
-    e.preventDefault();
+  function novoPosto() {
+    setForm((atual) => ({ ...atual, postos: [...atual.postos, { ...postoVazio }] }));
+  }
+
+  function removerPosto(index: number) {
+    setForm((atual) => ({ ...atual, postos: atual.postos.filter((_, i) => i !== index) }));
+  }
+
+  function atualizarPosto(index: number, campo: keyof PostoPassagem, valor: string) {
+    setForm((atual) => ({
+      ...atual,
+      postos: atual.postos.map((posto, i) => (i === index ? { ...posto, [campo]: valor } : posto)),
+    }));
+  }
+
+  const informacoesPlantao = separarInformacoes(form.informacoesComplementares);
+
+  async function abrirNovaPassagem() {
     setSalvando(true);
     try {
-      await api.post("/operacao/registros", {
-        tipo,
-        titulo: titulo || tipo,
-        local,
-        observacoes,
-        itens: [
-          {
-            categoria: tipo,
-            descricao: observacoes || titulo || tipo,
-            conformidade: "Conforme",
-            criticidade: tipo === "Passagem de Serviço" ? "Media" : "Baixa",
-          },
-        ],
+      const response = await api.post("/operacao/passagens-turno", {
+        equipe: equipeAtual,
+        dataPassagem: form.dataPassagem,
+        colaboradoresIds: form.colaboradoresIds,
+        postos: form.postos,
       });
-      setTitulo("");
-      setObservacoes("");
-      carregar();
+      preencherPassagem(response.data);
+      await carregar();
     } finally {
       setSalvando(false);
     }
   }
 
-  useEffect(() => {
-    carregar();
-  }, []);
+  async function salvarPassagem(formOverride = form) {
+    if (formOverride.statusPostoGocil === "Incompleto" && !formOverride.observacaoPostoGocil.trim()) {
+      alert("Informe as observaÃ§Ãµes do Posto Gocil.");
+      return;
+    }
+    if (formOverride.statusPostoScanner === "Incompleto" && !formOverride.observacaoPostoScanner.trim()) {
+      alert("Informe as observaÃ§Ãµes do Posto Scanner.");
+      return;
+    }
+    setSalvando(true);
+    try {
+      const payload = { ...formOverride, equipe: equipeAtual };
+      const response = passagemSelecionada
+        ? await api.put(`/operacao/passagens-turno/${passagemSelecionada.id}`, payload)
+        : await api.post("/operacao/passagens-turno", payload);
+      preencherPassagem(response.data);
+      await carregar();
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function finalizarPassagem() {
+    if (!passagemSelecionada) return;
+    const confirmar = window.confirm("Deseja realmente finalizar e enviar este relatÃ³rio?");
+    if (!confirmar) return;
+    setSalvando(true);
+    try {
+      const response = await api.post(`/operacao/passagens-turno/${passagemSelecionada.id}/finalizar`);
+      preencherPassagem(response.data);
+      await carregar();
+      baixarPdf(response.data.id);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function baixarPdf(id = passagemSelecionada?.id) {
+    if (!id) return;
+    const response = await api.get(`/operacao/passagens-turno/${id}/pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(response.data);
+    window.open(url, "_blank");
+    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+  }
+
+  async function salvarRegistro(e: React.FormEvent) {
+    e.preventDefault();
+    if (!passagemSelecionada) {
+      alert("Abra ou selecione uma passagem de turno antes de registrar uma informaÃ§Ã£o do plantÃ£o.");
+      return;
+    }
+    if (!podeEditarPassagem) {
+      alert("Este relatÃ³rio jÃ¡ foi enviado e nÃ£o pode ser alterado por este perfil.");
+      return;
+    }
+    const novaInformacao = montarInformacao(titulo, local, observacoes);
+    const informacoes = [...informacoesPlantao];
+    if (editandoInformacao !== null) {
+      informacoes[editandoInformacao] = novaInformacao;
+    } else {
+      informacoes.push(novaInformacao);
+    }
+    const proximoForm = { ...form, informacoesComplementares: informacoes.join("\n\n---\n\n") };
+    setForm(proximoForm);
+    setSalvando(true);
+    try {
+      await salvarPassagem(proximoForm);
+      setTitulo("");
+      setObservacoes("");
+      setEditandoInformacao(null);
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function editarInformacaoPlantao(index: number) {
+    const info = informacoesPlantao[index] || "";
+    const tituloInfo = info.match(/^TÃ­tulo:\s*(.*)$/m)?.[1] || "InformaÃ§Ã£o do PlantÃ£o";
+    const localInfo = info.match(/^Local:\s*(.*)$/m)?.[1] || "Centro de OperaÃ§Ãµes";
+    const descricaoInfo = info.match(/^DescriÃ§Ã£o:\s*([\s\S]*)$/m)?.[1] || info;
+    setTitulo(tituloInfo);
+    setLocal(localInfo);
+    setObservacoes(descricaoInfo);
+    setEditandoInformacao(index);
+  }
+
+  async function excluirInformacaoPlantao(index: number) {
+    if (!window.confirm("Deseja remover esta informaÃ§Ã£o do relatÃ³rio de passagem de turno?")) return;
+    const informacoes = informacoesPlantao.filter((_, i) => i !== index);
+    const proximoForm = { ...form, informacoesComplementares: informacoes.join("\n\n---\n\n") };
+    setForm(proximoForm);
+    await salvarPassagem(proximoForm);
+  }
 
   const maxReincidencia = useMemo(() => {
     if (!dados) return 1;
     return Math.max(1, ...Object.values(dados.reincidencia).flat().map((item) => item.total));
   }, [dados]);
+
+  const podeEditarPassagem = passagemSelecionada?.status !== "Enviado" || gerenciaPassagem;
 
   if (!dados) {
     return <div className="p-6 text-slate-500">Carregando painel SOC operacional...</div>;
@@ -81,15 +318,25 @@ export default function OperacaoSOC() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Operação SOC</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">OperaÃ§Ã£o SOC</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-            Checklist de turno, passagem de serviço, livro eletrônico e inteligência operacional da unidade {dados.unidade}.
+            Passagem de turno, livro eletrÃ´nico, informaÃ§Ãµes do plantÃ£o e inteligÃªncia operacional da unidade {dados.unidade}.
           </p>
         </div>
         <button onClick={carregar} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white dark:bg-blue-600">
           <RefreshCw size={16} />
           Atualizar
         </button>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">Filtrar informaÃ§Ãµes por equipe</label>
+        <select value={filtroEquipe} onChange={(e) => setFiltroEquipe(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white md:max-w-xs">
+          <option value="">Minha equipe / todas permitidas</option>
+          {(dados.equipes || equipesPadrao).map((equipe) => (
+            <option key={equipe} value={equipe}>{equipe}</option>
+          ))}
+        </select>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -101,31 +348,11 @@ export default function OperacaoSOC() {
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <form onSubmit={salvarRegistro} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2">
-            <ClipboardCheck className="text-blue-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Registro operacional</h2>
-          </div>
-          <div className="grid gap-3">
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-              <option>Checklist de Turno</option>
-              <option>Passagem de Serviço</option>
-            </select>
-            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título do registro" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-            <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Local operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações, pendências, alertas e orientações para o próximo turno" rows={6} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-            <button disabled={salvando} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:bg-slate-400">
-              <Send size={16} />
-              {salvando ? "Salvando..." : "Registrar"}
-            </button>
-          </div>
-        </form>
-
+      <div className="grid gap-6 xl:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
             <BookOpen className="text-emerald-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Livro eletrônico de ocorrências</h2>
+            <h2 className="font-bold text-slate-900 dark:text-white">Livro eletrÃ´nico de ocorrÃªncias</h2>
           </div>
           <div className="max-h-[430px] space-y-3 overflow-auto pr-2">
             {dados.livroEletronico.map((item, index) => (
@@ -140,37 +367,215 @@ export default function OperacaoSOC() {
             ))}
           </div>
         </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="text-cyan-600" size={20} />
+              <h2 className="font-bold text-slate-900 dark:text-white">RelatÃ³rio de Passagem de ServiÃ§o</h2>
+            </div>
+            <button type="button" onClick={abrirNovaPassagem} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:bg-slate-400">
+              <Plus size={16} />
+              Nova passagem
+            </button>
+          </div>
+          <div className="grid gap-3">
+            {dados.passagensTurno.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                Nenhuma passagem de turno encontrada. Abra uma nova passagem para criar o card em aberto do plantÃ£o.
+              </p>
+            ) : (
+              dados.passagensTurno.map((passagem) => (
+                <button
+                  type="button"
+                  key={passagem.id}
+                  onClick={() => preencherPassagem(passagem)}
+                  className={`rounded-xl border p-4 text-left text-sm transition hover:border-blue-500 ${passagemSelecionada?.id === passagem.id ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30" : "border-slate-100 dark:border-slate-800"}`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <strong className="text-slate-900 dark:text-white">{passagem.codigo}</strong>
+                    <span className={`rounded-full px-2 py-1 text-xs font-bold ${passagem.status === "Aberto" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>
+                      {passagem.status}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-slate-600 dark:text-slate-300">{passagem.unidade} | {passagem.equipe}</p>
+                  <p className="text-slate-500 dark:text-slate-400">ResponsÃ¡vel: {passagem.responsavel?.apelido || passagem.responsavel?.nome || "NÃ£o informado"}</p>
+                  <p className="mt-1 text-xs text-slate-500">Aberto em {new Date(passagem.horaAbertura).toLocaleString("pt-BR")}</p>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2">
-            <RadioTower className="text-purple-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Reincidência e inteligência</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Passagem de Turno em tempo real</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              {passagemSelecionada ? `${passagemSelecionada.codigo} | ${passagemSelecionada.status}` : "Abra ou selecione uma passagem para alimentar o relatÃ³rio durante o plantÃ£o."}
+            </p>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {Object.entries(dados.reincidencia).map(([grupo, itens]) => (
-              <div key={grupo} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
-                <p className="mb-3 text-sm font-bold capitalize text-slate-700 dark:text-slate-200">{grupo.replace("por", "Por ")}</p>
-                <div className="space-y-2">
-                  {itens.slice(0, 5).map((item) => (
-                    <div key={item.nome}>
-                      <div className="flex justify-between text-xs text-slate-500"><span>{item.nome}</span><span>{item.total}</span></div>
-                      <div className="mt-1 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
-                        <div className="h-2 rounded-full bg-blue-600" style={{ width: `${Math.max(8, (item.total / maxReincidencia) * 100)}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => salvarPassagem()} disabled={salvando || !podeEditarPassagem} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-400 dark:bg-blue-600">
+              <Save size={16} />
+              Salvar
+            </button>
+            <button type="button" onClick={finalizarPassagem} disabled={salvando || !passagemSelecionada || passagemSelecionada.status === "Enviado"} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-400">
+              <Send size={16} />
+              Enviar RelatÃ³rio
+            </button>
+            <button type="button" onClick={() => baixarPdf()} disabled={!passagemSelecionada} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 disabled:text-slate-400 dark:border-slate-700 dark:text-slate-100">
+              <FileDown size={16} />
+              PDF
+            </button>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+            Data da passagem
+            <input type="date" value={form.dataPassagem} onChange={(e) => setForm((atual) => ({ ...atual, dataPassagem: e.target.value }))} disabled={!podeEditarPassagem} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+          </label>
+          <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+            Unidade
+            <input value={dados.unidade} readOnly className="mt-2 w-full rounded-xl border border-slate-300 bg-slate-50 p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+          </label>
+          <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+            Equipe
+            <select value={equipeAtual} onChange={(e) => setFiltroEquipe(e.target.value)} disabled={!gerenciaPassagem || !podeEditarPassagem} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+              <option value="">Selecione a equipe</option>
+              {(dados.equipes || equipesPadrao).map((equipe) => <option key={equipe} value={equipe}>{equipe}</option>)}
+            </select>
+          </label>
+          <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+            Colaboradores da equipe
+            <select
+              multiple
+              value={form.colaboradoresIds.map(String)}
+              onChange={(e) => setForm((atual) => ({ ...atual, colaboradoresIds: Array.from(e.target.selectedOptions).map((option) => Number(option.value)) }))}
+              disabled={!podeEditarPassagem}
+              className="mt-2 min-h-24 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            >
+              {usuariosEquipe.map((item) => <option key={item.id} value={item.id}>{item.apelido || item.nome}</option>)}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-bold text-slate-900 dark:text-white">Postos Operacionais</h3>
+            <button type="button" onClick={novoPosto} disabled={!podeEditarPassagem} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:bg-slate-400">
+              <Plus size={15} />
+              Adicionar novo posto
+            </button>
+          </div>
+          <div className="space-y-3">
+            {form.postos.map((posto, index) => (
+              <div key={index} className="grid gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-800 md:grid-cols-[1fr_1fr_0.7fr_0.7fr_auto]">
+                <select value={posto.posto} onChange={(e) => atualizarPosto(index, "posto", e.target.value)} disabled={!podeEditarPassagem} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                  <option value="">Selecione o posto</option>
+                  {postosDisponiveis.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+                <input value={posto.colaborador} onChange={(e) => atualizarPosto(index, "colaborador", e.target.value)} disabled={!podeEditarPassagem} placeholder="Nome do colaborador alocado" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                <input value={posto.re} onChange={(e) => atualizarPosto(index, "re", e.target.value)} disabled={!podeEditarPassagem} placeholder="R.E do colaborador" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                <select value={posto.escala} onChange={(e) => atualizarPosto(index, "escala", e.target.value)} disabled={!podeEditarPassagem} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                  <option value="">Escala</option>
+                  {escalas.map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+                <button type="button" onClick={() => removerPosto(index)} disabled={!podeEditarPassagem || form.postos.length === 1} className="rounded-xl border border-red-200 p-3 text-red-600 disabled:border-slate-200 disabled:text-slate-300 dark:border-red-900">
+                  <Trash2 size={18} />
+                </button>
               </div>
             ))}
           </div>
         </div>
 
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              Status do Posto Gocil
+              <select value={form.statusPostoGocil} onChange={(e) => setForm((atual) => ({ ...atual, statusPostoGocil: e.target.value }))} disabled={!podeEditarPassagem} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                <option>Completo</option>
+                <option>Incompleto</option>
+              </select>
+            </label>
+            {form.statusPostoGocil === "Incompleto" && (
+              <textarea value={form.observacaoPostoGocil} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoGocil: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="ObservaÃ§Ãµes obrigatÃ³rias do Posto Gocil" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            )}
+          </div>
+          <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              Status do Posto Scanner
+              <select value={form.statusPostoScanner} onChange={(e) => setForm((atual) => ({ ...atual, statusPostoScanner: e.target.value }))} disabled={!podeEditarPassagem} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                <option>Completo</option>
+                <option>Incompleto</option>
+              </select>
+            </label>
+            {form.statusPostoScanner === "Incompleto" && (
+              <textarea value={form.observacaoPostoScanner} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoScanner: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="ObservaÃ§Ãµes obrigatÃ³rias do Posto Scanner" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            )}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold text-slate-900 dark:text-white">Informações adicionadas ao relatório</h3>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-200">{informacoesPlantao.length} registro(s)</span>
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            {informacoesPlantao.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">Nenhuma informação adicionada ao relatório atual.</p>
+            ) : informacoesPlantao.map((info, index) => (
+              <div key={`${index}-${info.slice(0, 20)}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm dark:border-slate-800 dark:bg-slate-950">
+                <p className="whitespace-pre-line text-slate-700 dark:text-slate-200">{info}</p>
+                {podeEditarPassagem && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" onClick={() => editarInformacaoPlantao(index)} className="inline-flex items-center gap-2 rounded-lg border border-blue-200 px-3 py-2 text-xs font-bold text-blue-700 dark:border-blue-900 dark:text-blue-200">
+                      <Pencil size={14} />
+                      Editar
+                    </button>
+                    <button type="button" onClick={() => excluirInformacaoPlantao(index)} className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-xs font-bold text-red-700 dark:border-red-900 dark:text-red-200">
+                      <Trash2 size={14} />
+                      Excluir
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {passagemSelecionada && (
+          <div className="mt-6 grid gap-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-950 md:grid-cols-3">
+            <p><strong>CFTV conectadas:</strong> {passagemSelecionada.cftvConectadas ?? "calculado ao enviar"}</p>
+            <p><strong>CFTV desconectadas:</strong> {passagemSelecionada.cftvDesconectadas ?? "calculado ao enviar"}</p>
+            <p><strong>ContÃªineres na quadra:</strong> {passagemSelecionada.containersArmazenados ?? "calculado ao enviar"}</p>
+          </div>
+        )}
+      </section>
+
+      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
+        <form onSubmit={salvarRegistro} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-4 flex items-center gap-2">
+            <ClipboardCheck className="text-blue-600" size={20} />
+            <h2 className="font-bold text-slate-900 dark:text-white">InformaÃ§Ãµes do PlantÃ£o</h2>
+          </div>
+          <div className="grid gap-3">
+            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="TÃ­tulo do registro operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Local operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="ObservaÃ§Ãµes, pendÃªncias, alertas e orientaÃ§Ãµes para o prÃ³ximo turno" rows={6} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <button disabled={salvando} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:bg-slate-400">
+              <Send size={16} />
+              {salvando ? "Salvando..." : "Registrar informaÃ§Ã£o"}
+            </button>
+          </div>
+        </form>
+
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
             <AlertTriangle className="text-amber-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Governança operacional</h2>
+            <h2 className="font-bold text-slate-900 dark:text-white">GovernanÃ§a operacional</h2>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {Object.entries(dados.indicadoresMensais).map(([chave, valor]) => (
@@ -181,11 +586,35 @@ export default function OperacaoSOC() {
             ))}
           </div>
           <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
-            <p className="mb-2 flex items-center gap-2 font-bold text-blue-900 dark:text-blue-100"><Activity size={16} /> Relatórios automáticos preparados</p>
+            <p className="mb-2 flex items-center gap-2 font-bold text-blue-900 dark:text-blue-100"><Activity size={16} /> RelatÃ³rios automÃ¡ticos preparados</p>
             <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-100">
               {dados.relatoriosExecutivosAutomaticos.map((item) => <li key={item}>{item}</li>)}
             </ul>
           </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-4 flex items-center gap-2">
+          <RadioTower className="text-purple-600" size={20} />
+          <h2 className="font-bold text-slate-900 dark:text-white">ReincidÃªncia e inteligÃªncia</h2>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Object.entries(dados.reincidencia).map(([grupo, itens]) => (
+            <div key={grupo} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
+              <p className="mb-3 text-sm font-bold capitalize text-slate-700 dark:text-slate-200">{grupo.replace("por", "Por ")}</p>
+              <div className="space-y-2">
+                {itens.slice(0, 5).map((item) => (
+                  <div key={item.nome}>
+                    <div className="flex justify-between text-xs text-slate-500"><span>{item.nome}</span><span>{item.total}</span></div>
+                    <div className="mt-1 h-2 rounded-full bg-slate-200 dark:bg-slate-800">
+                      <div className="h-2 rounded-full bg-blue-600" style={{ width: `${Math.max(8, (item.total / maxReincidencia) * 100)}%` }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

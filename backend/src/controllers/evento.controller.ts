@@ -29,6 +29,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
       status = "ABERTO",
       dataEvento,
       relatoSeguranca,
+      acoesTomadas,
       envolvidos,
       anexosRemover,
     } = req.body;
@@ -87,6 +88,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
         natureza,
         subNatureza,
         relatoSeguranca,
+        acoesTomadas,
         status,
         dataEvento: new Date(dataEvento),
 
@@ -198,6 +200,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       status = "ABERTO",
       dataEvento,
       relatoSeguranca,
+      acoesTomadas,
       envolvidos,
       anexosRemover,
     } = req.body;
@@ -286,6 +289,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
           natureza,
           subNatureza,
           relatoSeguranca,
+          acoesTomadas,
           status,
           dataEvento: new Date(dataEvento),
 
@@ -404,6 +408,7 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         status: evento.status,
         data: evento.dataEvento,
         relatoSeguranca: evento.relatoSeguranca,
+        acoesTomadas: evento.acoesTomadas,
         envolvidos: evento.envolvidos,
         analise: evento.analise,
       },

@@ -3,6 +3,34 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 
+function formatarCodigo(numero: number, ano: number) {
+  return `${String(numero).padStart(4, "0")}/${ano}`;
+}
+
+async function proximaNumeracaoInvestigacao(unidade: string) {
+  const ano = new Date().getFullYear();
+  const ultimaInvestigacao = await prisma.investigacao.findFirst({
+    where: {
+      ano,
+      unidade,
+    },
+    orderBy: {
+      numero: "desc",
+    },
+    select: {
+      numero: true,
+    },
+  });
+
+  const numero = (ultimaInvestigacao?.numero || 0) + 1;
+
+  return {
+    numero,
+    ano,
+    codigo: formatarCodigo(numero, ano),
+  };
+}
+
 export async function listarInvestigacoes(req: AuthRequest, res: Response) {
   const investigacoes = await prisma.investigacao.findMany({
     where: {
@@ -48,12 +76,41 @@ export async function converterOcorrenciaParaInvestigacao(
       });
     }
 
-    const investigacao = await prisma.investigacao.upsert({
+    const investigacaoExistente = await prisma.investigacao.findUnique({
       where: {
         ocorrenciaId: ocorrencia.id,
       },
-      update: {},
-      create: {
+      include: {
+        ocorrencia: true,
+        responsavel: true,
+      },
+    });
+
+    if (investigacaoExistente) {
+      if (investigacaoExistente.codigo) {
+        return res.status(200).json(investigacaoExistente);
+      }
+
+      const numeracao = await proximaNumeracaoInvestigacao(ocorrencia.unidade);
+      const investigacaoAtualizada = await prisma.investigacao.update({
+        where: {
+          id: investigacaoExistente.id,
+        },
+        data: numeracao,
+        include: {
+          ocorrencia: true,
+          responsavel: true,
+        },
+      });
+
+      return res.status(200).json(investigacaoAtualizada);
+    }
+
+    const numeracao = await proximaNumeracaoInvestigacao(ocorrencia.unidade);
+
+    const investigacao = await prisma.investigacao.create({
+      data: {
+        ...numeracao,
         ocorrenciaId: ocorrencia.id,
         titulo: ocorrencia.assunto,
         descricao: ocorrencia.relatoSeguranca || ocorrencia.assunto,

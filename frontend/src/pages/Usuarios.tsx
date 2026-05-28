@@ -8,6 +8,7 @@ type Usuario = {
   re?: string;
   setor?: string;
   cargo?: string;
+  equipe?: string;
   unidade?: string;
   unidadesPermitidas?: string[];
   empresa?: string;
@@ -17,6 +18,7 @@ type Usuario = {
 };
 
 const unidades = ["GJA-T1", "GJA-T2", "ITAJAÍ-SC", "SUAPE-T1", "SUAPE-T2", "ANHANGUERA"];
+const equipes = ["Equipe A", "Equipe B", "Equipe C", "Equipe D"];
 const perfis = [
   { label: "Administrador", value: "ADMINISTRADOR" },
   { label: "Analista", value: "ANALISTA" },
@@ -29,6 +31,7 @@ const vazio = {
   re: "",
   setor: "",
   cargo: "",
+  equipe: "",
   unidade: "GJA-T1",
   unidadesPermitidas: ["GJA-T1"],
   empresa: "Movecta S/A",
@@ -109,6 +112,7 @@ export default function Usuarios() {
       re: usuario.re || "",
       setor: usuario.setor || "",
       cargo: usuario.cargo || "",
+      equipe: usuario.equipe || "",
       unidade: usuario.unidade || "GJA-T1",
       unidadesPermitidas: usuario.unidadesPermitidas?.length ? usuario.unidadesPermitidas : [usuario.unidade || "GJA-T1"],
       empresa: usuario.empresa || "Movecta S/A",
@@ -220,6 +224,10 @@ export default function Usuarios() {
             <input className="rounded-lg border p-3" placeholder="R.E" value={formulario.re} onChange={(e) => atualizarCampo("re", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Setor" value={formulario.setor} onChange={(e) => atualizarCampo("setor", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Cargo" value={formulario.cargo} onChange={(e) => atualizarCampo("cargo", e.target.value)} required />
+            <select className="rounded-lg border p-3" value={formulario.equipe} onChange={(e) => atualizarCampo("equipe", e.target.value)}>
+              <option value="">Selecione a equipe operacional</option>
+              {equipes.map((equipe) => <option key={equipe} value={equipe}>{equipe}</option>)}
+            </select>
             <div className="rounded-lg border p-3 md:col-span-2">
               <p className="mb-3 text-sm font-semibold text-slate-700">Unidades permitidas para acesso</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -296,6 +304,7 @@ export default function Usuarios() {
               <th className="p-3">R.E</th>
               <th className="p-3">Cargo</th>
               <th className="p-3">Setor</th>
+              <th className="p-3">Equipe</th>
               <th className="p-3">Unidade</th>
               <th className="p-3">Perfil</th>
               <th className="p-3">Status</th>
@@ -311,6 +320,7 @@ export default function Usuarios() {
                 <td className="p-3">{usuario.re}</td>
                 <td className="p-3">{usuario.cargo}</td>
                 <td className="p-3">{usuario.setor}</td>
+                <td className="p-3">{usuario.equipe || "-"}</td>
                 <td className="p-3">{usuario.unidadesPermitidas?.join(", ") || usuario.unidade}</td>
                 <td className="p-3">{usuario.perfilAcesso}</td>
                 <td className="p-3">{usuario.statusUsuario}</td>

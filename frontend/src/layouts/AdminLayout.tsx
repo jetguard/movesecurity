@@ -36,6 +36,7 @@ import {
   Server,
   Columns3,
   PackageSearch,
+  Lightbulb,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -379,7 +380,7 @@ export default function AdminLayout() {
                   </Link>
                   <Link to="/checklists" className={subItem}>
                     <ClipboardCheck size={16} />
-                    Checklists
+                    Informações do Plantão
                   </Link>
                   <Link to="/aprovacoes" className={subItem}>
                     <CheckCircle2 size={16} />
@@ -418,6 +419,10 @@ export default function AdminLayout() {
                         <MapPinned size={16} />
                         Locais
                       </Link>
+                      <Link to="/sugestoes-melhoria" className={subItem}>
+                        <Lightbulb size={16} />
+                        Sugestões
+                      </Link>
                     </>
                   )}
                   {podeAdministrar() && (
@@ -429,6 +434,10 @@ export default function AdminLayout() {
                       <Link to="/governanca" className={subItem}>
                         <Server size={16} />
                         Governança
+                      </Link>
+                      <Link to="/atualizacoes" className={subItem}>
+                        <ScrollText size={16} />
+                        Atualizações
                       </Link>
                     </>
                   )}

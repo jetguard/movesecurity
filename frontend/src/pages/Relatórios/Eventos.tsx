@@ -25,6 +25,7 @@ type Evento = {
   status: string;
   dataEvento: string;
   relatoSeguranca?: string;
+  acoesTomadas?: string;
   envolvidos: Envolvido[];
   anexos?: Anexo[];
   analise?: AnaliseEvento | null;
@@ -117,6 +118,7 @@ export default function Eventos() {
   const [dataEvento, setDataEvento] = useState("");
   const [etapaFormulario, setEtapaFormulario] = useState(1);
   const [relatoSeguranca, setRelatoSeguranca] = useState("");
+  const [acoesTomadas, setAcoesTomadas] = useState("");
   const [quantidadeEnvolvidos, setQuantidadeEnvolvidos] = useState(1);
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([
     { ...envolvidoVazio },
@@ -276,6 +278,7 @@ export default function Eventos() {
     setDataEvento("");
     setEtapaFormulario(1);
     setRelatoSeguranca("");
+    setAcoesTomadas("");
     setQuantidadeEnvolvidos(1);
     setEnvolvidos([{ ...envolvidoVazio }]);
     setAnexos([]);
@@ -297,6 +300,7 @@ export default function Eventos() {
     setSubNatureza(evento.subNatureza);
     setDataEvento(formatarDataParaInput(evento.dataEvento));
     setRelatoSeguranca(evento.relatoSeguranca || "");
+    setAcoesTomadas(evento.acoesTomadas || "");
     setQuantidadeEnvolvidos(evento.envolvidos.length || 1);
     setEnvolvidos(
       evento.envolvidos.length ? evento.envolvidos : [{ ...envolvidoVazio }]
@@ -366,6 +370,7 @@ export default function Eventos() {
     formData.append("status", eventoEditando?.status || "Aberto");
     formData.append("dataEvento", dataEvento);
     formData.append("relatoSeguranca", relatoSeguranca);
+    formData.append("acoesTomadas", acoesTomadas);
     formData.append("envolvidos", JSON.stringify(envolvidos));
     formData.append("anexosRemover", JSON.stringify(anexosRemover));
 
@@ -708,6 +713,15 @@ export default function Eventos() {
               <LexicalEditor
                 value={relatoSeguranca}
                 onChange={setRelatoSeguranca}
+                title="Relato Segurança Patrimonial"
+                placeholder="Descreva o relato patrimonial do evento..."
+              />
+
+              <LexicalEditor
+                value={acoesTomadas}
+                onChange={setAcoesTomadas}
+                title="Ações tomadas"
+                placeholder="Descreva as ações tomadas, tratativas imediatas, orientações, acionamentos e providências executadas..."
               />
             </div>
           )}
@@ -1000,6 +1014,10 @@ export default function Eventos() {
             <div className="mt-5">
               <h3 className="font-bold">Relato</h3>
               <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: eventoVisualizando.relatoSeguranca || "Sem relato." }} />
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Ações tomadas</h3>
+              <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: eventoVisualizando.acoesTomadas || "Nenhuma ação tomada informada." }} />
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Envolvidos</h3>

@@ -25,6 +25,7 @@ type Ocorrencia = {
   status: string;
   dataOcorrencia: string;
   relatoSeguranca?: string;
+  acoesTomadas?: string;
   envolvidos: Envolvido[];
   anexos?: Anexo[];
   analise?: AnaliseOcorrencia | null;
@@ -61,6 +62,7 @@ type AnaliseOcorrencia = {
 
 type InvestigacaoVinculada = {
   id: number;
+  codigo?: string | null;
   createdAt: string;
   numeroOcorrencia?: string;
 };
@@ -125,6 +127,7 @@ export default function Ocorrencias() {
   const [dataOcorrencia, setDataOcorrencia] = useState("");
   const [etapaFormulario, setEtapaFormulario] = useState(1);
   const [relatoSeguranca, setRelatoSeguranca] = useState("");
+  const [acoesTomadas, setAcoesTomadas] = useState("");
   const [quantidadeEnvolvidos, setQuantidadeEnvolvidos] = useState(1);
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([
     { ...envolvidoVazio },
@@ -284,6 +287,7 @@ export default function Ocorrencias() {
     setDataOcorrencia("");
     setEtapaFormulario(1);
     setRelatoSeguranca("");
+    setAcoesTomadas("");
     setQuantidadeEnvolvidos(1);
     setEnvolvidos([{ ...envolvidoVazio }]);
     setAnexos([]);
@@ -299,6 +303,7 @@ export default function Ocorrencias() {
 
   function formatarNumeroInvestigacao(investigacao?: InvestigacaoVinculada | null) {
     if (!investigacao) return "";
+    if (investigacao.codigo) return investigacao.codigo;
 
     const ano = investigacao.createdAt
       ? new Date(investigacao.createdAt).getFullYear()
@@ -315,6 +320,7 @@ export default function Ocorrencias() {
     setSubNatureza(ocorrencia.subNatureza);
     setDataOcorrencia(formatarDataParaInput(ocorrencia.dataOcorrencia));
     setRelatoSeguranca(ocorrencia.relatoSeguranca || "");
+    setAcoesTomadas(ocorrencia.acoesTomadas || "");
     setQuantidadeEnvolvidos(ocorrencia.envolvidos.length || 1);
     setEnvolvidos(
       ocorrencia.envolvidos.length
@@ -401,6 +407,7 @@ export default function Ocorrencias() {
     formData.append("status", ocorrenciaEditando?.status || "Aberto");
     formData.append("dataOcorrencia", dataOcorrencia);
     formData.append("relatoSeguranca", relatoSeguranca);
+    formData.append("acoesTomadas", acoesTomadas);
     formData.append("envolvidos", JSON.stringify(envolvidos));
     formData.append("anexosRemover", JSON.stringify(anexosRemover));
 
@@ -760,9 +767,18 @@ export default function Ocorrencias() {
 
           {etapaFormulario === 2 && (
             <div className="space-y-4">
-                            <LexicalEditor
+              <LexicalEditor
                 value={relatoSeguranca}
                 onChange={setRelatoSeguranca}
+                title="Relato Segurança Patrimonial"
+                placeholder="Descreva o relato patrimonial da ocorrência..."
+              />
+
+              <LexicalEditor
+                value={acoesTomadas}
+                onChange={setAcoesTomadas}
+                title="Ações tomadas"
+                placeholder="Descreva as ações tomadas, tratativas imediatas, orientações, acionamentos e providências executadas..."
               />
             </div>
           )}
@@ -1034,6 +1050,10 @@ export default function Ocorrencias() {
             <div className="mt-5">
               <h3 className="font-bold">Relato</h3>
               <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: ocorrenciaVisualizando.relatoSeguranca || "Sem relato." }} />
+            </div>
+            <div className="mt-5">
+              <h3 className="font-bold">Ações tomadas</h3>
+              <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: ocorrenciaVisualizando.acoesTomadas || "Nenhuma ação tomada informada." }} />
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Envolvidos</h3>

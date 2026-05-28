@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Camera, ChevronDown, Download, Eye, FileText, PackageSearch, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Download, Eye, FileText, PackageSearch, Pencil, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
 
@@ -28,6 +28,7 @@ type ContainerQuadra = {
   unidade: string;
   dataHoraEntrada: string;
   dataHoraSaida?: string | null;
+  posicionamento?: string | null;
   tipoContainer: string;
   dimensao: string;
   destino: string;
@@ -35,22 +36,12 @@ type ContainerQuadra = {
   scannerSaida?: boolean | null;
   estufadoTerminal: boolean;
   numeroLacre?: string | null;
-  novoLacre?: string | null;
   armador?: string | null;
-  transportadora?: string | null;
-  motoristaResponsavel?: string | null;
-  documentoMotorista?: string | null;
-  placaCavalo?: string | null;
-  placaCarreta?: string | null;
-  tipoCarga?: string | null;
-  pesoCarga?: string | null;
   prioridade: string;
   statusOperacional: string;
-  statusFinal?: string | null;
   observacoes?: string | null;
   observacoesSaida?: string | null;
   tempoTerminal: string;
-  nivelPermanencia: string;
   anexos?: Anexo[];
   historico?: Historico[];
 };
@@ -59,44 +50,26 @@ const inicial = {
   numeroContainer: "",
   dataHoraEntrada: "",
   dataHoraSaida: "",
-  tipoContainer: "Dry",
-  dimensao: "20 pés",
-  destino: "América do Sul",
-  scannerEntrada: "Não",
+  posicionamento: "",
+  tipoContainer: "",
+  dimensao: "",
+  destino: "",
+  scannerEntrada: "",
   scannerSaida: "",
-  estufadoTerminal: "Não",
+  estufadoTerminal: "",
   numeroLacre: "",
-  novoLacre: "",
   armador: "",
-  transportadora: "",
-  motoristaResponsavel: "",
-  documentoMotorista: "",
-  placaCavalo: "",
-  placaCarreta: "",
-  tipoCarga: "",
-  pesoCarga: "",
-  prioridade: "Baixa",
-  statusOperacional: "Previsto para chegada",
-  statusFinal: "",
+  prioridade: "",
+  statusOperacional: "Previsão para chegada",
   observacoes: "",
   observacoesSaida: "",
-  categoriaAnexo: "Entrada",
 };
 
-const tipoContainer = ["Dry", "Reefer", "Tank", "Open Top", "Flat Rack"];
+const tiposContainer = ["Dry", "Reefer", "Tank", "Open Top", "Flat Rack"];
 const dimensoes = ["20 pés", "40 pés", "40 HC"];
 const destinos = ["África", "Europa", "Ásia", "América do Norte", "América do Sul", "América Central", "Oriente Médio", "Oceania"];
 const prioridades = ["Baixa", "Média", "Alta", "Crítica"];
-const statusOperacionais = ["Previsto para chegada", "Dentro do terminal", "Liberado", "Pendente de verificação", "Bloqueado"];
-const statusFinais = ["", "Liberado", "Retido", "Encaminhado para verificação", "Finalizado"];
-const categorias = ["Entrada", "Saída", "Evidências Operacionais"];
-
-const nivelClasse: Record<string, string> = {
-  normal: "border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200",
-  atencao: "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200",
-  critico: "border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200",
-  finalizado: "border-slate-300 bg-slate-50 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200",
-};
+const statusOperacionais = ["Previsão para chegada", "No terminal", "Liberado"];
 
 function inputData(data?: string | null) {
   if (!data) return "";
@@ -106,6 +79,24 @@ function inputData(data?: string | null) {
 
 function nomeUsuario(usuario?: { nome: string; apelido?: string | null }) {
   return usuario?.apelido || usuario?.nome || "Sistema";
+}
+
+function mascararContainer(valor: string) {
+  const limpo = valor.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
+  const letras = limpo.slice(0, 4).replace(/[^A-Z]/g, "");
+  const numeros = limpo.slice(4).replace(/\D/g, "").slice(0, 7);
+
+  if (!numeros) return letras;
+
+  const parte1 = numeros.slice(0, 3);
+  const parte2 = numeros.slice(3, 6);
+  const digito = numeros.slice(6, 7);
+
+  let formatado = `${letras} ${parte1}`;
+  if (parte2) formatado += `.${parte2}`;
+  if (digito) formatado += `-${digito}`;
+
+  return formatado.trim();
 }
 
 export default function QuadraSeguranca() {
@@ -119,8 +110,6 @@ export default function QuadraSeguranca() {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroDimensao, setFiltroDimensao] = useState("");
   const [filtroDestino, setFiltroDestino] = useState("");
-  const [filtroScanner, setFiltroScanner] = useState("");
-  const [filtroEstufado, setFiltroEstufado] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const podeExcluir = podeAdministrar() || podeAnalisar();
@@ -139,52 +128,44 @@ export default function QuadraSeguranca() {
 
   const filtrados = useMemo(() => {
     return containers.filter((item) => {
-      const texto = `${item.numeroContainer} ${item.armador || ""} ${item.transportadora || ""} ${item.motoristaResponsavel || ""}`.toLowerCase();
+      const texto = `${item.numeroContainer} ${item.armador || ""} ${item.posicionamento || ""}`.toLowerCase();
       return (
         (!busca || texto.includes(busca.toLowerCase())) &&
         (!filtroStatus || item.statusOperacional === filtroStatus) &&
         (!filtroTipo || item.tipoContainer === filtroTipo) &&
         (!filtroDimensao || item.dimensao === filtroDimensao) &&
-        (!filtroDestino || item.destino === filtroDestino) &&
-        (!filtroScanner || (filtroScanner === "Sim" ? item.scannerEntrada : !item.scannerEntrada)) &&
-        (!filtroEstufado || (filtroEstufado === "Sim" ? item.estufadoTerminal : !item.estufadoTerminal))
+        (!filtroDestino || item.destino === filtroDestino)
       );
     });
-  }, [busca, containers, filtroDestino, filtroDimensao, filtroEstufado, filtroScanner, filtroStatus, filtroTipo]);
+  }, [busca, containers, filtroDestino, filtroDimensao, filtroStatus, filtroTipo]);
 
   const resumo = useMemo(() => ({
     total: containers.length,
-    terminal: containers.filter((item) => ["Dentro do terminal", "Pendente de verificação", "Bloqueado"].includes(item.statusOperacional)).length,
-    criticos: containers.filter((item) => item.nivelPermanencia === "critico" || item.prioridade === "Crítica").length,
-    scannerPendente: containers.filter((item) => !item.scannerEntrada).length,
-    lacresDivergentes: containers.filter((item) => item.numeroLacre && item.novoLacre && item.numeroLacre !== item.novoLacre),
-    permanenciaCritica: containers.filter((item) => item.nivelPermanencia === "critico"),
-    mapaAreas: Object.entries(containers.reduce<Record<string, { total: number; criticos: number; bloqueados: number }>>((acc, item) => {
-      const area = item.destino || item.tipoCarga || "Não informado";
-      acc[area] ||= { total: 0, criticos: 0, bloqueados: 0 };
-      acc[area].total += 1;
-      if (item.nivelPermanencia === "critico") acc[area].criticos += 1;
-      if (item.statusOperacional === "Bloqueado") acc[area].bloqueados += 1;
+    previstos: containers.filter((item) => item.statusOperacional === "Previsão para chegada" || item.statusOperacional === "Previsto para chegada").length,
+    terminal: containers.filter((item) => item.statusOperacional === "No terminal" || item.statusOperacional === "Dentro do terminal").length,
+    liberados: containers.filter((item) => item.statusOperacional === "Liberado").length,
+    mapaPosicoes: Object.entries(containers.reduce<Record<string, number>>((acc, item) => {
+      const posicao = item.posicionamento || "Sem posição";
+      acc[posicao] = (acc[posicao] || 0) + 1;
       return acc;
-    }, {})).map(([area, dados]) => ({ area, ...dados })).sort((a, b) => b.criticos - a.criticos || b.total - a.total),
+    }, {})).map(([posicao, total]) => ({ posicao, total })).sort((a, b) => b.total - a.total),
   }), [containers]);
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({
       ...atual,
-      [nome]: ["numeroContainer", "placaCavalo", "placaCarreta"].includes(nome)
-        ? valor.toLocaleUpperCase("pt-BR")
-        : valor,
+      [nome]: nome === "numeroContainer"
+        ? mascararContainer(valor)
+        : ["posicionamento", "numeroLacre", "armador"].includes(nome)
+          ? valor.toLocaleUpperCase("pt-BR")
+          : valor,
     }));
   }
 
   function novo() {
     setEditando(null);
     setArquivos([]);
-    setForm({
-      ...inicial,
-      dataHoraEntrada: inputData(new Date().toISOString()),
-    });
+    setForm({ ...inicial, dataHoraEntrada: inputData(new Date().toISOString()) });
     setFormularioAberto(true);
   }
 
@@ -195,6 +176,7 @@ export default function QuadraSeguranca() {
       numeroContainer: item.numeroContainer,
       dataHoraEntrada: inputData(item.dataHoraEntrada),
       dataHoraSaida: inputData(item.dataHoraSaida),
+      posicionamento: item.posicionamento || "",
       tipoContainer: item.tipoContainer,
       dimensao: item.dimensao,
       destino: item.destino,
@@ -202,21 +184,11 @@ export default function QuadraSeguranca() {
       scannerSaida: item.scannerSaida === null || item.scannerSaida === undefined ? "" : item.scannerSaida ? "Sim" : "Não",
       estufadoTerminal: item.estufadoTerminal ? "Sim" : "Não",
       numeroLacre: item.numeroLacre || "",
-      novoLacre: item.novoLacre || "",
       armador: item.armador || "",
-      transportadora: item.transportadora || "",
-      motoristaResponsavel: item.motoristaResponsavel || "",
-      documentoMotorista: item.documentoMotorista || "",
-      placaCavalo: item.placaCavalo || "",
-      placaCarreta: item.placaCarreta || "",
-      tipoCarga: item.tipoCarga || "",
-      pesoCarga: item.pesoCarga || "",
       prioridade: item.prioridade,
-      statusOperacional: item.statusOperacional,
-      statusFinal: item.statusFinal || "",
+      statusOperacional: item.statusOperacional === "Dentro do terminal" ? "No terminal" : item.statusOperacional,
       observacoes: item.observacoes || "",
       observacoesSaida: item.observacoesSaida || "",
-      categoriaAnexo: "Evidências Operacionais",
     });
     setFormularioAberto(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -264,7 +236,7 @@ export default function QuadraSeguranca() {
         <div>
           <h1 className="text-3xl font-bold">Quadra de Segurança</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Controle operacional, scanner, evidências e rastreabilidade de contêineres.
+            Controle operacional, posicionamento e rastreabilidade de contêineres.
           </p>
         </div>
         <button onClick={novo} className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
@@ -278,59 +250,16 @@ export default function QuadraSeguranca() {
           <p className="mt-2 text-3xl font-bold">{resumo.total}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <p className="text-sm text-slate-500">Previsão para chegada</p>
+          <p className="mt-2 text-3xl font-bold text-amber-600">{resumo.previstos}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p className="text-sm text-slate-500">No terminal</p>
           <p className="mt-2 text-3xl font-bold text-blue-600">{resumo.terminal}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-sm text-slate-500">Críticos</p>
-          <p className="mt-2 text-3xl font-bold text-red-600">{resumo.criticos}</p>
-        </div>
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-sm text-slate-500">Sem scanner entrada</p>
-          <p className="mt-2 text-3xl font-bold text-amber-600">{resumo.scannerPendente}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1fr_1.2fr]">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/60 dark:bg-red-950/30">
-          <h2 className="font-bold text-red-800 dark:text-red-100">Alerta de permanência</h2>
-          <div className="mt-3 space-y-2">
-            {resumo.permanenciaCritica.slice(0, 4).map((item) => (
-              <div key={item.id} className="rounded-lg bg-white/70 p-3 text-sm dark:bg-slate-900/60">
-                <strong>{item.numeroContainer}</strong>
-                <p>{item.tempoTerminal} | {item.statusOperacional}</p>
-              </div>
-            ))}
-            {resumo.permanenciaCritica.length === 0 && <p className="text-sm text-red-700 dark:text-red-100">Nenhum contêiner em permanência crítica.</p>}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/60 dark:bg-amber-950/30">
-          <h2 className="font-bold text-amber-800 dark:text-amber-100">Lacre divergente</h2>
-          <div className="mt-3 space-y-2">
-            {resumo.lacresDivergentes.slice(0, 4).map((item) => (
-              <div key={item.id} className="rounded-lg bg-white/70 p-3 text-sm dark:bg-slate-900/60">
-                <strong>{item.numeroContainer}</strong>
-                <p>Entrada: {item.numeroLacre} | Saída: {item.novoLacre}</p>
-              </div>
-            ))}
-            {resumo.lacresDivergentes.length === 0 && <p className="text-sm text-amber-700 dark:text-amber-100">Sem divergência de lacre registrada.</p>}
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="font-bold">Mapa/status por área</h2>
-          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {resumo.mapaAreas.slice(0, 6).map((item) => (
-              <div key={item.area} className="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-950">
-                <div className="flex justify-between gap-2">
-                  <strong>{item.area}</strong>
-                  <span>{item.total}</span>
-                </div>
-                <p className="text-xs text-slate-500">Críticos: {item.criticos} | Bloqueados: {item.bloqueados}</p>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-slate-500">Liberados</p>
+          <p className="mt-2 text-3xl font-bold text-emerald-600">{resumo.liberados}</p>
         </div>
       </div>
 
@@ -343,7 +272,7 @@ export default function QuadraSeguranca() {
           <div className="flex items-center gap-2">
             <PackageSearch className="text-blue-600" />
             <div>
-              <h2 className="text-xl font-bold">{editando ? `Editar ${editando.numeroContainer}` : "Cadastro de Entrada"}</h2>
+              <h2 className="text-xl font-bold">{editando ? `Editar ${editando.numeroContainer}` : "Cadastro de Contêiner"}</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 {formularioAberto ? "Preencha os dados operacionais do contêiner." : "Clique para expandir o formulário."}
               </p>
@@ -355,55 +284,59 @@ export default function QuadraSeguranca() {
         {formularioAberto && (
           <form onSubmit={salvar} className="border-t border-slate-200 p-5 dark:border-slate-800">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Número do Contêiner" value={form.numeroContainer} onChange={(e) => campo("numeroContainer", e.target.value)} required />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraEntrada} onChange={(e) => campo("dataHoraEntrada", e.target.value)} required />
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.tipoContainer} onChange={(e) => campo("tipoContainer", e.target.value)}>
-                {tipoContainer.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.dimensao} onChange={(e) => campo("dimensao", e.target.value)}>
-                {dimensoes.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.destino} onChange={(e) => campo("destino", e.target.value)}>
-                {destinos.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerEntrada} onChange={(e) => campo("scannerEntrada", e.target.value)}>
-                <option value="Não">Scanner entrada: Não</option>
-                <option value="Sim">Scanner entrada: Sim</option>
-              </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.estufadoTerminal} onChange={(e) => campo("estufadoTerminal", e.target.value)}>
-                <option value="Não">Estufado no terminal: Não</option>
-                <option value="Sim">Estufado no terminal: Sim</option>
-              </select>
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Número do lacre" value={form.numeroLacre} onChange={(e) => campo("numeroLacre", e.target.value)} />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Armador" value={form.armador} onChange={(e) => campo("armador", e.target.value)} />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Transportadora" value={form.transportadora} onChange={(e) => campo("transportadora", e.target.value)} />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Motorista responsável" value={form.motoristaResponsavel} onChange={(e) => campo("motoristaResponsavel", e.target.value)} />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Documento do motorista" value={form.documentoMotorista} onChange={(e) => campo("documentoMotorista", e.target.value)} />
-              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Placa do cavalo mecânico" value={form.placaCavalo} onChange={(e) => campo("placaCavalo", e.target.value)} />
-              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Placa da carreta" value={form.placaCarreta} onChange={(e) => campo("placaCarreta", e.target.value)} />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Tipo de carga" value={form.tipoCarga} onChange={(e) => campo("tipoCarga", e.target.value)} />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Peso da carga" value={form.pesoCarga} onChange={(e) => campo("pesoCarga", e.target.value)} />
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>
-                {prioridades.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
+              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Número do contêiner: AAAA 123.456-7" value={form.numeroContainer} onChange={(e) => campo("numeroContainer", e.target.value)} required />
+              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Posicionamento. Ex: E13A01" value={form.posicionamento} onChange={(e) => campo("posicionamento", e.target.value)} />
               <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.statusOperacional} onChange={(e) => campo("statusOperacional", e.target.value)}>
                 {statusOperacionais.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraSaida} onChange={(e) => campo("dataHoraSaida", e.target.value)} placeholder="Data e hora da saída" />
+
+              <label className="space-y-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Data de entrada
+                <input className="w-full rounded-lg border p-3 font-normal dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraEntrada} onChange={(e) => campo("dataHoraEntrada", e.target.value)} required />
+              </label>
+              <label className="space-y-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                Data de saída
+                <input className="w-full rounded-lg border p-3 font-normal dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraSaida} onChange={(e) => campo("dataHoraSaida", e.target.value)} />
+              </label>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>
+                <option value="">Prioridade</option>
+                {prioridades.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.tipoContainer} onChange={(e) => campo("tipoContainer", e.target.value)} required>
+                <option value="">Tipo do contêiner</option>
+                {tiposContainer.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.dimensao} onChange={(e) => campo("dimensao", e.target.value)} required>
+                <option value="">Dimensão</option>
+                {dimensoes.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.destino} onChange={(e) => campo("destino", e.target.value)} required>
+                <option value="">Destino</option>
+                {destinos.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerEntrada} onChange={(e) => campo("scannerEntrada", e.target.value)}>
+                <option value="">Scanner na entrada</option>
+                <option value="Não">Não</option>
+                <option value="Sim">Sim</option>
+              </select>
               <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerSaida} onChange={(e) => campo("scannerSaida", e.target.value)}>
-                <option value="">Scanner saída: não informado</option>
-                <option value="Não">Scanner saída: Não</option>
-                <option value="Sim">Scanner saída: Sim</option>
+                <option value="">Scanner na saída</option>
+                <option value="Não">Não</option>
+                <option value="Sim">Sim</option>
               </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.statusFinal} onChange={(e) => campo("statusFinal", e.target.value)}>
-                {statusFinais.map((item) => <option key={item || "vazio"} value={item}>{item || "Status final não informado"}</option>)}
+              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.estufadoTerminal} onChange={(e) => campo("estufadoTerminal", e.target.value)}>
+                <option value="">Estufado no terminal</option>
+                <option value="Não">Não</option>
+                <option value="Sim">Sim</option>
               </select>
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Novo lacre na saída" value={form.novoLacre} onChange={(e) => campo("novoLacre", e.target.value)} />
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.categoriaAnexo} onChange={(e) => campo("categoriaAnexo", e.target.value)}>
-                {categorias.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
+
+              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Número do lacre" value={form.numeroLacre} onChange={(e) => campo("numeroLacre", e.target.value)} />
+              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Armador" value={form.armador} onChange={(e) => campo("armador", e.target.value)} />
               <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" type="file" multiple accept="image/*,.pdf" onChange={(e) => setArquivos(Array.from(e.target.files || []))} />
-              <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações da entrada" value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} />
+
+              <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações operacionais" value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} />
               <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações da saída" value={form.observacoesSaida} onChange={(e) => campo("observacoesSaida", e.target.value)} />
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
@@ -416,14 +349,14 @@ export default function QuadraSeguranca() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Buscar contêiner, motorista, armador" value={busca} onChange={(e) => setBusca(e.target.value)} />
+          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Buscar contêiner, posição ou armador" value={busca} onChange={(e) => setBusca(e.target.value)} />
           <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
             <option value="">Todos os status</option>
             {statusOperacionais.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
           <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
             <option value="">Todos os tipos</option>
-            {tipoContainer.map((item) => <option key={item} value={item}>{item}</option>)}
+            {tiposContainer.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
           <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroDimensao} onChange={(e) => setFiltroDimensao(e.target.value)}>
             <option value="">Todas as dimensões</option>
@@ -433,16 +366,6 @@ export default function QuadraSeguranca() {
             <option value="">Todos os destinos</option>
             {destinos.map((item) => <option key={item} value={item}>{item}</option>)}
           </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroScanner} onChange={(e) => setFiltroScanner(e.target.value)}>
-            <option value="">Scanner entrada</option>
-            <option value="Sim">Sim</option>
-            <option value="Não">Não</option>
-          </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroEstufado} onChange={(e) => setFiltroEstufado(e.target.value)}>
-            <option value="">Estufado</option>
-            <option value="Sim">Sim</option>
-            <option value="Não">Não</option>
-          </select>
         </div>
 
         <div className="overflow-x-auto">
@@ -450,13 +373,12 @@ export default function QuadraSeguranca() {
             <thead className="bg-slate-100 text-left text-slate-600 dark:bg-slate-950 dark:text-slate-300">
               <tr>
                 <th className="p-3">Contêiner</th>
+                <th className="p-3">Posição</th>
                 <th className="p-3">Unidade</th>
                 <th className="p-3">Entrada</th>
                 <th className="p-3">Tipo</th>
                 <th className="p-3">Dimensão</th>
                 <th className="p-3">Destino</th>
-                <th className="p-3">Scanner Entrada</th>
-                <th className="p-3">Estufado</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Tempo no Terminal</th>
                 <th className="p-3">Ações</th>
@@ -466,15 +388,14 @@ export default function QuadraSeguranca() {
               {filtrados.map((item) => (
                 <tr key={item.id} className="border-t border-slate-200 dark:border-slate-800">
                   <td className="p-3 font-bold">{item.numeroContainer}</td>
+                  <td className="p-3">{item.posicionamento || "Não informado"}</td>
                   <td className="p-3">{item.unidade}</td>
                   <td className="p-3">{new Date(item.dataHoraEntrada).toLocaleString("pt-BR")}</td>
                   <td className="p-3">{item.tipoContainer}</td>
                   <td className="p-3">{item.dimensao}</td>
                   <td className="p-3">{item.destino}</td>
-                  <td className="p-3">{item.scannerEntrada ? "Sim" : "Não"}</td>
-                  <td className="p-3">{item.estufadoTerminal ? "Sim" : "Não"}</td>
                   <td className="p-3"><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{item.statusOperacional}</span></td>
-                  <td className="p-3"><span className={`rounded-full border px-3 py-1 text-xs font-bold ${nivelClasse[item.nivelPermanencia] || nivelClasse.normal}`}>{item.tempoTerminal}</span></td>
+                  <td className="p-3">{item.tempoTerminal}</td>
                   <td className="p-3">
                     <div className="flex gap-2">
                       <button onClick={() => editar(item)} className="rounded bg-blue-600 p-2 text-white" title="Editar"><Pencil size={16} /></button>
@@ -487,10 +408,24 @@ export default function QuadraSeguranca() {
                 </tr>
               ))}
               {filtrados.length === 0 && (
-                <tr><td colSpan={11} className="p-6 text-center text-slate-500">{carregando ? "Carregando..." : "Nenhum contêiner encontrado."}</td></tr>
+                <tr><td colSpan={10} className="p-6 text-center text-slate-500">{carregando ? "Carregando..." : "Nenhum contêiner encontrado."}</td></tr>
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <h2 className="font-bold">Mapa operacional por posição</h2>
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          {resumo.mapaPosicoes.slice(0, 12).map((item) => (
+            <div key={item.posicao} className="rounded-lg bg-slate-50 p-3 text-sm dark:bg-slate-950">
+              <div className="flex justify-between gap-2">
+                <strong>{item.posicao}</strong>
+                <span>{item.total}</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -500,7 +435,7 @@ export default function QuadraSeguranca() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold">Dossiê {dossie.numeroContainer}</h2>
-                <p className="text-slate-500">Responsável atual: {nomeUsuario(dossie.historico?.[0]?.usuario)}</p>
+                <p className="text-slate-500">Posição: {dossie.posicionamento || "Não informado"}</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => baixarDossiePdf(dossie)} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white">
@@ -517,27 +452,24 @@ export default function QuadraSeguranca() {
                 <p>Entrada: {new Date(dossie.dataHoraEntrada).toLocaleString("pt-BR")}</p>
                 <p>Scanner: {dossie.scannerEntrada ? "Sim" : "Não"}</p>
                 <p>Lacre: {dossie.numeroLacre || "Não informado"}</p>
-                <p>Motorista: {dossie.motoristaResponsavel || "Não informado"}</p>
               </div>
               <div className="rounded-xl border p-4 dark:border-slate-800">
                 <h3 className="font-bold">Saída</h3>
                 <p>Saída: {dossie.dataHoraSaida ? new Date(dossie.dataHoraSaida).toLocaleString("pt-BR") : "Não informada"}</p>
                 <p>Scanner: {dossie.scannerSaida === undefined || dossie.scannerSaida === null ? "Não informado" : dossie.scannerSaida ? "Sim" : "Não"}</p>
-                <p>Novo lacre: {dossie.novoLacre || "Não informado"}</p>
-                <p>Status final: {dossie.statusFinal || "Não informado"}</p>
               </div>
               <div className="rounded-xl border p-4 dark:border-slate-800">
                 <h3 className="font-bold">Operacional</h3>
                 <p>Status: {dossie.statusOperacional}</p>
-                <p>Prioridade: {dossie.prioridade}</p>
+                <p>Prioridade: {dossie.prioridade || "Não informada"}</p>
                 <p>Tempo: {dossie.tempoTerminal}</p>
-                <p>Carga: {dossie.tipoCarga || "Não informada"}</p>
+                <p>Armador: {dossie.armador || "Não informado"}</p>
               </div>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
               <section>
-                <h3 className="mb-3 flex items-center gap-2 font-bold"><Camera size={18} /> Anexos e Evidências</h3>
+                <h3 className="mb-3 flex items-center gap-2 font-bold"><FileText size={18} /> Anexos</h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {(dossie.anexos || []).map((anexo) => (
                     <a key={anexo.id} href={`/${anexo.caminho.replace(/\\/g, "/")}`} target="_blank" className="rounded-xl border p-3 hover:border-blue-400 dark:border-slate-800" rel="noreferrer">
@@ -547,7 +479,7 @@ export default function QuadraSeguranca() {
                         <div className="mb-2 flex h-32 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800"><FileText /></div>
                       )}
                       <p className="truncate font-semibold">{anexo.nomeOriginal}</p>
-                      <p className="text-xs text-slate-500">{anexo.categoria} - {new Date(anexo.createdAt).toLocaleString("pt-BR")}</p>
+                      <p className="text-xs text-slate-500">{new Date(anexo.createdAt).toLocaleString("pt-BR")}</p>
                       <p className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600"><Download size={12} /> Abrir/baixar</p>
                     </a>
                   ))}
