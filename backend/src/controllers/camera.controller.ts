@@ -336,6 +336,38 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
   }
 }
 
+export async function excluirCamera(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const camera = await prisma.cameraMonitoramento.findFirst({
+      where: { id: Number(id), unidade: req.unidadeAtiva },
+      include: {
+        checklists: true,
+        eventos: true,
+      },
+    });
+
+    if (!camera) return res.status(404).json({ error: "Câmera não encontrada" });
+
+    await prisma.cameraMonitoramento.delete({
+      where: { id: camera.id },
+    });
+
+    await registrarLog({
+      req,
+      acao: `Exclusão de câmera ${camera.numeroCamera}`,
+      tipoRegistro: "CameraMonitoramento",
+      registroId: camera.id,
+      dadosAnteriores: camera,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir câmera" });
+  }
+}
+
 export async function criarChecklistCamera(req: AuthRequest, res: Response) {
   try {
     const { cameraId } = req.params;

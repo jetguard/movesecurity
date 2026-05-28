@@ -248,6 +248,16 @@ export default function Cameras() {
     await carregar();
   }
 
+  async function excluirCamera(camera: CameraItem) {
+    const confirmar = window.confirm(
+      `Deseja realmente excluir a câmera ${camera.numeroCamera}?\n\nEssa ação também removerá o histórico de checklists e eventos desta câmera.`
+    );
+    if (!confirmar) return;
+
+    await api.delete(`/cameras/${camera.id}`);
+    await carregar();
+  }
+
   function abrirChecklist(camera: CameraItem) {
     setCameraChecklist(camera);
     setChecklist({
@@ -531,6 +541,7 @@ export default function Cameras() {
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
                       {podeAnalisar() && <button onClick={() => editarCamera(camera)} className="rounded bg-slate-200 px-3 py-1">Editar</button>}
+                      {podeAnalisar() && <button onClick={() => excluirCamera(camera)} className="rounded bg-red-600 px-3 py-1 text-white">Excluir</button>}
                       <button onClick={() => abrirChecklist(camera)} className="rounded bg-blue-600 px-3 py-1 text-white">Checklist</button>
                     </div>
                   </td>

@@ -2,7 +2,8 @@
 import path from "path";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
-import { Response } from "express";
+import { Request, Response } from "express";
+import { jwtSecret } from "../config/security";
 
 type EnvolvidoPdf = {
   tipoEnvolvimento?: string;
@@ -55,6 +56,8 @@ type UsuarioAssinatura = {
   empresa?: string | null;
 };
 
+export type TipoRelatorioPublico = "ocorrencias" | "eventos";
+
 const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
 const page = {
   left: 45,
@@ -66,6 +69,77 @@ const page = {
   bottom: 804,
 };
 const contentWidth = page.right - page.left;
+
+function decodificarEntidadeHtml(entidade: string) {
+  const mapa: Record<string, string> = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: '"',
+    apos: "'",
+    nbsp: " ",
+    ccedil: "ç",
+    Ccedil: "Ç",
+    aacute: "á",
+    Aacute: "Á",
+    eacute: "é",
+    Eacute: "É",
+    iacute: "í",
+    Iacute: "Í",
+    oacute: "ó",
+    Oacute: "Ó",
+    uacute: "ú",
+    Uacute: "Ú",
+    atilde: "ã",
+    Atilde: "Ã",
+    otilde: "õ",
+    Otilde: "Õ",
+    acirc: "â",
+    Acirc: "Â",
+    ecirc: "ê",
+    Ecirc: "Ê",
+    ocirc: "ô",
+    Ocirc: "Ô",
+  };
+
+  if (mapa[entidade]) return mapa[entidade];
+
+  if (entidade.startsWith("#x")) {
+    const codigo = Number.parseInt(entidade.slice(2), 16);
+    return Number.isFinite(codigo) ? String.fromCodePoint(codigo) : "";
+  }
+
+  if (entidade.startsWith("#")) {
+    const codigo = Number.parseInt(entidade.slice(1), 10);
+    return Number.isFinite(codigo) ? String.fromCodePoint(codigo) : "";
+  }
+
+  return "";
+}
+
+function textoPdf(valorEntrada?: string | number | null) {
+  const texto = String(valorEntrada ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6])>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "- ")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&([a-zA-Z]+|#[0-9]+|#x[0-9a-fA-F]+);/g, (_, entidade) => decodificarEntidadeHtml(entidade))
+    .normalize("NFC")
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+    .replace(/[\u2013\u2014\u2212]/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[\u2022\u25CF\u25E6\u2043]/g, "-")
+    .replace(/[\u00A0\u2007\u202F]/g, " ")
+    .replace(/[\u200B-\u200D\uFEFF]/g, "")
+    .replace(/[Ðð]/g, "")
+    .replace(/[^\u0009\u000A\u000D\u0020-\u00FF]/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return texto;
+}
 
 function formatarData(data: Date) {
   return new Intl.DateTimeFormat("pt-BR", {
@@ -83,8 +157,51 @@ function criarToken(relatorio: RelatorioPdf, usuario: UsuarioAssinatura) {
     .toUpperCase();
 }
 
+export function criarTokenAcessoPdf(params: {
+  tipo: TipoRelatorioPublico;
+  id: number;
+  codigo: string;
+  unidade: string;
+}) {
+  return crypto
+    .createHmac("sha256", jwtSecret())
+    .update(`${params.tipo}:${params.id}:${params.codigo}:${params.unidade}`)
+    .digest("hex")
+    .slice(0, 32);
+}
+
+export function validarTokenAcessoPdf(params: {
+  tipo: TipoRelatorioPublico;
+  id: number;
+  codigo: string;
+  unidade: string;
+  token?: string | null;
+}) {
+  if (!params.token) return false;
+  const esperado = criarTokenAcessoPdf(params);
+  const recebido = String(params.token);
+
+  if (recebido.length !== esperado.length) return false;
+
+  return crypto.timingSafeEqual(Buffer.from(recebido), Buffer.from(esperado));
+}
+
+export function criarUrlPublicaPdf(
+  req: Pick<Request, "protocol" | "get">,
+  params: {
+    tipo: TipoRelatorioPublico;
+    id: number;
+    codigo: string;
+    unidade: string;
+  }
+) {
+  const token = criarTokenAcessoPdf(params);
+  return `${req.protocol}://${req.get("host")}/api/public/relatorios/${params.tipo}/${params.id}/pdf?token=${token}`;
+}
+
 function valor(valor?: string | null) {
-  return valor && String(valor).trim() ? valor : "Não informado";
+  const texto = textoPdf(valor);
+  return texto ? texto : "Não informado";
 }
 
 function desenharBasePagina(
@@ -115,7 +232,7 @@ function desenharBasePagina(
     .font("Helvetica-Bold")
     .fontSize(16)
     .fillColor("#111827")
-    .text(`Relatório de ${relatorio.tipo}`, 215, page.top + 16, {
+    .text(textoPdf(`Relatório de ${relatorio.tipo}`), 215, page.top + 16, {
       width: 200,
       align: "center",
     });
@@ -123,7 +240,7 @@ function desenharBasePagina(
   doc
     .font("Helvetica-Bold")
     .fontSize(14)
-    .text(relatorio.codigo, 430, page.top + 18, {
+    .text(textoPdf(relatorio.codigo), 430, page.top + 18, {
       width: 115,
       align: "right",
     });
@@ -151,23 +268,23 @@ function desenharBasePagina(
     .fontSize(8.5)
     .fillColor("#374151")
     .text(
-      `Documento validado e elaborado por ${usuario.nome}. Token: ${token}`,
+      textoPdf(`Documento validado e elaborado por ${usuario.nome}. Token: ${token}`),
       page.left,
       page.footerTop + 38,
       { width: 350 }
     );
 
   const detalhesUsuario = [
-    usuario.re ? `R.E: ${usuario.re}` : null,
-    usuario.cargo ? `Cargo: ${usuario.cargo}` : null,
-    usuario.setor ? `Setor: ${usuario.setor}` : null,
-    usuario.empresa ? `Empresa: ${usuario.empresa}` : null,
+    usuario.re ? `R.E: ${textoPdf(usuario.re)}` : null,
+    usuario.cargo ? `Cargo: ${textoPdf(usuario.cargo)}` : null,
+    usuario.setor ? `Setor: ${textoPdf(usuario.setor)}` : null,
+    usuario.empresa ? `Empresa: ${textoPdf(usuario.empresa)}` : null,
   ]
     .filter(Boolean)
     .join(" | ");
 
   if (detalhesUsuario) {
-    doc.text(detalhesUsuario, page.left, page.footerTop + 58, { width: 350 });
+    doc.text(textoPdf(detalhesUsuario), page.left, page.footerTop + 58, { width: 350 });
   }
 
   doc.image(qrCode, 455, page.footerTop + 15, { width: 78 });
@@ -219,7 +336,7 @@ function escreverTituloSecao(doc: PDFKit.PDFDocument, titulo: string) {
     .font("Helvetica-Bold")
     .fontSize(12)
     .fillColor("#0f172a")
-    .text(titulo, page.left + 10, y + 2);
+    .text(textoPdf(titulo), page.left + 10, y + 2);
   doc
     .moveTo(page.left, y + 20)
     .lineTo(page.right, y + 20)
@@ -240,13 +357,13 @@ function escreverCampo(
     .font("Helvetica-Bold")
     .fontSize(8.5)
     .fillColor("#64748b")
-    .text(rotulo.toUpperCase(), x, y, { width });
+    .text(textoPdf(rotulo.toUpperCase()), x, y, { width });
 
   doc
     .font("Helvetica")
     .fontSize(10)
     .fillColor("#111827")
-    .text(conteudo, x, y + 14, { width, lineGap: 2 });
+    .text(textoPdf(conteudo), x, y + 14, { width, lineGap: 2 });
 }
 
 function escreverDadosRelatorio(doc: PDFKit.PDFDocument, relatorio: RelatorioPdf) {
@@ -296,7 +413,7 @@ function escreverEnvolvidos(
       .font("Helvetica-Bold")
       .fontSize(10.5)
       .fillColor("#111827")
-      .text(`${index + 1}. ${envolvido.nome}`, page.left + 14, y + 12, {
+      .text(textoPdf(`${index + 1}. ${envolvido.nome}`), page.left + 14, y + 12, {
         width: 260,
       });
 
@@ -304,15 +421,15 @@ function escreverEnvolvidos(
       .font("Helvetica")
       .fontSize(9)
       .fillColor("#334155")
-      .text(`Tipo: ${valor(envolvido.tipoEnvolvimento)}`, page.left + 14, y + 32, { width: 210 })
-      .text(`Documento: ${envolvido.tipoDocumento} ${envolvido.documento}`, page.left + 14, y + 47, { width: 250 })
-      .text(`Empresa: ${valor(envolvido.empresa)}`, page.left + 285, y + 32, { width: 200 });
+      .text(textoPdf(`Tipo: ${valor(envolvido.tipoEnvolvimento)}`), page.left + 14, y + 32, { width: 210 })
+      .text(textoPdf(`Documento: ${envolvido.tipoDocumento} ${envolvido.documento}`), page.left + 14, y + 47, { width: 250 })
+      .text(textoPdf(`Empresa: ${valor(envolvido.empresa)}`), page.left + 285, y + 32, { width: 200 });
 
     const veiculo = envolvido.possuiVeiculo
       ? `Placa: ${valor(envolvido.placa)} | Reboque: ${valor(envolvido.reboque)}`
       : "Veículo: não informado";
 
-    doc.text(veiculo, page.left + 14, y + 62, { width: 245 });
+    doc.text(textoPdf(veiculo), page.left + 14, y + 62, { width: 245 });
 
     doc.y = y + 96;
     garantirEspaco(doc, 52, relatorio, usuario, qrCode, token);
@@ -320,11 +437,14 @@ function escreverEnvolvidos(
       .font("Helvetica-Bold")
       .fontSize(8.5)
       .fillColor("#64748b")
-      .text(`RELATO DO ENVOLVIDO ${index + 1}`, page.left, doc.y, { width: contentWidth });
+      .text(textoPdf(`RELATO DO ENVOLVIDO ${index + 1}`), page.left, doc.y, { width: contentWidth });
     doc.moveDown(0.25);
 
     relato.split(/\n+/).forEach((paragrafo) => {
-      const altura = doc.heightOfString(paragrafo, {
+      const textoParagrafo = textoPdf(paragrafo);
+      if (!textoParagrafo) return;
+
+      const altura = doc.heightOfString(textoParagrafo, {
         width: contentWidth,
         align: "justify",
         lineGap: 3,
@@ -335,7 +455,7 @@ function escreverEnvolvidos(
         .font("Helvetica")
         .fontSize(9.5)
         .fillColor("#111827")
-        .text(paragrafo, page.left, doc.y, {
+        .text(textoParagrafo, page.left, doc.y, {
           width: contentWidth,
           align: "justify",
           lineGap: 3,
@@ -355,11 +475,14 @@ function escreverBlocoTexto(
   token: string
 ) {
   garantirEspaco(doc, 55, relatorio, usuario, qrCode, token);
-  doc.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text(titulo, page.left, doc.y);
+  doc.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text(textoPdf(titulo), page.left, doc.y);
   doc.moveDown(0.3);
 
-  texto.split(/\n+/).forEach((paragrafo) => {
-    const altura = doc.heightOfString(paragrafo, {
+  textoPdf(texto).split(/\n+/).forEach((paragrafo) => {
+    const textoParagrafo = textoPdf(paragrafo);
+    if (!textoParagrafo) return;
+
+    const altura = doc.heightOfString(textoParagrafo, {
       width: contentWidth,
       align: "justify",
       lineGap: 3,
@@ -370,7 +493,7 @@ function escreverBlocoTexto(
       .font("Helvetica")
       .fontSize(10)
       .fillColor("#111827")
-      .text(paragrafo, page.left, doc.y, {
+      .text(textoParagrafo, page.left, doc.y, {
         width: contentWidth,
         align: "justify",
         lineGap: 3,
@@ -459,10 +582,13 @@ function escreverRelato(
   escreverTituloSecao(doc, "Relato patrimonial");
 
   const texto = valor(relatorio.relatoSeguranca);
-  const paragrafos = texto.split(/\n+/);
+  const paragrafos = textoPdf(texto).split(/\n+/);
 
   paragrafos.forEach((paragrafo) => {
-    const altura = doc.heightOfString(paragrafo, {
+    const textoParagrafo = textoPdf(paragrafo);
+    if (!textoParagrafo) return;
+
+    const altura = doc.heightOfString(textoParagrafo, {
       width: contentWidth,
       align: "justify",
       lineGap: 3,
@@ -474,7 +600,7 @@ function escreverRelato(
       .font("Helvetica")
       .fontSize(10)
       .fillColor("#111827")
-      .text(paragrafo, page.left, doc.y, {
+      .text(textoParagrafo, page.left, doc.y, {
         width: contentWidth,
         align: "justify",
         lineGap: 3,
@@ -528,7 +654,7 @@ export async function gerarRelatorioPdf(
       .font("Helvetica")
       .fontSize(8)
       .fillColor("#6b7280")
-      .text(`Página ${i + 1} de ${range.count}`, page.left, 786, {
+      .text(textoPdf(`Página ${i + 1} de ${range.count}`), page.left, 786, {
         width: contentWidth,
         align: "center",
       });

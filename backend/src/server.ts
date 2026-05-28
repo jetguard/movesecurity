@@ -28,6 +28,7 @@ import governancaRoutes from "./routes/governanca.routes";
 import planejamentoRoutes from "./routes/planejamento.routes";
 import quadraSegurancaRoutes from "./routes/quadraSeguranca.routes";
 import operacaoRoutes from "./routes/operacao.routes";
+import publicRelatorioRoutes from "./routes/publicRelatorio.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -50,6 +51,7 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
 
+app.use("/api/public", publicRelatorioRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/usuarios", usuarioRoutes);
 app.use("/api/analises", analiseRoutes);

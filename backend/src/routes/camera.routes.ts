@@ -4,6 +4,7 @@ import {
   criarCamera,
   criarChecklistCamera,
   dashboardCameras,
+  excluirCamera,
   exportarHistoricoCameras,
   exportarInventarioCameras,
   listarCameras,
@@ -18,6 +19,7 @@ router.get("/exportar/inventario", autenticarUsuario, autorizarPerfis(acessoRela
 router.get("/exportar/historico", autenticarUsuario, autorizarPerfis(acessoRelatorios), exportarHistoricoCameras);
 router.post("/", autenticarUsuario, autorizarPerfis(acessoAnalise), criarCamera);
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), atualizarCamera);
+router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), excluirCamera);
 router.get("/dashboard", autenticarUsuario, autorizarPerfis(acessoRelatorios), dashboardCameras);
 router.get("/:cameraId/checklists", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarChecklistCamera);
 router.post("/:cameraId/checklists", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarChecklistCamera);

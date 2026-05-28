@@ -1,7 +1,7 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
-import { gerarRelatorioPdf } from "../services/relatorioPdf.service";
+import { criarUrlPublicaPdf, gerarRelatorioPdf } from "../services/relatorioPdf.service";
 import { registrarLog } from "../services/auditoria.service";
 import { estaAprovado } from "../utils/status";
 import { calcularHashArquivo } from "../utils/arquivoHash";
@@ -385,7 +385,12 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
       });
     }
 
-    const pdfUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+    const pdfUrl = criarUrlPublicaPdf(req, {
+      tipo: "eventos",
+      id: evento.id,
+      codigo: evento.codigo,
+      unidade: evento.unidade,
+    });
 
     return gerarRelatorioPdf(
       res,
