@@ -560,18 +560,23 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     } else {
       const gap = 12;
       const colW = (523 - gap) / 2;
-      let x = 36;
-      passagem.postos.forEach((posto, index) => {
-        if (index % 2 === 0) ensure(58);
-        x = index % 2 === 0 ? 36 : 36 + colW + gap;
-        const y = doc.y;
+      const desenharPosto = (posto: (typeof passagem.postos)[number], x: number, y: number) => {
         doc.roundedRect(x, y, colW, 50, 5).fillAndStroke("#f8fafc", "#dbe4ef");
         doc.font("Helvetica-Bold").fontSize(9.2).fillColor("#0f172a").text(posto.posto, x + 9, y + 8, { width: colW - 18 });
         doc.font("Helvetica").fontSize(8.2).fillColor("#334155")
           .text(`Colaborador: ${posto.colaborador}`, x + 9, y + 22, { width: colW - 18 })
           .text(`R.E: ${posto.re || "-"} | Escala: ${posto.escala}`, x + 9, y + 34, { width: colW - 18 });
-        if (index % 2 === 1 || index === passagem.postos.length - 1) doc.y = y + 58;
-      });
+      };
+
+      for (let index = 0; index < passagem.postos.length; index += 2) {
+        ensure(58);
+        const y = doc.y;
+        desenharPosto(passagem.postos[index], 36, y);
+        if (passagem.postos[index + 1]) {
+          desenharPosto(passagem.postos[index + 1], 36 + colW + gap, y);
+        }
+        doc.y = y + 58;
+      }
     }
 
     section("Status dos postos");

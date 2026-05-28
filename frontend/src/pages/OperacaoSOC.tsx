@@ -179,6 +179,7 @@ export default function OperacaoSOC() {
 
   function preencherPassagem(passagem: PassagemTurno) {
     setPassagemSelecionada(passagem);
+    setFiltroEquipe(passagem.equipe || usuario?.equipe || "");
     setForm({
       dataPassagem: dataInput(passagem.dataPassagem),
       colaboradoresIds: passagem.colaboradoresIds || [],
