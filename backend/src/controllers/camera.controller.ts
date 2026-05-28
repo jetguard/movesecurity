@@ -12,6 +12,11 @@ function numero(valor: unknown, fallback = 0) {
   return Number.isFinite(convertido) ? convertido : fallback;
 }
 
+function codigo(valor: unknown, fallback = "") {
+  const texto = String(valor ?? fallback).trim();
+  return texto ? texto.toUpperCase() : fallback;
+}
+
 function minutosEntre(inicio: Date, fim: Date) {
   return Math.max(0, Math.round((fim.getTime() - inicio.getTime()) / 60000));
 }
@@ -232,8 +237,8 @@ export async function criarCamera(req: AuthRequest, res: Response) {
     const status = req.body.status || STATUS_CONECTADA;
     const camera = await prisma.cameraMonitoramento.create({
       data: {
-        numeroCamera: numero(req.body.numeroCamera),
-        numeroServidor: numero(req.body.numeroServidor),
+        numeroCamera: codigo(req.body.numeroCamera),
+        numeroServidor: codigo(req.body.numeroServidor),
         tipoSistema: "DIGIFORT",
         periodoGravacaoDias: numero(req.body.periodoGravacaoDias),
         status,
@@ -296,8 +301,8 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
     const camera = await prisma.cameraMonitoramento.update({
       where: { id: anterior.id },
       data: {
-        numeroCamera: numero(req.body.numeroCamera, anterior.numeroCamera),
-        numeroServidor: numero(req.body.numeroServidor, anterior.numeroServidor),
+        numeroCamera: codigo(req.body.numeroCamera, anterior.numeroCamera),
+        numeroServidor: codigo(req.body.numeroServidor, anterior.numeroServidor),
         tipoSistema: "DIGIFORT",
         periodoGravacaoDias: numero(req.body.periodoGravacaoDias, anterior.periodoGravacaoDias),
         tecnologia: req.body.tecnologia || anterior.tecnologia,

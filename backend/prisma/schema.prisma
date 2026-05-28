@@ -572,8 +572,8 @@ model ComentarioInterno {
 
 model CameraMonitoramento {
   id                     Int       @id @default(autoincrement())
-  numeroCamera           Int
-  numeroServidor         Int
+  numeroCamera           String
+  numeroServidor         String
   tipoSistema            String    @default("DIGIFORT")
   periodoGravacaoDias    Int
   status                 String    @default("Conectada")

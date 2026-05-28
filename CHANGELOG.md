@@ -4,6 +4,14 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.0.1] - 2026-05-28
+
+### Corrigido
+
+- Checklist CFTV com labels visíveis nos campos de data, retenção estimada e demais campos operacionais.
+- Cadastro e edição de câmeras agora aceitam códigos alfanuméricos para câmera e servidor, como `CF001` e `SJJ-1`.
+- Migration Prisma para preservar câmeras antigas e converter `Nº da câmera` e `Nº do servidor` para texto.
+
 ## [1.0.0] - 2026-05-28
 
 ### Adicionado
@@ -74,4 +82,3 @@ O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a 
 - Health check administrativo em Governança.
 - Backup local do banco SQLite.
 - Preparação para migração futura para PostgreSQL.
-

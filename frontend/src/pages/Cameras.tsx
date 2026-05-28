@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Camera, Radio, ShieldCheck, Wifi, WifiOff } from "lucide-react";
 import { api } from "../services/api";
 import { podeAnalisar } from "../utils/permissoes";
 
 type CameraItem = {
   id: number;
-  numeroCamera: number;
-  numeroServidor: number;
+  numeroCamera: string;
+  numeroServidor: string;
   tipoSistema: string;
   periodoGravacaoDias: number;
   status: string;
@@ -44,8 +44,8 @@ type DashboardCameras = {
   falhasPorServidor: [string, number][];
   resolucaoPorOperador: [string, number][];
   falhasPorDia: [string, number][];
-  timeline: Array<{ id: number; camera: number; area: string; status: string; iniciadoEm: string; encerradoEm?: string; duracao?: number; observacao?: string }>;
-  mapaOperacional: Array<{ id: number; numeroCamera: number; servidor: number; area: string; local: string; status: string; tipoCamera: string; tecnologia: string; offlineMinutos: number }>;
+  timeline: Array<{ id: number; camera: string; area: string; status: string; iniciadoEm: string; encerradoEm?: string; duracao?: number; observacao?: string }>;
+  mapaOperacional: Array<{ id: number; numeroCamera: string; servidor: string; area: string; local: string; status: string; tipoCamera: string; tecnologia: string; offlineMinutos: number }>;
   alertas: Array<{ id: number; titulo: string; mensagem: string; minutos: number; slaViolado?: boolean }>;
   alertasAutomaticos?: Array<{ tipo: string; mensagem: string; severidade: string }>;
 };
@@ -143,6 +143,15 @@ function CardSoc({ titulo, valor, subtitulo, icon: Icon, tom }: { titulo: string
       </div>
       <p className="mt-3 text-xs text-slate-500">{subtitulo}</p>
     </div>
+  );
+}
+
+function CampoChecklist({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="space-y-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+      <span>{label}</span>
+      {children}
+    </label>
   );
 }
 
@@ -443,8 +452,8 @@ export default function Cameras() {
             <button type="button" onClick={() => setFormAberto(false)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <input className="rounded-lg border p-3" placeholder="Nº da câmera" value={form.numeroCamera} onChange={(e) => campo("numeroCamera", e.target.value)} required />
-            <input className="rounded-lg border p-3" placeholder="Nº do servidor" value={form.numeroServidor} onChange={(e) => campo("numeroServidor", e.target.value)} required />
+            <input className="rounded-lg border p-3" placeholder="Nº da câmera. Ex: CF001" value={form.numeroCamera} onChange={(e) => campo("numeroCamera", e.target.value.toUpperCase())} required />
+            <input className="rounded-lg border p-3" placeholder="Nº do servidor. Ex: SJJ-1" value={form.numeroServidor} onChange={(e) => campo("numeroServidor", e.target.value.toUpperCase())} required />
             <select className="rounded-lg border p-3" value={form.tipoSistema} onChange={(e) => campo("tipoSistema", e.target.value)} required>
               <option value="">Selecione o tipo de sistema</option>
               <option>DIGIFORT</option>
@@ -543,19 +552,46 @@ export default function Cameras() {
               <button type="button" onClick={() => setCameraChecklist(null)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <select className="rounded-lg border p-3" title="Status atual da câmera no momento do checklist" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}><option>Conectada</option><option>Desconectada</option></select>
-              <input className="rounded-lg border p-3" placeholder="Dias disponíveis calculados/sugeridos" title="Quantidade de dias disponíveis após cálculo de retenção" value={checklist.tempoGravacaoDisponivel} onChange={(e) => campoChecklist("tempoGravacaoDisponivel", e.target.value)} required />
-              <input className="rounded-lg border p-3" type="datetime-local" title="Data inicial ou limite de gravação informada pelo operador" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} />
-              <input className="rounded-lg border p-3" readOnly title="Retenção calculada automaticamente em dias, horas e minutos" value={checklist.retencaoEstimadaTexto} />
-              <input className="rounded-lg border p-3" type="datetime-local" title="Data/hora de desconexão manual, se houver ajuste operacional" value={checklist.dataDesconexaoManual} onChange={(e) => campoChecklist("dataDesconexaoManual", e.target.value)} />
-              <input className="rounded-lg border p-3" type="datetime-local" title="Data/hora de reconexão manual. Se ficar vazio, calcula até agora" value={checklist.dataReconexaoManual} onChange={(e) => campoChecklist("dataReconexaoManual", e.target.value)} />
-              <select className="rounded-lg border p-3" title="Qualidade atual da imagem exibida no sistema de CFTV" value={checklist.qualidadeImagem} onChange={(e) => campoChecklist("qualidadeImagem", e.target.value)}><option>Excelente</option><option>Boa</option><option>Regular</option><option>Ruim</option><option>Sem imagem</option></select>
-              <select className="rounded-lg border p-3" title="Funcionamento do infravermelho durante período noturno ou baixa luminosidade" value={checklist.funcionamentoInfravermelho} onChange={(e) => campoChecklist("funcionamentoInfravermelho", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option><option>Não possui</option></select>
-              <select className="rounded-lg border p-3" title="Confirma se a gravação está sendo armazenada corretamente" value={checklist.funcionamentoGravacao} onChange={(e) => campoChecklist("funcionamentoGravacao", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option></select>
-              <select className="rounded-lg border p-3" title="Comunicação entre câmera, rede e servidor de gravação" value={checklist.comunicacaoServidor} onChange={(e) => campoChecklist("comunicacaoServidor", e.target.value)}><option>Funcionando</option><option>Instável</option><option>Sem comunicação</option></select>
-              <select className="rounded-lg border p-3" title="Indica oscilação, queda de imagem ou comportamento intermitente" value={checklist.instabilidadeDetectada} onChange={(e) => campoChecklist("instabilidadeDetectada", e.target.value)}><option>Não</option><option>Sim</option></select>
-              <select className="rounded-lg border p-3" title="Indica se a câmera precisa de manutenção preventiva ou corretiva" value={checklist.necessidadeManutencao} onChange={(e) => campoChecklist("necessidadeManutencao", e.target.value)}><option>Não</option><option>Sim</option><option>Urgente</option></select>
-              <textarea className="rounded-lg border p-3 md:col-span-2" placeholder="Descreva observações operacionais, falhas percebidas, imagem ruim, perda de gravação ou ação necessária" title="Observações operacionais do checklist" value={checklist.observacoesOperacionais} onChange={(e) => campoChecklist("observacoesOperacionais", e.target.value)} />
+              <CampoChecklist label="Status atual da câmera">
+                <select className="w-full rounded-lg border p-3" title="Status atual da câmera no momento do checklist" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}><option>Conectada</option><option>Desconectada</option></select>
+              </CampoChecklist>
+              <CampoChecklist label="Tempo de gravação disponível">
+                <input className="w-full rounded-lg border p-3" placeholder="Ex: 180 dias disponíveis" title="Quantidade de dias disponíveis após cálculo de retenção" value={checklist.tempoGravacaoDisponivel} onChange={(e) => campoChecklist("tempoGravacaoDisponivel", e.target.value)} required />
+              </CampoChecklist>
+              <CampoChecklist label="Data inicial/limite de gravação">
+                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data inicial ou limite de gravação informada pelo operador" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} />
+              </CampoChecklist>
+              <CampoChecklist label="Retenção estimada atual">
+                <input className="w-full rounded-lg border bg-slate-50 p-3 text-slate-700" readOnly title="Retenção calculada automaticamente em dias, horas e minutos" value={checklist.retencaoEstimadaTexto} />
+              </CampoChecklist>
+              <CampoChecklist label="Data/hora de desconexão">
+                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data/hora de desconexão manual, se houver ajuste operacional" value={checklist.dataDesconexaoManual} onChange={(e) => campoChecklist("dataDesconexaoManual", e.target.value)} />
+              </CampoChecklist>
+              <CampoChecklist label="Data/hora de reconexão">
+                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data/hora de reconexão manual. Se ficar vazio, calcula até agora" value={checklist.dataReconexaoManual} onChange={(e) => campoChecklist("dataReconexaoManual", e.target.value)} />
+              </CampoChecklist>
+              <CampoChecklist label="Qualidade da imagem">
+                <select className="w-full rounded-lg border p-3" title="Qualidade atual da imagem exibida no sistema de CFTV" value={checklist.qualidadeImagem} onChange={(e) => campoChecklist("qualidadeImagem", e.target.value)}><option>Excelente</option><option>Boa</option><option>Regular</option><option>Ruim</option><option>Sem imagem</option></select>
+              </CampoChecklist>
+              <CampoChecklist label="Funcionamento do infravermelho">
+                <select className="w-full rounded-lg border p-3" title="Funcionamento do infravermelho durante período noturno ou baixa luminosidade" value={checklist.funcionamentoInfravermelho} onChange={(e) => campoChecklist("funcionamentoInfravermelho", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option><option>Não possui</option></select>
+              </CampoChecklist>
+              <CampoChecklist label="Funcionamento da gravação">
+                <select className="w-full rounded-lg border p-3" title="Confirma se a gravação está sendo armazenada corretamente" value={checklist.funcionamentoGravacao} onChange={(e) => campoChecklist("funcionamentoGravacao", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option></select>
+              </CampoChecklist>
+              <CampoChecklist label="Comunicação com servidor">
+                <select className="w-full rounded-lg border p-3" title="Comunicação entre câmera, rede e servidor de gravação" value={checklist.comunicacaoServidor} onChange={(e) => campoChecklist("comunicacaoServidor", e.target.value)}><option>Funcionando</option><option>Instável</option><option>Sem comunicação</option></select>
+              </CampoChecklist>
+              <CampoChecklist label="Instabilidade detectada">
+                <select className="w-full rounded-lg border p-3" title="Indica oscilação, queda de imagem ou comportamento intermitente" value={checklist.instabilidadeDetectada} onChange={(e) => campoChecklist("instabilidadeDetectada", e.target.value)}><option>Não</option><option>Sim</option></select>
+              </CampoChecklist>
+              <CampoChecklist label="Necessidade de manutenção">
+                <select className="w-full rounded-lg border p-3" title="Indica se a câmera precisa de manutenção preventiva ou corretiva" value={checklist.necessidadeManutencao} onChange={(e) => campoChecklist("necessidadeManutencao", e.target.value)}><option>Não</option><option>Sim</option><option>Urgente</option></select>
+              </CampoChecklist>
+              <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2 dark:text-slate-200">
+                <span>Observações operacionais</span>
+                <textarea className="w-full rounded-lg border p-3" placeholder="Descreva observações operacionais, falhas percebidas, imagem ruim, perda de gravação ou ação necessária" title="Observações operacionais do checklist" value={checklist.observacoesOperacionais} onChange={(e) => campoChecklist("observacoesOperacionais", e.target.value)} />
+              </label>
             </div>
             <button className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-bold text-white">Salvar checklist</button>
           </form>
