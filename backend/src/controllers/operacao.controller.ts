@@ -205,7 +205,7 @@ export async function painelOperacionalSoc(req: AuthRequest, res: Response) {
     return res.json({
       unidade,
       filtroEquipe: equipeFiltro || null,
-      equipes: ["Equipe A", "Equipe B", "Equipe C", "Equipe D"],
+      equipes: ["Equipe A", "Equipe B", "Equipe C", "Equipe D", "Administrativo"],
       atualizadoEm: new Date().toISOString(),
       soc: {
         ocorrenciasAbertas: ocorrencias.filter((item) => item.status !== "Concluído").length,

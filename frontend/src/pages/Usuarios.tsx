@@ -18,7 +18,7 @@ type Usuario = {
 };
 
 const unidades = ["GJA-T1", "GJA-T2", "ITAJAÍ-SC", "SUAPE-T1", "SUAPE-T2", "ANHANGUERA"];
-const equipes = ["Equipe A", "Equipe B", "Equipe C", "Equipe D"];
+const equipes = ["Equipe A", "Equipe B", "Equipe C", "Equipe D", "Administrativo"];
 const perfis = [
   { label: "Administrador", value: "ADMINISTRADOR" },
   { label: "Analista", value: "ANALISTA" },

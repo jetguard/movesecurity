@@ -56,7 +56,7 @@ function validarStatus(status?: string) {
 
 function validarEquipe(equipe?: string) {
   if (!equipe) return null;
-  return ["Equipe A", "Equipe B", "Equipe C", "Equipe D"].includes(equipe) ? equipe : null;
+  return ["Equipe A", "Equipe B", "Equipe C", "Equipe D", "Administrativo"].includes(equipe) ? equipe : null;
 }
 
 export async function listarUsuarios(req: Request, res: Response) {

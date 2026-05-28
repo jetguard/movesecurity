@@ -101,7 +101,7 @@ const postosDisponiveis = [
 ];
 
 const escalas = ["06x18", "18x06", "07x19", "19x07", "07x15", "15x23", "23x07"];
-const equipesPadrao = ["Equipe A", "Equipe B", "Equipe C", "Equipe D"];
+const equipesPadrao = ["Equipe A", "Equipe B", "Equipe C", "Equipe D", "Administrativo"];
 
 const postoVazio: PostoPassagem = { posto: "", colaborador: "", re: "", escala: "" };
 const checklistEquipamentosPadrao: ChecklistEquipamento[] = [
