@@ -16,12 +16,62 @@ function minutosEntre(inicio: Date, fim: Date) {
   return Math.max(0, Math.round((fim.getTime() - inicio.getTime()) / 60000));
 }
 
+function dataOpcional(valor: unknown) {
+  if (!valor) return null;
+  const data = new Date(String(valor));
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function formatarRetencao(minutosTotais: number) {
+  const minutos = Math.max(0, Math.round(minutosTotais));
+  const dias = Math.floor(minutos / 1440);
+  const horas = Math.floor((minutos % 1440) / 60);
+  const minutosRestantes = minutos % 60;
+  return `${dias} dias, ${String(horas).padStart(2, "0")} horas e ${String(minutosRestantes).padStart(2, "0")} minutos`;
+}
+
 function agrupar<T>(itens: T[], chave: (item: T) => string | number | null | undefined) {
   return itens.reduce<Record<string, number>>((acc, item) => {
     const key = String(chave(item) || "Não informado");
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
+}
+
+async function calcularRetencaoGravacao(params: {
+  cameraId: number;
+  dataInicial?: Date | null;
+  dataDesconexaoManual?: Date | null;
+  dataReconexaoManual?: Date | null;
+}) {
+  const agora = new Date();
+  const retencaoProjetadaMinutos = 180 * 24 * 60;
+  const eventos = await prisma.cameraEventoStatus.findMany({
+    where: {
+      cameraId: params.cameraId,
+      statusNovo: STATUS_DESCONECTADA,
+      ...(params.dataInicial ? { iniciadoEm: { gte: params.dataInicial } } : {}),
+    },
+    orderBy: { iniciadoEm: "asc" },
+  });
+
+  const offlineEventos = eventos.reduce((total, evento) => {
+    const fim = evento.encerradoEm || agora;
+    return total + minutosEntre(evento.iniciadoEm, fim);
+  }, 0);
+
+  const offlineManual =
+    params.dataDesconexaoManual
+      ? minutosEntre(params.dataDesconexaoManual, params.dataReconexaoManual || agora)
+      : 0;
+
+  const retencaoMinutos = Math.max(0, retencaoProjetadaMinutos - offlineEventos - offlineManual);
+
+  return {
+    retencaoMinutos,
+    retencaoTexto: formatarRetencao(retencaoMinutos),
+    offlineMinutos: offlineEventos + offlineManual,
+  };
 }
 
 function ranking(dados: Record<string, number>, limite = 8) {
@@ -314,6 +364,15 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
       atual?.status === STATUS_DESCONECTADA && atual.desconectadaDesde
         ? minutosEntre(atual.desconectadaDesde, new Date())
         : 0;
+    const dataInicialGravacao = dataOpcional(req.body.dataInicialGravacao);
+    const dataDesconexaoManual = dataOpcional(req.body.dataDesconexaoManual);
+    const dataReconexaoManual = dataOpcional(req.body.dataReconexaoManual);
+    const retencao = await calcularRetencaoGravacao({
+      cameraId: camera.id,
+      dataInicial: dataInicialGravacao,
+      dataDesconexaoManual,
+      dataReconexaoManual,
+    });
 
     const checklist = await prisma.cameraChecklistOperacional.create({
       data: {
@@ -322,6 +381,11 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
         responsavelId: req.usuarioId!,
         statusAtual,
         tempoGravacaoDisponivel: numero(req.body.tempoGravacaoDisponivel),
+        dataInicialGravacao,
+        dataDesconexaoManual,
+        dataReconexaoManual,
+        retencaoEstimadaMinutos: retencao.retencaoMinutos,
+        retencaoEstimadaTexto: retencao.retencaoTexto,
         qualidadeImagem: req.body.qualidadeImagem,
         funcionamentoInfravermelho: req.body.funcionamentoInfravermelho,
         funcionamentoGravacao: req.body.funcionamentoGravacao,
@@ -329,7 +393,7 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
         instabilidadeDetectada: req.body.instabilidadeDetectada,
         necessidadeManutencao: req.body.necessidadeManutencao,
         observacoesOperacionais: req.body.observacoesOperacionais,
-        indisponibilidadeMinutos: indisponibilidadeAberta,
+        indisponibilidadeMinutos: Math.max(indisponibilidadeAberta, retencao.offlineMinutos),
         falhaRecorrente: eventosRecentes >= 3 || req.body.instabilidadeDetectada === "Sim",
       },
       include: { responsavel: { select: { id: true, nome: true, apelido: true } }, camera: true },

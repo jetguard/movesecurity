@@ -601,12 +601,17 @@ model CameraMonitoramento {
 }
 
 model CameraChecklistOperacional {
-  id                         Int      @id @default(autoincrement())
+  id                         Int       @id @default(autoincrement())
   cameraId                   Int
-  unidade                    String   @default("GJA-T1")
+  unidade                    String    @default("GJA-T1")
   responsavelId              Int
   statusAtual                String
   tempoGravacaoDisponivel    Int
+  dataInicialGravacao        DateTime?
+  dataDesconexaoManual       DateTime?
+  dataReconexaoManual        DateTime?
+  retencaoEstimadaMinutos    Int?
+  retencaoEstimadaTexto      String?
   qualidadeImagem            String
   funcionamentoInfravermelho String
   funcionamentoGravacao      String
@@ -614,10 +619,10 @@ model CameraChecklistOperacional {
   instabilidadeDetectada     String
   necessidadeManutencao      String
   observacoesOperacionais    String?
-  indisponibilidadeMinutos   Int      @default(0)
-  falhaRecorrente            Boolean  @default(false)
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  indisponibilidadeMinutos   Int       @default(0)
+  falhaRecorrente            Boolean   @default(false)
+  createdAt                  DateTime  @default(now())
+  updatedAt                  DateTime  @updatedAt
 
   camera      CameraMonitoramento @relation(fields: [cameraId], references: [id], onDelete: Cascade)
   responsavel Usuario             @relation("CameraChecklistResponsavel", fields: [responsavelId], references: [id])

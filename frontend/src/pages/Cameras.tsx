@@ -69,6 +69,10 @@ const cameraInicial = {
 const checklistInicial = {
   statusAtual: "Conectada",
   tempoGravacaoDisponivel: "",
+  dataInicialGravacao: "",
+  dataDesconexaoManual: "",
+  dataReconexaoManual: "",
+  retencaoEstimadaTexto: "Retenção estimada atual: 180 dias, 00 horas e 00 minutos",
   qualidadeImagem: "Boa",
   funcionamentoInfravermelho: "Funcionando",
   funcionamentoGravacao: "Funcionando",
@@ -83,6 +87,32 @@ function minutos(min: number) {
   const horas = Math.floor(min / 60);
   const minutosRestantes = min % 60;
   return horas > 0 ? `${horas}h ${minutosRestantes}min` : `${minutosRestantes} min`;
+}
+
+function minutosEntreDatas(inicio: string, fim?: string) {
+  if (!inicio) return 0;
+  const dataInicio = new Date(inicio);
+  const dataFim = fim ? new Date(fim) : new Date();
+  if (Number.isNaN(dataInicio.getTime()) || Number.isNaN(dataFim.getTime())) return 0;
+  return Math.max(0, Math.round((dataFim.getTime() - dataInicio.getTime()) / 60000));
+}
+
+function formatarRetencao(minutosTotais: number) {
+  const minutosAjustados = Math.max(0, Math.round(minutosTotais));
+  const dias = Math.floor(minutosAjustados / 1440);
+  const horas = Math.floor((minutosAjustados % 1440) / 60);
+  const minutosRestantes = minutosAjustados % 60;
+  return `${dias} dias, ${String(horas).padStart(2, "0")} horas e ${String(minutosRestantes).padStart(2, "0")} minutos`;
+}
+
+function calcularRetencaoChecklist(camera: CameraItem | null, dados: typeof checklistInicial) {
+  const retencaoProjetada = 180 * 24 * 60;
+  const offlineHistorico = camera?.totalIndisponibilidade || 0;
+  const offlineAtual = camera?.status === "Desconectada" && camera.desconectadaDesde
+    ? minutosEntreDatas(camera.desconectadaDesde)
+    : 0;
+  const offlineManual = minutosEntreDatas(dados.dataDesconexaoManual, dados.dataReconexaoManual || undefined);
+  return formatarRetencao(retencaoProjetada - offlineHistorico - offlineAtual - offlineManual);
 }
 
 function Barra({ nome, valor, maximo, cor = "bg-cyan-400" }: { nome: string; valor: number; maximo: number; cor?: string }) {
@@ -148,8 +178,25 @@ export default function Cameras() {
   }
 
   function campoChecklist(nome: string, valor: string) {
-    setChecklist((atual) => ({ ...atual, [nome]: valor }));
+    setChecklist((atual) => {
+      const novo = { ...atual, [nome]: valor };
+      return {
+        ...novo,
+        retencaoEstimadaTexto: `Retenção estimada atual: ${calcularRetencaoChecklist(cameraChecklist, novo)}`,
+      };
+    });
   }
+
+  useEffect(() => {
+    if (!cameraChecklist) return;
+    const intervalo = window.setInterval(() => {
+      setChecklist((atual) => ({
+        ...atual,
+        retencaoEstimadaTexto: `Retenção estimada atual: ${calcularRetencaoChecklist(cameraChecklist, atual)}`,
+      }));
+    }, 60000);
+    return () => window.clearInterval(intervalo);
+  }, [cameraChecklist]);
 
   function novaCamera() {
     setCameraEditando(null);
@@ -194,7 +241,12 @@ export default function Cameras() {
 
   function abrirChecklist(camera: CameraItem) {
     setCameraChecklist(camera);
-    setChecklist({ ...checklistInicial, statusAtual: camera.status });
+    setChecklist({
+      ...checklistInicial,
+      statusAtual: camera.status,
+      tempoGravacaoDisponivel: String(Math.max(0, Math.round((180 * 24 * 60 - camera.totalIndisponibilidade) / 1440))),
+      retencaoEstimadaTexto: `Retenção estimada atual: ${calcularRetencaoChecklist(camera, checklistInicial)}`,
+    });
   }
 
   async function salvarChecklist(e: React.FormEvent) {
@@ -491,15 +543,19 @@ export default function Cameras() {
               <button type="button" onClick={() => setCameraChecklist(null)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <select className="rounded-lg border p-3" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}><option>Conectada</option><option>Desconectada</option></select>
-              <input className="rounded-lg border p-3" placeholder="Tempo de gravação disponível em dias" value={checklist.tempoGravacaoDisponivel} onChange={(e) => campoChecklist("tempoGravacaoDisponivel", e.target.value)} required />
-              <select className="rounded-lg border p-3" value={checklist.qualidadeImagem} onChange={(e) => campoChecklist("qualidadeImagem", e.target.value)}><option>Excelente</option><option>Boa</option><option>Regular</option><option>Ruim</option><option>Sem imagem</option></select>
-              <select className="rounded-lg border p-3" value={checklist.funcionamentoInfravermelho} onChange={(e) => campoChecklist("funcionamentoInfravermelho", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option><option>Não possui</option></select>
-              <select className="rounded-lg border p-3" value={checklist.funcionamentoGravacao} onChange={(e) => campoChecklist("funcionamentoGravacao", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option></select>
-              <select className="rounded-lg border p-3" value={checklist.comunicacaoServidor} onChange={(e) => campoChecklist("comunicacaoServidor", e.target.value)}><option>Funcionando</option><option>Instável</option><option>Sem comunicação</option></select>
-              <select className="rounded-lg border p-3" value={checklist.instabilidadeDetectada} onChange={(e) => campoChecklist("instabilidadeDetectada", e.target.value)}><option>Não</option><option>Sim</option></select>
-              <select className="rounded-lg border p-3" value={checklist.necessidadeManutencao} onChange={(e) => campoChecklist("necessidadeManutencao", e.target.value)}><option>Não</option><option>Sim</option><option>Urgente</option></select>
-              <textarea className="rounded-lg border p-3 md:col-span-2" placeholder="Observações operacionais" value={checklist.observacoesOperacionais} onChange={(e) => campoChecklist("observacoesOperacionais", e.target.value)} />
+              <select className="rounded-lg border p-3" title="Status atual da câmera no momento do checklist" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}><option>Conectada</option><option>Desconectada</option></select>
+              <input className="rounded-lg border p-3" placeholder="Dias disponíveis calculados/sugeridos" title="Quantidade de dias disponíveis após cálculo de retenção" value={checklist.tempoGravacaoDisponivel} onChange={(e) => campoChecklist("tempoGravacaoDisponivel", e.target.value)} required />
+              <input className="rounded-lg border p-3" type="datetime-local" title="Data inicial ou limite de gravação informada pelo operador" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} />
+              <input className="rounded-lg border p-3" readOnly title="Retenção calculada automaticamente em dias, horas e minutos" value={checklist.retencaoEstimadaTexto} />
+              <input className="rounded-lg border p-3" type="datetime-local" title="Data/hora de desconexão manual, se houver ajuste operacional" value={checklist.dataDesconexaoManual} onChange={(e) => campoChecklist("dataDesconexaoManual", e.target.value)} />
+              <input className="rounded-lg border p-3" type="datetime-local" title="Data/hora de reconexão manual. Se ficar vazio, calcula até agora" value={checklist.dataReconexaoManual} onChange={(e) => campoChecklist("dataReconexaoManual", e.target.value)} />
+              <select className="rounded-lg border p-3" title="Qualidade atual da imagem exibida no sistema de CFTV" value={checklist.qualidadeImagem} onChange={(e) => campoChecklist("qualidadeImagem", e.target.value)}><option>Excelente</option><option>Boa</option><option>Regular</option><option>Ruim</option><option>Sem imagem</option></select>
+              <select className="rounded-lg border p-3" title="Funcionamento do infravermelho durante período noturno ou baixa luminosidade" value={checklist.funcionamentoInfravermelho} onChange={(e) => campoChecklist("funcionamentoInfravermelho", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option><option>Não possui</option></select>
+              <select className="rounded-lg border p-3" title="Confirma se a gravação está sendo armazenada corretamente" value={checklist.funcionamentoGravacao} onChange={(e) => campoChecklist("funcionamentoGravacao", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option></select>
+              <select className="rounded-lg border p-3" title="Comunicação entre câmera, rede e servidor de gravação" value={checklist.comunicacaoServidor} onChange={(e) => campoChecklist("comunicacaoServidor", e.target.value)}><option>Funcionando</option><option>Instável</option><option>Sem comunicação</option></select>
+              <select className="rounded-lg border p-3" title="Indica oscilação, queda de imagem ou comportamento intermitente" value={checklist.instabilidadeDetectada} onChange={(e) => campoChecklist("instabilidadeDetectada", e.target.value)}><option>Não</option><option>Sim</option></select>
+              <select className="rounded-lg border p-3" title="Indica se a câmera precisa de manutenção preventiva ou corretiva" value={checklist.necessidadeManutencao} onChange={(e) => campoChecklist("necessidadeManutencao", e.target.value)}><option>Não</option><option>Sim</option><option>Urgente</option></select>
+              <textarea className="rounded-lg border p-3 md:col-span-2" placeholder="Descreva observações operacionais, falhas percebidas, imagem ruim, perda de gravação ou ação necessária" title="Observações operacionais do checklist" value={checklist.observacoesOperacionais} onChange={(e) => campoChecklist("observacoesOperacionais", e.target.value)} />
             </div>
             <button className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-bold text-white">Salvar checklist</button>
           </form>
