@@ -31,6 +31,14 @@ type PostoPassagem = {
   escala: string;
 };
 
+type ChecklistEquipamento = {
+  categoria: string;
+  nome: string;
+  funcionando: string;
+  observacao: string;
+  chamado: string;
+};
+
 type PassagemTurno = {
   id: number;
   codigo: string;
@@ -46,6 +54,7 @@ type PassagemTurno = {
   statusPostoScanner: string;
   observacaoPostoScanner?: string | null;
   informacoesComplementares?: string | null;
+  checklistEquipamentos?: ChecklistEquipamento[];
   cftvConectadas?: number | null;
   cftvDesconectadas?: number | null;
   containersArmazenados?: number | null;
@@ -69,11 +78,11 @@ type SocData = {
 };
 
 const metricas = [
-  ["ocorrenciasAbertas", "OcorrÃªncias abertas"],
+  ["ocorrenciasAbertas", "Ocorrências abertas"],
   ["eventosAbertos", "Eventos abertos"],
-  ["investigacoesAbertas", "InvestigaÃ§Ãµes"],
-  ["camerasOffline", "CÃ¢meras offline"],
-  ["containersCriticos", "ContÃªineres no terminal"],
+  ["investigacoesAbertas", "Investigações"],
+  ["camerasOffline", "Câmeras offline"],
+  ["containersCriticos", "Contêineres no terminal"],
   ["tarefasAbertas", "Tarefas abertas"],
   ["checklistsHoje", "Registros hoje"],
 ];
@@ -82,11 +91,11 @@ const postosDisponiveis = [
   "Gate 1",
   "Gate 2",
   "Gate 3",
-  "Portaria de ServiÃ§o",
+  "Portaria de Serviço",
   "Portaria Social",
-  "BalanÃ§a de SaÃ­da",
-  "BalanÃ§a de Entrada",
-  "RotatÃ³ria",
+  "Balança de Saída",
+  "Balança de Entrada",
+  "Rotatória",
   "Scanner",
   "Scanner Novo",
 ];
@@ -95,6 +104,11 @@ const escalas = ["06x18", "18x06", "07x19", "19x07", "07x15", "15x23", "23x07"];
 const equipesPadrao = ["Equipe A", "Equipe B", "Equipe C", "Equipe D"];
 
 const postoVazio: PostoPassagem = { posto: "", colaborador: "", re: "", escala: "" };
+const checklistEquipamentosPadrao: ChecklistEquipamento[] = [
+  ...["Rádio Base Fixa", "Rádios PAM / PAMG", "Rádio HT e Bateria", "Telefone Emergência", "Telefone Ramal", "Celular Corporativo"].map((nome) => ({ categoria: "Aparelhos de comunicação", nome, funcionando: "N/A", observacao: "", chamado: "" })),
+  ...["Catracas", "Leitoras de crachá", "Leitora facial", "Urnas coletoras", "Totens", "Cancelas", "Torniquetes", "Lanternas", "Portais detectores", "Bastões detectores", "Scanner(s) de bagagem", "Ar-condicionado", "Botão de pânico", "Impressora(s)"].map((nome) => ({ categoria: "Equipamentos de apoio", nome, funcionando: "N/A", observacao: "", chamado: "" })),
+  ...["PC's", "Monitores", "Mesas Controladoras", "Teclados/Mouses", "Vídeo Wall / Telas", "Mobília"].map((nome) => ({ categoria: "Equipamentos essenciais", nome, funcionando: "N/A", observacao: "", chamado: "" })),
+];
 
 function dataInput(data?: string | null) {
   if (!data) return new Date().toISOString().slice(0, 10);
@@ -110,9 +124,9 @@ function separarInformacoes(texto: string) {
 
 function montarInformacao(titulo: string, local: string, observacoes: string) {
   const linhas = [
-    `TÃ­tulo: ${titulo.trim() || "InformaÃ§Ã£o do PlantÃ£o"}`,
-    `Local: ${local.trim() || "Centro de OperaÃ§Ãµes"}`,
-    `DescriÃ§Ã£o: ${observacoes.trim() || "Sem descriÃ§Ã£o informada"}`,
+    `Título: ${titulo.trim() || "Informação do Plantão"}`,
+    `Local: ${local.trim() || "Centro de Operações"}`,
+    `Descrição: ${observacoes.trim() || "Sem descrição informada"}`,
   ];
   return linhas.join("\n");
 }
@@ -125,7 +139,7 @@ export default function OperacaoSOC() {
   const [passagemSelecionada, setPassagemSelecionada] = useState<PassagemTurno | null>(null);
   const [filtroEquipe, setFiltroEquipe] = useState("");
   const [titulo, setTitulo] = useState("");
-  const [local, setLocal] = useState("Centro de OperaÃ§Ãµes");
+  const [local, setLocal] = useState("Centro de Operações");
   const [observacoes, setObservacoes] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [editandoInformacao, setEditandoInformacao] = useState<number | null>(null);
@@ -138,6 +152,7 @@ export default function OperacaoSOC() {
     statusPostoScanner: "Completo",
     observacaoPostoScanner: "",
     informacoesComplementares: "",
+    checklistEquipamentos: checklistEquipamentosPadrao,
   });
 
   const equipeAtual = filtroEquipe || usuario?.equipe || "";
@@ -173,6 +188,7 @@ export default function OperacaoSOC() {
       statusPostoScanner: passagem.statusPostoScanner || "Completo",
       observacaoPostoScanner: passagem.observacaoPostoScanner || "",
       informacoesComplementares: passagem.informacoesComplementares || "",
+      checklistEquipamentos: passagem.checklistEquipamentos?.length ? passagem.checklistEquipamentos : checklistEquipamentosPadrao,
     });
   }
 
@@ -188,6 +204,13 @@ export default function OperacaoSOC() {
     setForm((atual) => ({
       ...atual,
       postos: atual.postos.map((posto, i) => (i === index ? { ...posto, [campo]: valor } : posto)),
+    }));
+  }
+
+  function atualizarEquipamento(index: number, campo: keyof ChecklistEquipamento, valor: string) {
+    setForm((atual) => ({
+      ...atual,
+      checklistEquipamentos: atual.checklistEquipamentos.map((item, i) => (i === index ? { ...item, [campo]: valor } : item)),
     }));
   }
 
@@ -211,11 +234,11 @@ export default function OperacaoSOC() {
 
   async function salvarPassagem(formOverride = form) {
     if (formOverride.statusPostoGocil === "Incompleto" && !formOverride.observacaoPostoGocil.trim()) {
-      alert("Informe as observaÃ§Ãµes do Posto Gocil.");
+      alert("Informe as observações do Posto Gocil.");
       return;
     }
     if (formOverride.statusPostoScanner === "Incompleto" && !formOverride.observacaoPostoScanner.trim()) {
-      alert("Informe as observaÃ§Ãµes do Posto Scanner.");
+      alert("Informe as observações do Posto Scanner.");
       return;
     }
     setSalvando(true);
@@ -233,7 +256,7 @@ export default function OperacaoSOC() {
 
   async function finalizarPassagem() {
     if (!passagemSelecionada) return;
-    const confirmar = window.confirm("Deseja realmente finalizar e enviar este relatÃ³rio?");
+    const confirmar = window.confirm("Deseja realmente finalizar e enviar este relatório?");
     if (!confirmar) return;
     setSalvando(true);
     try {
@@ -254,14 +277,42 @@ export default function OperacaoSOC() {
     window.setTimeout(() => URL.revokeObjectURL(url), 30000);
   }
 
+  async function carregarUltimoChecklistEquipamentos() {
+    if (!equipeAtual) {
+      alert("Selecione a equipe para buscar o checklist anterior.");
+      return;
+    }
+    const confirmar = window.confirm("Deseja carregar o checklist de equipamentos do relatório anterior? Os itens atuais serão substituídos.");
+    if (!confirmar) return;
+    setSalvando(true);
+    try {
+      const response = await api.get("/operacao/passagens-turno/ultimo-checklist-equipamentos", {
+        params: {
+          equipe: equipeAtual,
+          ignorarId: passagemSelecionada?.id,
+        },
+      });
+      const checklist = response.data.checklistEquipamentos?.length ? response.data.checklistEquipamentos : checklistEquipamentosPadrao;
+      setForm((atual) => ({ ...atual, checklistEquipamentos: checklist }));
+      alert(`Checklist carregado do relatório ${response.data.codigo}. Revise as informações antes de enviar.`);
+    } catch (error) {
+      const mensagem = error && typeof error === "object" && "response" in error
+        ? (error as { response?: { data?: { error?: string } } }).response?.data?.error
+        : undefined;
+      alert(mensagem || "Não foi possível carregar o checklist anterior.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function salvarRegistro(e: React.FormEvent) {
     e.preventDefault();
     if (!passagemSelecionada) {
-      alert("Abra ou selecione uma passagem de turno antes de registrar uma informaÃ§Ã£o do plantÃ£o.");
+      alert("Abra ou selecione uma passagem de turno antes de registrar uma informação do plantão.");
       return;
     }
     if (!podeEditarPassagem) {
-      alert("Este relatÃ³rio jÃ¡ foi enviado e nÃ£o pode ser alterado por este perfil.");
+      alert("Este relatório já foi enviado e não pode ser alterado por este perfil.");
       return;
     }
     const novaInformacao = montarInformacao(titulo, local, observacoes);
@@ -286,9 +337,9 @@ export default function OperacaoSOC() {
 
   function editarInformacaoPlantao(index: number) {
     const info = informacoesPlantao[index] || "";
-    const tituloInfo = info.match(/^TÃ­tulo:\s*(.*)$/m)?.[1] || "InformaÃ§Ã£o do PlantÃ£o";
-    const localInfo = info.match(/^Local:\s*(.*)$/m)?.[1] || "Centro de OperaÃ§Ãµes";
-    const descricaoInfo = info.match(/^DescriÃ§Ã£o:\s*([\s\S]*)$/m)?.[1] || info;
+    const tituloInfo = info.match(/^Título:\s*(.*)$/m)?.[1] || "Informação do Plantão";
+    const localInfo = info.match(/^Local:\s*(.*)$/m)?.[1] || "Centro de Operações";
+    const descricaoInfo = info.match(/^Descrição:\s*([\s\S]*)$/m)?.[1] || info;
     setTitulo(tituloInfo);
     setLocal(localInfo);
     setObservacoes(descricaoInfo);
@@ -296,7 +347,7 @@ export default function OperacaoSOC() {
   }
 
   async function excluirInformacaoPlantao(index: number) {
-    if (!window.confirm("Deseja remover esta informaÃ§Ã£o do relatÃ³rio de passagem de turno?")) return;
+    if (!window.confirm("Deseja remover esta informação do relatório de passagem de turno?")) return;
     const informacoes = informacoesPlantao.filter((_, i) => i !== index);
     const proximoForm = { ...form, informacoesComplementares: informacoes.join("\n\n---\n\n") };
     setForm(proximoForm);
@@ -318,9 +369,9 @@ export default function OperacaoSOC() {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">OperaÃ§Ã£o SOC</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Operação SOC</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">
-            Passagem de turno, livro eletrÃ´nico, informaÃ§Ãµes do plantÃ£o e inteligÃªncia operacional da unidade {dados.unidade}.
+            Passagem de turno, livro eletrônico, informações do plantão e inteligência operacional da unidade {dados.unidade}.
           </p>
         </div>
         <button onClick={carregar} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white dark:bg-blue-600">
@@ -330,7 +381,7 @@ export default function OperacaoSOC() {
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">Filtrar informaÃ§Ãµes por equipe</label>
+        <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">Filtrar informações por equipe</label>
         <select value={filtroEquipe} onChange={(e) => setFiltroEquipe(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white md:max-w-xs">
           <option value="">Minha equipe / todas permitidas</option>
           {(dados.equipes || equipesPadrao).map((equipe) => (
@@ -352,7 +403,7 @@ export default function OperacaoSOC() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
             <BookOpen className="text-emerald-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Livro eletrÃ´nico de ocorrÃªncias</h2>
+            <h2 className="font-bold text-slate-900 dark:text-white">Livro eletrônico de ocorrências</h2>
           </div>
           <div className="max-h-[430px] space-y-3 overflow-auto pr-2">
             {dados.livroEletronico.map((item, index) => (
@@ -372,7 +423,7 @@ export default function OperacaoSOC() {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <ClipboardCheck className="text-cyan-600" size={20} />
-              <h2 className="font-bold text-slate-900 dark:text-white">RelatÃ³rio de Passagem de ServiÃ§o</h2>
+              <h2 className="font-bold text-slate-900 dark:text-white">Relatório de Passagem de Serviço</h2>
             </div>
             <button type="button" onClick={abrirNovaPassagem} disabled={salvando} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:bg-slate-400">
               <Plus size={16} />
@@ -382,7 +433,7 @@ export default function OperacaoSOC() {
           <div className="grid gap-3">
             {dados.passagensTurno.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                Nenhuma passagem de turno encontrada. Abra uma nova passagem para criar o card em aberto do plantÃ£o.
+                Nenhuma passagem de turno encontrada. Abra uma nova passagem para criar o card em aberto do plantão.
               </p>
             ) : (
               dados.passagensTurno.map((passagem) => (
@@ -399,7 +450,7 @@ export default function OperacaoSOC() {
                     </span>
                   </div>
                   <p className="mt-2 text-slate-600 dark:text-slate-300">{passagem.unidade} | {passagem.equipe}</p>
-                  <p className="text-slate-500 dark:text-slate-400">ResponsÃ¡vel: {passagem.responsavel?.apelido || passagem.responsavel?.nome || "NÃ£o informado"}</p>
+                  <p className="text-slate-500 dark:text-slate-400">Responsável: {passagem.responsavel?.apelido || passagem.responsavel?.nome || "Não informado"}</p>
                   <p className="mt-1 text-xs text-slate-500">Aberto em {new Date(passagem.horaAbertura).toLocaleString("pt-BR")}</p>
                 </button>
               ))
@@ -413,7 +464,7 @@ export default function OperacaoSOC() {
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-white">Passagem de Turno em tempo real</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              {passagemSelecionada ? `${passagemSelecionada.codigo} | ${passagemSelecionada.status}` : "Abra ou selecione uma passagem para alimentar o relatÃ³rio durante o plantÃ£o."}
+              {passagemSelecionada ? `${passagemSelecionada.codigo} | ${passagemSelecionada.status}` : "Abra ou selecione uma passagem para alimentar o relatório durante o plantão."}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -423,7 +474,7 @@ export default function OperacaoSOC() {
             </button>
             <button type="button" onClick={finalizarPassagem} disabled={salvando || !passagemSelecionada || passagemSelecionada.status === "Enviado"} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white disabled:bg-slate-400">
               <Send size={16} />
-              Enviar RelatÃ³rio
+              Enviar Relatório
             </button>
             <button type="button" onClick={() => baixarPdf()} disabled={!passagemSelecionada} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 disabled:text-slate-400 dark:border-slate-700 dark:text-slate-100">
               <FileDown size={16} />
@@ -501,7 +552,7 @@ export default function OperacaoSOC() {
               </select>
             </label>
             {form.statusPostoGocil === "Incompleto" && (
-              <textarea value={form.observacaoPostoGocil} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoGocil: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="ObservaÃ§Ãµes obrigatÃ³rias do Posto Gocil" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+              <textarea value={form.observacaoPostoGocil} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoGocil: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="Observações obrigatórias do Posto Gocil" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
             )}
           </div>
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
@@ -513,8 +564,60 @@ export default function OperacaoSOC() {
               </select>
             </label>
             {form.statusPostoScanner === "Incompleto" && (
-              <textarea value={form.observacaoPostoScanner} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoScanner: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="ObservaÃ§Ãµes obrigatÃ³rias do Posto Scanner" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+              <textarea value={form.observacaoPostoScanner} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoScanner: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="Observações obrigatórias do Posto Scanner" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
             )}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-bold text-slate-900 dark:text-white">Checklist de equipamentos da portaria e segurança</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Use o último checklist como base e altere somente o que mudou no turno.</p>
+            </div>
+            <button type="button" onClick={carregarUltimoChecklistEquipamentos} disabled={!podeEditarPassagem || salvando} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 px-4 py-2 text-sm font-bold text-blue-700 transition hover:bg-blue-50 disabled:border-slate-200 disabled:text-slate-400 dark:border-blue-900 dark:text-blue-200 dark:hover:bg-blue-950">
+              <RefreshCw size={16} />
+              Carregar último checklist
+            </button>
+          </div>
+          <div className="mt-3 space-y-4">
+            {Array.from(new Set(form.checklistEquipamentos.map((item) => item.categoria))).map((categoria) => (
+              <div key={categoria} className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="bg-blue-600 px-4 py-2 text-sm font-bold uppercase text-white">{categoria}</div>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-100 text-left text-xs uppercase text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      <tr>
+                        <th className="p-3">Equipamento</th>
+                        <th className="p-3">Funcionando</th>
+                        <th className="p-3">Observação</th>
+                        <th className="p-3">Nº chamado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {form.checklistEquipamentos.map((item, index) => ({ item, index })).filter(({ item }) => item.categoria === categoria).map(({ item, index }) => (
+                        <tr key={`${item.categoria}-${item.nome}`}>
+                          <td className="p-3 font-semibold text-slate-800 dark:text-slate-100">{item.nome}</td>
+                          <td className="p-3">
+                            <select value={item.funcionando} onChange={(e) => atualizarEquipamento(index, "funcionando", e.target.value)} disabled={!podeEditarPassagem} className="w-full rounded-lg border border-slate-300 bg-white p-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                              <option>Sim</option>
+                              <option>Não</option>
+                              <option>N/A</option>
+                            </select>
+                          </td>
+                          <td className="p-3">
+                            <input value={item.observacao} onChange={(e) => atualizarEquipamento(index, "observacao", e.target.value)} disabled={!podeEditarPassagem} placeholder="Observação operacional" className="w-full rounded-lg border border-slate-300 bg-white p-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                          </td>
+                          <td className="p-3">
+                            <input value={item.chamado} onChange={(e) => atualizarEquipamento(index, "chamado", e.target.value)} disabled={!podeEditarPassagem} placeholder="Nº chamado" className="w-full rounded-lg border border-slate-300 bg-white p-2 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -550,7 +653,7 @@ export default function OperacaoSOC() {
           <div className="mt-6 grid gap-3 rounded-xl bg-slate-50 p-4 text-sm dark:bg-slate-950 md:grid-cols-3">
             <p><strong>CFTV conectadas:</strong> {passagemSelecionada.cftvConectadas ?? "calculado ao enviar"}</p>
             <p><strong>CFTV desconectadas:</strong> {passagemSelecionada.cftvDesconectadas ?? "calculado ao enviar"}</p>
-            <p><strong>ContÃªineres na quadra:</strong> {passagemSelecionada.containersArmazenados ?? "calculado ao enviar"}</p>
+            <p><strong>Contêineres na quadra:</strong> {passagemSelecionada.containersArmazenados ?? "calculado ao enviar"}</p>
           </div>
         )}
       </section>
@@ -559,15 +662,15 @@ export default function OperacaoSOC() {
         <form onSubmit={salvarRegistro} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
             <ClipboardCheck className="text-blue-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">InformaÃ§Ãµes do PlantÃ£o</h2>
+            <h2 className="font-bold text-slate-900 dark:text-white">Informações do Plantão</h2>
           </div>
           <div className="grid gap-3">
-            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="TÃ­tulo do registro operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título do registro operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
             <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Local operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="ObservaÃ§Ãµes, pendÃªncias, alertas e orientaÃ§Ãµes para o prÃ³ximo turno" rows={6} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações, pendências, alertas e orientações para o próximo turno" rows={6} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
             <button disabled={salvando} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:bg-slate-400">
               <Send size={16} />
-              {salvando ? "Salvando..." : "Registrar informaÃ§Ã£o"}
+              {salvando ? "Salvando..." : "Registrar informação"}
             </button>
           </div>
         </form>
@@ -575,7 +678,7 @@ export default function OperacaoSOC() {
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
             <AlertTriangle className="text-amber-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">GovernanÃ§a operacional</h2>
+            <h2 className="font-bold text-slate-900 dark:text-white">Governança operacional</h2>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {Object.entries(dados.indicadoresMensais).map(([chave, valor]) => (
@@ -586,7 +689,7 @@ export default function OperacaoSOC() {
             ))}
           </div>
           <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
-            <p className="mb-2 flex items-center gap-2 font-bold text-blue-900 dark:text-blue-100"><Activity size={16} /> RelatÃ³rios automÃ¡ticos preparados</p>
+            <p className="mb-2 flex items-center gap-2 font-bold text-blue-900 dark:text-blue-100"><Activity size={16} /> Relatórios automáticos preparados</p>
             <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-100">
               {dados.relatoriosExecutivosAutomaticos.map((item) => <li key={item}>{item}</li>)}
             </ul>
@@ -597,7 +700,7 @@ export default function OperacaoSOC() {
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-4 flex items-center gap-2">
           <RadioTower className="text-purple-600" size={20} />
-          <h2 className="font-bold text-slate-900 dark:text-white">ReincidÃªncia e inteligÃªncia</h2>
+          <h2 className="font-bold text-slate-900 dark:text-white">Reincidência e inteligência</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {Object.entries(dados.reincidencia).map(([grupo, itens]) => (
@@ -620,3 +723,5 @@ export default function OperacaoSOC() {
     </div>
   );
 }
+
+

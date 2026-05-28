@@ -4,6 +4,20 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.0.8] - 2026-05-28
+
+### Adicionado
+
+- Checklist de equipamentos da portaria e segurança no relatório de Passagem de Turno SOC.
+- Botão para carregar automaticamente o último checklist de equipamentos salvo, reaproveitando apenas essas informações no relatório atual.
+- Exibição do checklist de equipamentos no PDF da Passagem de Turno, organizado por aparelhos de comunicação, equipamentos de apoio e equipamentos essenciais.
+- Endpoint para recuperar o último checklist de equipamentos por unidade e equipe.
+
+### Melhorado
+
+- PDF da Passagem de Turno reorganizado para reduzir páginas em branco, corrigir textos quebrados e apresentar postos em duas colunas.
+- Nome do arquivo PDF da Passagem de Turno passa a seguir padrão com número sequencial, data do turno e equipe.
+
 ## [1.0.7] - 2026-05-28
 
 ### Melhorado

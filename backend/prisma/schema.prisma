@@ -588,6 +588,7 @@ model PassagemTurno {
   statusPostoScanner        String    @default("Completo")
   observacaoPostoScanner    String?
   informacoesComplementares String?
+  checklistEquipamentos     String?
   cftvConectadas            Int?
   cftvDesconectadas         Int?
   containersArmazenados     Int?

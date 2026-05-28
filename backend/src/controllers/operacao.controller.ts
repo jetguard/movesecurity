@@ -22,7 +22,7 @@ function horaRegistro(data: Date) {
 function agrupar<T>(itens: T[], chave: (item: T) => string | null | undefined) {
   return Object.entries(
     itens.reduce<Record<string, number>>((acc, item) => {
-      const nome = chave(item) || "NÃ£o informado";
+      const nome = chave(item) || "Não informado";
       acc[nome] = (acc[nome] || 0) + 1;
       return acc;
     }, {})
@@ -85,8 +85,33 @@ function idsColaboradores(valor: unknown) {
   }
 }
 
+function normalizarChecklistEquipamentos(valor: unknown) {
+  if (Array.isArray(valor)) return JSON.stringify(valor);
+  if (!valor) return null;
+  try {
+    const parsed = JSON.parse(String(valor));
+    return Array.isArray(parsed) ? JSON.stringify(parsed) : null;
+  } catch {
+    return null;
+  }
+}
+
+function checklistEquipamentos(valor: unknown): Array<{ categoria: string; nome: string; funcionando: string; observacao?: string; chamado?: string }> {
+  if (!valor) return [];
+  try {
+    const parsed = Array.isArray(valor) ? valor : JSON.parse(String(valor));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function serializarPassagem(passagem: any) {
-  return { ...passagem, colaboradoresIds: idsColaboradores(passagem.colaboradoresIds) };
+  return {
+    ...passagem,
+    colaboradoresIds: idsColaboradores(passagem.colaboradoresIds),
+    checklistEquipamentos: checklistEquipamentos(passagem.checklistEquipamentos),
+  };
 }
 
 async function indicadoresPassagem(unidade: string) {
@@ -154,7 +179,7 @@ export async function painelOperacionalSoc(req: AuthRequest, res: Response) {
 
     const registros = [
       ...ocorrencias.map((item) => ({
-        modulo: "OcorrÃªncia",
+        modulo: "Ocorrência",
         codigo: item.codigo,
         titulo: item.assunto,
         local: item.local,
@@ -183,16 +208,16 @@ export async function painelOperacionalSoc(req: AuthRequest, res: Response) {
       equipes: ["Equipe A", "Equipe B", "Equipe C", "Equipe D"],
       atualizadoEm: new Date().toISOString(),
       soc: {
-        ocorrenciasAbertas: ocorrencias.filter((item) => item.status !== "ConcluÃ­do").length,
-        eventosAbertos: eventos.filter((item) => item.status !== "ConcluÃ­do").length,
-        investigacoesAbertas: investigacoes.filter((item) => item.status !== "ConcluÃ­do").length,
+        ocorrenciasAbertas: ocorrencias.filter((item) => item.status !== "Concluído").length,
+        eventosAbertos: eventos.filter((item) => item.status !== "Concluído").length,
+        investigacoesAbertas: investigacoes.filter((item) => item.status !== "Concluído").length,
         camerasOffline: cameras.filter((item) => item.status === "Desconectada").length,
         containersCriticos: containersNoTerminal.length,
         tarefasAbertas: tarefas.length,
         checklistsHoje: checklists.filter((item) => item.dataHora >= hoje).length,
       },
       checklistTurno: checklists.find((item) => item.tipo === "Checklist de Turno") || null,
-      passagensServico: checklists.filter((item) => item.tipo === "Passagem de ServiÃ§o").slice(0, 6),
+      passagensServico: checklists.filter((item) => item.tipo === "Passagem de Serviço").slice(0, 6),
       passagensTurno: passagensTurno.map(serializarPassagem),
       livroEletronico: [
         ...registros.slice(0, 20).map((item) => ({
@@ -203,8 +228,8 @@ export async function painelOperacionalSoc(req: AuthRequest, res: Response) {
         })),
         ...cameraEventos.slice(0, 20).map((item) => ({
           tipo: "CFTV",
-          titulo: `CÃ¢mera ${item.camera?.numeroCamera || "-"} - ${item.statusNovo}`,
-          detalhe: `${item.camera?.areaMonitorada || "Ãrea nÃ£o informada"} | ${item.observacao || "Sem observaÃ§Ã£o"}`,
+          titulo: `Câmera ${item.camera?.numeroCamera || "-"} - ${item.statusNovo}`,
+          detalhe: `${item.camera?.areaMonitorada || "Área não informada"} | ${item.observacao || "Sem observação"}`,
           data: item.iniciadoEm,
         })),
       ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()).slice(0, 30),
@@ -222,9 +247,9 @@ export async function painelOperacionalSoc(req: AuthRequest, res: Response) {
         containersNoTerminal: containersNoTerminal.length,
       },
       relatoriosExecutivosAutomaticos: [
-        "Resumo diÃ¡rio operacional por unidade",
-        "RelatÃ³rio semanal de reincidÃªncia por local e natureza",
-        "RelatÃ³rio mensal executivo com indicadores por unidade",
+        "Resumo diário operacional por unidade",
+        "Relatório semanal de reincidência por local e natureza",
+        "Relatório mensal executivo com indicadores por unidade",
       ],
       tarefas: tarefas.map((item) => ({
         id: item.id,
@@ -232,7 +257,7 @@ export async function painelOperacionalSoc(req: AuthRequest, res: Response) {
         status: item.coluna?.titulo || item.status,
         prioridade: item.prioridade,
         prazo: item.prazo,
-        responsavel: item.responsavel?.apelido || item.responsavel?.nome || "Sem responsÃ¡vel",
+        responsavel: item.responsavel?.apelido || item.responsavel?.nome || "Sem responsável",
       })),
     });
   } catch (error) {
@@ -254,7 +279,7 @@ export async function listarUsuariosMesmaEquipe(req: AuthRequest, res: Response)
     return res.json(usuarios);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar usuÃ¡rios da equipe" });
+    return res.status(500).json({ error: "Erro ao listar usuários da equipe" });
   }
 }
 
@@ -275,13 +300,50 @@ export async function listarPassagensTurno(req: AuthRequest, res: Response) {
   }
 }
 
+export async function ultimoChecklistEquipamentosPassagem(req: AuthRequest, res: Response) {
+  try {
+    const usuario = await usuarioSolicitante(req.usuarioId);
+    const unidade = req.unidadeAtiva || usuario?.unidade || "GJA-T1";
+    const equipe = String(req.query.equipe || usuario?.equipe || "").trim();
+    if (!equipe) return res.status(400).json({ error: "Equipe não informada para buscar o checklist anterior." });
+
+    const passagem = await prisma.passagemTurno.findFirst({
+      where: {
+        unidade,
+        equipe,
+        checklistEquipamentos: { not: null },
+        ...(req.query.ignorarId ? { id: { not: Number(req.query.ignorarId) } } : {}),
+      },
+      orderBy: [{ horaEncerramento: "desc" }, { updatedAt: "desc" }],
+      select: {
+        id: true,
+        codigo: true,
+        dataPassagem: true,
+        equipe: true,
+        status: true,
+        checklistEquipamentos: true,
+      },
+    });
+
+    if (!passagem) return res.status(404).json({ error: "Nenhum checklist anterior encontrado para esta equipe." });
+
+    return res.json({
+      ...passagem,
+      checklistEquipamentos: checklistEquipamentos(passagem.checklistEquipamentos),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao buscar último checklist de equipamentos" });
+  }
+}
+
 export async function criarPassagemTurno(req: AuthRequest, res: Response) {
   try {
     const usuario = await usuarioSolicitante(req.usuarioId);
-    if (!usuario || !req.usuarioId) return res.status(401).json({ error: "UsuÃ¡rio nÃ£o autenticado" });
+    if (!usuario || !req.usuarioId) return res.status(401).json({ error: "Usuário não autenticado" });
     const unidade = req.unidadeAtiva || usuario.unidade || "GJA-T1";
     const equipe = String(req.body.equipe || usuario.equipe || "").trim();
-    if (!equipe) return res.status(400).json({ error: "UsuÃ¡rio sem equipe definida para abertura da passagem." });
+    if (!equipe) return res.status(400).json({ error: "Usuário sem equipe definida para abertura da passagem." });
     const aberta = await prisma.passagemTurno.findFirst({
       where: { unidade, equipe, status: "Aberto" },
       include: { responsavel: true, postos: true },
@@ -301,6 +363,7 @@ export async function criarPassagemTurno(req: AuthRequest, res: Response) {
         statusPostoScanner: req.body.statusPostoScanner || "Completo",
         observacaoPostoScanner: req.body.observacaoPostoScanner || null,
         informacoesComplementares: req.body.informacoesComplementares || "",
+        checklistEquipamentos: normalizarChecklistEquipamentos(req.body.checklistEquipamentos),
         postos: { create: normalizarPostos(req.body.postos || []) },
       },
       include: { responsavel: true, postos: true },
@@ -320,8 +383,8 @@ export async function atualizarPassagemTurno(req: AuthRequest, res: Response) {
       where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
       include: { postos: true },
     });
-    if (!anterior) return res.status(404).json({ error: "Passagem nÃ£o encontrada" });
-    if (anterior.status !== "Aberto" && !podeGerenciarPassagem(req.usuarioPerfil)) return res.status(403).json({ error: "RelatÃ³rio finalizado nÃ£o pode ser editado por este perfil." });
+    if (!anterior) return res.status(404).json({ error: "Passagem não encontrada" });
+    if (anterior.status !== "Aberto" && !podeGerenciarPassagem(req.usuarioPerfil)) return res.status(403).json({ error: "Relatório finalizado não pode ser editado por este perfil." });
     if (!podeGerenciarPassagem(req.usuarioPerfil) && anterior.equipe !== usuario?.equipe) return res.status(403).json({ error: "Apenas integrantes da equipe podem editar esta passagem." });
     const passagem = await prisma.$transaction(async (tx) => {
       await tx.passagemTurnoPosto.deleteMany({ where: { passagemId: anterior.id } });
@@ -335,12 +398,13 @@ export async function atualizarPassagemTurno(req: AuthRequest, res: Response) {
           statusPostoScanner: req.body.statusPostoScanner || "Completo",
           observacaoPostoScanner: req.body.observacaoPostoScanner || null,
           informacoesComplementares: req.body.informacoesComplementares || "",
+          checklistEquipamentos: normalizarChecklistEquipamentos(req.body.checklistEquipamentos),
           postos: { create: normalizarPostos(req.body.postos || []) },
         },
         include: { responsavel: { select: { id: true, nome: true, apelido: true, equipe: true } }, postos: true },
       });
     });
-    await registrarLog({ req, acao: `AtualizaÃ§Ã£o da passagem de turno ${passagem.codigo}`, tipoRegistro: "PassagemTurno", registroId: passagem.id, dadosAnteriores: anterior, dadosNovos: passagem });
+    await registrarLog({ req, acao: `Atualização da passagem de turno ${passagem.codigo}`, tipoRegistro: "PassagemTurno", registroId: passagem.id, dadosAnteriores: anterior, dadosNovos: passagem });
     return res.json(serializarPassagem(passagem));
   } catch (error) {
     console.error(error);
@@ -354,7 +418,7 @@ export async function finalizarPassagemTurno(req: AuthRequest, res: Response) {
       where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
       include: { postos: true },
     });
-    if (!anterior) return res.status(404).json({ error: "Passagem nÃ£o encontrada" });
+    if (!anterior) return res.status(404).json({ error: "Passagem não encontrada" });
     const usuario = await usuarioSolicitante(req.usuarioId);
     if (!podeGerenciarPassagem(req.usuarioPerfil) && anterior.equipe !== usuario?.equipe) return res.status(403).json({ error: "Apenas integrantes da equipe podem finalizar esta passagem." });
     const passagem = await prisma.passagemTurno.update({
@@ -362,7 +426,7 @@ export async function finalizarPassagemTurno(req: AuthRequest, res: Response) {
       data: { status: "Enviado", horaEncerramento: new Date(), ...(await indicadoresPassagem(anterior.unidade)) },
       include: { responsavel: { select: { id: true, nome: true, apelido: true, equipe: true } }, postos: true },
     });
-    await registrarLog({ req, acao: `FinalizaÃ§Ã£o da passagem de turno ${passagem.codigo}`, tipoRegistro: "PassagemTurno", registroId: passagem.id, dadosAnteriores: anterior, dadosNovos: passagem });
+    await registrarLog({ req, acao: `Finalização da passagem de turno ${passagem.codigo}`, tipoRegistro: "PassagemTurno", registroId: passagem.id, dadosAnteriores: anterior, dadosNovos: passagem });
     return res.json(serializarPassagem(passagem));
   } catch (error) {
     console.error(error);
@@ -387,7 +451,7 @@ export async function adicionarInformacaoPassagem(req: AuthRequest, res: Respons
     return res.json(serializarPassagem(atualizada));
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao vincular informaÃ§Ã£o Ã  passagem" });
+    return res.status(500).json({ error: "Erro ao vincular informação à passagem" });
   }
 }
 
@@ -397,85 +461,163 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
       where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
       include: { responsavel: { select: { nome: true, apelido: true, equipe: true } }, postos: true },
     });
-    if (!passagem) return res.status(404).json({ error: "Passagem nÃ£o encontrada" });
-    const colaboradores = idsColaboradores(passagem.colaboradoresIds).length
-      ? await prisma.usuario.findMany({ where: { id: { in: idsColaboradores(passagem.colaboradoresIds) } }, select: { nome: true, apelido: true } })
+    if (!passagem) return res.status(404).json({ error: "Passagem não encontrada" });
+
+    const colaboradoresIds = idsColaboradores(passagem.colaboradoresIds);
+    const colaboradores = colaboradoresIds.length
+      ? await prisma.usuario.findMany({ where: { id: { in: colaboradoresIds } }, select: { nome: true, apelido: true } })
       : [];
     const indicadores = passagem.status === "Aberto" ? await indicadoresPassagem(passagem.unidade) : {
       cftvConectadas: passagem.cftvConectadas || 0,
       cftvDesconectadas: passagem.cftvDesconectadas || 0,
       containersArmazenados: passagem.containersArmazenados || 0,
     };
-    const doc = new PDFDocument({
-      size: "A4",
-      bufferPages: true,
-      margins: { top: 118, left: 42, right: 42, bottom: 70 },
-    });
+    const equipamentos = checklistEquipamentos(passagem.checklistEquipamentos);
+
+    const doc = new PDFDocument({ size: "A4", bufferPages: true, margins: { top: 98, left: 36, right: 36, bottom: 58 } });
+    const dataArquivo = passagem.dataPassagem.toLocaleDateString("pt-BR").replace(/\//g, ".");
+    const codigoArquivo = passagem.codigo.replace("/", "-");
+    const nomeArquivo = `${codigoArquivo} - Relatorio Operacional de passagem de Turno - ${dataArquivo} - ${passagem.equipe}.pdf`;
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename=passagem-turno-${passagem.codigo.replace("/", "-")}.pdf`);
+    res.setHeader("Content-Disposition", `inline; filename="${nomeArquivo}"`);
     doc.pipe(res);
+
     const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
     const responsavel = passagem.responsavel.apelido || passagem.responsavel.nome;
-    const cabecalho = () => {
-      doc.image(logoPath, 42, 34, { width: 135 });
-      doc.font("Helvetica-Bold").fontSize(17).fillColor("#0f172a").text("RelatÃ³rio de Passagem de Turno", 210, 38, { align: "right", width: 343 });
-      doc.font("Helvetica").fontSize(9.5).fillColor("#475569").text(`CÃ³digo: ${passagem.codigo}`, 210, 61, { align: "right", width: 343 });
-      doc.text(`Unidade: ${passagem.unidade} | Equipe: ${passagem.equipe}`, 210, 76, { align: "right", width: 343 });
-      doc.moveTo(42, 103).lineTo(553, 103).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
+    const colaboradoresTexto = colaboradores.map((item) => item.apelido || item.nome).join(", ") || "Não informado";
+    const pageBottom = 742;
+
+    const header = () => {
+      doc.image(logoPath, 36, 28, { width: 125 });
+      doc.font("Helvetica-Bold").fontSize(16).fillColor("#0f172a").text("Relatório Operacional de Passagem de Turno", 190, 30, { align: "right", width: 369 });
+      doc.font("Helvetica").fontSize(9).fillColor("#475569").text(`Código: ${passagem.codigo}`, 190, 53, { align: "right", width: 369 });
+      doc.text(`Unidade: ${passagem.unidade} | Equipe: ${passagem.equipe}`, 190, 68, { align: "right", width: 369 });
+      doc.moveTo(36, 88).lineTo(559, 88).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
     };
-    const rodape = (pagina: number, total: number) => {
-      doc.moveTo(42, 760).lineTo(553, 760).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
-      doc.font("Helvetica").fontSize(8).fillColor("#64748b")
-        .text(`Emitido em ${new Date().toLocaleString("pt-BR")} por ${responsavel}`, 42, 770, { align: "left", width: 360 })
-        .text(`PÃ¡gina ${pagina} de ${total}`, 430, 770, { align: "right", width: 123 });
+
+    const footer = (pagina: number, total: number) => {
+      doc.moveTo(36, 760).lineTo(559, 760).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
+      doc.font("Helvetica").fontSize(7.8).fillColor("#64748b")
+        .text(`Emitido em ${new Date().toLocaleString("pt-BR")} por ${responsavel}`, 36, 770, { align: "left", width: 360 })
+        .text(`Página ${pagina} de ${total}`, 430, 770, { align: "right", width: 129 });
     };
-    cabecalho();
-    doc.y = 118;
-    doc.on("pageAdded", () => {
-      cabecalho();
-      doc.y = 118;
-    });
-    const secao = (titulo: string) => {
-      if (doc.y > 705) doc.addPage();
-      doc.moveDown(0.5).font("Helvetica-Bold").fontSize(13).fillColor("#0f172a").text(titulo, 42, doc.y, { align: "left", width: 511 });
-      doc.moveTo(42, doc.y + 3).lineTo(553, doc.y + 3).strokeColor("#cbd5e1").stroke();
-      doc.moveDown(0.8);
+
+    const ensure = (height: number) => {
+      if (doc.y + height > pageBottom) doc.addPage();
     };
-    const linha = (rotulo: string, valor: unknown) => {
-      doc.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text(rotulo.toUpperCase(), 42, doc.y, { align: "left", width: 511 });
-      doc.font("Helvetica").fontSize(10.5).fillColor("#111827").text(String(valor || "Não informado"), 42, doc.y, { align: "left", width: 511 });
-      doc.moveDown(0.45);
+
+    const section = (title: string) => {
+      ensure(34);
+      doc.moveDown(0.6);
+      doc.roundedRect(36, doc.y, 523, 22, 4).fillAndStroke("#0f8fdc", "#0f8fdc");
+      doc.font("Helvetica-Bold").fontSize(10).fillColor("#ffffff").text(title.toUpperCase(), 44, doc.y + 6, { align: "left", width: 507 });
+      doc.y += 28;
     };
-    const campoResumo = (x: number, y: number, rotulo: string, valor: unknown) => {
-      doc.roundedRect(x, y, 244, 45, 6).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
-      doc.font("Helvetica-Bold").fontSize(8).fillColor("#64748b").text(rotulo.toUpperCase(), x + 12, y + 9, { align: "left", width: 220 });
-      doc.font("Helvetica").fontSize(10.2).fillColor("#111827").text(String(valor || "Não informado"), x + 12, y + 23, { align: "left", width: 220 });
+
+    const summaryBox = (x: number, y: number, w: number, label: string, value: unknown) => {
+      doc.roundedRect(x, y, w, 42, 5).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
+      doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#64748b").text(label.toUpperCase(), x + 10, y + 8, { width: w - 20 });
+      doc.font("Helvetica").fontSize(9.4).fillColor("#111827").text(String(value || "Não informado"), x + 10, y + 22, { width: w - 20, height: 16 });
     };
-    secao("Cabeçalho");
+
+    const paragraph = (text: string) => {
+      const clean = text?.trim() || "Sem informações registradas.";
+      const height = doc.heightOfString(clean, { width: 507, align: "left" }) + 18;
+      ensure(height);
+      doc.roundedRect(36, doc.y, 523, height, 5).fillAndStroke("#f8fafc", "#e2e8f0");
+      doc.font("Helvetica").fontSize(9.2).fillColor("#111827").text(clean, 46, doc.y + 10, { width: 503, align: "left" });
+      doc.y += height + 4;
+    };
+
+    header();
+    doc.y = 102;
+
+    section("Dados do turno");
     const yResumo = doc.y;
-    campoResumo(42, yResumo, "Data", passagem.dataPassagem.toLocaleDateString("pt-BR"));
-    campoResumo(309, yResumo, "Hora de abertura", passagem.horaAbertura.toLocaleString("pt-BR"));
-    campoResumo(42, yResumo + 55, "Hora de encerramento", passagem.horaEncerramento?.toLocaleString("pt-BR") || "Em aberto");
-    campoResumo(309, yResumo + 55, "Unidade / Equipe", `${passagem.unidade} | ${passagem.equipe}`);
-    campoResumo(42, yResumo + 110, "Responsável", responsavel);
-    campoResumo(309, yResumo + 110, "Colaboradores", colaboradores.map((item) => item.apelido || item.nome).join(", ") || "Não informado");
-    doc.y = yResumo + 165;
-    secao("Postos Operacionais");
-    passagem.postos.forEach((posto) => linha(posto.posto, `Colaborador: ${posto.colaborador} | R.E: ${posto.re || "-"} | Escala: ${posto.escala}`));
-    secao("Status dos Postos");
-    linha("Posto Gocil", passagem.statusPostoGocil);
-    if (passagem.statusPostoGocil === "Incompleto") linha("ObservaÃ§Ãµes do Posto Gocil", passagem.observacaoPostoGocil);
-    linha("Posto Scanner", passagem.statusPostoScanner);
-    if (passagem.statusPostoScanner === "Incompleto") linha("ObservaÃ§Ãµes do Posto Scanner", passagem.observacaoPostoScanner);
-    secao("InformaÃ§Ãµes Complementares");
-    linha("ObservaÃ§Ãµes gerais", passagem.informacoesComplementares || "Sem observaÃ§Ãµes");
-    secao("SituaÃ§Ã£o Atual");
-    linha("CFTV", `Conectadas: ${indicadores.cftvConectadas} | Desconectadas: ${indicadores.cftvDesconectadas}`);
-    linha("ContÃªineres na Quadra", indicadores.containersArmazenados);
+    summaryBox(36, yResumo, 168, "Data", passagem.dataPassagem.toLocaleDateString("pt-BR"));
+    summaryBox(214, yResumo, 168, "Hora de abertura", passagem.horaAbertura.toLocaleString("pt-BR"));
+    summaryBox(392, yResumo, 167, "Hora de encerramento", passagem.horaEncerramento?.toLocaleString("pt-BR") || "Em aberto");
+    summaryBox(36, yResumo + 50, 168, "Unidade / equipe", `${passagem.unidade} | ${passagem.equipe}`);
+    summaryBox(214, yResumo + 50, 168, "Responsável", responsavel);
+    summaryBox(392, yResumo + 50, 167, "Colaboradores", colaboradoresTexto);
+    doc.y = yResumo + 98;
+
+    section("Postos operacionais");
+    if (!passagem.postos.length) {
+      paragraph("Nenhum posto operacional registrado.");
+    } else {
+      const gap = 12;
+      const colW = (523 - gap) / 2;
+      let x = 36;
+      passagem.postos.forEach((posto, index) => {
+        if (index % 2 === 0) ensure(58);
+        x = index % 2 === 0 ? 36 : 36 + colW + gap;
+        const y = doc.y;
+        doc.roundedRect(x, y, colW, 50, 5).fillAndStroke("#f8fafc", "#dbe4ef");
+        doc.font("Helvetica-Bold").fontSize(9.2).fillColor("#0f172a").text(posto.posto, x + 9, y + 8, { width: colW - 18 });
+        doc.font("Helvetica").fontSize(8.2).fillColor("#334155")
+          .text(`Colaborador: ${posto.colaborador}`, x + 9, y + 22, { width: colW - 18 })
+          .text(`R.E: ${posto.re || "-"} | Escala: ${posto.escala}`, x + 9, y + 34, { width: colW - 18 });
+        if (index % 2 === 1 || index === passagem.postos.length - 1) doc.y = y + 58;
+      });
+    }
+
+    section("Status dos postos");
+    const yStatus = doc.y;
+    summaryBox(36, yStatus, 255, "Posto Gocil", passagem.statusPostoGocil);
+    summaryBox(304, yStatus, 255, "Posto Scanner", passagem.statusPostoScanner);
+    doc.y = yStatus + 50;
+    if (passagem.statusPostoGocil === "Incompleto") paragraph(`Observações do Posto Gocil:\n${passagem.observacaoPostoGocil || "Não informado"}`);
+    if (passagem.statusPostoScanner === "Incompleto") paragraph(`Observações do Posto Scanner:\n${passagem.observacaoPostoScanner || "Não informado"}`);
+
+    section("Checklist de equipamentos da portaria e segurança");
+    if (!equipamentos.length) {
+      paragraph("Nenhum equipamento avaliado no plantão.");
+    } else {
+      const categorias = Array.from(new Set(equipamentos.map((item) => item.categoria || "Equipamentos")));
+      categorias.forEach((categoria) => {
+        const itens = equipamentos.filter((item) => (item.categoria || "Equipamentos") === categoria);
+        ensure(42 + itens.length * 18);
+        doc.font("Helvetica-Bold").fontSize(9.5).fillColor("#0f172a").text(categoria, 36, doc.y, { width: 523 });
+        doc.y += 14;
+        const yTable = doc.y;
+        const widths = [165, 74, 204, 80];
+        const xs = [36, 201, 275, 479];
+        doc.rect(36, yTable, 523, 18).fillAndStroke("#e0f2fe", "#94a3b8");
+        ["Equipamento", "Status", "Observação", "Nº chamado"].forEach((h, i) => {
+          doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#0f172a").text(h, xs[i] + 4, yTable + 5, { width: widths[i] - 8 });
+        });
+        doc.y = yTable + 18;
+        itens.forEach((item) => {
+          ensure(18);
+          const y = doc.y;
+          doc.rect(36, y, 523, 18).strokeColor("#cbd5e1").stroke();
+          xs.slice(1).forEach((xLine) => doc.moveTo(xLine, y).lineTo(xLine, y + 18).strokeColor("#cbd5e1").stroke());
+          doc.font("Helvetica").fontSize(7.5).fillColor("#111827")
+            .text(item.nome || "-", xs[0] + 4, y + 5, { width: widths[0] - 8 })
+            .text(item.funcionando || "N/A", xs[1] + 4, y + 5, { width: widths[1] - 8 })
+            .text(item.observacao || "-", xs[2] + 4, y + 5, { width: widths[2] - 8 })
+            .text(item.chamado || "-", xs[3] + 4, y + 5, { width: widths[3] - 8 });
+          doc.y = y + 18;
+        });
+        doc.moveDown(0.6);
+      });
+    }
+
+    section("Informações complementares");
+    paragraph(passagem.informacoesComplementares || "Sem observações.");
+
+    section("Situação operacional automática");
+    const yAuto = doc.y;
+    summaryBox(36, yAuto, 168, "CFTV conectadas", indicadores.cftvConectadas);
+    summaryBox(214, yAuto, 168, "CFTV desconectadas", indicadores.cftvDesconectadas);
+    summaryBox(392, yAuto, 167, "Contêineres na quadra", indicadores.containersArmazenados);
+    doc.y = yAuto + 52;
+
     const paginas = doc.bufferedPageRange();
     for (let pagina = paginas.start; pagina < paginas.start + paginas.count; pagina++) {
       doc.switchToPage(pagina);
-      rodape(pagina - paginas.start + 1, paginas.count);
+      footer(pagina - paginas.start + 1, paginas.count);
     }
     doc.end();
   } catch (error) {
@@ -483,14 +625,13 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: "Erro ao gerar PDF da passagem de turno" });
   }
 }
-
 export async function criarRegistroOperacional(req: AuthRequest, res: Response) {
   try {
     const unidade = req.unidadeAtiva || "GJA-T1";
     const tiposPermitidos = ["Informação do Plantão", "Checklist de Turno", "Passagem de Serviço"];
     const tipo = tiposPermitidos.includes(String(req.body.tipo)) ? String(req.body.tipo) : "Informação do Plantão";
     const titulo = String(req.body.titulo || tipo).trim();
-    const local = String(req.body.local || "Centro de OperaÃ§Ãµes").trim();
+    const local = String(req.body.local || "Centro de Operações").trim();
     const observacoes = String(req.body.observacoes || "").trim();
     const itens = Array.isArray(req.body.itens) ? req.body.itens : [];
     const codigo = await proximoCodigoChecklist(unidade);
@@ -501,7 +642,7 @@ export async function criarRegistroOperacional(req: AuthRequest, res: Response) 
         unidade,
         local,
         tipo,
-        setor: "OperaÃ§Ã£o",
+        setor: "Operação",
         responsavelId: req.usuarioId!,
         status: req.body.status || "Aberto",
         observacoes,
@@ -527,3 +668,5 @@ export async function criarRegistroOperacional(req: AuthRequest, res: Response) 
     return res.status(500).json({ error: "Erro ao criar registro operacional" });
   }
 }
+
+
