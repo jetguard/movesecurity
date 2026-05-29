@@ -43,6 +43,11 @@ export default function Login() {
       localStorage.setItem("usuario", JSON.stringify(response.data.usuario));
       sessionStorage.setItem("loginInicio", String(Date.now()));
 
+      if (localStorage.getItem("bloquearAposProximoLogin") === "true") {
+        localStorage.setItem("sistemaBloqueado", "true");
+        localStorage.removeItem("bloquearAposProximoLogin");
+      }
+
       window.location.href = response.data.usuario?.deveAlterarSenha ? "/alterar-senha" : "/";
     } catch (error) {
       const apiError = error as AxiosError<ApiError>;

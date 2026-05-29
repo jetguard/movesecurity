@@ -1,7 +1,7 @@
 ﻿import { useEffect, useState } from "react";
 import { Link, Outlet } from "react-router-dom";
 import { useMemo } from "react";
-import type { MouseEvent } from "react";
+import type { FormEvent, MouseEvent } from "react";
 import {
   CalendarDays,
   Activity,
@@ -37,6 +37,7 @@ import {
   Columns3,
   PackageSearch,
   Lightbulb,
+  Lock,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -61,6 +62,10 @@ export default function AdminLayout() {
   const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
   const [passagensAbertas, setPassagensAbertas] = useState(0);
+  const [sistemaBloqueado, setSistemaBloqueado] = useState(() => localStorage.getItem("sistemaBloqueado") === "true");
+  const [senhaDesbloqueio, setSenhaDesbloqueio] = useState("");
+  const [erroDesbloqueio, setErroDesbloqueio] = useState("");
+  const [desbloqueando, setDesbloqueando] = useState(false);
   const [tema, setTema] = useState(() => {
     const salvo = localStorage.getItem("tema");
     if (salvo === "dark" || salvo === "light") return salvo;
@@ -79,6 +84,19 @@ export default function AdminLayout() {
     document.documentElement.classList.toggle("dark", tema === "dark");
     localStorage.setItem("tema", tema);
   }, [tema]);
+
+  useEffect(() => {
+    function sincronizarBloqueio(event: StorageEvent) {
+      if (event.key === "sistemaBloqueado") {
+        setSistemaBloqueado(event.newValue === "true");
+        setSenhaDesbloqueio("");
+        setErroDesbloqueio("");
+      }
+    }
+
+    window.addEventListener("storage", sincronizarBloqueio);
+    return () => window.removeEventListener("storage", sincronizarBloqueio);
+  }, []);
 
   useEffect(() => {
     if (!unidadesDisponiveis.includes(unidadeAtiva)) {
@@ -179,9 +197,15 @@ export default function AdminLayout() {
     } finally {
       localStorage.removeItem("token");
       localStorage.removeItem("usuario");
+      localStorage.removeItem("sistemaBloqueado");
       sessionStorage.removeItem("loginInicio");
       window.location.href = "/login";
     }
+  }
+
+  async function encerrarSessaoBloqueada() {
+    localStorage.setItem("bloquearAposProximoLogin", "true");
+    await logout();
   }
 
   function formatarSessao(segundos: number) {
@@ -198,6 +222,39 @@ export default function AdminLayout() {
 
   function alternarTema() {
     setTema((atual) => (atual === "dark" ? "light" : "dark"));
+  }
+
+  function bloquearSistema() {
+    const confirmarBloqueio = window.confirm("Deseja realmente bloquear a sessão atual?");
+    if (!confirmarBloqueio) return;
+
+    localStorage.setItem("sistemaBloqueado", "true");
+    setSenhaDesbloqueio("");
+    setErroDesbloqueio("");
+    setSistemaBloqueado(true);
+  }
+
+  async function desbloquearSistema(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErroDesbloqueio("");
+
+    if (!senhaDesbloqueio) {
+      setErroDesbloqueio("Informe sua senha para desbloquear.");
+      return;
+    }
+
+    try {
+      setDesbloqueando(true);
+      await api.post("/auth/desbloquear-sessao", { senha: senhaDesbloqueio });
+      localStorage.removeItem("sistemaBloqueado");
+      sessionStorage.setItem("ultimaAtividade", String(Date.now()));
+      setSenhaDesbloqueio("");
+      setSistemaBloqueado(false);
+    } catch (error: any) {
+      setErroDesbloqueio(error.response?.data?.error || "Não foi possível desbloquear o sistema.");
+    } finally {
+      setDesbloqueando(false);
+    }
   }
 
   function fecharMenuMobileAoNavegar(event: MouseEvent<HTMLElement>) {
@@ -525,6 +582,14 @@ export default function AdminLayout() {
               >
                 {tema === "dark" ? <Sun size={17} /> : <Moon size={17} />}
               </button>
+              <button
+                type="button"
+                onClick={bloquearSistema}
+                className="rounded-full bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200"
+                title="Bloquear sistema"
+              >
+                <Lock size={17} />
+              </button>
 
               <div className="min-w-0 text-right">
                 <p className="hidden truncate text-sm font-semibold text-slate-900 min-[430px]:block">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
@@ -598,6 +663,14 @@ export default function AdminLayout() {
             >
               {tema === "dark" ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            <button
+              type="button"
+              onClick={bloquearSistema}
+              className="rounded-full bg-slate-100 p-3 text-slate-700 transition hover:bg-slate-200"
+              title="Bloquear sistema"
+            >
+              <Lock size={18} />
+            </button>
             <div className="hidden min-w-0 text-left sm:text-right md:block">
               <p className="font-semibold text-slate-900">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
               <p className="text-xs text-slate-500">Sessao: {formatarSessao(segundosSessao)}</p>
@@ -618,6 +691,76 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+
+      {sistemaBloqueado && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md">
+          <form
+            onSubmit={desbloquearSistema}
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/95 p-6 text-white shadow-2xl"
+          >
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600/20 text-blue-200 ring-1 ring-blue-400/30">
+              <Lock size={26} />
+            </div>
+
+            <div className="mt-5 text-center">
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-200">JetGuard bloqueado</p>
+              <h2 className="mt-2 text-2xl font-bold">Sessão protegida</h2>
+              <p className="mt-2 text-sm text-slate-300">
+                O sistema está bloqueado para proteger as informações em tela. Digite a senha do usuário conectado para continuar.
+              </p>
+            </div>
+
+            <div className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-3">
+              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-800">
+                {usuario?.fotoPerfil ? (
+                  <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center font-bold text-slate-300">
+                    {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate font-semibold">{usuario?.apelido || usuario?.nome || "Usuário conectado"}</p>
+                <p className="truncate text-xs text-slate-400">{usuario?.email}</p>
+              </div>
+            </div>
+
+            <label className="mt-5 block">
+              <span className="mb-2 block text-sm font-semibold text-slate-200">Senha</span>
+              <input
+                autoFocus
+                type="password"
+                value={senhaDesbloqueio}
+                onChange={(event) => setSenhaDesbloqueio(event.target.value)}
+                className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
+                placeholder="Digite sua senha para desbloquear"
+              />
+            </label>
+
+            {erroDesbloqueio && (
+              <p className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-200">
+                {erroDesbloqueio}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              disabled={desbloqueando}
+              className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-700"
+            >
+              {desbloqueando ? "Validando..." : "Desbloquear sistema"}
+            </button>
+            <button
+              type="button"
+              onClick={encerrarSessaoBloqueada}
+              className="mt-3 w-full rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 font-semibold text-red-100 transition hover:bg-red-500/20"
+            >
+              Encerrar sessão
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

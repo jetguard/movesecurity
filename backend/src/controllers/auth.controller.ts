@@ -394,6 +394,44 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
   }
 }
 
+export async function desbloquearSessao(req: AuthRequest, res: Response) {
+  try {
+    const { senha } = req.body;
+
+    if (!senha) {
+      return res.status(400).json({ error: "Informe sua senha para desbloquear o sistema." });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuario nao encontrado." });
+    }
+
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+    if (!senhaCorreta) {
+      return res.status(400).json({ error: "Senha invalida." });
+    }
+
+    await registrarLog({
+      req,
+      acao: "Desbloqueio seguro da sessao",
+      tipoRegistro: "Auth",
+      registroId: usuario.id,
+      dadosNovos: {
+        usuario: usuario.nome,
+        desbloqueadoEm: new Date().toISOString(),
+      },
+    });
+
+    return res.json({ mensagem: "Sessao desbloqueada com sucesso." });
+  } catch (error) {
+    return res.status(500).json({ error: "Erro ao desbloquear sessao" });
+  }
+}
+
 export async function logout(req: AuthRequest, res: Response) {
   await registrarLog({
     req,
