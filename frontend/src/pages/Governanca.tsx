@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Activity, Clock, Database, Download, FileText, Lock, RefreshCw, Server, ShieldCheck } from "lucide-react";
 import { api } from "../services/api";
+import { SkeletonPage } from "../components/ui/Skeleton";
 
 type GovernancaStatus = {
   ambiente: {
@@ -73,11 +74,7 @@ export default function Governanca() {
   }, []);
 
   if (carregando) {
-    return (
-      <div className="rounded-2xl bg-white p-8 text-slate-500 shadow-sm dark:bg-slate-900 dark:text-slate-300">
-        Carregando governanca do ambiente...
-      </div>
-    );
+    return <SkeletonPage />;
   }
 
   if (!dados) {

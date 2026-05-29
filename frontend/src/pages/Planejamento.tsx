@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { DragEvent, FormEvent } from "react";
 import { Archive, CalendarClock, GripVertical, Plus, RefreshCw, Trash2, UserRound } from "lucide-react";
 import { api } from "../services/api";
+import { SkeletonPage } from "../components/ui/Skeleton";
 
 type Usuario = {
   id: number;
@@ -213,7 +214,7 @@ export default function Planejamento() {
   }
 
   if (carregando) {
-    return <div className="rounded-2xl bg-white p-8 text-slate-500 shadow dark:bg-slate-900 dark:text-slate-300">Carregando planejamento...</div>;
+    return <SkeletonPage />;
   }
 
   return (

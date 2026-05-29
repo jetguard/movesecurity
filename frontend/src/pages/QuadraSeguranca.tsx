@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { ChevronDown, Download, Eye, FileText, PackageSearch, Pencil, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
+import { SkeletonTable } from "../components/ui/Skeleton";
 
 type Anexo = {
   id: number;
@@ -369,6 +370,9 @@ export default function QuadraSeguranca() {
         </div>
 
         <div className="overflow-x-auto">
+          {carregando && filtrados.length === 0 ? (
+            <SkeletonTable rows={6} columns={10} className="border-0 shadow-none" />
+          ) : (
           <table className="min-w-full text-sm">
             <thead className="bg-slate-100 text-left text-slate-600 dark:bg-slate-950 dark:text-slate-300">
               <tr>
@@ -412,6 +416,7 @@ export default function QuadraSeguranca() {
               )}
             </tbody>
           </table>
+          )}
         </div>
       </div>
 

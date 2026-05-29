@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AdminLayout from "./layouts/AdminLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import { PERFIS } from "./utils/permissoes";
+import { SkeletonPage } from "./components/ui/Skeleton";
 
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Ocorrencias = lazy(() => import("./pages/Relatórios/Ocorrencias"));
@@ -45,11 +46,7 @@ const SugestoesMelhoria = lazy(() => import("./pages/SugestoesMelhoria"));
 const Sessoes = lazy(() => import("./pages/Sessoes"));
 
 function CarregandoPagina() {
-  return (
-    <div className="flex min-h-80 items-center justify-center rounded-2xl bg-white p-8 text-slate-500 shadow-sm">
-      Carregando módulo...
-    </div>
-  );
+  return <SkeletonPage />;
 }
 
 export default function App() {
@@ -236,3 +233,4 @@ export default function App() {
     </BrowserRouter>
   );
 }
+

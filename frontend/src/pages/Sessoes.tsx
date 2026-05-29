@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Clock, LogOut, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
 import { api } from "../services/api";
 import { usuarioAtual } from "../utils/permissoes";
+import { SkeletonTable } from "../components/ui/Skeleton";
 
 type UsuarioSessao = {
   id: number;
@@ -53,7 +54,7 @@ function nomeUsuario(usuario: UsuarioSessao) {
 export default function Sessoes() {
   const [status, setStatus] = useState("ATIVA");
   const [sessoes, setSessoes] = useState<SessaoUsuario[]>([]);
-  const [carregando, setCarregando] = useState(false);
+  const [carregando, setCarregando] = useState(true);
   const usuarioLogado = usuarioAtual();
 
   async function carregarSessoes() {
@@ -143,6 +144,9 @@ export default function Sessoes() {
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        {carregando && sessoes.length === 0 ? (
+          <SkeletonTable rows={7} columns={8} className="border-0 shadow-none" />
+        ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left text-slate-500 dark:bg-slate-950 dark:text-slate-400">
@@ -215,6 +219,7 @@ export default function Sessoes() {
             </tbody>
           </table>
         </div>
+        )}
 
         {!carregando && sessoes.length === 0 && (
           <div className="p-8 text-center text-slate-500 dark:text-slate-400">

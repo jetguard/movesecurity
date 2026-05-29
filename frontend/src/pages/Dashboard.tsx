@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { api } from "../services/api";
 import { PERFIS, usuarioAtual } from "../utils/permissoes";
+import { SkeletonDashboard } from "../components/ui/Skeleton";
 
 type AnaliseOcorrencia = {
   prejuizoFinanceiro?: string;
@@ -433,6 +434,13 @@ export default function Dashboard() {
       .catch(() => setQuadraResumo({}));
   }, [ano, isOperador]);
 
+  const carregamentoInicial =
+    carregando &&
+    ocorrencias.length === 0 &&
+    eventos.length === 0 &&
+    investigacoes.length === 0 &&
+    tarefasAbertas.length === 0;
+
   const locais = useMemo(() => {
     const lista = new Set<string>();
     ocorrencias.forEach((item) => lista.add(item.local));
@@ -564,6 +572,10 @@ export default function Dashboard() {
       </html>
     `);
     janela.document.close();
+  }
+
+  if (carregamentoInicial) {
+    return <SkeletonDashboard />;
   }
 
   return (

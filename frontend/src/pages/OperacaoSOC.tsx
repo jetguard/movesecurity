@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { api } from "../services/api";
 import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
+import { SkeletonDashboard } from "../components/ui/Skeleton";
 
 type UsuarioEquipe = {
   id: number;
@@ -452,7 +453,7 @@ export default function OperacaoSOC() {
   const podeEditarPassagem = Boolean(relatorioEmAberto);
 
   if (!dados) {
-    return <div className="p-6 text-slate-500">Carregando painel SOC operacional...</div>;
+    return <SkeletonDashboard />;
   }
 
   return (

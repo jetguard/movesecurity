@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CalendarClock, RefreshCcw, Rocket, Tags } from "lucide-react";
 import { api } from "../services/api";
+import { SkeletonPage } from "../components/ui/Skeleton";
 
 type SecaoChangelog = {
   titulo: string;
@@ -37,6 +38,10 @@ export default function AtualizacoesSistema() {
   useEffect(() => {
     carregarAtualizacoes();
   }, []);
+
+  if (carregando && !dados) {
+    return <SkeletonPage />;
+  }
 
   return (
     <div className="space-y-6">
