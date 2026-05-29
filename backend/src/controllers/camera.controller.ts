@@ -47,6 +47,53 @@ function formatarIndisponibilidade(minutosTotais: number) {
   return partes.join(" e ");
 }
 
+function calcularMinutosIndisponiveisNoIntervalo(
+  eventos: Array<{ iniciadoEm: Date; encerradoEm: Date | null; statusNovo: string }>,
+  inicio: Date,
+  fim: Date
+) {
+  const agora = new Date();
+  return eventos
+    .filter((evento) => evento.statusNovo === STATUS_DESCONECTADA)
+    .reduce((total, evento) => {
+      const inicioEvento = evento.iniciadoEm > inicio ? evento.iniciadoEm : inicio;
+      const fimEventoBase = evento.encerradoEm || agora;
+      const fimEvento = fimEventoBase < fim ? fimEventoBase : fim;
+      if (fimEvento <= inicioEvento) return total;
+      return total + minutosEntre(inicioEvento, fimEvento);
+    }, 0);
+}
+
+function calcularRetencaoEfetiva(params: {
+  dataMaisAntiga?: Date | null;
+  dataMaisRecente?: Date | null;
+  eventos: Array<{ iniciadoEm: Date; encerradoEm: Date | null; statusNovo: string }>;
+}) {
+  if (!params.dataMaisAntiga || !params.dataMaisRecente) {
+    return {
+      retencaoBrutaMinutos: 0,
+      indisponibilidadeMinutos: 0,
+      retencaoMinutos: 0,
+      retencaoTexto: formatarRetencao(0),
+    };
+  }
+
+  const retencaoBrutaMinutos = minutosEntre(params.dataMaisAntiga, params.dataMaisRecente);
+  const indisponibilidadeMinutos = calcularMinutosIndisponiveisNoIntervalo(
+    params.eventos,
+    params.dataMaisAntiga,
+    params.dataMaisRecente
+  );
+  const retencaoMinutos = Math.max(0, retencaoBrutaMinutos - indisponibilidadeMinutos);
+
+  return {
+    retencaoBrutaMinutos,
+    indisponibilidadeMinutos,
+    retencaoMinutos,
+    retencaoTexto: formatarRetencao(retencaoMinutos),
+  };
+}
+
 function agrupar<T>(itens: T[], chave: (item: T) => string | number | null | undefined) {
   return itens.reduce<Record<string, number>>((acc, item) => {
     const key = String(chave(item) || "Não informado");
@@ -56,18 +103,27 @@ function agrupar<T>(itens: T[], chave: (item: T) => string | number | null | und
 }
 
 async function calcularRetencaoGravacao(params: {
+  cameraId: number;
   dataMaisAntiga?: Date | null;
   dataMaisRecente?: Date | null;
 }) {
-  const retencaoMinutos =
-    params.dataMaisAntiga && params.dataMaisRecente
-      ? minutosEntre(params.dataMaisAntiga, params.dataMaisRecente)
-      : 0;
+  const eventos = await prisma.cameraEventoStatus.findMany({
+    where: {
+      cameraId: params.cameraId,
+      statusNovo: STATUS_DESCONECTADA,
+    },
+    select: {
+      iniciadoEm: true,
+      encerradoEm: true,
+      statusNovo: true,
+    },
+  });
 
-  return {
-    retencaoMinutos,
-    retencaoTexto: formatarRetencao(retencaoMinutos),
-  };
+  return calcularRetencaoEfetiva({
+    dataMaisAntiga: params.dataMaisAntiga,
+    dataMaisRecente: params.dataMaisRecente,
+    eventos,
+  });
 }
 
 function ranking(dados: Record<string, number>, limite = 8) {
@@ -202,7 +258,35 @@ export async function listarCameras(req: AuthRequest, res: Response) {
         },
       },
     });
-    return res.json(cameras);
+    const eventos = await prisma.cameraEventoStatus.findMany({
+      where: { unidade: req.unidadeAtiva, statusNovo: STATUS_DESCONECTADA },
+      select: { cameraId: true, iniciadoEm: true, encerradoEm: true, statusNovo: true },
+    });
+
+    const camerasComRetencaoAtual = cameras.map((camera) => {
+      const ultimoChecklist = camera.checklists[0];
+      if (!ultimoChecklist) return camera;
+      const eventosCamera = eventos.filter((evento) => evento.cameraId === camera.id);
+      const retencao = calcularRetencaoEfetiva({
+        dataMaisAntiga: ultimoChecklist.dataInicialGravacao,
+        dataMaisRecente: ultimoChecklist.dataMaisRecenteGravacao,
+        eventos: eventosCamera,
+      });
+      return {
+        ...camera,
+        checklists: [
+          {
+            ...ultimoChecklist,
+            tempoGravacaoDisponivel: Math.floor(retencao.retencaoMinutos / 1440),
+            retencaoEstimadaMinutos: retencao.retencaoMinutos,
+            retencaoEstimadaTexto: retencao.retencaoTexto,
+            indisponibilidadeMinutos: retencao.indisponibilidadeMinutos,
+          },
+        ],
+      };
+    });
+
+    return res.json(camerasComRetencaoAtual);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar câmeras" });
@@ -398,6 +482,7 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
     const dataInicialGravacao = dataOpcional(req.body.dataInicialGravacao);
     const dataMaisRecenteGravacao = dataOpcional(req.body.dataMaisRecenteGravacao);
     const retencao = await calcularRetencaoGravacao({
+      cameraId: camera.id,
       dataMaisAntiga: dataInicialGravacao,
       dataMaisRecente: dataMaisRecenteGravacao,
     });
@@ -650,13 +735,27 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
     const tempoMaximoOffline = configuracao?.tempoMaximoOffline || 60;
     const checklistCameraDias = configuracao?.checklistCameraDias || 7;
     const limiteChecklist = new Date(Date.now() - checklistCameraDias * 24 * 60 * 60 * 1000);
+    const checklistsComRetencao = checklists.map((checklist) => {
+      const retencao = calcularRetencaoEfetiva({
+        dataMaisAntiga: checklist.dataInicialGravacao,
+        dataMaisRecente: checklist.dataMaisRecenteGravacao,
+        eventos: eventos.filter((evento) => evento.cameraId === checklist.cameraId),
+      });
+      return {
+        ...checklist,
+        tempoGravacaoDisponivel: Math.floor(retencao.retencaoMinutos / 1440),
+        retencaoEstimadaMinutos: retencao.retencaoMinutos,
+        retencaoEstimadaTexto: retencao.retencaoTexto,
+        indisponibilidadeMinutos: retencao.indisponibilidadeMinutos,
+      };
+    });
     const camerasSemChecklist = cameras.filter((camera) => {
-      const ultimo = checklists.find((checklist) => checklist.cameraId === camera.id);
+      const ultimo = checklistsComRetencao.find((checklist) => checklist.cameraId === camera.id);
       return !ultimo || ultimo.createdAt < limiteChecklist;
     });
     const ultimoChecklistPorCamera = cameras.map((camera) => ({
       camera,
-      checklist: checklists.find((checklist) => checklist.cameraId === camera.id) || null,
+      checklist: checklistsComRetencao.find((checklist) => checklist.cameraId === camera.id) || null,
     }));
     const retencoesValidas = ultimoChecklistPorCamera
       .map(({ checklist }) => checklist?.tempoGravacaoDisponivel ?? null)
@@ -717,7 +816,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
     );
 
     const resolucaoPorOperador = ranking(
-      checklists.reduce<Record<string, number>>((acc, checklist) => {
+      checklistsComRetencao.reduce<Record<string, number>>((acc, checklist) => {
         const nome = checklist.responsavel?.apelido || checklist.responsavel?.nome || "Não informado";
         acc[nome] = (acc[nome] || 0) + checklist.indisponibilidadeMinutos;
         return acc;
@@ -783,7 +882,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         status: camera.status,
         tipoCamera: camera.tipoCamera,
         tecnologia: camera.tecnologia,
-        diasRetencao: checklists.find((checklist) => checklist.cameraId === camera.id)?.tempoGravacaoDisponivel ?? null,
+        diasRetencao: checklistsComRetencao.find((checklist) => checklist.cameraId === camera.id)?.tempoGravacaoDisponivel ?? null,
         offlineMinutos:
           camera.status === STATUS_DESCONECTADA && camera.desconectadaDesde
             ? minutosEntre(camera.desconectadaDesde, agora)
@@ -831,27 +930,41 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
         },
       },
     });
+    const eventos = await prisma.cameraEventoStatus.findMany({
+      where: { unidade: req.unidadeAtiva, statusNovo: STATUS_DESCONECTADA },
+      select: { cameraId: true, iniciadoEm: true, encerradoEm: true, statusNovo: true },
+    });
 
     const linhas = [
       ["Camera", "Servidor", "Sistema", "Retencao real dias", "Data mais antiga", "Data mais recente", "Status", "Tecnologia", "Tipo", "Local", "Area", "Infravermelho", "Monitoramento", "Ultima manutencao", "Falhas", "Indisponibilidade minutos"],
-      ...cameras.map((camera) => [
-        camera.numeroCamera,
-        camera.numeroServidor,
-        camera.tipoSistema,
-        camera.checklists[0]?.tempoGravacaoDisponivel ?? "",
-        camera.checklists[0]?.dataInicialGravacao?.toISOString().slice(0, 10) || "",
-        camera.checklists[0]?.dataMaisRecenteGravacao?.toISOString().slice(0, 10) || "",
-        camera.status,
-        camera.tecnologia,
-        camera.tipoCamera,
-        camera.localInstalado,
-        camera.areaMonitorada,
-        camera.infravermelho,
-        camera.monitoramento,
-        camera.ultimaManutencao?.toISOString().slice(0, 10) || "",
-        camera.totalFalhas,
-        camera.totalIndisponibilidade,
-      ]),
+      ...cameras.map((camera) => {
+        const checklist = camera.checklists[0];
+        const retencao = checklist
+          ? calcularRetencaoEfetiva({
+              dataMaisAntiga: checklist.dataInicialGravacao,
+              dataMaisRecente: checklist.dataMaisRecenteGravacao,
+              eventos: eventos.filter((evento) => evento.cameraId === camera.id),
+            })
+          : null;
+        return [
+          camera.numeroCamera,
+          camera.numeroServidor,
+          camera.tipoSistema,
+          retencao ? Math.floor(retencao.retencaoMinutos / 1440) : "",
+          checklist?.dataInicialGravacao?.toISOString().slice(0, 10) || "",
+          checklist?.dataMaisRecenteGravacao?.toISOString().slice(0, 10) || "",
+          camera.status,
+          camera.tecnologia,
+          camera.tipoCamera,
+          camera.localInstalado,
+          camera.areaMonitorada,
+          camera.infravermelho,
+          camera.monitoramento,
+          camera.ultimaManutencao?.toISOString().slice(0, 10) || "",
+          camera.totalFalhas,
+          camera.totalIndisponibilidade,
+        ];
+      }),
     ];
 
     return enviarCsv(res, `inventario-cameras-${req.unidadeAtiva || "unidade"}.csv`, linhas);
