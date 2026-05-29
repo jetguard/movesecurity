@@ -58,6 +58,7 @@ export default function AdminLayout() {
   const [operacaoOpen, setOperacaoOpen] = useState(true);
   const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
   const [administracaoOpen, setAdministracaoOpen] = useState(false);
+  const [sistemaOpen, setSistemaOpen] = useState(false);
   const [segundosSessao, setSegundosSessao] = useState(0);
   const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
@@ -465,7 +466,7 @@ export default function AdminLayout() {
             </>
           )}
 
-          {(podeAdministrar() || podeVerLogs() || podeVerNaturezas()) && (
+          {(podeAdministrar() || podeVerNaturezas()) && (
             <>
               <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
@@ -493,10 +494,6 @@ export default function AdminLayout() {
                         <MapPinned size={16} />
                         Locais
                       </Link>
-                      <Link to="/sugestoes-melhoria" className={subItem}>
-                        <Lightbulb size={16} />
-                        Sugestões
-                      </Link>
                     </>
                   )}
                   {podeAdministrar() && (
@@ -505,19 +502,46 @@ export default function AdminLayout() {
                         <Settings size={16} />
                         Configurações
                       </Link>
-                      <Link to="/governanca" className={subItem}>
-                        <Server size={16} />
-                        Governança
-                      </Link>
                       <Link to="/sessoes" className={subItem}>
                         <Lock size={16} />
                         Sessões Ativas
+                      </Link>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+
+          {(podeAdministrar() || podeVerLogs() || podeVerNaturezas()) && (
+            <>
+              <button onClick={() => setSistemaOpen(!sistemaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+                <div className="flex items-center gap-3">
+                  <Server size={20} className="shrink-0" />
+                  <span className={menuText}>Sistema</span>
+                </div>
+                <span className={menuToggle}>{sistemaOpen ? "-" : "+"}</span>
+              </button>
+
+              {sistemaOpen && (
+                <div className={submenuClass}>
+                  {podeAdministrar() && (
+                    <>
+                      <Link to="/governanca" className={subItem}>
+                        <Server size={16} />
+                        Governança
                       </Link>
                       <Link to="/atualizacoes" className={subItem}>
                         <ScrollText size={16} />
                         Atualizações
                       </Link>
                     </>
+                  )}
+                  {podeVerNaturezas() && (
+                    <Link to="/sugestoes-melhoria" className={subItem}>
+                      <Lightbulb size={16} />
+                      Sugestões
+                    </Link>
                   )}
                   {podeVerLogs() && (
                     <Link to="/logs" className={subItem}>
