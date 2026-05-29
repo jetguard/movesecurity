@@ -31,7 +31,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && window.location.pathname !== "/login") {
       localStorage.removeItem("token");
       localStorage.removeItem("usuario");
+      localStorage.removeItem("sistemaBloqueado");
       sessionStorage.removeItem("loginInicio");
+      if (error.response?.data?.code === "SESSAO_ENCERRADA") {
+        alert("Sua sessão foi encerrada pelo administrador. Faça login novamente.");
+      }
       window.location.href = "/login";
     }
 

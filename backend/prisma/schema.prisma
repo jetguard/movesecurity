@@ -56,8 +56,36 @@ model Usuario {
   quadraAnexos                 QuadraSegurancaAnexo[]         @relation("QuadraAnexoUsuario")
   quadraHistorico              QuadraSegurancaHistorico[]     @relation("QuadraHistoricoUsuario")
   dispositivosAutorizados      DispositivoAutorizado[]
+  sessoes                      SessaoUsuario[]
   sugestoesMelhoria            SugestaoMelhoria[]             @relation("SugestaoMelhoriaAutor")
   sugestoesMelhoriaAvaliadas   SugestaoMelhoria[]             @relation("SugestaoMelhoriaAvaliador")
+}
+
+model SessaoUsuario {
+  id                  String    @id @default(cuid())
+  usuarioId           Int
+  tokenHash           String?   @unique
+  status              String    @default("ATIVA")
+  unidadeAtiva        String?
+  equipe              String?
+  perfilAcesso        String?
+  ipInicio            String?
+  ipUltimaAtividade   String?
+  navegador           String?
+  sistema             String?
+  iniciadaEm          DateTime  @default(now())
+  ultimaAtividadeEm   DateTime  @default(now())
+  encerradaEm         DateTime?
+  encerradaPor        String?
+  encerradaPorId      Int?
+  motivoEncerramento  String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@index([usuarioId, status])
+  @@index([status, ultimaAtividadeEm])
 }
 
 model SugestaoMelhoria {

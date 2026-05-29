@@ -31,6 +31,7 @@ import operacaoRoutes from "./routes/operacao.routes";
 import publicRelatorioRoutes from "./routes/publicRelatorio.routes";
 import sistemaRoutes from "./routes/sistema.routes";
 import sugestaoMelhoriaRoutes from "./routes/sugestaoMelhoria.routes";
+import sessaoRoutes from "./routes/sessao.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -78,6 +79,7 @@ app.use("/api/quadra-seguranca", quadraSegurancaRoutes);
 app.use("/api/operacao", operacaoRoutes);
 app.use("/api/sistema", sistemaRoutes);
 app.use("/api/sugestoes-melhoria", sugestaoMelhoriaRoutes);
+app.use("/api/sessoes", sessaoRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);

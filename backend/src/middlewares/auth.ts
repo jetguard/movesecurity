@@ -9,10 +9,12 @@ export type AuthRequest = Request & {
   usuarioPerfil?: string;
   usuarioUnidade?: string | null;
   unidadeAtiva?: string;
+  sessaoId?: string;
 };
 
 type TokenPayload = {
   id: number;
+  sessaoId?: string;
 };
 
 export async function autenticarUsuario(
@@ -55,6 +57,34 @@ export async function autenticarUsuario(
     if (usuario.statusUsuario !== "ATIVO") {
       return res.status(403).json({
         error: "Usuário sem acesso ao sistema",
+      });
+    }
+
+    if (payload.sessaoId) {
+      const sessao = await prisma.sessaoUsuario.findUnique({
+        where: { id: payload.sessaoId },
+        select: {
+          id: true,
+          usuarioId: true,
+          status: true,
+        },
+      });
+
+      if (!sessao || sessao.usuarioId !== usuario.id || sessao.status !== "ATIVA") {
+        return res.status(401).json({
+          error: "Sessão encerrada. Faça login novamente.",
+          code: "SESSAO_ENCERRADA",
+        });
+      }
+
+      req.sessaoId = sessao.id;
+
+      await prisma.sessaoUsuario.update({
+        where: { id: sessao.id },
+        data: {
+          ultimaAtividadeEm: new Date(),
+          ipUltimaAtividade: req.ip,
+        },
       });
     }
 

@@ -4,6 +4,20 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.0] - 2026-05-29
+
+### Adicionado
+
+- Modulo administrativo de Sessoes de usuarios, exibindo usuarios conectados, perfil, unidade, equipe, IP, dispositivo, inicio, ultima atividade, termino e duracao da sessao.
+- Historico de sessoes encerradas e desconectadas para auditoria administrativa.
+- Acao administrativa para desconectar sessoes ativas de outros usuarios.
+- Registro de sessao no login e encerramento no logout, com validacao backend para bloquear tokens de sessoes desconectadas.
+
+### Seguranca
+
+- Administradores passam a conseguir encerrar acessos ativos sem depender do usuario final.
+- Usuarios desconectados administrativamente sao redirecionados para login ao tentar continuar usando o sistema.
+
 ## [1.0.9] - 2026-05-29
 
 ### Seguranca

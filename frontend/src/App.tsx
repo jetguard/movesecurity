@@ -42,6 +42,7 @@ const QuadraSeguranca = lazy(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazy(() => import("./pages/OperacaoSOC"));
 const AtualizacoesSistema = lazy(() => import("./pages/AtualizacoesSistema"));
 const SugestoesMelhoria = lazy(() => import("./pages/SugestoesMelhoria"));
+const Sessoes = lazy(() => import("./pages/Sessoes"));
 
 function CarregandoPagina() {
   return (
@@ -185,6 +186,14 @@ export default function App() {
               element={
                 <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
                   <AtualizacoesSistema />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="sessoes"
+              element={
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                  <Sessoes />
                 </ProtectedRoute>
               }
             />

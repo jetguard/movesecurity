@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 import { prisma } from "../lib/prisma";
 import { jwtExpiresIn, jwtSecret, loginPolicy } from "../config/security";
 import { AuthRequest } from "../middlewares/auth";
@@ -53,6 +54,24 @@ function limparTentativas(email: string, ip?: string) {
 
 function perfilExigeDispositivo(perfil?: string) {
   return perfil === "OPERADOR" || perfil === "ANALISTA";
+}
+
+function sistemaDoUserAgent(userAgent: string) {
+  return userAgent.includes("Windows")
+    ? "Windows"
+    : userAgent.includes("Mac")
+      ? "macOS"
+      : userAgent.includes("Linux")
+        ? "Linux"
+        : userAgent.includes("Android")
+          ? "Android"
+          : userAgent.includes("iPhone")
+            ? "iOS"
+            : "Nao identificado";
+}
+
+function hashToken(token: string) {
+  return crypto.createHash("sha256").update(token).digest("hex");
 }
 
 async function validarDispositivoAutorizado(req: Request, usuario: { id: number; perfilAcesso: string }) {
@@ -256,15 +275,36 @@ export async function login(req: Request, res: Response) {
 
     limparTentativas(emailLogin, req.ip);
 
+    const userAgent = String(req.headers["user-agent"] || "");
+    const unidadeAtiva = normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade)[0] || usuario.unidade || "GJA-T1";
+    const sessao = await prisma.sessaoUsuario.create({
+      data: {
+        usuarioId: usuario.id,
+        unidadeAtiva,
+        equipe: usuario.equipe,
+        perfilAcesso: usuario.perfilAcesso,
+        ipInicio: req.ip,
+        ipUltimaAtividade: req.ip,
+        navegador: userAgent.slice(0, 250),
+        sistema: sistemaDoUserAgent(userAgent),
+      },
+    });
+
     const token = jwt.sign(
       {
         id: usuario.id,
+        sessaoId: sessao.id,
       },
       jwtSecret(),
       {
         expiresIn: jwtExpiresIn() as jwt.SignOptions["expiresIn"],
       }
     );
+
+    await prisma.sessaoUsuario.update({
+      where: { id: sessao.id },
+      data: { tokenHash: hashToken(token) },
+    });
 
     const agora = new Date();
     await prisma.usuario.update({
@@ -288,6 +328,7 @@ export async function login(req: Request, res: Response) {
           email: usuario.email,
           acessoEm: agora.toISOString(),
           expiraEm: jwtExpiresIn(),
+          sessaoId: sessao.id,
         }),
       },
     });
@@ -433,6 +474,22 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
 }
 
 export async function logout(req: AuthRequest, res: Response) {
+  if (req.sessaoId) {
+    await prisma.sessaoUsuario.updateMany({
+      where: {
+        id: req.sessaoId,
+        status: "ATIVA",
+      },
+      data: {
+        status: "ENCERRADA",
+        encerradaEm: new Date(),
+        encerradaPor: "Usuario",
+        encerradaPorId: req.usuarioId,
+        motivoEncerramento: "Logout do usuario",
+      },
+    });
+  }
+
   await registrarLog({
     req,
     acao: "Logout do sistema",

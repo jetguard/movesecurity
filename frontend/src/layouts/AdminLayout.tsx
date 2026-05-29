@@ -509,6 +509,10 @@ export default function AdminLayout() {
                         <Server size={16} />
                         Governança
                       </Link>
+                      <Link to="/sessoes" className={subItem}>
+                        <Lock size={16} />
+                        Sessões Ativas
+                      </Link>
                       <Link to="/atualizacoes" className={subItem}>
                         <ScrollText size={16} />
                         Atualizações
