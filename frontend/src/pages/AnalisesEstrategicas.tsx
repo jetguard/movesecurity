@@ -45,6 +45,9 @@ type DadosVinculo = {
   ocorrenciaId?: number | null;
   eventoId?: number | null;
   investigacaoId?: number | null;
+  ocorrenciaCodigo?: string | null;
+  eventoCodigo?: string | null;
+  investigacaoCodigo?: string | null;
   contexto?: Record<string, any>;
 };
 
@@ -77,6 +80,9 @@ const vazio = {
   ocorrenciaId: "",
   eventoId: "",
   investigacaoId: "",
+  ocorrenciaCodigo: "",
+  eventoCodigo: "",
+  investigacaoCodigo: "",
   analiseRiscoId: "",
 };
 
@@ -148,6 +154,9 @@ export default function AnalisesEstrategicas() {
       ocorrenciaId: dados.ocorrenciaId ? String(dados.ocorrenciaId) : atual.ocorrenciaId,
       eventoId: dados.eventoId ? String(dados.eventoId) : atual.eventoId,
       investigacaoId: dados.investigacaoId ? String(dados.investigacaoId) : atual.investigacaoId,
+      ocorrenciaCodigo: dados.ocorrenciaCodigo || atual.ocorrenciaCodigo,
+      eventoCodigo: dados.eventoCodigo || atual.eventoCodigo,
+      investigacaoCodigo: dados.investigacaoCodigo || atual.investigacaoCodigo,
       descricao: atual.descricao || [
         `${dados.origem} vinculada automaticamente.`,
         dados.contexto?.codigo ? `Codigo: ${dados.contexto.codigo}` : "",
@@ -161,13 +170,16 @@ export default function AnalisesEstrategicas() {
       dados.contexto?.codigo ? `Codigo: ${dados.contexto.codigo}` : "",
       dados.local ? `Local: ${dados.local}` : "",
       dados.natureza ? `Natureza: ${dados.natureza}` : "",
-      dados.investigacaoId ? `R.I vinculada: ID ${dados.investigacaoId}` : "",
+      dados.investigacaoCodigo ? `R.I vinculada: ${dados.investigacaoCodigo}` : "",
     ].filter(Boolean).join(" | "));
   }
 
   async function buscarDadosVinculados() {
     const params: Record<string, string> = {};
-    if (form.investigacaoId) params.investigacaoId = form.investigacaoId;
+    if (form.investigacaoCodigo) params.investigacaoCodigo = form.investigacaoCodigo;
+    else if (form.ocorrenciaCodigo) params.ocorrenciaCodigo = form.ocorrenciaCodigo;
+    else if (form.eventoCodigo) params.eventoCodigo = form.eventoCodigo;
+    else if (form.investigacaoId) params.investigacaoId = form.investigacaoId;
     else if (form.ocorrenciaId) params.ocorrenciaId = form.ocorrenciaId;
     else if (form.eventoId) params.eventoId = form.eventoId;
 
@@ -201,6 +213,9 @@ export default function AnalisesEstrategicas() {
       ocorrenciaId: analise.ocorrenciaId ? String(analise.ocorrenciaId) : "",
       eventoId: analise.eventoId ? String(analise.eventoId) : "",
       investigacaoId: analise.investigacaoId ? String(analise.investigacaoId) : "",
+      ocorrenciaCodigo: "",
+      eventoCodigo: "",
+      investigacaoCodigo: "",
       analiseRiscoId: analise.analiseRiscoId ? String(analise.analiseRiscoId) : "",
     });
     setResumoVinculo("");
@@ -283,20 +298,20 @@ export default function AnalisesEstrategicas() {
             </select>
             <input type="datetime-local" className="rounded-lg border p-3" value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} />
             <input className="rounded-lg border p-3" placeholder="Responsavel pela acao" value={form.responsavelAcao} onChange={(e) => campo("responsavelAcao", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="ID da ocorrencia vinculada" value={form.ocorrenciaId} onBlur={buscarDadosVinculados} onChange={(e) => campo("ocorrenciaId", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="ID do evento vinculado" value={form.eventoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("eventoId", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="ID da investigacao vinculada" value={form.investigacaoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("investigacaoId", e.target.value)} />
+            <input className="rounded-lg border p-3" placeholder="Nº da ocorrencia vinculada. Ex: 0001/2026" value={form.ocorrenciaCodigo} onBlur={buscarDadosVinculados} onChange={(e) => campo("ocorrenciaCodigo", e.target.value.toUpperCase())} />
+            <input className="rounded-lg border p-3" placeholder="Nº do evento vinculado. Ex: 0005/2026" value={form.eventoCodigo} onBlur={buscarDadosVinculados} onChange={(e) => campo("eventoCodigo", e.target.value.toUpperCase())} />
+            <input className="rounded-lg border p-3" placeholder="Nº da investigacao vinculada. Ex: RI003/2026" value={form.investigacaoCodigo} onBlur={buscarDadosVinculados} onChange={(e) => campo("investigacaoCodigo", e.target.value.toUpperCase())} />
             <input className="rounded-lg border p-3" placeholder="ID da analise de risco vinculada" value={form.analiseRiscoId} onChange={(e) => campo("analiseRiscoId", e.target.value)} />
           </div>
           <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <p>
-                Informe o ID da ocorrencia, evento ou investigacao para preencher automaticamente local e contexto da analise.
+                Informe o numero da ocorrencia, evento ou investigacao para preencher automaticamente local e contexto da analise.
               </p>
               <button
                 type="button"
                 onClick={buscarDadosVinculados}
-                disabled={buscandoVinculo || (!form.ocorrenciaId && !form.eventoId && !form.investigacaoId)}
+                disabled={buscandoVinculo || (!form.ocorrenciaCodigo && !form.eventoCodigo && !form.investigacaoCodigo && !form.ocorrenciaId && !form.eventoId && !form.investigacaoId)}
                 className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:bg-slate-300"
               >
                 {buscandoVinculo ? "Buscando..." : "Buscar vinculo"}

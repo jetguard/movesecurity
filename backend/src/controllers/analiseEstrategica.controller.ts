@@ -18,8 +18,56 @@ function normalizarId(valor: unknown) {
   return Number.isFinite(numero) && numero > 0 ? numero : null;
 }
 
+function normalizarCodigo(valor: unknown) {
+  const codigo = String(valor || "").trim().toUpperCase();
+  return codigo || null;
+}
+
 function normalizarData(valor: unknown) {
   return valor ? new Date(String(valor)) : null;
+}
+
+async function resolverVinculosPorCodigo(body: any, unidade: string) {
+  const ocorrenciaIdInformado = normalizarId(body.ocorrenciaId);
+  const eventoIdInformado = normalizarId(body.eventoId);
+  const investigacaoIdInformado = normalizarId(body.investigacaoId);
+
+  const ocorrenciaCodigo = normalizarCodigo(body.ocorrenciaCodigo);
+  const eventoCodigo = normalizarCodigo(body.eventoCodigo);
+  const investigacaoCodigo = normalizarCodigo(body.investigacaoCodigo);
+
+  const [ocorrencia, evento, investigacao] = await Promise.all([
+    ocorrenciaIdInformado || !ocorrenciaCodigo
+      ? null
+      : prisma.ocorrencia.findFirst({
+          where: { codigo: { equals: ocorrenciaCodigo }, unidade },
+          select: { id: true },
+        }),
+    eventoIdInformado || !eventoCodigo
+      ? null
+      : prisma.evento.findFirst({
+          where: { codigo: { equals: eventoCodigo }, unidade },
+          select: { id: true },
+        }),
+    investigacaoIdInformado || !investigacaoCodigo
+      ? null
+      : prisma.investigacao.findFirst({
+          where: {
+            unidade,
+            OR: [
+              { codigo: { equals: investigacaoCodigo } },
+              { numeroOcorrencia: { equals: investigacaoCodigo } },
+            ],
+          },
+          select: { id: true },
+        }),
+  ]);
+
+  return {
+    ocorrenciaId: ocorrenciaIdInformado || ocorrencia?.id || null,
+    eventoId: eventoIdInformado || evento?.id || null,
+    investigacaoId: investigacaoIdInformado || investigacao?.id || null,
+  };
 }
 
 export async function listarAnalisesEstrategicas(req: AuthRequest, res: Response) {
@@ -51,17 +99,31 @@ export async function listarAnalisesEstrategicas(req: AuthRequest, res: Response
 
 export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Response) {
   try {
+    const ocorrenciaCodigo = normalizarCodigo(req.query.ocorrenciaCodigo || req.query.ocorrencia);
+    const eventoCodigo = normalizarCodigo(req.query.eventoCodigo || req.query.evento);
+    const investigacaoCodigo = normalizarCodigo(req.query.investigacaoCodigo || req.query.investigacao);
     const ocorrenciaId = normalizarId(req.query.ocorrenciaId);
     const eventoId = normalizarId(req.query.eventoId);
     const investigacaoId = normalizarId(req.query.investigacaoId);
 
-    if (!ocorrenciaId && !eventoId && !investigacaoId) {
-      return res.status(400).json({ error: "Informe o ID da ocorrência, evento ou investigação." });
+    if (!ocorrenciaId && !eventoId && !investigacaoId && !ocorrenciaCodigo && !eventoCodigo && !investigacaoCodigo) {
+      return res.status(400).json({ error: "Informe o número da ocorrência, evento ou investigação." });
     }
 
-    if (investigacaoId) {
+    if (investigacaoId || investigacaoCodigo) {
       const investigacao = await prisma.investigacao.findFirst({
-        where: { id: investigacaoId, unidade: req.unidadeAtiva },
+        where: {
+          unidade: req.unidadeAtiva,
+          OR: [
+            ...(investigacaoId ? [{ id: investigacaoId }] : []),
+            ...(investigacaoCodigo
+              ? [
+                  { codigo: { equals: investigacaoCodigo } },
+                  { numeroOcorrencia: { equals: investigacaoCodigo } },
+                ]
+              : []),
+          ],
+        },
         include: {
           ocorrencia: {
             select: {
@@ -90,6 +152,8 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
         subNatureza: investigacao.subNatureza,
         ocorrenciaId: investigacao.ocorrenciaId,
         investigacaoId: investigacao.id,
+        ocorrenciaCodigo: investigacao.numeroOcorrencia,
+        investigacaoCodigo: investigacao.codigo || investigacao.numeroOcorrencia,
         contexto: {
           codigo: investigacao.codigo,
           assunto: investigacao.assunto,
@@ -100,9 +164,15 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
       });
     }
 
-    if (ocorrenciaId) {
+    if (ocorrenciaId || ocorrenciaCodigo) {
       const ocorrencia = await prisma.ocorrencia.findFirst({
-        where: { id: ocorrenciaId, unidade: req.unidadeAtiva },
+        where: {
+          unidade: req.unidadeAtiva,
+          OR: [
+            ...(ocorrenciaId ? [{ id: ocorrenciaId }] : []),
+            ...(ocorrenciaCodigo ? [{ codigo: { equals: ocorrenciaCodigo } }] : []),
+          ],
+        },
         include: {
           investigacao: {
             select: {
@@ -129,6 +199,8 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
         subNatureza: ocorrencia.subNatureza,
         ocorrenciaId: ocorrencia.id,
         investigacaoId: ocorrencia.investigacao?.id || null,
+        ocorrenciaCodigo: ocorrencia.codigo,
+        investigacaoCodigo: ocorrencia.investigacao?.codigo || null,
         contexto: {
           codigo: ocorrencia.codigo,
           assunto: ocorrencia.assunto,
@@ -138,9 +210,15 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
       });
     }
 
-    if (eventoId) {
+    if (eventoId || eventoCodigo) {
       const evento = await prisma.evento.findFirst({
-        where: { id: eventoId, unidade: req.unidadeAtiva },
+        where: {
+          unidade: req.unidadeAtiva,
+          OR: [
+            ...(eventoId ? [{ id: eventoId }] : []),
+            ...(eventoCodigo ? [{ codigo: { equals: eventoCodigo } }] : []),
+          ],
+        },
       });
 
       if (!evento) {
@@ -155,6 +233,7 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
         natureza: evento.natureza,
         subNatureza: evento.subNatureza,
         eventoId: evento.id,
+        eventoCodigo: evento.codigo,
         contexto: {
           codigo: evento.codigo,
           assunto: evento.assunto,
@@ -192,6 +271,7 @@ export async function criarAnaliseEstrategica(req: AuthRequest, res: Response) {
     const numero = ultima ? ultima.numero + 1 : 1;
     const prefixo = prefixos[tipo] || "AES";
     const codigo = `${prefixo}${String(numero).padStart(3, "0")}/${ano}`;
+    const vinculos = await resolverVinculosPorCodigo(req.body, req.unidadeAtiva || "GJA-T1");
 
     const analise = await prisma.analiseEstrategica.create({
       data: {
@@ -213,9 +293,9 @@ export async function criarAnaliseEstrategica(req: AuthRequest, res: Response) {
         planoAcao: req.body.planoAcao,
         responsavelAcao: req.body.responsavelAcao,
         prazo: normalizarData(req.body.prazo),
-        ocorrenciaId: normalizarId(req.body.ocorrenciaId),
-        eventoId: normalizarId(req.body.eventoId),
-        investigacaoId: normalizarId(req.body.investigacaoId),
+        ocorrenciaId: vinculos.ocorrenciaId,
+        eventoId: vinculos.eventoId,
+        investigacaoId: vinculos.investigacaoId,
         analiseRiscoId: normalizarId(req.body.analiseRiscoId),
       },
       include: {
@@ -258,6 +338,8 @@ export async function atualizarAnaliseEstrategica(req: AuthRequest, res: Respons
       return res.status(404).json({ error: "Análise estratégica não encontrada" });
     }
 
+    const vinculos = await resolverVinculosPorCodigo(req.body, req.unidadeAtiva || "GJA-T1");
+
     const analise = await prisma.analiseEstrategica.update({
       where: {
         id: Number(id),
@@ -276,9 +358,9 @@ export async function atualizarAnaliseEstrategica(req: AuthRequest, res: Respons
         planoAcao: req.body.planoAcao,
         responsavelAcao: req.body.responsavelAcao,
         prazo: normalizarData(req.body.prazo),
-        ocorrenciaId: normalizarId(req.body.ocorrenciaId),
-        eventoId: normalizarId(req.body.eventoId),
-        investigacaoId: normalizarId(req.body.investigacaoId),
+        ocorrenciaId: vinculos.ocorrenciaId ?? anterior.ocorrenciaId,
+        eventoId: vinculos.eventoId ?? anterior.eventoId,
+        investigacaoId: vinculos.investigacaoId ?? anterior.investigacaoId,
         analiseRiscoId: normalizarId(req.body.analiseRiscoId),
       },
       include: {
