@@ -49,6 +49,127 @@ export async function listarAnalisesEstrategicas(req: AuthRequest, res: Response
   }
 }
 
+export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Response) {
+  try {
+    const ocorrenciaId = normalizarId(req.query.ocorrenciaId);
+    const eventoId = normalizarId(req.query.eventoId);
+    const investigacaoId = normalizarId(req.query.investigacaoId);
+
+    if (!ocorrenciaId && !eventoId && !investigacaoId) {
+      return res.status(400).json({ error: "Informe o ID da ocorrência, evento ou investigação." });
+    }
+
+    if (investigacaoId) {
+      const investigacao = await prisma.investigacao.findFirst({
+        where: { id: investigacaoId, unidade: req.unidadeAtiva },
+        include: {
+          ocorrencia: {
+            select: {
+              id: true,
+              codigo: true,
+              assunto: true,
+              local: true,
+              natureza: true,
+              subNatureza: true,
+              relatoSeguranca: true,
+            },
+          },
+        },
+      });
+
+      if (!investigacao) {
+        return res.status(404).json({ error: "Investigação não encontrada para esta unidade." });
+      }
+
+      return res.json({
+        origem: "Investigação",
+        titulo: `Análise estratégica da investigação ${investigacao.codigo || investigacao.numeroOcorrencia}`,
+        local: investigacao.local,
+        unidade: investigacao.unidade,
+        natureza: investigacao.natureza,
+        subNatureza: investigacao.subNatureza,
+        ocorrenciaId: investigacao.ocorrenciaId,
+        investigacaoId: investigacao.id,
+        contexto: {
+          codigo: investigacao.codigo,
+          assunto: investigacao.assunto,
+          descricaoInvestigacao: investigacao.descricaoInvestigacao,
+          conclusaoFatos: investigacao.conclusaoFatos,
+          ocorrencia: investigacao.ocorrencia,
+        },
+      });
+    }
+
+    if (ocorrenciaId) {
+      const ocorrencia = await prisma.ocorrencia.findFirst({
+        where: { id: ocorrenciaId, unidade: req.unidadeAtiva },
+        include: {
+          investigacao: {
+            select: {
+              id: true,
+              codigo: true,
+              descricaoInvestigacao: true,
+              conclusaoFatos: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      if (!ocorrencia) {
+        return res.status(404).json({ error: "Ocorrência não encontrada para esta unidade." });
+      }
+
+      return res.json({
+        origem: "Ocorrência",
+        titulo: `Análise estratégica da ocorrência ${ocorrencia.codigo}`,
+        local: ocorrencia.local,
+        unidade: ocorrencia.unidade,
+        natureza: ocorrencia.natureza,
+        subNatureza: ocorrencia.subNatureza,
+        ocorrenciaId: ocorrencia.id,
+        investigacaoId: ocorrencia.investigacao?.id || null,
+        contexto: {
+          codigo: ocorrencia.codigo,
+          assunto: ocorrencia.assunto,
+          relatoSeguranca: ocorrencia.relatoSeguranca,
+          investigacao: ocorrencia.investigacao,
+        },
+      });
+    }
+
+    if (eventoId) {
+      const evento = await prisma.evento.findFirst({
+        where: { id: eventoId, unidade: req.unidadeAtiva },
+      });
+
+      if (!evento) {
+        return res.status(404).json({ error: "Evento não encontrado para esta unidade." });
+      }
+
+      return res.json({
+        origem: "Evento",
+        titulo: `Análise estratégica do evento ${evento.codigo}`,
+        local: evento.local,
+        unidade: evento.unidade,
+        natureza: evento.natureza,
+        subNatureza: evento.subNatureza,
+        eventoId: evento.id,
+        contexto: {
+          codigo: evento.codigo,
+          assunto: evento.assunto,
+          relatoSeguranca: evento.relatoSeguranca,
+        },
+      });
+    }
+
+    return res.status(400).json({ error: "Vínculo inválido." });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao buscar dados vinculados" });
+  }
+}
+
 export async function criarAnaliseEstrategica(req: AuthRequest, res: Response) {
   try {
     const { tipo, titulo, descricao } = req.body;

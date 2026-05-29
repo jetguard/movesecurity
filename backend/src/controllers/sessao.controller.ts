@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { AuthRequest } from "../middlewares/auth";
+import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { prisma } from "../lib/prisma";
 import { registrarLog } from "../services/auditoria.service";
 
@@ -12,7 +12,12 @@ export async function listarSessoes(req: AuthRequest, res: Response) {
   try {
     const status = normalizarStatus(req.query.status);
     const sessoes = await prisma.sessaoUsuario.findMany({
-      where: { status },
+      where: {
+        status,
+        ...(req.usuarioPerfil === PERFIS.SUPER_ADMIN
+          ? {}
+          : { usuario: { perfilAcesso: { not: PERFIS.SUPER_ADMIN } } }),
+      },
       orderBy: status === "ATIVA" ? { ultimaAtividadeEm: "desc" } : { encerradaEm: "desc" },
       take: 150,
       include: {

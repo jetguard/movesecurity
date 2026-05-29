@@ -28,6 +28,26 @@ type AnaliseEstrategica = {
   };
 };
 
+type LocalTerminal = {
+  id: number;
+  nome: string;
+  areaSensivel: boolean;
+  status: string;
+};
+
+type DadosVinculo = {
+  origem: string;
+  titulo: string;
+  local?: string;
+  unidade?: string;
+  natureza?: string;
+  subNatureza?: string;
+  ocorrenciaId?: number | null;
+  eventoId?: number | null;
+  investigacaoId?: number | null;
+  contexto?: Record<string, any>;
+};
+
 const tipos = [
   "Causa Raiz",
   "Reincidencia",
@@ -80,11 +100,18 @@ export default function AnalisesEstrategicas() {
   const [abrirFormulario, setAbrirFormulario] = useState(false);
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
+  const [locais, setLocais] = useState<LocalTerminal[]>([]);
+  const [buscandoVinculo, setBuscandoVinculo] = useState(false);
+  const [resumoVinculo, setResumoVinculo] = useState("");
   const formularioRef = useRef<HTMLFormElement | null>(null);
 
   async function carregar() {
-    const response = await api.get("/analises-estrategicas");
-    setAnalises(response.data);
+    const [analisesResponse, locaisResponse] = await Promise.all([
+      api.get("/analises-estrategicas"),
+      api.get("/locais", { params: { status: "ativo" } }).catch(() => ({ data: [] })),
+    ]);
+    setAnalises(analisesResponse.data);
+    setLocais(locaisResponse.data);
   }
 
   useEffect(() => {
@@ -113,9 +140,54 @@ export default function AnalisesEstrategicas() {
     setForm((atual) => ({ ...atual, [nome]: valor }));
   }
 
+  function aplicarDadosVinculo(dados: DadosVinculo) {
+    setForm((atual) => ({
+      ...atual,
+      titulo: atual.titulo || dados.titulo || atual.titulo,
+      local: dados.local || atual.local,
+      ocorrenciaId: dados.ocorrenciaId ? String(dados.ocorrenciaId) : atual.ocorrenciaId,
+      eventoId: dados.eventoId ? String(dados.eventoId) : atual.eventoId,
+      investigacaoId: dados.investigacaoId ? String(dados.investigacaoId) : atual.investigacaoId,
+      descricao: atual.descricao || [
+        `${dados.origem} vinculada automaticamente.`,
+        dados.contexto?.codigo ? `Codigo: ${dados.contexto.codigo}` : "",
+        dados.contexto?.assunto ? `Assunto: ${dados.contexto.assunto}` : "",
+        dados.natureza ? `Natureza: ${dados.natureza}${dados.subNatureza ? ` / ${dados.subNatureza}` : ""}` : "",
+      ].filter(Boolean).join("\n"),
+    }));
+
+    setResumoVinculo([
+      `${dados.origem} localizada`,
+      dados.contexto?.codigo ? `Codigo: ${dados.contexto.codigo}` : "",
+      dados.local ? `Local: ${dados.local}` : "",
+      dados.natureza ? `Natureza: ${dados.natureza}` : "",
+      dados.investigacaoId ? `R.I vinculada: ID ${dados.investigacaoId}` : "",
+    ].filter(Boolean).join(" | "));
+  }
+
+  async function buscarDadosVinculados() {
+    const params: Record<string, string> = {};
+    if (form.investigacaoId) params.investigacaoId = form.investigacaoId;
+    else if (form.ocorrenciaId) params.ocorrenciaId = form.ocorrenciaId;
+    else if (form.eventoId) params.eventoId = form.eventoId;
+
+    if (!Object.keys(params).length) return;
+
+    setBuscandoVinculo(true);
+    try {
+      const response = await api.get("/analises-estrategicas/vinculo", { params });
+      aplicarDadosVinculo(response.data);
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Nao foi possivel carregar os dados vinculados.");
+    } finally {
+      setBuscandoVinculo(false);
+    }
+  }
+
   function novaAnalise(tipo = "Causa Raiz") {
     setForm({ ...vazio, tipo, dataHora: new Date().toISOString().slice(0, 16) });
     setEditando(null);
+    setResumoVinculo("");
     setAbrirFormulario(true);
   }
 
@@ -131,6 +203,7 @@ export default function AnalisesEstrategicas() {
       investigacaoId: analise.investigacaoId ? String(analise.investigacaoId) : "",
       analiseRiscoId: analise.analiseRiscoId ? String(analise.analiseRiscoId) : "",
     });
+    setResumoVinculo("");
     setAbrirFormulario(true);
   }
 
@@ -199,13 +272,37 @@ export default function AnalisesEstrategicas() {
             <input className="rounded-lg border p-3" placeholder="Titulo" value={form.titulo} onChange={(e) => campo("titulo", e.target.value)} required />
             <input type="datetime-local" className="rounded-lg border p-3" value={form.dataHora} onChange={(e) => campo("dataHora", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Setor" value={form.setor} onChange={(e) => campo("setor", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="Local" value={form.local} onChange={(e) => campo("local", e.target.value)} />
+            <select className="rounded-lg border p-3" value={form.local} onChange={(e) => campo("local", e.target.value)}>
+              <option value="">Selecione o local da analise</option>
+              {form.local && !locais.some((local) => local.nome === form.local) && <option value={form.local}>{form.local}</option>}
+              {locais.map((local) => (
+                <option key={local.id} value={local.nome}>
+                  {local.nome}{local.areaSensivel ? " - AREA SENSIVEL" : ""}
+                </option>
+              ))}
+            </select>
             <input type="datetime-local" className="rounded-lg border p-3" value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} />
             <input className="rounded-lg border p-3" placeholder="Responsavel pela acao" value={form.responsavelAcao} onChange={(e) => campo("responsavelAcao", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="ID da ocorrencia vinculada" value={form.ocorrenciaId} onChange={(e) => campo("ocorrenciaId", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="ID do evento vinculado" value={form.eventoId} onChange={(e) => campo("eventoId", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="ID da investigacao vinculada" value={form.investigacaoId} onChange={(e) => campo("investigacaoId", e.target.value)} />
+            <input className="rounded-lg border p-3" placeholder="ID da ocorrencia vinculada" value={form.ocorrenciaId} onBlur={buscarDadosVinculados} onChange={(e) => campo("ocorrenciaId", e.target.value)} />
+            <input className="rounded-lg border p-3" placeholder="ID do evento vinculado" value={form.eventoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("eventoId", e.target.value)} />
+            <input className="rounded-lg border p-3" placeholder="ID da investigacao vinculada" value={form.investigacaoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("investigacaoId", e.target.value)} />
             <input className="rounded-lg border p-3" placeholder="ID da analise de risco vinculada" value={form.analiseRiscoId} onChange={(e) => campo("analiseRiscoId", e.target.value)} />
+          </div>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p>
+                Informe o ID da ocorrencia, evento ou investigacao para preencher automaticamente local e contexto da analise.
+              </p>
+              <button
+                type="button"
+                onClick={buscarDadosVinculados}
+                disabled={buscandoVinculo || (!form.ocorrenciaId && !form.eventoId && !form.investigacaoId)}
+                className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 disabled:bg-slate-300"
+              >
+                {buscandoVinculo ? "Buscando..." : "Buscar vinculo"}
+              </button>
+            </div>
+            {resumoVinculo && <p className="mt-3 font-semibold">{resumoVinculo}</p>}
           </div>
           <textarea className="min-h-28 w-full rounded-lg border p-3" placeholder="Descricao da analise" value={form.descricao} onChange={(e) => campo("descricao", e.target.value)} required />
           <textarea className="min-h-28 w-full rounded-lg border p-3" placeholder="Diagnostico" value={form.diagnostico} onChange={(e) => campo("diagnostico", e.target.value)} />

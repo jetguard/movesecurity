@@ -1,10 +1,26 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
-import { AuthRequest } from "../middlewares/auth";
+import { AuthRequest, PERFIS } from "../middlewares/auth";
 
-export async function listarLogs(req: Request, res: Response) {
+export async function listarLogs(req: AuthRequest, res: Response) {
   try {
+    const superAdmins = await prisma.usuario.findMany({
+      where: { perfilAcesso: PERFIS.SUPER_ADMIN },
+      select: { id: true },
+    });
+    const superAdminIds = superAdmins.map((usuario) => usuario.id);
+
     const logs = await prisma.logAuditoria.findMany({
+      where: req.usuarioPerfil === PERFIS.SUPER_ADMIN
+        ? {}
+        : {
+            NOT: {
+              AND: [
+                { usuarioId: { in: superAdminIds } },
+                { tipoRegistro: { in: ["Auth", "SessaoUsuario"] } },
+              ],
+            },
+          },
       orderBy: {
         createdAt: "desc",
       },
