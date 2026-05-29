@@ -7,10 +7,13 @@ import {
   excluirCamera,
   exportarHistoricoCameras,
   exportarInventarioCameras,
+  atualizarIndisponibilidadeCamera,
   listarCameras,
   listarChecklistCamera,
+  listarIndisponibilidadesCamera,
+  registrarIndisponibilidadeCamera,
 } from "../controllers/camera.controller";
-import { acessoAnalise, acessoRelatorios, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { acessoAnalise, acessoRelatorios, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
 
@@ -23,5 +26,8 @@ router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), excluir
 router.get("/dashboard", autenticarUsuario, autorizarPerfis(acessoRelatorios), dashboardCameras);
 router.get("/:cameraId/checklists", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarChecklistCamera);
 router.post("/:cameraId/checklists", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarChecklistCamera);
+router.get("/:cameraId/indisponibilidades", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarIndisponibilidadesCamera);
+router.post("/:cameraId/indisponibilidades", autenticarUsuario, autorizarPerfis(acessoRelatorios), registrarIndisponibilidadeCamera);
+router.put("/:cameraId/indisponibilidades/:eventoId", autenticarUsuario, autorizarPerfis(acessoTotal), atualizarIndisponibilidadeCamera);
 
 export default router;

@@ -680,9 +680,10 @@ model ComentarioInterno {
 model CameraMonitoramento {
   id                     Int       @id @default(autoincrement())
   numeroCamera           String
+  nomeCamera             String?
   numeroServidor         String
   tipoSistema            String    @default("DIGIFORT")
-  periodoGravacaoDias    Int
+  periodoGravacaoDias    Int       @default(0)
   status                 String    @default("Conectada")
   tecnologia             String
   tipoCamera             String
@@ -715,6 +716,7 @@ model CameraChecklistOperacional {
   statusAtual                String
   tempoGravacaoDisponivel    Int
   dataInicialGravacao        DateTime?
+  dataMaisRecenteGravacao    DateTime?
   dataDesconexaoManual       DateTime?
   dataReconexaoManual        DateTime?
   retencaoEstimadaMinutos    Int?
@@ -744,6 +746,7 @@ model CameraEventoStatus {
   iniciadoEm          DateTime  @default(now())
   encerradoEm         DateTime?
   duracaoIndisponivel Int?
+  motivo              String?
   responsavelId       Int?
   observacao          String?
   createdAt           DateTime  @default(now())

@@ -35,6 +35,18 @@ function formatarRetencao(minutosTotais: number) {
   return `${dias} dias, ${String(horas).padStart(2, "0")} horas e ${String(minutosRestantes).padStart(2, "0")} minutos`;
 }
 
+function formatarIndisponibilidade(minutosTotais: number) {
+  const minutos = Math.max(0, Math.round(minutosTotais));
+  const dias = Math.floor(minutos / 1440);
+  const horas = Math.floor((minutos % 1440) / 60);
+  const minutosRestantes = minutos % 60;
+  const partes = [];
+  if (dias) partes.push(`${dias} dia${dias === 1 ? "" : "s"}`);
+  if (horas) partes.push(`${horas} hora${horas === 1 ? "" : "s"}`);
+  if (!dias && !horas) partes.push(`${minutosRestantes} minuto${minutosRestantes === 1 ? "" : "s"}`);
+  return partes.join(" e ");
+}
+
 function agrupar<T>(itens: T[], chave: (item: T) => string | number | null | undefined) {
   return itens.reduce<Record<string, number>>((acc, item) => {
     const key = String(chave(item) || "Não informado");
@@ -44,38 +56,17 @@ function agrupar<T>(itens: T[], chave: (item: T) => string | number | null | und
 }
 
 async function calcularRetencaoGravacao(params: {
-  cameraId: number;
-  dataInicial?: Date | null;
-  dataDesconexaoManual?: Date | null;
-  dataReconexaoManual?: Date | null;
+  dataMaisAntiga?: Date | null;
+  dataMaisRecente?: Date | null;
 }) {
-  const agora = new Date();
-  const retencaoProjetadaMinutos = 180 * 24 * 60;
-  const eventos = await prisma.cameraEventoStatus.findMany({
-    where: {
-      cameraId: params.cameraId,
-      statusNovo: STATUS_DESCONECTADA,
-      ...(params.dataInicial ? { iniciadoEm: { gte: params.dataInicial } } : {}),
-    },
-    orderBy: { iniciadoEm: "asc" },
-  });
-
-  const offlineEventos = eventos.reduce((total, evento) => {
-    const fim = evento.encerradoEm || agora;
-    return total + minutosEntre(evento.iniciadoEm, fim);
-  }, 0);
-
-  const offlineManual =
-    params.dataDesconexaoManual
-      ? minutosEntre(params.dataDesconexaoManual, params.dataReconexaoManual || agora)
+  const retencaoMinutos =
+    params.dataMaisAntiga && params.dataMaisRecente
+      ? minutosEntre(params.dataMaisAntiga, params.dataMaisRecente)
       : 0;
-
-  const retencaoMinutos = Math.max(0, retencaoProjetadaMinutos - offlineEventos - offlineManual);
 
   return {
     retencaoMinutos,
     retencaoTexto: formatarRetencao(retencaoMinutos),
-    offlineMinutos: offlineEventos + offlineManual,
   };
 }
 
@@ -115,6 +106,7 @@ async function registrarMudancaStatus(params: {
         statusAnterior: params.statusAnterior || camera.status,
         statusNovo: STATUS_DESCONECTADA,
         iniciadoEm: agora,
+        motivo: "Status alterado para desconectada",
         responsavelId: params.responsavelId,
         observacao: params.observacao,
       },
@@ -172,6 +164,7 @@ async function registrarMudancaStatus(params: {
         iniciadoEm: agora,
         encerradoEm: agora,
         duracaoIndisponivel: 0,
+        motivo: "Status alterado para conectada",
         responsavelId: params.responsavelId,
         observacao: params.observacao,
       },
@@ -221,7 +214,6 @@ export async function criarCamera(req: AuthRequest, res: Response) {
     const obrigatorios = [
       "numeroCamera",
       "numeroServidor",
-      "periodoGravacaoDias",
       "tecnologia",
       "tipoCamera",
       "localInstalado",
@@ -238,6 +230,7 @@ export async function criarCamera(req: AuthRequest, res: Response) {
     const camera = await prisma.cameraMonitoramento.create({
       data: {
         numeroCamera: codigo(req.body.numeroCamera),
+        nomeCamera: req.body.nomeCamera,
         numeroServidor: codigo(req.body.numeroServidor),
         tipoSistema: "DIGIFORT",
         periodoGravacaoDias: numero(req.body.periodoGravacaoDias),
@@ -302,6 +295,7 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
       where: { id: anterior.id },
       data: {
         numeroCamera: codigo(req.body.numeroCamera, anterior.numeroCamera),
+        nomeCamera: req.body.nomeCamera ?? anterior.nomeCamera,
         numeroServidor: codigo(req.body.numeroServidor, anterior.numeroServidor),
         tipoSistema: "DIGIFORT",
         periodoGravacaoDias: numero(req.body.periodoGravacaoDias, anterior.periodoGravacaoDias),
@@ -402,14 +396,12 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
         ? minutosEntre(atual.desconectadaDesde, new Date())
         : 0;
     const dataInicialGravacao = dataOpcional(req.body.dataInicialGravacao);
-    const dataDesconexaoManual = dataOpcional(req.body.dataDesconexaoManual);
-    const dataReconexaoManual = dataOpcional(req.body.dataReconexaoManual);
+    const dataMaisRecenteGravacao = dataOpcional(req.body.dataMaisRecenteGravacao);
     const retencao = await calcularRetencaoGravacao({
-      cameraId: camera.id,
-      dataInicial: dataInicialGravacao,
-      dataDesconexaoManual,
-      dataReconexaoManual,
+      dataMaisAntiga: dataInicialGravacao,
+      dataMaisRecente: dataMaisRecenteGravacao,
     });
+    const diasRetencao = Math.floor(retencao.retencaoMinutos / 1440);
 
     const checklist = await prisma.cameraChecklistOperacional.create({
       data: {
@@ -417,21 +409,22 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
         unidade: camera.unidade,
         responsavelId: req.usuarioId!,
         statusAtual,
-        tempoGravacaoDisponivel: numero(req.body.tempoGravacaoDisponivel),
+        tempoGravacaoDisponivel: diasRetencao,
         dataInicialGravacao,
-        dataDesconexaoManual,
-        dataReconexaoManual,
+        dataMaisRecenteGravacao,
+        dataDesconexaoManual: null,
+        dataReconexaoManual: null,
         retencaoEstimadaMinutos: retencao.retencaoMinutos,
         retencaoEstimadaTexto: retencao.retencaoTexto,
-        qualidadeImagem: req.body.qualidadeImagem,
-        funcionamentoInfravermelho: req.body.funcionamentoInfravermelho,
-        funcionamentoGravacao: req.body.funcionamentoGravacao,
-        comunicacaoServidor: req.body.comunicacaoServidor,
-        instabilidadeDetectada: req.body.instabilidadeDetectada,
-        necessidadeManutencao: req.body.necessidadeManutencao,
+        qualidadeImagem: req.body.qualidadeImagem || "Nao informado",
+        funcionamentoInfravermelho: req.body.funcionamentoInfravermelho || "Nao informado",
+        funcionamentoGravacao: req.body.funcionamentoGravacao || "Nao informado",
+        comunicacaoServidor: req.body.comunicacaoServidor || "Nao informado",
+        instabilidadeDetectada: req.body.instabilidadeDetectada || (statusAtual === STATUS_DESCONECTADA ? "Sim" : "Nao"),
+        necessidadeManutencao: req.body.necessidadeManutencao || "Nao informado",
         observacoesOperacionais: req.body.observacoesOperacionais,
-        indisponibilidadeMinutos: Math.max(indisponibilidadeAberta, retencao.offlineMinutos),
-        falhaRecorrente: eventosRecentes >= 3 || req.body.instabilidadeDetectada === "Sim",
+        indisponibilidadeMinutos: indisponibilidadeAberta,
+        falhaRecorrente: eventosRecentes >= 3 || statusAtual === STATUS_DESCONECTADA,
       },
       include: { responsavel: { select: { id: true, nome: true, apelido: true } }, camera: true },
     });
@@ -456,6 +449,167 @@ export async function listarChecklistCamera(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar histórico da câmera" });
+  }
+}
+
+export async function listarIndisponibilidadesCamera(req: AuthRequest, res: Response) {
+  try {
+    const { cameraId } = req.params;
+    const camera = await prisma.cameraMonitoramento.findFirst({
+      where: { id: Number(cameraId), unidade: req.unidadeAtiva },
+    });
+    if (!camera) return res.status(404).json({ error: "CÃ¢mera nÃ£o encontrada" });
+
+    const eventos = await prisma.cameraEventoStatus.findMany({
+      where: {
+        cameraId: camera.id,
+        unidade: req.unidadeAtiva,
+        statusNovo: STATUS_DESCONECTADA,
+      },
+      orderBy: { iniciadoEm: "desc" },
+    });
+
+    const responsaveisIds = [...new Set(eventos.map((evento) => evento.responsavelId).filter(Boolean))] as number[];
+    const responsaveis = await prisma.usuario.findMany({
+      where: { id: { in: responsaveisIds } },
+      select: { id: true, nome: true, apelido: true },
+    });
+    const usuarios = new Map(responsaveis.map((usuario) => [usuario.id, usuario]));
+
+    return res.json(eventos.map((evento) => {
+      const duracao = evento.duracaoIndisponivel ?? (evento.encerradoEm ? minutosEntre(evento.iniciadoEm, evento.encerradoEm) : minutosEntre(evento.iniciadoEm, new Date()));
+      const responsavel = evento.responsavelId ? usuarios.get(evento.responsavelId) : null;
+      return {
+        ...evento,
+        duracaoIndisponivel: duracao,
+        tempoIndisponibilidade: formatarIndisponibilidade(duracao),
+        responsavel: responsavel ? { nome: responsavel.apelido || responsavel.nome } : null,
+      };
+    }));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar histÃ³rico de indisponibilidade" });
+  }
+}
+
+export async function registrarIndisponibilidadeCamera(req: AuthRequest, res: Response) {
+  try {
+    const { cameraId } = req.params;
+    const camera = await prisma.cameraMonitoramento.findFirst({
+      where: { id: Number(cameraId), unidade: req.unidadeAtiva },
+    });
+    if (!camera) return res.status(404).json({ error: "CÃ¢mera nÃ£o encontrada" });
+
+    const iniciadoEm = dataOpcional(req.body.iniciadoEm);
+    const encerradoEm = dataOpcional(req.body.encerradoEm);
+    const motivo = String(req.body.motivo || "").trim();
+
+    if (!iniciadoEm || !encerradoEm || !motivo) {
+      return res.status(400).json({ error: "Informe data/hora inicial, data/hora final e motivo." });
+    }
+
+    if (encerradoEm <= iniciadoEm) {
+      return res.status(400).json({ error: "A data/hora final deve ser maior que a data/hora inicial." });
+    }
+
+    const duracao = minutosEntre(iniciadoEm, encerradoEm);
+    const evento = await prisma.cameraEventoStatus.create({
+      data: {
+        cameraId: camera.id,
+        unidade: camera.unidade,
+        statusAnterior: STATUS_CONECTADA,
+        statusNovo: STATUS_DESCONECTADA,
+        iniciadoEm,
+        encerradoEm,
+        duracaoIndisponivel: duracao,
+        motivo,
+        responsavelId: req.usuarioId,
+        observacao: req.body.observacao,
+      },
+    });
+
+    await prisma.cameraMonitoramento.update({
+      where: { id: camera.id },
+      data: {
+        totalFalhas: { increment: 1 },
+        totalIndisponibilidade: { increment: duracao },
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: `Registro de indisponibilidade da cÃ¢mera ${camera.numeroCamera} por ${formatarIndisponibilidade(duracao)}`,
+      tipoRegistro: "CameraEventoStatus",
+      registroId: evento.id,
+      dadosNovos: evento,
+    });
+
+    return res.status(201).json({
+      ...evento,
+      tempoIndisponibilidade: formatarIndisponibilidade(duracao),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao registrar indisponibilidade" });
+  }
+}
+
+export async function atualizarIndisponibilidadeCamera(req: AuthRequest, res: Response) {
+  try {
+    const { cameraId, eventoId } = req.params;
+    const anterior = await prisma.cameraEventoStatus.findFirst({
+      where: {
+        id: Number(eventoId),
+        cameraId: Number(cameraId),
+        unidade: req.unidadeAtiva,
+        statusNovo: STATUS_DESCONECTADA,
+      },
+    });
+    if (!anterior) return res.status(404).json({ error: "Registro de indisponibilidade nÃ£o encontrado" });
+
+    const iniciadoEm = dataOpcional(req.body.iniciadoEm) || anterior.iniciadoEm;
+    const encerradoEm = dataOpcional(req.body.encerradoEm) || anterior.encerradoEm;
+    if (!encerradoEm || encerradoEm <= iniciadoEm) {
+      return res.status(400).json({ error: "A data/hora final deve ser maior que a data/hora inicial." });
+    }
+
+    const duracaoAnterior = anterior.duracaoIndisponivel ?? minutosEntre(anterior.iniciadoEm, anterior.encerradoEm || new Date());
+    const duracaoNova = minutosEntre(iniciadoEm, encerradoEm);
+
+    const evento = await prisma.cameraEventoStatus.update({
+      where: { id: anterior.id },
+      data: {
+        iniciadoEm,
+        encerradoEm,
+        duracaoIndisponivel: duracaoNova,
+        motivo: req.body.motivo || anterior.motivo,
+        observacao: req.body.observacao ?? anterior.observacao,
+      },
+    });
+
+    await prisma.cameraMonitoramento.update({
+      where: { id: Number(cameraId) },
+      data: {
+        totalIndisponibilidade: { increment: duracaoNova - duracaoAnterior },
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: `AtualizaÃ§Ã£o de indisponibilidade da cÃ¢mera ID ${cameraId}`,
+      tipoRegistro: "CameraEventoStatus",
+      registroId: evento.id,
+      dadosAnteriores: anterior,
+      dadosNovos: evento,
+    });
+
+    return res.json({
+      ...evento,
+      tempoIndisponibilidade: formatarIndisponibilidade(duracaoNova),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao atualizar indisponibilidade" });
   }
 }
 
@@ -500,6 +654,40 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
       const ultimo = checklists.find((checklist) => checklist.cameraId === camera.id);
       return !ultimo || ultimo.createdAt < limiteChecklist;
     });
+    const ultimoChecklistPorCamera = cameras.map((camera) => ({
+      camera,
+      checklist: checklists.find((checklist) => checklist.cameraId === camera.id) || null,
+    }));
+    const retencoesValidas = ultimoChecklistPorCamera
+      .map(({ checklist }) => checklist?.tempoGravacaoDisponivel ?? null)
+      .filter((dias): dias is number => typeof dias === "number" && Number.isFinite(dias));
+    const retencaoMedia =
+      retencoesValidas.length === 0
+        ? 0
+        : Math.round(retencoesValidas.reduce((soma, dias) => soma + dias, 0) / retencoesValidas.length);
+    const camerasConformidade = ultimoChecklistPorCamera.filter(({ checklist }) => (checklist?.tempoGravacaoDisponivel ?? -1) >= 180).length;
+    const camerasAtencao = ultimoChecklistPorCamera.filter(({ checklist }) => {
+      const dias = checklist?.tempoGravacaoDisponivel;
+      return typeof dias === "number" && dias >= 150 && dias <= 179;
+    }).length;
+    const camerasCriticas = ultimoChecklistPorCamera.filter(({ checklist }) => {
+      const dias = checklist?.tempoGravacaoDisponivel;
+      return typeof dias === "number" && dias < 150;
+    }).length;
+    const menorRetencao = ultimoChecklistPorCamera
+      .filter(({ checklist }) => typeof checklist?.tempoGravacaoDisponivel === "number")
+      .sort((a, b) => (a.checklist!.tempoGravacaoDisponivel || 0) - (b.checklist!.tempoGravacaoDisponivel || 0))
+      .slice(0, 10)
+      .map(({ camera, checklist }) => ({
+        id: camera.id,
+        numeroCamera: camera.numeroCamera,
+        servidor: camera.numeroServidor,
+        area: camera.areaMonitorada,
+        status: camera.status,
+        diasRetencao: checklist?.tempoGravacaoDisponivel || 0,
+        dataMaisAntiga: checklist?.dataInicialGravacao,
+        dataMaisRecente: checklist?.dataMaisRecenteGravacao,
+      }));
 
     const instabilidadePorCamera = ranking(
       cameras.reduce<Record<string, number>>((acc, camera) => {
@@ -553,6 +741,12 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
       mediaSolucao,
       mediaOfflinePorCamera: total === 0 ? 0 : Math.round(totalOfflineHistorico / total),
       totalOfflineHistorico,
+      retencaoMedia,
+      camerasConformidade,
+      camerasAtencao,
+      camerasCriticas,
+      camerasDesconectadas: offline,
+      menorRetencao,
       sla,
       metaSla,
       indicadorSla: sla >= metaSla ? "Dentro do SLA" : sla >= 90 ? "Atenção" : "Crítico",
@@ -589,6 +783,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         status: camera.status,
         tipoCamera: camera.tipoCamera,
         tecnologia: camera.tecnologia,
+        diasRetencao: checklists.find((checklist) => checklist.cameraId === camera.id)?.tempoGravacaoDisponivel ?? null,
         offlineMinutos:
           camera.status === STATUS_DESCONECTADA && camera.desconectadaDesde
             ? minutosEntre(camera.desconectadaDesde, agora)
@@ -629,15 +824,23 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
     const cameras = await prisma.cameraMonitoramento.findMany({
       where: { unidade: req.unidadeAtiva },
       orderBy: { numeroCamera: "asc" },
+      include: {
+        checklists: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+        },
+      },
     });
 
     const linhas = [
-      ["Camera", "Servidor", "Sistema", "Retencao dias", "Status", "Tecnologia", "Tipo", "Local", "Area", "Infravermelho", "Monitoramento", "Ultima manutencao", "Falhas", "Indisponibilidade minutos"],
+      ["Camera", "Servidor", "Sistema", "Retencao real dias", "Data mais antiga", "Data mais recente", "Status", "Tecnologia", "Tipo", "Local", "Area", "Infravermelho", "Monitoramento", "Ultima manutencao", "Falhas", "Indisponibilidade minutos"],
       ...cameras.map((camera) => [
         camera.numeroCamera,
         camera.numeroServidor,
         camera.tipoSistema,
-        camera.periodoGravacaoDias,
+        camera.checklists[0]?.tempoGravacaoDisponivel ?? "",
+        camera.checklists[0]?.dataInicialGravacao?.toISOString().slice(0, 10) || "",
+        camera.checklists[0]?.dataMaisRecenteGravacao?.toISOString().slice(0, 10) || "",
         camera.status,
         camera.tecnologia,
         camera.tipoCamera,

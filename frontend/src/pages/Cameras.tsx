@@ -1,14 +1,15 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Camera, Radio, ShieldCheck, Wifi, WifiOff } from "lucide-react";
 import { api } from "../services/api";
-import { podeAnalisar } from "../utils/permissoes";
+import { podeAdministrar, podeAnalisar } from "../utils/permissoes";
 
 type CameraItem = {
   id: number;
   numeroCamera: string;
+  nomeCamera?: string;
   numeroServidor: string;
   tipoSistema: string;
-  periodoGravacaoDias: number;
+  periodoGravacaoDias?: number;
   status: string;
   tecnologia: string;
   tipoCamera: string;
@@ -21,6 +22,14 @@ type CameraItem = {
   totalIndisponibilidade: number;
   totalFalhas: number;
   desconectadaDesde?: string | null;
+  checklists?: Array<{
+    id: number;
+    tempoGravacaoDisponivel: number;
+    dataInicialGravacao?: string | null;
+    dataMaisRecenteGravacao?: string | null;
+    retencaoEstimadaTexto?: string | null;
+    createdAt: string;
+  }>;
 };
 
 type DashboardCameras = {
@@ -32,6 +41,12 @@ type DashboardCameras = {
   mediaSolucao: number;
   mediaOfflinePorCamera: number;
   totalOfflineHistorico: number;
+  retencaoMedia: number;
+  camerasConformidade: number;
+  camerasAtencao: number;
+  camerasCriticas: number;
+  camerasDesconectadas: number;
+  menorRetencao: Array<{ id: number; numeroCamera: string; servidor: string; area: string; status: string; diasRetencao: number; dataMaisAntiga?: string; dataMaisRecente?: string }>;
   sla: number;
   metaSla?: number;
   indicadorSla: string;
@@ -45,16 +60,28 @@ type DashboardCameras = {
   resolucaoPorOperador: [string, number][];
   falhasPorDia: [string, number][];
   timeline: Array<{ id: number; camera: string; area: string; status: string; iniciadoEm: string; encerradoEm?: string; duracao?: number; observacao?: string }>;
-  mapaOperacional: Array<{ id: number; numeroCamera: string; servidor: string; area: string; local: string; status: string; tipoCamera: string; tecnologia: string; offlineMinutos: number }>;
+  mapaOperacional: Array<{ id: number; numeroCamera: string; servidor: string; area: string; local: string; status: string; tipoCamera: string; tecnologia: string; diasRetencao?: number | null; offlineMinutos: number }>;
   alertas: Array<{ id: number; titulo: string; mensagem: string; minutos: number; slaViolado?: boolean }>;
   alertasAutomaticos?: Array<{ tipo: string; mensagem: string; severidade: string }>;
 };
 
+type IndisponibilidadeCamera = {
+  id: number;
+  iniciadoEm: string;
+  encerradoEm?: string;
+  duracaoIndisponivel: number;
+  tempoIndisponibilidade: string;
+  motivo?: string;
+  observacao?: string;
+  createdAt: string;
+  responsavel?: { nome: string } | null;
+};
+
 const cameraInicial = {
   numeroCamera: "",
+  nomeCamera: "",
   numeroServidor: "",
   tipoSistema: "",
-  periodoGravacaoDias: "",
   status: "",
   tecnologia: "",
   tipoCamera: "",
@@ -68,19 +95,28 @@ const cameraInicial = {
 
 const checklistInicial = {
   statusAtual: "Conectada",
-  tempoGravacaoDisponivel: "",
   dataInicialGravacao: "",
-  dataDesconexaoManual: "",
-  dataReconexaoManual: "",
-  retencaoEstimadaTexto: "Retenção estimada atual: 180 dias, 00 horas e 00 minutos",
-  qualidadeImagem: "Boa",
-  funcionamentoInfravermelho: "Funcionando",
-  funcionamentoGravacao: "Funcionando",
-  comunicacaoServidor: "Funcionando",
-  instabilidadeDetectada: "Não",
-  necessidadeManutencao: "Não",
+  dataMaisRecenteGravacao: "",
+  retencaoEstimadaTexto: "Retencao atual: informe as datas reais encontradas no Digifort",
   observacoesOperacionais: "",
 };
+
+const indisponibilidadeInicial = {
+  iniciadoEm: "",
+  encerradoEm: "",
+  motivo: "",
+  observacao: "",
+};
+
+const motivosIndisponibilidade = [
+  "Falha de Rede",
+  "Falha de Energia",
+  "Falha do Equipamento",
+  "Manutenção Programada",
+  "Manutenção Corretiva",
+  "Falha de Servidor",
+  "Outro",
+];
 
 function minutos(min: number) {
   if (!min) return "0 min";
@@ -105,14 +141,11 @@ function formatarRetencao(minutosTotais: number) {
   return `${dias} dias, ${String(horas).padStart(2, "0")} horas e ${String(minutosRestantes).padStart(2, "0")} minutos`;
 }
 
-function calcularRetencaoChecklist(camera: CameraItem | null, dados: typeof checklistInicial) {
-  const retencaoProjetada = 180 * 24 * 60;
-  const offlineHistorico = camera?.totalIndisponibilidade || 0;
-  const offlineAtual = camera?.status === "Desconectada" && camera.desconectadaDesde
-    ? minutosEntreDatas(camera.desconectadaDesde)
-    : 0;
-  const offlineManual = minutosEntreDatas(dados.dataDesconexaoManual, dados.dataReconexaoManual || undefined);
-  return formatarRetencao(retencaoProjetada - offlineHistorico - offlineAtual - offlineManual);
+function calcularRetencaoChecklist(_camera: CameraItem | null, dados: typeof checklistInicial) {
+  if (!dados.dataInicialGravacao || !dados.dataMaisRecenteGravacao) {
+    return "informe as duas datas reais encontradas no Digifort";
+  }
+  return formatarRetencao(minutosEntreDatas(dados.dataInicialGravacao, dados.dataMaisRecenteGravacao));
 }
 
 function Barra({ nome, valor, maximo, cor = "bg-cyan-400" }: { nome: string; valor: number; maximo: number; cor?: string }) {
@@ -161,6 +194,11 @@ export default function Cameras() {
   const [formAberto, setFormAberto] = useState(false);
   const [cameraEditando, setCameraEditando] = useState<CameraItem | null>(null);
   const [cameraChecklist, setCameraChecklist] = useState<CameraItem | null>(null);
+  const [cameraHistorico, setCameraHistorico] = useState<CameraItem | null>(null);
+  const [indisponibilidades, setIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
+  const [formIndisponibilidade, setFormIndisponibilidade] = useState(indisponibilidadeInicial);
+  const [indisponibilidadeEditando, setIndisponibilidadeEditando] = useState<IndisponibilidadeCamera | null>(null);
+  const [formIndisponibilidadeAberto, setFormIndisponibilidadeAberto] = useState(false);
   const [form, setForm] = useState(cameraInicial);
   const [checklist, setChecklist] = useState(checklistInicial);
 
@@ -191,9 +229,13 @@ export default function Cameras() {
       const novo = { ...atual, [nome]: valor };
       return {
         ...novo,
-        retencaoEstimadaTexto: `Retenção estimada atual: ${calcularRetencaoChecklist(cameraChecklist, novo)}`,
+        retencaoEstimadaTexto: `Retenção atual: ${calcularRetencaoChecklist(cameraChecklist, novo)}`,
       };
     });
+  }
+
+  function campoIndisponibilidade(nome: string, valor: string) {
+    setFormIndisponibilidade((atual) => ({ ...atual, [nome]: valor }));
   }
 
   useEffect(() => {
@@ -201,7 +243,7 @@ export default function Cameras() {
     const intervalo = window.setInterval(() => {
       setChecklist((atual) => ({
         ...atual,
-        retencaoEstimadaTexto: `Retenção estimada atual: ${calcularRetencaoChecklist(cameraChecklist, atual)}`,
+        retencaoEstimadaTexto: `Retenção atual: ${calcularRetencaoChecklist(cameraChecklist, atual)}`,
       }));
     }, 60000);
     return () => window.clearInterval(intervalo);
@@ -218,9 +260,9 @@ export default function Cameras() {
     setCameraEditando(camera);
     setForm({
       numeroCamera: String(camera.numeroCamera),
+      nomeCamera: camera.nomeCamera || "",
       numeroServidor: String(camera.numeroServidor),
       tipoSistema: camera.tipoSistema,
-      periodoGravacaoDias: String(camera.periodoGravacaoDias),
       status: camera.status,
       tecnologia: camera.tecnologia,
       tipoCamera: camera.tipoCamera,
@@ -263,9 +305,44 @@ export default function Cameras() {
     setChecklist({
       ...checklistInicial,
       statusAtual: camera.status,
-      tempoGravacaoDisponivel: String(Math.max(0, Math.round((180 * 24 * 60 - camera.totalIndisponibilidade) / 1440))),
-      retencaoEstimadaTexto: `Retenção estimada atual: ${calcularRetencaoChecklist(camera, checklistInicial)}`,
+      retencaoEstimadaTexto: `Retenção atual: ${calcularRetencaoChecklist(camera, checklistInicial)}`,
     });
+  }
+
+  async function abrirHistoricoIndisponibilidade(camera: CameraItem) {
+    setCameraHistorico(camera);
+    setFormIndisponibilidade(indisponibilidadeInicial);
+    setIndisponibilidadeEditando(null);
+    setFormIndisponibilidadeAberto(false);
+    const response = await api.get(`/cameras/${camera.id}/indisponibilidades`);
+    setIndisponibilidades(response.data);
+  }
+
+  function editarIndisponibilidade(registro: IndisponibilidadeCamera) {
+    setIndisponibilidadeEditando(registro);
+    setFormIndisponibilidade({
+      iniciadoEm: registro.iniciadoEm ? registro.iniciadoEm.slice(0, 16) : "",
+      encerradoEm: registro.encerradoEm ? registro.encerradoEm.slice(0, 16) : "",
+      motivo: registro.motivo || "",
+      observacao: registro.observacao || "",
+    });
+    setFormIndisponibilidadeAberto(true);
+  }
+
+  async function salvarIndisponibilidade(e: React.FormEvent) {
+    e.preventDefault();
+    if (!cameraHistorico) return;
+    if (indisponibilidadeEditando) {
+      await api.put(`/cameras/${cameraHistorico.id}/indisponibilidades/${indisponibilidadeEditando.id}`, formIndisponibilidade);
+    } else {
+      await api.post(`/cameras/${cameraHistorico.id}/indisponibilidades`, formIndisponibilidade);
+    }
+    const response = await api.get(`/cameras/${cameraHistorico.id}/indisponibilidades`);
+    setIndisponibilidades(response.data);
+    setFormIndisponibilidade(indisponibilidadeInicial);
+    setIndisponibilidadeEditando(null);
+    setFormIndisponibilidadeAberto(false);
+    await carregar();
   }
 
   async function salvarChecklist(e: React.FormEvent) {
@@ -324,6 +401,14 @@ export default function Cameras() {
               <CardSoc titulo="Online" valor={dashboard.online} subtitulo={`${dashboard.disponibilidade}% de disponibilidade`} icon={Wifi} tom="text-emerald-300" />
               <CardSoc titulo="Offline" valor={dashboard.offline} subtitulo={`${dashboard.indisponibilidade}% indisponível`} icon={WifiOff} tom="text-red-300" />
               <CardSoc titulo="SLA operacional" valor={`${dashboard.sla}%`} subtitulo={`${dashboard.indicadorSla} | meta ${dashboard.metaSla || 98}%`} icon={ShieldCheck} tom={dashboard.sla >= (dashboard.metaSla || 98) ? "text-emerald-300" : dashboard.sla >= 90 ? "text-amber-300" : "text-red-300"} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              <CardSoc titulo="Retencao media" valor={`${dashboard.retencaoMedia || 0} dias`} subtitulo="Media real pelo Digifort" icon={ShieldCheck} tom="text-cyan-300" />
+              <CardSoc titulo="Em conformidade" valor={dashboard.camerasConformidade || 0} subtitulo="Retencao acima de 180 dias" icon={Wifi} tom="text-emerald-300" />
+              <CardSoc titulo="Em atencao" valor={dashboard.camerasAtencao || 0} subtitulo="Retencao entre 150 e 179 dias" icon={AlertTriangle} tom="text-amber-300" />
+              <CardSoc titulo="Criticas" valor={dashboard.camerasCriticas || 0} subtitulo="Retencao abaixo de 150 dias" icon={AlertTriangle} tom="text-red-300" />
+              <CardSoc titulo="Sem gravacao" valor={dashboard.camerasDesconectadas || 0} subtitulo="Cameras desconectadas agora" icon={WifiOff} tom="text-red-300" />
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -409,6 +494,21 @@ export default function Cameras() {
               </div>
             </div>
 
+            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+              <h2 className="font-bold text-slate-100">10 cameras com menor retencao real</h2>
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                {dashboard.menorRetencao.length === 0 ? (
+                  <p className="text-sm text-slate-500">Nenhum checklist de retencao registrado.</p>
+                ) : dashboard.menorRetencao.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-900 p-3">
+                    <p className="text-sm font-bold text-slate-100">Camera {item.numeroCamera}</p>
+                    <p className="mt-1 text-2xl font-black text-amber-300">{item.diasRetencao} dias</p>
+                    <p className="text-xs text-slate-400">{item.area} | Servidor {item.servidor}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {dashboard.digifort && (
               <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
                 <h2 className="font-bold text-cyan-100">Preparação para integração Digifort</h2>
@@ -463,12 +563,12 @@ export default function Cameras() {
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <input className="rounded-lg border p-3" placeholder="Nº da câmera. Ex: CF001" value={form.numeroCamera} onChange={(e) => campo("numeroCamera", e.target.value.toUpperCase())} required />
+            <input className="rounded-lg border p-3" placeholder="Nome da camera. Ex: Gate 1 - Entrada" value={form.nomeCamera} onChange={(e) => campo("nomeCamera", e.target.value)} />
             <input className="rounded-lg border p-3" placeholder="Nº do servidor. Ex: SJJ-1" value={form.numeroServidor} onChange={(e) => campo("numeroServidor", e.target.value.toUpperCase())} required />
             <select className="rounded-lg border p-3" value={form.tipoSistema} onChange={(e) => campo("tipoSistema", e.target.value)} required>
               <option value="">Selecione o tipo de sistema</option>
               <option>DIGIFORT</option>
             </select>
-            <input className="rounded-lg border p-3" placeholder="Período de gravação em dias" value={form.periodoGravacaoDias} onChange={(e) => campo("periodoGravacaoDias", e.target.value)} required />
             <select className="rounded-lg border p-3" value={form.status} onChange={(e) => campo("status", e.target.value)} required>
               <option value="">Selecione o status atual</option>
               <option>Conectada</option>
@@ -522,6 +622,7 @@ export default function Cameras() {
                 <th className="p-3">Tipo</th>
                 <th className="p-3">Tecnologia</th>
                 <th className="p-3">Área</th>
+                <th className="p-3">Dias de gravacao</th>
                 <th className="p-3">Falhas</th>
                 <th className="p-3">Offline total</th>
                 <th className="p-3">Ações</th>
@@ -530,12 +631,13 @@ export default function Cameras() {
             <tbody>
               {cameras.map((camera) => (
                 <tr key={camera.id} className="border-b border-slate-100">
-                  <td className="p-3 font-bold">Câmera {camera.numeroCamera}</td>
+                  <td className="p-3 font-bold">Câmera {camera.numeroCamera}{camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}</td>
                   <td className="p-3">Servidor {camera.numeroServidor}</td>
                   <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${camera.status === "Conectada" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{camera.status}</span></td>
                   <td className="p-3">{camera.tipoCamera}</td>
                   <td className="p-3">{camera.tecnologia}</td>
                   <td className="p-3">{camera.areaMonitorada}</td>
+                  <td className="p-3 font-bold">{camera.checklists?.[0]?.tempoGravacaoDisponivel ?? "Sem checklist"}</td>
                   <td className="p-3">{camera.totalFalhas}</td>
                   <td className="p-3">{minutos(camera.totalIndisponibilidade)}</td>
                   <td className="p-3">
@@ -543,6 +645,7 @@ export default function Cameras() {
                       {podeAnalisar() && <button onClick={() => editarCamera(camera)} className="rounded bg-slate-200 px-3 py-1">Editar</button>}
                       {podeAnalisar() && <button onClick={() => excluirCamera(camera)} className="rounded bg-red-600 px-3 py-1 text-white">Excluir</button>}
                       <button onClick={() => abrirChecklist(camera)} className="rounded bg-blue-600 px-3 py-1 text-white">Checklist</button>
+                      <button onClick={() => abrirHistoricoIndisponibilidade(camera)} className="rounded bg-slate-900 px-3 py-1 text-white">Histórico</button>
                     </div>
                   </td>
                 </tr>
@@ -551,6 +654,99 @@ export default function Cameras() {
           </table>
         </div>
       </section>
+
+      {cameraHistorico && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">Histórico de Indisponibilidade</p>
+                <h2 className="text-xl font-bold text-slate-900">Câmera {cameraHistorico.numeroCamera}{cameraHistorico.nomeCamera ? ` - ${cameraHistorico.nomeCamera}` : ""}</h2>
+                <p className="text-sm text-slate-500">{cameraHistorico.areaMonitorada} | Servidor {cameraHistorico.numeroServidor}</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormIndisponibilidade(indisponibilidadeInicial);
+                    setIndisponibilidadeEditando(null);
+                    setFormIndisponibilidadeAberto(true);
+                  }}
+                  className="rounded-lg bg-blue-600 px-4 py-2 font-bold text-white"
+                >
+                  + Registrar Indisponibilidade
+                </button>
+                <button type="button" onClick={() => setCameraHistorico(null)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
+              </div>
+            </div>
+
+            {formIndisponibilidadeAberto && (
+              <form onSubmit={salvarIndisponibilidade} className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <label className="space-y-2 text-sm font-bold text-slate-700">
+                    <span>Data/Hora Inicial</span>
+                    <input type="datetime-local" className="w-full rounded-lg border p-3" value={formIndisponibilidade.iniciadoEm} onChange={(e) => campoIndisponibilidade("iniciadoEm", e.target.value)} required />
+                  </label>
+                  <label className="space-y-2 text-sm font-bold text-slate-700">
+                    <span>Data/Hora Final</span>
+                    <input type="datetime-local" className="w-full rounded-lg border p-3" value={formIndisponibilidade.encerradoEm} onChange={(e) => campoIndisponibilidade("encerradoEm", e.target.value)} required />
+                  </label>
+                  <label className="space-y-2 text-sm font-bold text-slate-700">
+                    <span>Motivo</span>
+                    <select className="w-full rounded-lg border p-3" value={formIndisponibilidade.motivo} onChange={(e) => campoIndisponibilidade("motivo", e.target.value)} required>
+                      <option value="">Selecione o motivo</option>
+                      {motivosIndisponibilidade.map((motivo) => <option key={motivo}>{motivo}</option>)}
+                    </select>
+                  </label>
+                  <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2">
+                    <span>Observação</span>
+                    <textarea className="w-full rounded-lg border p-3" placeholder="Detalhe a indisponibilidade, evidências e tratativas realizadas" value={formIndisponibilidade.observacao} onChange={(e) => campoIndisponibilidade("observacao", e.target.value)} />
+                  </label>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button className="rounded-lg bg-green-600 px-5 py-3 font-bold text-white">{indisponibilidadeEditando ? "Salvar alteração" : "Salvar registro"}</button>
+                  <button type="button" onClick={() => setFormIndisponibilidadeAberto(false)} className="rounded-lg bg-slate-200 px-5 py-3 font-bold text-slate-700">Cancelar</button>
+                </div>
+              </form>
+            )}
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[920px] text-left text-sm">
+                <thead className="bg-slate-100 text-slate-600">
+                  <tr>
+                    <th className="p-3">Data Inicial</th>
+                    <th className="p-3">Data Final</th>
+                    <th className="p-3">Tempo</th>
+                    <th className="p-3">Motivo</th>
+                    <th className="p-3">Usuário Responsável</th>
+                    <th className="p-3">Data de Cadastro</th>
+                    {podeAdministrar() && <th className="p-3">Ações</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {indisponibilidades.length === 0 ? (
+                    <tr><td className="p-4 text-slate-500" colSpan={podeAdministrar() ? 7 : 6}>Nenhum período de indisponibilidade registrado.</td></tr>
+                  ) : indisponibilidades.map((registro) => (
+                    <tr key={registro.id} className="border-b border-slate-100">
+                      <td className="p-3">{new Date(registro.iniciadoEm).toLocaleString("pt-BR")}</td>
+                      <td className="p-3">{registro.encerradoEm ? new Date(registro.encerradoEm).toLocaleString("pt-BR") : "Em aberto"}</td>
+                      <td className="p-3 font-bold">{registro.tempoIndisponibilidade}</td>
+                      <td className="p-3">{registro.motivo || "Não informado"}</td>
+                      <td className="p-3">{registro.responsavel?.nome || "Sistema"}</td>
+                      <td className="p-3">{new Date(registro.createdAt).toLocaleString("pt-BR")}</td>
+                      {podeAdministrar() && (
+                        <td className="p-3">
+                          <button onClick={() => editarIndisponibilidade(registro)} className="rounded bg-slate-200 px-3 py-1 text-slate-700">Editar</button>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
 
       {cameraChecklist && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -563,45 +759,24 @@ export default function Cameras() {
               <button type="button" onClick={() => setCameraChecklist(null)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <CampoChecklist label="Status atual da câmera">
-                <select className="w-full rounded-lg border p-3" title="Status atual da câmera no momento do checklist" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}><option>Conectada</option><option>Desconectada</option></select>
+              <CampoChecklist label="Data mais antiga encontrada no Digifort">
+                <input className="w-full rounded-lg border p-3" type="date" title="Data mais antiga de gravacao encontrada durante a consulta no Digifort" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} required />
               </CampoChecklist>
-              <CampoChecklist label="Tempo de gravação disponível">
-                <input className="w-full rounded-lg border p-3" placeholder="Ex: 180 dias disponíveis" title="Quantidade de dias disponíveis após cálculo de retenção" value={checklist.tempoGravacaoDisponivel} onChange={(e) => campoChecklist("tempoGravacaoDisponivel", e.target.value)} required />
+              <CampoChecklist label="Data mais recente encontrada no Digifort">
+                <input className="w-full rounded-lg border p-3" type="date" title="Data mais recente de gravacao encontrada durante a consulta no Digifort" value={checklist.dataMaisRecenteGravacao} onChange={(e) => campoChecklist("dataMaisRecenteGravacao", e.target.value)} required />
               </CampoChecklist>
-              <CampoChecklist label="Data inicial/limite de gravação">
-                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data inicial ou limite de gravação informada pelo operador" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} />
+              <CampoChecklist label="Status atual da camera">
+                <select className="w-full rounded-lg border p-3" title="Status atual da camera no momento do checklist" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}>
+                  <option>Conectada</option>
+                  <option>Desconectada</option>
+                </select>
               </CampoChecklist>
-              <CampoChecklist label="Retenção estimada atual">
-                <input className="w-full rounded-lg border bg-slate-50 p-3 text-slate-700" readOnly title="Retenção calculada automaticamente em dias, horas e minutos" value={checklist.retencaoEstimadaTexto} />
-              </CampoChecklist>
-              <CampoChecklist label="Data/hora de desconexão">
-                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data/hora de desconexão manual, se houver ajuste operacional" value={checklist.dataDesconexaoManual} onChange={(e) => campoChecklist("dataDesconexaoManual", e.target.value)} />
-              </CampoChecklist>
-              <CampoChecklist label="Data/hora de reconexão">
-                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data/hora de reconexão manual. Se ficar vazio, calcula até agora" value={checklist.dataReconexaoManual} onChange={(e) => campoChecklist("dataReconexaoManual", e.target.value)} />
-              </CampoChecklist>
-              <CampoChecklist label="Qualidade da imagem">
-                <select className="w-full rounded-lg border p-3" title="Qualidade atual da imagem exibida no sistema de CFTV" value={checklist.qualidadeImagem} onChange={(e) => campoChecklist("qualidadeImagem", e.target.value)}><option>Excelente</option><option>Boa</option><option>Regular</option><option>Ruim</option><option>Sem imagem</option></select>
-              </CampoChecklist>
-              <CampoChecklist label="Funcionamento do infravermelho">
-                <select className="w-full rounded-lg border p-3" title="Funcionamento do infravermelho durante período noturno ou baixa luminosidade" value={checklist.funcionamentoInfravermelho} onChange={(e) => campoChecklist("funcionamentoInfravermelho", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option><option>Não possui</option></select>
-              </CampoChecklist>
-              <CampoChecklist label="Funcionamento da gravação">
-                <select className="w-full rounded-lg border p-3" title="Confirma se a gravação está sendo armazenada corretamente" value={checklist.funcionamentoGravacao} onChange={(e) => campoChecklist("funcionamentoGravacao", e.target.value)}><option>Funcionando</option><option>Parcial</option><option>Não funcionando</option></select>
-              </CampoChecklist>
-              <CampoChecklist label="Comunicação com servidor">
-                <select className="w-full rounded-lg border p-3" title="Comunicação entre câmera, rede e servidor de gravação" value={checklist.comunicacaoServidor} onChange={(e) => campoChecklist("comunicacaoServidor", e.target.value)}><option>Funcionando</option><option>Instável</option><option>Sem comunicação</option></select>
-              </CampoChecklist>
-              <CampoChecklist label="Instabilidade detectada">
-                <select className="w-full rounded-lg border p-3" title="Indica oscilação, queda de imagem ou comportamento intermitente" value={checklist.instabilidadeDetectada} onChange={(e) => campoChecklist("instabilidadeDetectada", e.target.value)}><option>Não</option><option>Sim</option></select>
-              </CampoChecklist>
-              <CampoChecklist label="Necessidade de manutenção">
-                <select className="w-full rounded-lg border p-3" title="Indica se a câmera precisa de manutenção preventiva ou corretiva" value={checklist.necessidadeManutencao} onChange={(e) => campoChecklist("necessidadeManutencao", e.target.value)}><option>Não</option><option>Sim</option><option>Urgente</option></select>
+              <CampoChecklist label="Retencao atual calculada">
+                <input className="w-full rounded-lg border bg-slate-50 p-3 text-slate-700" readOnly title="Diferenca real entre a data mais antiga e a data mais recente encontradas no Digifort" value={checklist.retencaoEstimadaTexto} />
               </CampoChecklist>
               <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2 dark:text-slate-200">
-                <span>Observações operacionais</span>
-                <textarea className="w-full rounded-lg border p-3" placeholder="Descreva observações operacionais, falhas percebidas, imagem ruim, perda de gravação ou ação necessária" title="Observações operacionais do checklist" value={checklist.observacoesOperacionais} onChange={(e) => campoChecklist("observacoesOperacionais", e.target.value)} />
+                <span>Observacoes do operador</span>
+                <textarea className="w-full rounded-lg border p-3" placeholder="Descreva o resultado da consulta no Digifort, falhas, ausencia de gravacao ou observacoes relevantes" title="Observacoes operacionais do checklist" value={checklist.observacoesOperacionais} onChange={(e) => campoChecklist("observacoesOperacionais", e.target.value)} />
               </label>
             </div>
             <button className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-bold text-white">Salvar checklist</button>
