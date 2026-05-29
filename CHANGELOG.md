@@ -4,6 +4,17 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.0.9] - 2026-05-29
+
+### Seguranca
+
+- Adicionado bloqueio seguro de sessao pelo cabecalho do sistema, com confirmacao antes de bloquear.
+- Tela de sessao bloqueada passa a exigir a senha do usuario conectado para liberar o uso do JetGuard.
+- Bloqueio sincronizado entre abas do mesmo navegador, evitando acesso por nova aba enquanto a estacao estiver bloqueada.
+- Opcao de encerrar sessao diretamente pela tela bloqueada.
+- Quando uma sessao bloqueada e encerrada, o proximo login no mesmo navegador inicia automaticamente bloqueado para reduzir risco com senhas salvas.
+- Backend passa a validar o desbloqueio por senha e registrar o evento nos logs de auditoria.
+
 ## [1.0.8] - 2026-05-28
 
 ### Adicionado
