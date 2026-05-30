@@ -6,6 +6,7 @@ import { emitirRealtime } from "../services/realtime.service";
 
 const STATUS_CONECTADA = "Conectada";
 const STATUS_DESCONECTADA = "Desconectada";
+const RETENCAO_MAXIMA_MINUTOS = 181 * 24 * 60;
 
 function numero(valor: unknown, fallback = 0) {
   const convertido = Number(valor);
@@ -67,9 +68,11 @@ function calcularMinutosIndisponiveisNoIntervalo(
 function calcularRetencaoEfetiva(params: {
   dataMaisAntiga?: Date | null;
   dataMaisRecente?: Date | null;
+  statusCamera?: string;
+  referenciaAtual?: Date;
   eventos: Array<{ iniciadoEm: Date; encerradoEm: Date | null; statusNovo: string }>;
 }) {
-  if (!params.dataMaisAntiga || !params.dataMaisRecente) {
+  if (!params.dataMaisAntiga) {
     return {
       retencaoBrutaMinutos: 0,
       indisponibilidadeMinutos: 0,
@@ -78,11 +81,27 @@ function calcularRetencaoEfetiva(params: {
     };
   }
 
-  const retencaoBrutaMinutos = minutosEntre(params.dataMaisAntiga, params.dataMaisRecente);
+  const agora = params.referenciaAtual || new Date();
+  const limiteJanelaMovel = new Date(agora.getTime() - RETENCAO_MAXIMA_MINUTOS * 60000);
+  const inicioOperacional = params.dataMaisAntiga > limiteJanelaMovel ? params.dataMaisAntiga : limiteJanelaMovel;
+  const fimOperacional = params.statusCamera === STATUS_DESCONECTADA
+    ? params.dataMaisRecente || agora
+    : agora;
+
+  if (fimOperacional <= inicioOperacional) {
+    return {
+      retencaoBrutaMinutos: 0,
+      indisponibilidadeMinutos: 0,
+      retencaoMinutos: 0,
+      retencaoTexto: formatarRetencao(0),
+    };
+  }
+
+  const retencaoBrutaMinutos = Math.min(minutosEntre(inicioOperacional, fimOperacional), RETENCAO_MAXIMA_MINUTOS);
   const indisponibilidadeMinutos = calcularMinutosIndisponiveisNoIntervalo(
     params.eventos,
-    params.dataMaisAntiga,
-    params.dataMaisRecente
+    inicioOperacional,
+    fimOperacional
   );
   const retencaoMinutos = Math.max(0, retencaoBrutaMinutos - indisponibilidadeMinutos);
 
@@ -106,6 +125,7 @@ async function calcularRetencaoGravacao(params: {
   cameraId: number;
   dataMaisAntiga?: Date | null;
   dataMaisRecente?: Date | null;
+  statusCamera?: string;
 }) {
   const eventos = await prisma.cameraEventoStatus.findMany({
     where: {
@@ -122,6 +142,7 @@ async function calcularRetencaoGravacao(params: {
   return calcularRetencaoEfetiva({
     dataMaisAntiga: params.dataMaisAntiga,
     dataMaisRecente: params.dataMaisRecente,
+    statusCamera: params.statusCamera,
     eventos,
   });
 }
@@ -149,8 +170,9 @@ async function registrarMudancaStatus(params: {
   statusNovo: string;
   responsavelId?: number;
   observacao?: string;
+  dataEvento?: Date;
 }) {
-  const agora = new Date();
+  const agora = params.dataEvento || new Date();
   const camera = await prisma.cameraMonitoramento.findUnique({ where: { id: params.cameraId } });
   if (!camera) return;
 
@@ -270,6 +292,7 @@ export async function listarCameras(req: AuthRequest, res: Response) {
       const retencao = calcularRetencaoEfetiva({
         dataMaisAntiga: ultimoChecklist.dataInicialGravacao,
         dataMaisRecente: ultimoChecklist.dataMaisRecenteGravacao,
+        statusCamera: camera.status,
         eventos: eventosCamera,
       });
       return {
@@ -455,16 +478,6 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
     if (!camera) return res.status(404).json({ error: "Câmera não encontrada" });
 
     const statusAtual = req.body.statusAtual || camera.status;
-    if (statusAtual !== camera.status) {
-      await registrarMudancaStatus({
-        cameraId: camera.id,
-        unidade: camera.unidade,
-        statusAnterior: camera.status,
-        statusNovo: statusAtual,
-        responsavelId: req.usuarioId,
-        observacao: req.body.observacoesOperacionais,
-      });
-    }
 
     const eventosRecentes = await prisma.cameraEventoStatus.count({
       where: {
@@ -480,11 +493,35 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
         ? minutosEntre(atual.desconectadaDesde, new Date())
         : 0;
     const dataInicialGravacao = dataOpcional(req.body.dataInicialGravacao);
-    const dataMaisRecenteGravacao = dataOpcional(req.body.dataMaisRecenteGravacao);
+    const dataMaisRecenteInformada = dataOpcional(req.body.dataMaisRecenteGravacao);
+    const dataMaisRecenteGravacao =
+      dataMaisRecenteInformada || (statusAtual === STATUS_CONECTADA ? new Date() : null);
+
+    if (!dataInicialGravacao) {
+      return res.status(400).json({ error: "Informe a data e hora mais antiga encontrada no Digifort." });
+    }
+
+    if (statusAtual === STATUS_DESCONECTADA && !dataMaisRecenteGravacao) {
+      return res.status(400).json({ error: "Informe a data e hora da última gravação antes da desconexão." });
+    }
+
+    if (statusAtual !== camera.status) {
+      await registrarMudancaStatus({
+        cameraId: camera.id,
+        unidade: camera.unidade,
+        statusAnterior: camera.status,
+        statusNovo: statusAtual,
+        responsavelId: req.usuarioId,
+        observacao: req.body.observacoesOperacionais,
+        dataEvento: dataMaisRecenteGravacao || new Date(),
+      });
+    }
+
     const retencao = await calcularRetencaoGravacao({
       cameraId: camera.id,
       dataMaisAntiga: dataInicialGravacao,
       dataMaisRecente: dataMaisRecenteGravacao,
+      statusCamera: statusAtual,
     });
     const diasRetencao = Math.floor(retencao.retencaoMinutos / 1440);
 
@@ -739,6 +776,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
       const retencao = calcularRetencaoEfetiva({
         dataMaisAntiga: checklist.dataInicialGravacao,
         dataMaisRecente: checklist.dataMaisRecenteGravacao,
+        statusCamera: checklist.camera.status,
         eventos: eventos.filter((evento) => evento.cameraId === checklist.cameraId),
       });
       return {
@@ -943,6 +981,7 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
           ? calcularRetencaoEfetiva({
               dataMaisAntiga: checklist.dataInicialGravacao,
               dataMaisRecente: checklist.dataMaisRecenteGravacao,
+              statusCamera: camera.status,
               eventos: eventos.filter((evento) => evento.cameraId === camera.id),
             })
           : null;

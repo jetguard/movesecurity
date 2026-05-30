@@ -108,6 +108,8 @@ const indisponibilidadeInicial = {
   observacao: "",
 };
 
+const RETENCAO_MAXIMA_MS = 181 * 24 * 60 * 60 * 1000;
+
 const motivosIndisponibilidade = [
   "Falha de Rede",
   "Falha de Energia",
@@ -138,6 +140,28 @@ function minutosEntreDatas(inicio: string, fim?: string) {
   return Math.max(0, Math.round((dataFim.getTime() - dataInicio.getTime()) / 60000));
 }
 
+function paraDatetimeLocal(valor?: string | null) {
+  if (!valor) return "";
+  const data = new Date(valor);
+  return dataParaDatetimeLocal(data);
+}
+
+function dataParaDatetimeLocal(data: Date) {
+  if (Number.isNaN(data.getTime())) return "";
+  const offset = data.getTimezoneOffset() * 60000;
+  return new Date(data.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function dataAntigaOperacional(valor?: string | null, status?: string) {
+  if (!valor) return "";
+  const dataReal = new Date(valor);
+  if (Number.isNaN(dataReal.getTime())) return "";
+  if (status !== "Conectada") return dataParaDatetimeLocal(dataReal);
+
+  const limiteJanela = new Date(Date.now() - RETENCAO_MAXIMA_MS);
+  return dataParaDatetimeLocal(dataReal > limiteJanela ? dataReal : limiteJanela);
+}
+
 function formatarRetencao(minutosTotais: number) {
   const minutosAjustados = Math.max(0, Math.round(minutosTotais));
   const dias = Math.floor(minutosAjustados / 1440);
@@ -147,10 +171,13 @@ function formatarRetencao(minutosTotais: number) {
 }
 
 function calcularRetencaoChecklist(_camera: CameraItem | null, dados: typeof checklistInicial) {
-  if (!dados.dataInicialGravacao || !dados.dataMaisRecenteGravacao) {
-    return "informe as duas datas reais encontradas no Digifort";
+  if (!dados.dataInicialGravacao) {
+    return "informe a data e hora mais antiga encontrada no Digifort";
   }
-  return formatarRetencao(minutosEntreDatas(dados.dataInicialGravacao, dados.dataMaisRecenteGravacao));
+  if (dados.statusAtual === "Desconectada" && !dados.dataMaisRecenteGravacao) {
+    return "informe a data e hora da última gravação antes da desconexão";
+  }
+  return formatarRetencao(minutosEntreDatas(dados.dataInicialGravacao, dados.dataMaisRecenteGravacao || undefined));
 }
 
 function Barra({ nome, valor, maximo, cor = "bg-cyan-400" }: { nome: string; valor: number; maximo: number; cor?: string }) {
@@ -306,11 +333,18 @@ export default function Cameras() {
   }
 
   function abrirChecklist(camera: CameraItem) {
-    setCameraChecklist(camera);
-    setChecklist({
+    const ultimoChecklist = camera.checklists?.[0];
+    const proximoChecklist = {
       ...checklistInicial,
       statusAtual: camera.status,
-      retencaoEstimadaTexto: `Retenção atual: ${calcularRetencaoChecklist(camera, checklistInicial)}`,
+      dataInicialGravacao: dataAntigaOperacional(ultimoChecklist?.dataInicialGravacao, camera.status),
+      dataMaisRecenteGravacao: camera.status === "Desconectada" ? paraDatetimeLocal(ultimoChecklist?.dataMaisRecenteGravacao) : "",
+    };
+
+    setCameraChecklist(camera);
+    setChecklist({
+      ...proximoChecklist,
+      retencaoEstimadaTexto: `Retencao atual: ${calcularRetencaoChecklist(camera, proximoChecklist)}`,
     });
   }
 
@@ -603,7 +637,10 @@ export default function Cameras() {
               <option>Ativo</option>
               <option>Inativo</option>
             </select>
-            <input type="date" className="rounded-lg border p-3" value={form.ultimaManutencao} onChange={(e) => campo("ultimaManutencao", e.target.value)} />
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Última manutenção da câmera</span>
+              <input type="date" className="w-full rounded-lg border p-3" value={form.ultimaManutencao} onChange={(e) => campo("ultimaManutencao", e.target.value)} />
+            </label>
             <textarea className="rounded-lg border p-3 md:col-span-3" placeholder="Observações técnicas" value={form.observacoesTecnicas} onChange={(e) => campo("observacoesTecnicas", e.target.value)} />
           </div>
           <button className="mt-5 rounded-lg bg-blue-600 px-5 py-3 font-bold text-white">Salvar câmera</button>
@@ -763,10 +800,10 @@ export default function Cameras() {
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <CampoChecklist label="Data mais antiga encontrada no Digifort">
-                <input className="w-full rounded-lg border p-3" type="date" title="Data mais antiga de gravacao encontrada durante a consulta no Digifort" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} required />
+                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data e hora mais antiga de gravação encontrada durante a consulta no Digifort" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} required />
               </CampoChecklist>
               <CampoChecklist label="Data mais recente encontrada no Digifort">
-                <input className="w-full rounded-lg border p-3" type="date" title="Data mais recente de gravacao encontrada durante a consulta no Digifort" value={checklist.dataMaisRecenteGravacao} onChange={(e) => campoChecklist("dataMaisRecenteGravacao", e.target.value)} required />
+                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Obrigatória somente quando a câmera estiver desconectada; se estiver conectada, o sistema usa a data e hora atual" value={checklist.dataMaisRecenteGravacao} onChange={(e) => campoChecklist("dataMaisRecenteGravacao", e.target.value)} required={checklist.statusAtual === "Desconectada"} />
               </CampoChecklist>
               <CampoChecklist label="Status atual da camera">
                 <select className="w-full rounded-lg border p-3" title="Status atual da camera no momento do checklist" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}>

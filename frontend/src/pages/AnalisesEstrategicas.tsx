@@ -35,6 +35,13 @@ type LocalTerminal = {
   status: string;
 };
 
+type AnaliseRiscoResumo = {
+  id: number;
+  codigo: string;
+  local?: string;
+  nivelRisco?: string;
+};
+
 type DadosVinculo = {
   origem: string;
   titulo: string;
@@ -84,6 +91,7 @@ const vazio = {
   eventoCodigo: "",
   investigacaoCodigo: "",
   analiseRiscoId: "",
+  analiseRiscoCodigo: "",
 };
 
 function textoTipo(tipo: string) {
@@ -107,17 +115,20 @@ export default function AnalisesEstrategicas() {
   const [filtroTipo, setFiltroTipo] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [locais, setLocais] = useState<LocalTerminal[]>([]);
+  const [riscos, setRiscos] = useState<AnaliseRiscoResumo[]>([]);
   const [buscandoVinculo, setBuscandoVinculo] = useState(false);
   const [resumoVinculo, setResumoVinculo] = useState("");
   const formularioRef = useRef<HTMLFormElement | null>(null);
 
   async function carregar() {
-    const [analisesResponse, locaisResponse] = await Promise.all([
+    const [analisesResponse, locaisResponse, riscosResponse] = await Promise.all([
       api.get("/analises-estrategicas"),
       api.get("/locais", { params: { status: "ativo" } }).catch(() => ({ data: [] })),
+      api.get("/riscos").catch(() => ({ data: [] })),
     ]);
     setAnalises(analisesResponse.data);
     setLocais(locaisResponse.data);
+    setRiscos(riscosResponse.data);
   }
 
   useEffect(() => {
@@ -143,7 +154,14 @@ export default function AnalisesEstrategicas() {
   }, [filtradas]);
 
   function campo(nome: string, valor: string) {
-    setForm((atual) => ({ ...atual, [nome]: valor }));
+    setForm((atual) => {
+      const proximo = { ...atual, [nome]: valor };
+      if (nome === "analiseRiscoCodigo") {
+        const risco = riscos.find((item) => item.codigo.toUpperCase() === valor.toUpperCase());
+        proximo.analiseRiscoId = risco ? String(risco.id) : "";
+      }
+      return proximo;
+    });
   }
 
   function aplicarDadosVinculo(dados: DadosVinculo) {
@@ -217,6 +235,7 @@ export default function AnalisesEstrategicas() {
       eventoCodigo: "",
       investigacaoCodigo: "",
       analiseRiscoId: analise.analiseRiscoId ? String(analise.analiseRiscoId) : "",
+      analiseRiscoCodigo: riscos.find((risco) => risco.id === analise.analiseRiscoId)?.codigo || "",
     });
     setResumoVinculo("");
     setAbrirFormulario(true);
@@ -301,7 +320,20 @@ export default function AnalisesEstrategicas() {
             <input className="rounded-lg border p-3" placeholder="Nº da ocorrencia vinculada. Ex: 0001/2026" value={form.ocorrenciaCodigo} onBlur={buscarDadosVinculados} onChange={(e) => campo("ocorrenciaCodigo", e.target.value.toUpperCase())} />
             <input className="rounded-lg border p-3" placeholder="Nº do evento vinculado. Ex: 0005/2026" value={form.eventoCodigo} onBlur={buscarDadosVinculados} onChange={(e) => campo("eventoCodigo", e.target.value.toUpperCase())} />
             <input className="rounded-lg border p-3" placeholder="Nº da investigacao vinculada. Ex: RI003/2026" value={form.investigacaoCodigo} onBlur={buscarDadosVinculados} onChange={(e) => campo("investigacaoCodigo", e.target.value.toUpperCase())} />
-            <input className="rounded-lg border p-3" placeholder="ID da analise de risco vinculada" value={form.analiseRiscoId} onChange={(e) => campo("analiseRiscoId", e.target.value)} />
+            <input
+              className="rounded-lg border p-3"
+              placeholder="Protocolo da análise de risco. Ex: AR001/2026"
+              list="analises-risco-disponiveis"
+              value={form.analiseRiscoCodigo}
+              onChange={(e) => campo("analiseRiscoCodigo", e.target.value.toUpperCase())}
+            />
+            <datalist id="analises-risco-disponiveis">
+              {riscos.map((risco) => (
+                <option key={risco.id} value={risco.codigo}>
+                  {risco.local ? `${risco.local} | ${risco.nivelRisco || ""}` : risco.nivelRisco || ""}
+                </option>
+              ))}
+            </datalist>
           </div>
           <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-900">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

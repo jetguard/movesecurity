@@ -3,6 +3,7 @@ import fs from "fs";
 import multer from "multer";
 import {
   atualizarRisco,
+  buscarVinculoRisco,
   criarRisco,
   gerarPdfRisco,
   listarRiscos,
@@ -35,6 +36,7 @@ const upload = multer({
 });
 
 router.get("/", autenticarUsuario, autorizarPerfis(acessoAnalise), listarRiscos);
+router.get("/vinculo", autenticarUsuario, autorizarPerfis(acessoAnalise), buscarVinculoRisco);
 router.post("/", autenticarUsuario, autorizarPerfis(acessoAnalise), upload.array("fotos"), criarRisco);
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), atualizarRisco);
 router.get("/:id/pdf", autenticarUsuario, autorizarPerfis(acessoAnalise), gerarPdfRisco);

@@ -15,6 +15,7 @@ const Locais = lazy(() => import("./pages/Cadastros/Locais"));
 const Login = lazy(() => import("./pages/Login"));
 const AlterarSenhaPrimeiroAcesso = lazy(() => import("./pages/AlterarSenhaPrimeiroAcesso"));
 const Perfil = lazy(() => import("./pages/Perfil"));
+const MeusDados = lazy(() => import("./pages/MeusDados"));
 const Logs = lazy(() => import("./pages/Logs"));
 const Usuarios = lazy(() => import("./pages/Usuarios"));
 const Riscos = lazy(() => import("./pages/Riscos"));
@@ -22,6 +23,7 @@ const AnalisesEstrategicas = lazy(() => import("./pages/AnalisesEstrategicas"));
 const Evidencias = lazy(() => import("./pages/Evidencias"));
 const Pendencias = lazy(() => import("./pages/Pendencias"));
 const Notificacoes = lazy(() => import("./pages/Notificacoes"));
+const AlertasOperacionais = lazy(() => import("./pages/AlertasOperacionais"));
 const BuscaGlobal = lazy(() => import("./pages/BuscaGlobal"));
 const Timeline = lazy(() => import("./pages/Timeline"));
 const InteligenciaOperacional = lazy(() => import("./pages/InteligenciaOperacional"));
@@ -41,6 +43,7 @@ const Governanca = lazy(() => import("./pages/Governanca"));
 const Planejamento = lazy(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazy(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazy(() => import("./pages/OperacaoSOC"));
+const MapaOperacional = lazy(() => import("./pages/MapaOperacional"));
 const AtualizacoesSistema = lazy(() => import("./pages/AtualizacoesSistema"));
 const SugestoesMelhoria = lazy(() => import("./pages/SugestoesMelhoria"));
 const Sessoes = lazy(() => import("./pages/Sessoes"));
@@ -79,14 +82,17 @@ export default function App() {
             <Route path="evidencias" element={<Evidencias />} />
             <Route path="pendencias" element={<Pendencias />} />
             <Route path="notificacoes" element={<Notificacoes />} />
+            <Route path="alertas-operacionais" element={<AlertasOperacionais />} />
             <Route path="busca" element={<BuscaGlobal />} />
             <Route path="timeline/:tipo/:id" element={<Timeline />} />
+            <Route path="meus-dados" element={<MeusDados />} />
             <Route path="mencoes" element={<Mencoes />} />
             <Route path="tarefas" element={<Tarefas />} />
             <Route path="minha-jornada" element={<MinhaJornada />} />
             <Route path="anulacoes" element={<Anulacoes />} />
             <Route path="cameras" element={<Cameras />} />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
+            <Route path="mapa-operacional" element={<MapaOperacional />} />
             <Route path="planejamento" element={<Planejamento />} />
             <Route path="quadra-seguranca" element={<QuadraSeguranca />} />
             <Route

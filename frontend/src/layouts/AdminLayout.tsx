@@ -23,14 +23,12 @@ import {
   ClipboardCheck,
   Target,
   Grid3X3,
-  UserCircle,
   Users,
   Moon,
   Sun,
   Video,
   Menu,
   X,
-  ClipboardList,
   AlertTriangle,
   MapPinned,
   Server,
@@ -54,7 +52,6 @@ export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
-  const [meusDadosOpen, setMeusDadosOpen] = useState(true);
   const [operacaoOpen, setOperacaoOpen] = useState(true);
   const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
   const [administracaoOpen, setAdministracaoOpen] = useState(false);
@@ -266,8 +263,8 @@ export default function AdminLayout() {
   }
 
   const mostrarTextoMenu = open || mobileMenuOpen;
-  const sidebarWidth = open ? "md:w-64" : "md:w-20";
-  const mainOffset = "md:ml-20";
+  const sidebarWidth = open ? "md:w-64" : "md:w-16";
+  const mainOffset = open ? "md:ml-64" : "md:ml-16";
   const item =
     "flex h-11 items-center gap-3 rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4";
   const subItem =
@@ -288,9 +285,7 @@ export default function AdminLayout() {
       )}
 
       <aside
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} overflow-y-auto bg-slate-950 text-white shadow-2xl transition-all duration-300 ease-in-out ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}
+        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} overflow-y-auto bg-slate-950 text-white shadow-2xl transition-all duration-300 ease-in-out [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700/70 [&::-webkit-scrollbar-track]:bg-transparent ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}
       >
         <div className={`flex h-20 items-center border-b border-slate-800 p-4 ${mostrarTextoMenu ? "justify-between" : "justify-center"}`}>
           <div className={`overflow-hidden transition-all duration-200 ${mostrarTextoMenu ? "w-40 opacity-100" : "w-0 opacity-0"}`}>
@@ -299,7 +294,13 @@ export default function AdminLayout() {
             </Link>
           </div>
 
-          <button onClick={() => setOpen(!open)} className="hidden rounded-lg bg-slate-800 px-2 py-2 text-sm hover:bg-slate-700 sm:px-3 md:block">
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="hidden h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-sm font-bold text-slate-200 shadow-lg transition hover:border-blue-400 hover:bg-blue-600 md:flex"
+            aria-label={open ? "Encolher menu" : "Expandir menu"}
+            title={open ? "Encolher menu" : "Expandir menu"}
+          >
             {open ? "<" : ">"}
           </button>
           <button onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-slate-800 p-2 text-sm hover:bg-slate-700 md:hidden" aria-label="Fechar menu">
@@ -312,31 +313,6 @@ export default function AdminLayout() {
             <LayoutDashboard size={20} className="shrink-0" />
             <span className={menuText}>Dashboard</span>
           </Link>
-
-          <button onClick={() => setMeusDadosOpen(!meusDadosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
-            <div className="flex items-center gap-3">
-              <UserCircle size={20} className="shrink-0" />
-              <span className={menuText}>Meus Dados</span>
-            </div>
-            <span className={menuToggle}>{meusDadosOpen ? "-" : "+"}</span>
-          </button>
-
-          {meusDadosOpen && (
-            <div className={submenuClass}>
-              <Link to="/perfil" className={subItem}>
-                <UserCircle size={16} />
-                Meu Perfil
-              </Link>
-              <Link to="/minha-jornada" className={subItem}>
-                <ClipboardList size={16} />
-                Minha Jornada
-              </Link>
-              <Link to="/mencoes" className={subItem}>
-                <AtSign size={16} />
-                Minhas Menções
-              </Link>
-            </div>
-          )}
 
           <Link to="/busca" className={item}>
             <Search size={20} className="shrink-0" />
@@ -398,9 +374,17 @@ export default function AdminLayout() {
                 <PackageSearch size={16} />
                 Quadra de Segurança
               </Link>
+              <Link to="/mapa-operacional" className={subItem}>
+                <MapPinned size={16} />
+                Mapa Operacional
+              </Link>
               <Link to="/notificacoes" className={subItem}>
                 <Bell size={16} />
                 Notificações
+              </Link>
+              <Link to="/alertas-operacionais" className={subItem}>
+                <ShieldAlert size={16} />
+                Alertas Operacionais
               </Link>
               <Link to="/pendencias" className={subItem}>
                 <ListChecks size={16} />
@@ -582,7 +566,7 @@ export default function AdminLayout() {
                   </span>
                 )}
               </Link>
-              <Link to="/mencoes" className="relative rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200">
+              <Link to="/meus-dados?aba=mencoes" className="relative rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200">
                 <AtSign size={17} />
                 {mencoesPendentes > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
@@ -619,11 +603,11 @@ export default function AdminLayout() {
                 <Lock size={17} />
               </button>
 
-              <div className="min-w-0 text-right">
+              <Link to="/meus-dados" className="min-w-0 text-right">
                 <p className="hidden truncate text-sm font-semibold text-slate-900 min-[430px]:block">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
                 <p className="truncate text-xs font-semibold text-slate-600">Unidade: {unidadeAtiva}</p>
-              </div>
-              <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200">
+              </Link>
+              <Link to="/meus-dados" className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200 ring-2 ring-transparent transition hover:ring-blue-400">
                 {usuario?.fotoPerfil ? (
                   <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
                 ) : (
@@ -631,7 +615,7 @@ export default function AdminLayout() {
                     {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
                   </div>
                 )}
-              </div>
+              </Link>
             </div>
           </div>
 
@@ -663,7 +647,7 @@ export default function AdminLayout() {
                 </span>
               )}
             </Link>
-            <Link to="/mencoes" className="relative rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200">
+            <Link to="/meus-dados?aba=mencoes" className="relative rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200">
               <AtSign size={18} />
               {mencoesPendentes > 0 && (
                 <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-xs font-bold text-white">
@@ -699,11 +683,11 @@ export default function AdminLayout() {
             >
               <Lock size={18} />
             </button>
-            <div className="hidden min-w-0 text-left sm:text-right md:block">
+            <Link to="/meus-dados" className="hidden min-w-0 text-left sm:text-right md:block">
               <p className="font-semibold text-slate-900">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
               <p className="text-xs text-slate-500">Sessao: {formatarSessao(segundosSessao)}</p>
-            </div>
-            <div className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200 md:block">
+            </Link>
+            <Link to="/meus-dados" className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200 ring-2 ring-transparent transition hover:ring-blue-400 md:block">
               {usuario?.fotoPerfil ? (
                 <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
               ) : (
@@ -711,7 +695,7 @@ export default function AdminLayout() {
                   {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
                 </div>
               )}
-            </div>
+            </Link>
           </div>
         </header>
 

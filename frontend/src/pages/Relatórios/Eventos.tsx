@@ -86,6 +86,15 @@ const envolvidoVazio: Envolvido = {
   relato: "",
 };
 
+function formatarBrl(valor: string) {
+  const digitos = valor.replace(/\D/g, "");
+  const numero = Number(digitos || "0") / 100;
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function Eventos() {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [usuariosMencao, setUsuariosMencao] = useState<UsuarioMencao[]>([]);
@@ -858,8 +867,9 @@ export default function Eventos() {
                 <input
                   className="w-full border rounded-lg p-3"
                   value={valorRecuperado}
-                  onChange={(e) => setValorRecuperado(e.target.value)}
+                  onChange={(e) => setValorRecuperado(formatarBrl(e.target.value))}
                   placeholder="Valor recuperado em BRL"
+                  inputMode="numeric"
                 />
               </div>
 

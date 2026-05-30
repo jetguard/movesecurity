@@ -94,6 +94,15 @@ const envolvidoVazio: Envolvido = {
   relato: "",
 };
 
+function formatarBrl(valor: string) {
+  const digitos = valor.replace(/\D/g, "");
+  const numero = Number(digitos || "0") / 100;
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export default function Ocorrencias() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [usuariosMencao, setUsuariosMencao] = useState<UsuarioMencao[]>([]);
@@ -894,8 +903,9 @@ export default function Ocorrencias() {
                 <input
                   className="w-full border rounded-lg p-3"
                   value={prejuizoFinanceiro}
-                  onChange={(e) => setPrejuizoFinanceiro(e.target.value)}
+                  onChange={(e) => setPrejuizoFinanceiro(formatarBrl(e.target.value))}
                   placeholder="Prejuízo financeiro em BRL"
+                  inputMode="numeric"
                 />
               </div>
 
