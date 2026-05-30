@@ -120,9 +120,14 @@ const motivosIndisponibilidade = [
 
 function minutos(min: number) {
   if (!min) return "0 min";
-  const horas = Math.floor(min / 60);
+  const dias = Math.floor(min / 1440);
+  const horas = Math.floor((min % 1440) / 60);
   const minutosRestantes = min % 60;
-  return horas > 0 ? `${horas}h ${minutosRestantes}min` : `${minutosRestantes} min`;
+  const partes = [];
+  if (dias) partes.push(`${dias}d`);
+  if (horas) partes.push(`${horas}h`);
+  if (!dias && minutosRestantes) partes.push(`${minutosRestantes}min`);
+  return partes.join(" ") || "0 min";
 }
 
 function minutosEntreDatas(inicio: string, fim?: string) {
@@ -624,7 +629,6 @@ export default function Cameras() {
                 <th className="p-3">Área</th>
                 <th className="p-3">Dias de gravacao</th>
                 <th className="p-3">Falhas</th>
-                <th className="p-3">Offline total</th>
                 <th className="p-3">Ações</th>
               </tr>
             </thead>
@@ -639,7 +643,6 @@ export default function Cameras() {
                   <td className="p-3">{camera.areaMonitorada}</td>
                   <td className="p-3 font-bold">{camera.checklists?.[0]?.tempoGravacaoDisponivel ?? "Sem checklist"}</td>
                   <td className="p-3">{camera.totalFalhas}</td>
-                  <td className="p-3">{minutos(camera.totalIndisponibilidade)}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
                       {podeAnalisar() && <button onClick={() => editarCamera(camera)} className="rounded bg-slate-200 px-3 py-1">Editar</button>}
