@@ -266,12 +266,12 @@ export default function AdminLayout() {
   const sidebarWidth = open ? "md:w-64" : "md:w-16";
   const mainOffset = open ? "md:ml-64" : "md:ml-16";
   const item =
-    "flex h-11 items-center gap-3 rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4";
+    "flex h-11 items-center gap-3 rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4";
   const subItem =
-    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 transition hover:bg-slate-800 hover:text-white";
-  const menuText = `whitespace-nowrap transition-all duration-200 ${mostrarTextoMenu ? "w-auto opacity-100" : "w-0 overflow-hidden opacity-0"}`;
-  const menuToggle = `ml-auto transition-all duration-200 ${mostrarTextoMenu ? "w-auto opacity-100" : "w-0 overflow-hidden opacity-0"}`;
-  const submenuClass = `ml-6 flex flex-col gap-2 overflow-hidden border-l border-slate-800 pl-4 transition-all duration-200 ${mostrarTextoMenu ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"}`;
+    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 transition-colors duration-100 hover:bg-slate-800 hover:text-white";
+  const menuText = `whitespace-nowrap transition-[opacity,max-width] duration-100 ease-out ${mostrarTextoMenu ? "max-w-48 opacity-100" : "max-w-0 overflow-hidden opacity-0"}`;
+  const menuToggle = `ml-auto transition-[opacity,max-width] duration-100 ease-out ${mostrarTextoMenu ? "max-w-8 opacity-100" : "max-w-0 overflow-hidden opacity-0"}`;
+  const submenuClass = `ml-6 flex flex-col gap-2 overflow-hidden border-l border-slate-800 pl-4 transition-[max-height,opacity] duration-100 ease-out ${mostrarTextoMenu ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"}`;
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -285,10 +285,10 @@ export default function AdminLayout() {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} overflow-y-auto bg-slate-950 text-white shadow-2xl transition-all duration-300 ease-in-out [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700/70 [&::-webkit-scrollbar-track]:bg-transparent ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}
+        className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} transform-gpu overflow-y-auto bg-slate-950 text-white shadow-2xl transition-[width,transform] duration-150 ease-out [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin] [will-change:width,transform] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700/70 [&::-webkit-scrollbar-track]:bg-transparent ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}
       >
         <div className={`flex h-20 items-center border-b border-slate-800 p-4 ${mostrarTextoMenu ? "justify-between" : "justify-center"}`}>
-          <div className={`overflow-hidden transition-all duration-200 ${mostrarTextoMenu ? "w-40 opacity-100" : "w-0 opacity-0"}`}>
+          <div className={`overflow-hidden transition-[opacity,width] duration-100 ease-out ${mostrarTextoMenu ? "w-40 opacity-100" : "w-0 opacity-0"}`}>
             <Link to="/" className="flex min-w-0 items-center">
               <img src="/images/movecta-logo.png" alt="Movecta" className="brand-logo h-10 w-40 rounded bg-white object-contain px-3 py-2" />
             </Link>
@@ -297,7 +297,7 @@ export default function AdminLayout() {
           <button
             type="button"
             onClick={() => setOpen(!open)}
-            className="hidden h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-sm font-bold text-slate-200 shadow-lg transition hover:border-blue-400 hover:bg-blue-600 md:flex"
+            className="hidden h-9 w-9 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-sm font-bold text-slate-200 shadow-lg transition-colors duration-100 hover:border-blue-400 hover:bg-blue-600 md:flex"
             aria-label={open ? "Encolher menu" : "Expandir menu"}
             title={open ? "Encolher menu" : "Expandir menu"}
           >
@@ -319,7 +319,7 @@ export default function AdminLayout() {
             <span className={menuText}>Busca Global</span>
           </Link>
 
-          <button onClick={() => setRelatoriosOpen(!relatoriosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+          <button onClick={() => setRelatoriosOpen(!relatoriosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
             <div className="flex items-center gap-3">
               <FolderOpen size={20} className="shrink-0" />
               <span className={menuText}>Relatorios</span>
@@ -348,7 +348,7 @@ export default function AdminLayout() {
             </div>
           )}
 
-          <button onClick={() => setOperacaoOpen(!operacaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+          <button onClick={() => setOperacaoOpen(!operacaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
             <div className="flex items-center gap-3">
               <ListChecks size={20} className="shrink-0" />
               <span className={menuText}>Operação</span>
@@ -403,7 +403,7 @@ export default function AdminLayout() {
 
           {podeGerenciarRiscos() && (
             <>
-              <button onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+              <button onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
                   <BrainCircuit size={20} className="shrink-0" />
                   <span className={menuText}>Gestão Avançada</span>
@@ -452,7 +452,7 @@ export default function AdminLayout() {
 
           {(podeAdministrar() || podeVerNaturezas()) && (
             <>
-              <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+              <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
                   <Settings size={20} className="shrink-0" />
                   <span className={menuText}>Administração</span>
@@ -499,7 +499,7 @@ export default function AdminLayout() {
 
           {(podeAdministrar() || podeVerLogs() || podeVerNaturezas()) && (
             <>
-              <button onClick={() => setSistemaOpen(!sistemaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition hover:bg-slate-800 hover:text-white sm:px-4">
+              <button onClick={() => setSistemaOpen(!sistemaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
                   <Server size={20} className="shrink-0" />
                   <span className={menuText}>Sistema</span>
@@ -538,14 +538,14 @@ export default function AdminLayout() {
             </>
           )}
 
-          <button onClick={logout} className="mt-6 flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition hover:bg-red-900 hover:text-white">
+          <button onClick={logout} className="mt-6 flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition-colors duration-100 hover:bg-red-900 hover:text-white">
             <LogOut size={20} className="shrink-0" />
             <span className={menuText}>Sair</span>
           </button>
         </nav>
       </aside>
 
-      <main className={`${mainOffset} min-w-0 transition-all duration-300 ease-in-out`}>
+      <main className={`${mainOffset} min-w-0 transition-[margin-left] duration-150 ease-out [will-change:margin-left]`}>
         <header className="sticky top-0 z-20 flex min-h-20 flex-col gap-4 border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
           <div className="flex min-w-0 items-center justify-between gap-2 md:hidden">
             <button
