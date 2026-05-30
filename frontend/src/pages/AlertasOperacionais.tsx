@@ -158,7 +158,7 @@ export default function AlertasOperacionais() {
                     </div>
 
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <Link to={alerta.link || "/"} className="rounded-lg bg-white/90 px-3 py-2 text-sm font-bold text-slate-900 shadow-sm hover:bg-white">
+                      <Link to={alerta.link || "/"} className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800">
                         Tratar
                       </Link>
                       {!alerta.lida && (
