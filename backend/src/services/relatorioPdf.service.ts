@@ -155,6 +155,87 @@ function textoPdf(valorEntrada?: string | number | null) {
   return texto;
 }
 
+function desenharAssinaturaDigital(
+  doc: PDFKit.PDFDocument,
+  params: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    usuario: UsuarioAssinatura;
+    token: string;
+    qrCode: string;
+  }
+) {
+  const qrSize = 64;
+  const qrX = params.x + params.width - qrSize - 13;
+  const qrY = params.y + 8;
+  const textoX = params.x + 18;
+  const textoWidth = params.width - qrSize - 42;
+
+  const detalhesUsuario = [
+    params.usuario.re ? `R.E: ${textoPdf(params.usuario.re)}` : null,
+    params.usuario.cargo ? `Cargo: ${textoPdf(params.usuario.cargo)}` : null,
+    params.usuario.setor ? `Setor: ${textoPdf(params.usuario.setor)}` : null,
+    params.usuario.empresa ? `Empresa: ${textoPdf(params.usuario.empresa)}` : null,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  doc
+    .roundedRect(params.x, params.y, params.width, params.height, 8)
+    .fillColor("#f8fbff")
+    .fill()
+    .roundedRect(params.x, params.y, params.width, params.height, 8)
+    .lineWidth(0.7)
+    .strokeColor("#dbeafe")
+    .stroke();
+
+  doc
+    .roundedRect(params.x, params.y, 6, params.height, 8)
+    .fillColor("#0b74ff")
+    .fill();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.6)
+    .fillColor("#0f172a")
+    .text("Assinatura digital JetGuard", textoX, params.y + 10, { width: textoWidth });
+
+  doc
+    .font("Helvetica")
+    .fontSize(7.4)
+    .fillColor("#334155")
+    .text(textoPdf(`Documento validado por ${params.usuario.nome}`), textoX, params.y + 26, {
+      width: textoWidth,
+    });
+
+  if (detalhesUsuario) {
+    doc
+      .fontSize(6.8)
+      .fillColor("#64748b")
+      .text(textoPdf(detalhesUsuario), textoX, params.y + 40, { width: textoWidth });
+  }
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(6.9)
+    .fillColor("#0b74ff")
+    .text(textoPdf(`Código: ${params.token}`), textoX, params.y + params.height - 16, {
+      width: textoWidth,
+    });
+
+  doc.image(params.qrCode, qrX, qrY, { width: qrSize });
+  doc
+    .font("Helvetica")
+    .fontSize(6.4)
+    .fillColor("#64748b")
+    .text("Baixar PDF", qrX - 6, qrY + qrSize + 1, {
+      width: qrSize + 12,
+      align: "center",
+    });
+}
+
 function formatarData(data: Date) {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
@@ -273,48 +354,15 @@ function desenharBasePagina(
     .strokeColor("#cbd5e1")
     .stroke();
 
-  const detalhesUsuario = [
-    usuario.re ? `R.E: ${textoPdf(usuario.re)}` : null,
-    usuario.cargo ? `Cargo: ${textoPdf(usuario.cargo)}` : null,
-    usuario.setor ? `Setor: ${textoPdf(usuario.setor)}` : null,
-    usuario.empresa ? `Empresa: ${textoPdf(usuario.empresa)}` : null,
-  ]
-    .filter(Boolean)
-    .join(" | ");
-
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(8.5)
-    .fillColor("#0f172a")
-    .text("Assinatura digital", page.left, page.footerTop + 16, { width: 335 });
-
-  doc
-    .font("Helvetica")
-    .fontSize(7.4)
-    .fillColor("#475569")
-    .text(
-      textoPdf(`Validado por ${usuario.nome}. Código: ${token}`),
-      page.left,
-      page.footerTop + 32,
-      { width: 335 }
-    );
-
-  if (detalhesUsuario) {
-    doc
-      .fontSize(7)
-      .fillColor("#64748b")
-      .text(textoPdf(detalhesUsuario), page.left, page.footerTop + 48, { width: 335 });
-  }
-
-  doc.image(qrCode, 470, page.footerTop + 11, { width: 66 });
-  doc
-    .font("Helvetica")
-    .fontSize(6.7)
-    .fillColor("#64748b")
-    .text("Baixar PDF", 454, page.footerTop + 79, {
-      width: 98,
-      align: "center",
-    });
+  desenharAssinaturaDigital(doc, {
+    x: page.left,
+    y: page.footerTop + 9,
+    width: contentWidth,
+    height: 78,
+    usuario,
+    token,
+    qrCode,
+  });
 
   doc.restore();
   doc.x = page.left;

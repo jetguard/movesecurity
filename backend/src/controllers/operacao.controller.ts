@@ -59,6 +59,70 @@ function podeGerenciarPassagem(perfil?: string) {
   return perfil === PERFIS.SUPER_ADMIN || perfil === PERFIS.ADMINISTRADOR || perfil === PERFIS.ANALISTA;
 }
 
+function desenharAssinaturaDigitalCcos(
+  doc: PDFKit.PDFDocument,
+  params: {
+    responsavel: string;
+    unidade: string;
+    equipe: string;
+    token: string;
+    qrCode: string;
+  }
+) {
+  const x = 36;
+  const y = 692;
+  const width = 523;
+  const height = 62;
+  const qrSize = 54;
+  const qrX = x + width - qrSize - 12;
+  const qrY = y + 5;
+  const textoX = x + 18;
+  const textoWidth = width - qrSize - 42;
+
+  doc
+    .roundedRect(x, y, width, height, 7)
+    .fillColor("#f8fbff")
+    .fill()
+    .roundedRect(x, y, width, height, 7)
+    .lineWidth(0.7)
+    .strokeColor("#dbeafe")
+    .stroke();
+
+  doc
+    .roundedRect(x, y, 6, height, 7)
+    .fillColor("#0b74ff")
+    .fill();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.4)
+    .fillColor("#0f172a")
+    .text("Assinatura digital JetGuard", textoX, y + 8, { width: textoWidth });
+
+  doc
+    .font("Helvetica")
+    .fontSize(7.2)
+    .fillColor("#334155")
+    .text(`Relatório CCOS validado por ${params.responsavel}`, textoX, y + 23, { width: textoWidth })
+    .text(`Unidade: ${params.unidade} | Equipe: ${params.equipe}`, textoX, y + 37, { width: textoWidth });
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(6.8)
+    .fillColor("#0b74ff")
+    .text(`Código: ${params.token}`, textoX, y + 50, { width: textoWidth });
+
+  doc.image(params.qrCode, qrX, qrY, { width: qrSize });
+  doc
+    .font("Helvetica")
+    .fontSize(6.2)
+    .fillColor("#64748b")
+    .text("Baixar PDF", qrX - 5, qrY + qrSize + 1, {
+      width: qrSize + 10,
+      align: "center",
+    });
+}
+
 export function criarTokenAcessoCcos(params: {
   id: number;
   codigo: string;
@@ -609,12 +673,13 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     };
 
     const footer = (pagina: number, total: number) => {
-      doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#0f172a").text("Assinatura digital", 36, 700, { width: 360 });
-      doc.font("Helvetica").fontSize(7.2).fillColor("#475569")
-        .text(`Validado por ${responsavel}. Código: ${tokenAssinatura}`, 36, 716, { width: 360 })
-        .text(`Unidade: ${passagem.unidade} | Equipe: ${passagem.equipe}`, 36, 731, { width: 360 });
-      doc.image(qrCodePdf, 493, 696, { width: 58 });
-      doc.font("Helvetica").fontSize(6.5).fillColor("#64748b").text("Baixar PDF", 482, 755, { width: 80, align: "center" });
+      desenharAssinaturaDigitalCcos(doc, {
+        responsavel,
+        unidade: passagem.unidade,
+        equipe: passagem.equipe,
+        token: tokenAssinatura,
+        qrCode: qrCodePdf,
+      });
       doc.moveTo(36, 760).lineTo(559, 760).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
       doc.font("Helvetica").fontSize(7.8).fillColor("#64748b")
         .text(`Emitido em ${new Date().toLocaleString("pt-BR")} por ${responsavel}`, 36, 770, { align: "left", width: 360 })
