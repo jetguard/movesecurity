@@ -397,6 +397,15 @@ export default function Cameras() {
   async function salvarIndisponibilidade(e: React.FormEvent) {
     e.preventDefault();
     if (!cameraHistorico) return;
+
+    const inicio = formIndisponibilidade.iniciadoEm ? new Date(formIndisponibilidade.iniciadoEm) : null;
+    const fim = formIndisponibilidade.encerradoEm ? new Date(formIndisponibilidade.encerradoEm) : null;
+
+    if (inicio && fim && inicio > fim) {
+      alert("A data/hora inicial da indisponibilidade não pode ser maior que a data/hora final.");
+      return;
+    }
+
     if (indisponibilidadeEditando) {
       await api.put(`/cameras/${cameraHistorico.id}/indisponibilidades/${indisponibilidadeEditando.id}`, formIndisponibilidade);
     } else {
@@ -413,6 +422,17 @@ export default function Cameras() {
   async function salvarChecklist(e: React.FormEvent) {
     e.preventDefault();
     if (!cameraChecklist) return;
+
+    const dataAntiga = checklist.dataInicialGravacao ? new Date(checklist.dataInicialGravacao) : null;
+    const dataRecente = checklist.dataMaisRecenteGravacao
+      ? new Date(checklist.dataMaisRecenteGravacao)
+      : new Date();
+
+    if (dataAntiga && dataAntiga > dataRecente) {
+      alert("A data mais antiga encontrada no Digifort não pode ser maior que a data mais recente.");
+      return;
+    }
+
     await api.post(`/cameras/${cameraChecklist.id}/checklists`, checklist);
     setCameraChecklist(null);
     setChecklist(checklistInicial);

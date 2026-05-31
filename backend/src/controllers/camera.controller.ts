@@ -546,6 +546,12 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "Informe a data e hora da última gravação antes da desconexão." });
     }
 
+    if (dataMaisRecenteGravacao && dataInicialGravacao > dataMaisRecenteGravacao) {
+      return res.status(400).json({
+        error: "A data mais antiga encontrada no Digifort nao pode ser maior que a data mais recente.",
+      });
+    }
+
     if (statusAtual !== camera.status) {
       await registrarMudancaStatus({
         cameraId: camera.id,
