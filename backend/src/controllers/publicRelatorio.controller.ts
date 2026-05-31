@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import {
+  gerarPdfPassagemTurno,
+  validarTokenAcessoCcos,
+} from "./operacao.controller";
+import {
   criarUrlPublicaPdf,
   gerarRelatorioPdf,
   TipoRelatorioPublico,
@@ -136,5 +140,48 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao gerar PDF público" });
+  }
+}
+
+export async function gerarPdfPublicoCcos(req: Request, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const token = String(req.query.token || "");
+
+    if (!Number.isFinite(id)) {
+      return res.status(404).json({ error: "Relatório CCOS não encontrado" });
+    }
+
+    const passagem = await prisma.passagemTurno.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        codigo: true,
+        unidade: true,
+      },
+    });
+
+    if (!passagem) return res.status(404).json({ error: "Relatório CCOS não encontrado" });
+
+    const valido = validarTokenAcessoCcos({
+      id: passagem.id,
+      codigo: passagem.codigo,
+      unidade: passagem.unidade,
+      token,
+    });
+
+    if (!valido) return res.status(403).json({ error: "Token de acesso inválido" });
+
+    return gerarPdfPassagemTurno(
+      {
+        ...req,
+        params: { ...req.params, id: String(passagem.id) },
+        unidadeAtiva: passagem.unidade,
+      } as unknown as Parameters<typeof gerarPdfPassagemTurno>[0],
+      res
+    );
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao gerar PDF público do CCOS" });
   }
 }

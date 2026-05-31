@@ -74,10 +74,13 @@ const page = {
 const contentWidth = page.right - page.left;
 
 function desenharMarcaDagua(doc: PDFKit.PDFDocument) {
+  const largura = 280;
+  const x = (doc.page.width - largura) / 2;
+  const y = (doc.page.height - largura) / 2;
   doc
     .save()
-    .opacity(0.045)
-    .image(watermarkPath, 177, 300, { width: 240 })
+    .opacity(0.065)
+    .image(watermarkPath, x, y, { width: largura })
     .restore();
 }
 
@@ -270,23 +273,6 @@ function desenharBasePagina(
     .strokeColor("#cbd5e1")
     .stroke();
 
-  doc
-    .font("Helvetica-Bold")
-    .fontSize(10)
-    .fillColor("#111827")
-    .text("Assinatura digital", page.left, page.footerTop + 17);
-
-  doc
-    .font("Helvetica")
-    .fontSize(8.5)
-    .fillColor("#374151")
-    .text(
-      textoPdf(`Documento validado e elaborado por ${usuario.nome}. Token: ${token}`),
-      page.left,
-      page.footerTop + 38,
-      { width: 350 }
-    );
-
   const detalhesUsuario = [
     usuario.re ? `R.E: ${textoPdf(usuario.re)}` : null,
     usuario.cargo ? `Cargo: ${textoPdf(usuario.cargo)}` : null,
@@ -296,16 +282,37 @@ function desenharBasePagina(
     .filter(Boolean)
     .join(" | ");
 
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(8.5)
+    .fillColor("#0f172a")
+    .text("Assinatura digital", page.left, page.footerTop + 16, { width: 335 });
+
+  doc
+    .font("Helvetica")
+    .fontSize(7.4)
+    .fillColor("#475569")
+    .text(
+      textoPdf(`Validado por ${usuario.nome}. Código: ${token}`),
+      page.left,
+      page.footerTop + 32,
+      { width: 335 }
+    );
+
   if (detalhesUsuario) {
-    doc.text(textoPdf(detalhesUsuario), page.left, page.footerTop + 58, { width: 350 });
+    doc
+      .fontSize(7)
+      .fillColor("#64748b")
+      .text(textoPdf(detalhesUsuario), page.left, page.footerTop + 48, { width: 335 });
   }
 
-  doc.image(qrCode, 455, page.footerTop + 15, { width: 78 });
+  doc.image(qrCode, 470, page.footerTop + 11, { width: 66 });
   doc
-    .fontSize(7.5)
-    .fillColor("#6b7280")
-    .text("Acesse o PDF", 444, page.footerTop + 96, {
-      width: 100,
+    .font("Helvetica")
+    .fontSize(6.7)
+    .fillColor("#64748b")
+    .text("Baixar PDF", 454, page.footerTop + 79, {
+      width: 98,
       align: "center",
     });
 

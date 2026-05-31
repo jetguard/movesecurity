@@ -1,8 +1,12 @@
 ﻿import { Response } from "express";
+import crypto from "crypto";
 import path from "path";
 import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
+import { Request } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
+import { jwtSecret } from "../config/security";
 import { registrarLog } from "../services/auditoria.service";
 
 function inicioDia(data = new Date()) {
@@ -53,6 +57,43 @@ async function proximoCodigoPassagem(unidade: string) {
 
 function podeGerenciarPassagem(perfil?: string) {
   return perfil === PERFIS.SUPER_ADMIN || perfil === PERFIS.ADMINISTRADOR || perfil === PERFIS.ANALISTA;
+}
+
+export function criarTokenAcessoCcos(params: {
+  id: number;
+  codigo: string;
+  unidade: string;
+}) {
+  return crypto
+    .createHmac("sha256", jwtSecret())
+    .update(`ccos:${params.id}:${params.codigo}:${params.unidade}`)
+    .digest("hex")
+    .slice(0, 32);
+}
+
+export function validarTokenAcessoCcos(params: {
+  id: number;
+  codigo: string;
+  unidade: string;
+  token?: string | null;
+}) {
+  if (!params.token) return false;
+  const esperado = criarTokenAcessoCcos(params);
+  const recebido = String(params.token);
+  if (recebido.length !== esperado.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(recebido), Buffer.from(esperado));
+}
+
+export function criarUrlPublicaCcos(
+  req: Pick<Request, "protocol" | "get">,
+  params: {
+    id: number;
+    codigo: string;
+    unidade: string;
+  }
+) {
+  const token = criarTokenAcessoCcos(params);
+  return `${req.protocol}://${req.get("host")}/api/public/ccos/passagens-turno/${params.id}/pdf?token=${token}`;
 }
 
 async function usuarioSolicitante(id?: number) {
@@ -535,10 +576,28 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     const watermarkPath = path.resolve(process.cwd(), "assets", "jetguard-watermark.png");
     const responsavel = passagem.responsavel.apelido || passagem.responsavel.nome;
     const colaboradoresTexto = colaboradores.map((item) => item.apelido || item.nome).join(", ") || "Não informado";
-    const pageBottom = 742;
+    const tokenAssinatura = crypto
+      .createHash("sha256")
+      .update(`CCOS:${passagem.codigo}:${responsavel}:${passagem.horaEncerramento?.toISOString() || passagem.updatedAt.toISOString()}`)
+      .digest("hex")
+      .slice(0, 16)
+      .toUpperCase();
+    const pdfUrl = criarUrlPublicaCcos(req, {
+      id: passagem.id,
+      codigo: passagem.codigo,
+      unidade: passagem.unidade,
+    });
+    const qrCodePdf = await QRCode.toDataURL(pdfUrl, {
+      margin: 1,
+      width: 112,
+    });
+    const pageBottom = 684;
 
     const watermark = () => {
-      doc.save().opacity(0.045).image(watermarkPath, 177, 300, { width: 240 }).restore();
+      const largura = 280;
+      const x = (doc.page.width - largura) / 2;
+      const y = (doc.page.height - largura) / 2;
+      doc.save().opacity(0.065).image(watermarkPath, x, y, { width: largura }).restore();
     };
 
     const header = () => {
@@ -550,6 +609,12 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     };
 
     const footer = (pagina: number, total: number) => {
+      doc.font("Helvetica-Bold").fontSize(8.5).fillColor("#0f172a").text("Assinatura digital", 36, 700, { width: 360 });
+      doc.font("Helvetica").fontSize(7.2).fillColor("#475569")
+        .text(`Validado por ${responsavel}. Código: ${tokenAssinatura}`, 36, 716, { width: 360 })
+        .text(`Unidade: ${passagem.unidade} | Equipe: ${passagem.equipe}`, 36, 731, { width: 360 });
+      doc.image(qrCodePdf, 493, 696, { width: 58 });
+      doc.font("Helvetica").fontSize(6.5).fillColor("#64748b").text("Baixar PDF", 482, 755, { width: 80, align: "center" });
       doc.moveTo(36, 760).lineTo(559, 760).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
       doc.font("Helvetica").fontSize(7.8).fillColor("#64748b")
         .text(`Emitido em ${new Date().toLocaleString("pt-BR")} por ${responsavel}`, 36, 770, { align: "left", width: 360 })
