@@ -93,7 +93,7 @@ export default function Sessoes() {
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Administração</p>
           <h1 className="text-3xl font-bold">Sessões de usuários</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Controle de usuários conectados, histórico de acesso e desconexão administrativa.
+            Controle de usuários conectados. Históricos encerrados e desconectados exibem somente as últimas 24 horas.
           </p>
         </div>
 

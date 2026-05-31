@@ -61,6 +61,7 @@ async function normalizarSessoesAdministrativasAtivas() {
 export async function listarSessoes(req: AuthRequest, res: Response) {
   try {
     const status = normalizarStatus(req.query.status);
+    const ultimas24Horas = new Date(Date.now() - 24 * 60 * 60 * 1000);
     if (status === "ATIVA") {
       await normalizarSessoesAdministrativasAtivas();
     }
@@ -68,6 +69,13 @@ export async function listarSessoes(req: AuthRequest, res: Response) {
     const sessoes = await prisma.sessaoUsuario.findMany({
       where: {
         status,
+        ...(status === "ATIVA"
+          ? {}
+          : {
+              encerradaEm: {
+                gte: ultimas24Horas,
+              },
+            }),
         ...(req.usuarioPerfil === PERFIS.SUPER_ADMIN
           ? {}
           : { usuario: { perfilAcesso: { not: PERFIS.SUPER_ADMIN } } }),
