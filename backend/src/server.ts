@@ -2,7 +2,7 @@ import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
 import helmet from "helmet";
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import authRoutes from "./routes/auth.routes";
 import ocorrenciaRoutes from "./routes/ocorrencia.routes";
 import eventoRoutes from "./routes/evento.routes";
@@ -59,13 +59,32 @@ function requisicaoLocalDesenvolvimento(ip?: string) {
   );
 }
 
+function chaveLimitLogin(req: express.Request) {
+  const email = typeof req.body?.email === "string"
+    ? req.body.email.trim().toLowerCase()
+    : "sem-email";
+  return `${ipKeyGenerator(req.ip || "sem-ip")}::${email}`;
+}
+
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 8,
+  windowMs: 10 * 60 * 1000,
+  limit: Number(process.env.LOGIN_RATE_LIMIT || 20),
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: chaveLimitLogin,
+  skipSuccessfulRequests: true,
   skip: (req) => requisicaoLocalDesenvolvimento(req.ip),
   message: { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
+});
+
+const refreshLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: Number(process.env.REFRESH_RATE_LIMIT || 120),
+  standardHeaders: true,
+  legacyHeaders: false,
+  skipSuccessfulRequests: true,
+  skip: (req) => requisicaoLocalDesenvolvimento(req.ip),
+  message: { error: "Muitas tentativas de renovação de sessão. Aguarde alguns minutos e tente novamente." },
 });
 
 const apiLimiter = rateLimit({
@@ -99,7 +118,7 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: "2mb" }));
 app.use("/api/auth/login", loginLimiter);
-app.use("/api/auth/refresh", loginLimiter);
+app.use("/api/auth/refresh", refreshLimiter);
 app.use("/api", apiLimiter);
 app.use(protegerCsrf);
 app.get(/^\/uploads\/(.+)$/, autenticarUsuario, servirArquivoProtegido);

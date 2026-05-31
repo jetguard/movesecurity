@@ -410,6 +410,7 @@ export async function login(req: Request, res: Response) {
     });
 
   } catch (error) {
+    console.error("Erro ao fazer login:", error);
     return res.status(500).json({
       error: "Erro ao fazer login",
     });
