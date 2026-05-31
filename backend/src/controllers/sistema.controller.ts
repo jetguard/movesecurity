@@ -124,6 +124,11 @@ function relativoSeguroUpload(caminho: string) {
   return normalizado;
 }
 
+function caminhoAbsolutoUpload(caminho: string) {
+  const normalizado = relativoUpload(caminho);
+  return path.resolve(process.cwd(), normalizado);
+}
+
 function tamanhoMb(bytes: number) {
   return Number((bytes / 1024 / 1024).toFixed(2));
 }
@@ -180,7 +185,7 @@ async function dadosIntegridade() {
   const arquivosDisco = listarArquivosUploadsAtivos(cwd);
   const caminhosBanco = new Set(registros.map((item) => relativoUpload(item.caminho)));
   const arquivosOrfaos = arquivosDisco.filter((arquivo) => !caminhosBanco.has(arquivo));
-  const arquivosAusentes = registros.filter((item) => item.caminho && !fs.existsSync(path.resolve(cwd, item.caminho)));
+  const arquivosAusentes = registros.filter((item) => item.caminho && !fs.existsSync(caminhoAbsolutoUpload(item.caminho)));
   const semHash = registros.filter((item) => !item.hash);
   const arquivosQuarentena = listarArquivosQuarentena(cwd);
   const backups = fs.existsSync(backupsDir)
