@@ -8,6 +8,7 @@ import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
 import { hashIdentificadorDispositivo } from "../utils/arquivoHash";
+import { aplicarCookieCsrf, cookieSeguro, lerCookie, limparCookieCsrf } from "../utils/csrf";
 
 type TentativaLogin = {
   quantidade: number;
@@ -74,10 +75,6 @@ function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
-function cookieSeguro(req: Request) {
-  return req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
-}
-
 function cookieOptions(req: Request, maxAge: number) {
   return {
     httpOnly: true,
@@ -86,15 +83,6 @@ function cookieOptions(req: Request, maxAge: number) {
     path: "/",
     maxAge,
   };
-}
-
-function lerCookie(req: Request, nome: string) {
-  const cookies = String(req.headers.cookie || "");
-  return cookies
-    .split(";")
-    .map((item) => item.trim())
-    .find((item) => item.startsWith(`${nome}=`))
-    ?.slice(nome.length + 1);
 }
 
 function criarAccessToken(usuarioId: number, sessaoId: string) {
@@ -116,11 +104,13 @@ function refreshExpiraEm() {
 function aplicarCookiesSessao(req: Request, res: Response, accessToken: string, refreshToken: string) {
   res.cookie("jetguard_access", accessToken, cookieOptions(req, 15 * 60 * 1000));
   res.cookie("jetguard_refresh", refreshToken, cookieOptions(req, sessionPolicy.refreshDays * 24 * 60 * 60 * 1000));
+  aplicarCookieCsrf(req, res);
 }
 
 function limparCookiesSessao(req: Request, res: Response) {
   res.clearCookie("jetguard_access", cookieOptions(req, 0));
   res.clearCookie("jetguard_refresh", cookieOptions(req, 0));
+  limparCookieCsrf(req, res);
 }
 
 function perfilSessaoUnica(perfil?: string) {
@@ -613,6 +603,11 @@ export async function renovarSessao(req: Request, res: Response) {
   } catch (error) {
     return res.status(401).json({ error: "Erro ao renovar sessão" });
   }
+}
+
+export function emitirCsrf(req: Request, res: Response) {
+  const csrfToken = aplicarCookieCsrf(req, res);
+  return res.json({ csrfToken });
 }
 
 export async function logout(req: AuthRequest, res: Response) {

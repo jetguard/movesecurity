@@ -44,6 +44,8 @@ export async function autenticarUsuario(
 
   try {
     const payload = jwt.verify(token, jwtSecret()) as TokenPayload;
+    const unidadeSolicitada = String(req.headers["x-unidade-ativa"] || "");
+    let unidadeSessao: string | null | undefined = null;
     const usuario = await prisma.usuario.findUnique({
       where: {
         id: payload.id,
@@ -77,6 +79,7 @@ export async function autenticarUsuario(
           id: true,
           usuarioId: true,
           status: true,
+          unidadeAtiva: true,
         },
       });
 
@@ -88,6 +91,7 @@ export async function autenticarUsuario(
       }
 
       req.sessaoId = sessao.id;
+      unidadeSessao = sessao.unidadeAtiva;
 
       await prisma.sessaoUsuario.update({
         where: { id: sessao.id },
@@ -114,7 +118,6 @@ export async function autenticarUsuario(
       });
     }
 
-    const unidadeSolicitada = String(req.headers["x-unidade-ativa"] || "");
     const unidadesPermitidas =
       usuario.perfilAcesso === PERFIS.SUPER_ADMIN
         ? UNIDADES_SISTEMA
@@ -126,7 +129,14 @@ export async function autenticarUsuario(
       });
     }
 
-    req.unidadeAtiva = unidadeSolicitada || usuario.unidade || unidadesPermitidas[0] || "GJA-T1";
+    req.unidadeAtiva = unidadeSolicitada || unidadeSessao || usuario.unidade || unidadesPermitidas[0] || "GJA-T1";
+
+    if (req.sessaoId && unidadeSolicitada) {
+      await prisma.sessaoUsuario.update({
+        where: { id: req.sessaoId },
+        data: { unidadeAtiva: unidadeSolicitada },
+      });
+    }
 
     return next();
   } catch (error) {

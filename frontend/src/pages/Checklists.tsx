@@ -14,11 +14,18 @@ type Checklist = {
   observacoes?: string;
   itens: Item[];
 };
+type LocalTerminal = {
+  id: number;
+  nome: string;
+  areaSensivel?: boolean;
+  status: string;
+};
 
 const itemPadrao: Item = { categoria: "Perimetro", descricao: "", conformidade: "Conforme", criticidade: "Media", observacao: "" };
 
 export default function Checklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
+  const [locais, setLocais] = useState<LocalTerminal[]>([]);
   const [abrir, setAbrir] = useState(false);
   const [form, setForm] = useState({
     titulo: "",
@@ -31,8 +38,12 @@ export default function Checklists() {
   });
 
   async function carregar() {
-    const response = await api.get("/checklists");
-    setChecklists(response.data);
+    const [checklistsResponse, locaisResponse] = await Promise.all([
+      api.get("/checklists"),
+      api.get("/locais", { params: { status: "ativo" } }).catch(() => ({ data: [] })),
+    ]);
+    setChecklists(checklistsResponse.data);
+    setLocais(locaisResponse.data);
   }
 
   useEffect(() => {
@@ -68,7 +79,7 @@ export default function Checklists() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Checklist de Inspecao Preventiva</h1>
+          <h1 className="text-2xl font-bold text-slate-900 sm:text-3xl">Checklist Inspeção Preventiva</h1>
           <p className="mt-1 text-sm text-slate-500">Rondas, portaria, CFTV, perimetro, iluminacao, docas e areas criticas.</p>
         </div>
         <button onClick={() => setAbrir(true)} className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white sm:w-auto">Novo Checklist</button>
@@ -84,7 +95,15 @@ export default function Checklists() {
         <form onSubmit={salvar} className="space-y-4 rounded-xl bg-white p-4 shadow sm:p-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <input className="rounded-lg border p-3" placeholder="Titulo" value={form.titulo} onChange={(e) => campo("titulo", e.target.value)} required />
-            <input className="rounded-lg border p-3" placeholder="Local" value={form.local} onChange={(e) => campo("local", e.target.value)} required />
+            <select className="rounded-lg border p-3" value={form.local} onChange={(e) => campo("local", e.target.value)} required>
+              <option value="">Selecione o local cadastrado</option>
+              {form.local && !locais.some((local) => local.nome === form.local) && <option value={form.local}>{form.local}</option>}
+              {locais.map((local) => (
+                <option key={local.id} value={local.nome}>
+                  {local.nome}{local.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                </option>
+              ))}
+            </select>
             <input className="rounded-lg border p-3" placeholder="Setor" value={form.setor} onChange={(e) => campo("setor", e.target.value)} />
             <select className="rounded-lg border p-3" value={form.tipo} onChange={(e) => campo("tipo", e.target.value)}><option>Ronda Preventiva</option><option>Portaria</option><option>CFTV</option><option>Perimetro</option><option>Docas</option><option>Area Critica</option></select>
           </div>

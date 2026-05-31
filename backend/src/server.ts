@@ -38,6 +38,8 @@ import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
 import { autenticarUsuario } from "./middlewares/auth";
+import { protegerCsrf } from "./middlewares/csrf";
+import { servirArquivoProtegido } from "./controllers/arquivo.controller";
 
 const app = express();
 const httpServer = createServer(app);
@@ -50,11 +52,19 @@ app.use(helmet({
   contentSecurityPolicy: false,
 }));
 
+function requisicaoLocalDesenvolvimento(ip?: string) {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(ip || "")
+  );
+}
+
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   limit: 8,
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req) => requisicaoLocalDesenvolvimento(req.ip),
   message: { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
 });
 
@@ -62,6 +72,7 @@ const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 240,
   standardHeaders: true,
+  skip: (req) => requisicaoLocalDesenvolvimento(req.ip),
   legacyHeaders: false,
   message: { error: "Limite de requisições excedido. Tente novamente em instantes." },
 });
@@ -72,7 +83,7 @@ app.use((req, res, next) => {
   res.header("Vary", "Origin");
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Unidade-Ativa");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Unidade-Ativa, X-CSRF-Token");
   res.header("X-Content-Type-Options", "nosniff");
   res.header("X-Frame-Options", "DENY");
   res.header("Referrer-Policy", "no-referrer");
@@ -90,15 +101,8 @@ app.use(express.json({ limit: "2mb" }));
 app.use("/api/auth/login", loginLimiter);
 app.use("/api/auth/refresh", loginLimiter);
 app.use("/api", apiLimiter);
-app.use("/uploads", autenticarUsuario, express.static("uploads", {
-  dotfiles: "deny",
-  etag: true,
-  maxAge: "1h",
-  setHeaders: (res) => {
-    res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Cache-Control", "private, max-age=3600");
-  },
-}));
+app.use(protegerCsrf);
+app.get(/^\/uploads\/(.+)$/, autenticarUsuario, servirArquivoProtegido);
 
 app.use("/api/public", publicRelatorioRoutes);
 app.use("/api/auth", authRoutes);

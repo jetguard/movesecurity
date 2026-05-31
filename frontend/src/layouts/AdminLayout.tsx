@@ -439,7 +439,7 @@ export default function AdminLayout() {
                   </Link>
                   <Link to="/checklists" className={subItem}>
                     <ClipboardCheck size={16} />
-                    Informações do Plantão
+                    Checklist Inspeção Preventiva
                   </Link>
                   <Link to="/aprovacoes" className={subItem}>
                     <CheckCircle2 size={16} />
@@ -519,6 +519,10 @@ export default function AdminLayout() {
                         <ScrollText size={16} />
                         Atualizações
                       </Link>
+                      <Link to="/integridade" className={subItem}>
+                        <ShieldCheck size={16} />
+                        Integridade
+                      </Link>
                     </>
                   )}
                   {podeVerNaturezas() && (
@@ -527,7 +531,7 @@ export default function AdminLayout() {
                       Sugestões
                     </Link>
                   )}
-                  {podeVerLogs() && (
+                  {podeAdministrar() && (
                     <Link to="/logs" className={subItem}>
                       <ScrollText size={16} />
                       Logs

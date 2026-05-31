@@ -45,6 +45,7 @@ const QuadraSeguranca = lazy(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazy(() => import("./pages/OperacaoSOC"));
 const MapaOperacional = lazy(() => import("./pages/MapaOperacional"));
 const AtualizacoesSistema = lazy(() => import("./pages/AtualizacoesSistema"));
+const IntegridadeSistema = lazy(() => import("./pages/IntegridadeSistema"));
 const SugestoesMelhoria = lazy(() => import("./pages/SugestoesMelhoria"));
 const Sessoes = lazy(() => import("./pages/Sessoes"));
 
@@ -193,6 +194,14 @@ export default function App() {
               }
             />
             <Route
+              path="integridade"
+              element={
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                  <IntegridadeSistema />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="sessoes"
               element={
                 <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
@@ -220,7 +229,7 @@ export default function App() {
             <Route
               path="logs"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
                   <Logs />
                 </ProtectedRoute>
               }
