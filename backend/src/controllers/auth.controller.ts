@@ -74,6 +74,28 @@ function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+function perfilSessaoUnica(perfil?: string) {
+  return perfil === "SUPER_ADMIN" || perfil === "ADMINISTRADOR";
+}
+
+async function encerrarSessoesAdministrativasAnteriores(usuario: { id: number; perfilAcesso: string }) {
+  if (!perfilSessaoUnica(usuario.perfilAcesso)) return;
+
+  await prisma.sessaoUsuario.updateMany({
+    where: {
+      usuarioId: usuario.id,
+      status: "ATIVA",
+    },
+    data: {
+      status: "DESCONECTADA",
+      encerradaEm: new Date(),
+      encerradaPor: "Sistema",
+      encerradaPorId: usuario.id,
+      motivoEncerramento: "Sessão encerrada automaticamente por novo login administrativo.",
+    },
+  });
+}
+
 async function validarDispositivoAutorizado(req: Request, usuario: { id: number; perfilAcesso: string }) {
   if (!perfilExigeDispositivo(usuario.perfilAcesso)) return null;
 
@@ -277,6 +299,8 @@ export async function login(req: Request, res: Response) {
 
     const userAgent = String(req.headers["user-agent"] || "");
     const unidadeAtiva = normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade)[0] || usuario.unidade || "GJA-T1";
+    await encerrarSessoesAdministrativasAnteriores(usuario);
+
     const sessao = await prisma.sessaoUsuario.create({
       data: {
         usuarioId: usuario.id,

@@ -8,9 +8,63 @@ function normalizarStatus(status?: unknown) {
   return ["ATIVA", "ENCERRADA", "EXPIRADA", "DESCONECTADA"].includes(valor) ? valor : "ATIVA";
 }
 
+async function normalizarSessoesAdministrativasAtivas() {
+  const sessoes = await prisma.sessaoUsuario.findMany({
+    where: {
+      status: "ATIVA",
+      usuario: {
+        perfilAcesso: {
+          in: [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR],
+        },
+      },
+    },
+    orderBy: [
+      { usuarioId: "asc" },
+      { ultimaAtividadeEm: "desc" },
+      { iniciadaEm: "desc" },
+    ],
+    select: {
+      id: true,
+      usuarioId: true,
+    },
+  });
+
+  const sessoesMantidas = new Set<number>();
+  const sessoesDuplicadas: string[] = [];
+
+  for (const sessao of sessoes) {
+    if (sessoesMantidas.has(sessao.usuarioId)) {
+      sessoesDuplicadas.push(sessao.id);
+      continue;
+    }
+
+    sessoesMantidas.add(sessao.usuarioId);
+  }
+
+  if (sessoesDuplicadas.length === 0) return;
+
+  await prisma.sessaoUsuario.updateMany({
+    where: {
+      id: {
+        in: sessoesDuplicadas,
+      },
+    },
+    data: {
+      status: "DESCONECTADA",
+      encerradaEm: new Date(),
+      encerradaPor: "Sistema",
+      motivoEncerramento: "Sessão administrativa duplicada encerrada automaticamente.",
+    },
+  });
+}
+
 export async function listarSessoes(req: AuthRequest, res: Response) {
   try {
     const status = normalizarStatus(req.query.status);
+    if (status === "ATIVA") {
+      await normalizarSessoesAdministrativasAtivas();
+    }
+
     const sessoes = await prisma.sessaoUsuario.findMany({
       where: {
         status,
