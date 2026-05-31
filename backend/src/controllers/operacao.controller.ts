@@ -138,7 +138,7 @@ function serializarPassagem(passagem: any) {
 
 async function indicadoresPassagem(unidade: string) {
   const [cameras, containers] = await Promise.all([
-    prisma.cameraMonitoramento.findMany({ where: { unidade }, select: { status: true } }),
+    prisma.cameraMonitoramento.findMany({ where: { unidade, statusCadastro: "Ativa" }, select: { status: true } }),
     prisma.quadraSegurancaContainer.count({
       where: { unidade, statusOperacional: { in: ["No terminal", "Dentro do terminal"] } },
     }),
@@ -171,7 +171,7 @@ export async function painelOperacionalSoc(req: AuthRequest, res: Response) {
       prisma.ocorrencia.findMany({ where: { unidade }, orderBy: { dataOcorrencia: "desc" }, take: 200 }),
       prisma.evento.findMany({ where: { unidade }, orderBy: { dataEvento: "desc" }, take: 200 }),
       prisma.investigacao.findMany({ where: { unidade }, orderBy: { createdAt: "desc" }, take: 100 }),
-      prisma.cameraMonitoramento.findMany({ where: { unidade }, orderBy: { updatedAt: "desc" } }),
+      prisma.cameraMonitoramento.findMany({ where: { unidade, statusCadastro: "Ativa" }, orderBy: { updatedAt: "desc" } }),
       prisma.quadraSegurancaContainer.findMany({ where: { unidade }, orderBy: { dataHoraEntrada: "desc" }, take: 200 }),
       prisma.planejamentoCard.findMany({
         where: { unidade, status: "Ativo" },

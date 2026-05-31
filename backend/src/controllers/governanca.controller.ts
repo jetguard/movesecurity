@@ -33,7 +33,7 @@ async function coletarIndicadores() {
     prisma.evento.count(),
     prisma.investigacao.count(),
     prisma.analiseRisco.count({ where: { nivelRisco: "Crítico" } }),
-    prisma.cameraMonitoramento.count({ where: { status: "Desconectada" } }),
+    prisma.cameraMonitoramento.count({ where: { status: "Desconectada", statusCadastro: "Ativa" } }),
     prisma.logAuditoria.count({
       where: {
         createdAt: {

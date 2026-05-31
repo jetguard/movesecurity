@@ -1,11 +1,13 @@
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
-import { AuthRequest } from "../middlewares/auth";
+import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { emitirRealtime } from "../services/realtime.service";
 
 const STATUS_CONECTADA = "Conectada";
 const STATUS_DESCONECTADA = "Desconectada";
+const STATUS_CADASTRO_ATIVA = "Ativa";
+const STATUS_CADASTRO_REMOVIDA = "Removida";
 const RETENCAO_MAXIMA_MINUTOS = 181 * 24 * 60;
 
 function numero(valor: unknown, fallback = 0) {
@@ -269,8 +271,12 @@ async function registrarMudancaStatus(params: {
 
 export async function listarCameras(req: AuthRequest, res: Response) {
   try {
+    const incluirRemovidas = req.query.incluirRemovidas === "true" && req.usuarioPerfil === PERFIS.SUPER_ADMIN;
     const cameras = await prisma.cameraMonitoramento.findMany({
-      where: { unidade: req.unidadeAtiva },
+      where: {
+        unidade: req.unidadeAtiva,
+        ...(incluirRemovidas ? {} : { statusCadastro: STATUS_CADASTRO_ATIVA }),
+      },
       orderBy: [{ status: "desc" }, { numeroCamera: "asc" }],
       include: {
         checklists: {
@@ -352,6 +358,7 @@ export async function criarCamera(req: AuthRequest, res: Response) {
         observacoesTecnicas: req.body.observacoesTecnicas,
         unidade: req.unidadeAtiva || "GJA-T1",
         cadastradoPorId: req.usuarioId,
+        statusCadastro: STATUS_CADASTRO_ATIVA,
         desconectadaDesde: status === STATUS_DESCONECTADA ? new Date() : null,
         totalFalhas: status === STATUS_DESCONECTADA ? 1 : 0,
       },
@@ -393,7 +400,7 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     const anterior = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(id), unidade: req.unidadeAtiva },
+      where: { id: Number(id), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
     });
     if (!anterior) return res.status(404).json({ error: "Câmera não encontrada" });
 
@@ -450,6 +457,40 @@ export async function excluirCamera(req: AuthRequest, res: Response) {
 
     if (!camera) return res.status(404).json({ error: "Câmera não encontrada" });
 
+    const exclusaoDefinitiva = req.query.permanente === "true";
+
+    if (exclusaoDefinitiva && req.usuarioPerfil !== PERFIS.SUPER_ADMIN) {
+      return res.status(403).json({ error: "Somente Super Admin pode excluir definitivamente uma câmera." });
+    }
+
+    if (!exclusaoDefinitiva) {
+      if (camera.statusCadastro === STATUS_CADASTRO_REMOVIDA) {
+        return res.status(400).json({ error: "Esta câmera já está removida/inativa." });
+      }
+
+      const atualizada = await prisma.cameraMonitoramento.update({
+        where: { id: camera.id },
+        data: {
+          statusCadastro: STATUS_CADASTRO_REMOVIDA,
+          monitoramento: "Inativo",
+          removidaEm: new Date(),
+          removidaPorId: req.usuarioId,
+          motivoRemocao: String(req.body?.motivo || "Removida pelo usuário"),
+        },
+      });
+
+      await registrarLog({
+        req,
+        acao: `Câmera ${camera.numeroCamera} marcada como removida/inativa`,
+        tipoRegistro: "CameraMonitoramento",
+        registroId: camera.id,
+        dadosAnteriores: camera,
+        dadosNovos: atualizada,
+      });
+
+      return res.json(atualizada);
+    }
+
     await prisma.cameraMonitoramento.delete({
       where: { id: camera.id },
     });
@@ -473,7 +514,7 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
   try {
     const { cameraId } = req.params;
     const camera = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(cameraId), unidade: req.unidadeAtiva },
+      where: { id: Number(cameraId), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
     });
     if (!camera) return res.status(404).json({ error: "Câmera não encontrada" });
 
@@ -563,7 +604,7 @@ export async function listarChecklistCamera(req: AuthRequest, res: Response) {
   try {
     const { cameraId } = req.params;
     const checklists = await prisma.cameraChecklistOperacional.findMany({
-      where: { cameraId: Number(cameraId), unidade: req.unidadeAtiva },
+      where: { cameraId: Number(cameraId), unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
       orderBy: { createdAt: "desc" },
       include: { responsavel: { select: { id: true, nome: true, apelido: true } } },
     });
@@ -578,7 +619,7 @@ export async function listarIndisponibilidadesCamera(req: AuthRequest, res: Resp
   try {
     const { cameraId } = req.params;
     const camera = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(cameraId), unidade: req.unidadeAtiva },
+      where: { id: Number(cameraId), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
     });
     if (!camera) return res.status(404).json({ error: "CÃ¢mera nÃ£o encontrada" });
 
@@ -618,7 +659,7 @@ export async function registrarIndisponibilidadeCamera(req: AuthRequest, res: Re
   try {
     const { cameraId } = req.params;
     const camera = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(cameraId), unidade: req.unidadeAtiva },
+      where: { id: Number(cameraId), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
     });
     if (!camera) return res.status(404).json({ error: "CÃ¢mera nÃ£o encontrada" });
 
@@ -738,14 +779,14 @@ export async function atualizarIndisponibilidadeCamera(req: AuthRequest, res: Re
 export async function dashboardCameras(req: AuthRequest, res: Response) {
   try {
     const [cameras, checklists, eventos, configuracao] = await Promise.all([
-      prisma.cameraMonitoramento.findMany({ where: { unidade: req.unidadeAtiva } }),
+      prisma.cameraMonitoramento.findMany({ where: { unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA } }),
       prisma.cameraChecklistOperacional.findMany({
-        where: { unidade: req.unidadeAtiva },
+        where: { unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
         include: { responsavel: { select: { nome: true, apelido: true } }, camera: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.cameraEventoStatus.findMany({
-        where: { unidade: req.unidadeAtiva },
+        where: { unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
         include: { camera: true },
         orderBy: { iniciadoEm: "desc" },
       }),
@@ -959,7 +1000,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
 export async function exportarInventarioCameras(req: AuthRequest, res: Response) {
   try {
     const cameras = await prisma.cameraMonitoramento.findMany({
-      where: { unidade: req.unidadeAtiva },
+      where: { unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
       orderBy: { numeroCamera: "asc" },
       include: {
         checklists: {
@@ -969,7 +1010,7 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
       },
     });
     const eventos = await prisma.cameraEventoStatus.findMany({
-      where: { unidade: req.unidadeAtiva, statusNovo: STATUS_DESCONECTADA },
+      where: { unidade: req.unidadeAtiva, statusNovo: STATUS_DESCONECTADA, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
       select: { cameraId: true, iniciadoEm: true, encerradoEm: true, statusNovo: true },
     });
 
@@ -1016,7 +1057,7 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
 export async function exportarHistoricoCameras(req: AuthRequest, res: Response) {
   try {
     const eventos = await prisma.cameraEventoStatus.findMany({
-      where: { unidade: req.unidadeAtiva },
+      where: { unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
       include: { camera: true },
       orderBy: { iniciadoEm: "desc" },
     });

@@ -205,11 +205,11 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
 
     const [camerasOffline, checklistsCamera, planos] = await Promise.all([
       prisma.cameraMonitoramento.findMany({
-        where: { unidade: req.unidadeAtiva, status: "Desconectada" },
+        where: { unidade: req.unidadeAtiva, status: "Desconectada", statusCadastro: "Ativa" },
         orderBy: { desconectadaDesde: "asc" },
       }),
       prisma.cameraMonitoramento.findMany({
-        where: { unidade: req.unidadeAtiva },
+        where: { unidade: req.unidadeAtiva, statusCadastro: "Ativa" },
         include: { checklists: { orderBy: { createdAt: "desc" }, take: 1 } },
       }),
       prisma.planoAcaoCorporativo.findMany({

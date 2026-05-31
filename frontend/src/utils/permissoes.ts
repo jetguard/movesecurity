@@ -40,6 +40,9 @@ export function temPerfil(perfis: string[]) {
 export const podeAdministrar = () =>
   temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]);
 
+export const podeSuperAdmin = () =>
+  temPerfil([PERFIS.SUPER_ADMIN]);
+
 export const podeAnalisar = () =>
   temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]);
 

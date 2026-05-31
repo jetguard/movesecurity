@@ -287,7 +287,7 @@ async function carregarDados(req: AuthRequest) {
     }),
     prisma.investigacao.findMany({ where: { unidade: req.unidadeAtiva }, orderBy: { createdAt: "desc" } }),
     prisma.analiseRisco.findMany({ where: { unidade: req.unidadeAtiva }, orderBy: { createdAt: "desc" } }),
-    prisma.cameraMonitoramento.findMany({ where: { unidade: req.unidadeAtiva }, orderBy: { updatedAt: "desc" } }),
+    prisma.cameraMonitoramento.findMany({ where: { unidade: req.unidadeAtiva, statusCadastro: "Ativa" }, orderBy: { updatedAt: "desc" } }),
     prisma.logAuditoria.findMany({ orderBy: { createdAt: "desc" }, take: 500 }),
   ]);
 }

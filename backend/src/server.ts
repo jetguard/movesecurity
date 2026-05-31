@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import { createServer } from "http";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import authRoutes from "./routes/auth.routes";
 import ocorrenciaRoutes from "./routes/ocorrencia.routes";
 import eventoRoutes from "./routes/evento.routes";
@@ -35,14 +37,47 @@ import sessaoRoutes from "./routes/sessao.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
+import { autenticarUsuario } from "./middlewares/auth";
 
 const app = express();
 const httpServer = createServer(app);
 
+app.disable("x-powered-by");
+app.set("trust proxy", 1);
+
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "same-site" },
+  contentSecurityPolicy: false,
+}));
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
+});
+
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 240,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Limite de requisições excedido. Tente novamente em instantes." },
+});
+
 app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", corsOrigin());
+  const origemPermitida = corsOrigin();
+  res.header("Access-Control-Allow-Origin", origemPermitida === "*" ? String(req.headers.origin || "*") : origemPermitida);
+  res.header("Vary", "Origin");
+  res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Unidade-Ativa");
+  res.header("X-Content-Type-Options", "nosniff");
+  res.header("X-Frame-Options", "DENY");
+  res.header("Referrer-Policy", "no-referrer");
+  res.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  res.header("Cross-Origin-Resource-Policy", "same-site");
 
   if (req.method === "OPTIONS") {
     return res.sendStatus(204);
@@ -51,8 +86,19 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json());
-app.use("/uploads", express.static("uploads"));
+app.use(express.json({ limit: "2mb" }));
+app.use("/api/auth/login", loginLimiter);
+app.use("/api/auth/refresh", loginLimiter);
+app.use("/api", apiLimiter);
+app.use("/uploads", autenticarUsuario, express.static("uploads", {
+  dotfiles: "deny",
+  etag: true,
+  maxAge: "1h",
+  setHeaders: (res) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Cache-Control", "private, max-age=3600");
+  },
+}));
 
 app.use("/api/public", publicRelatorioRoutes);
 app.use("/api/auth", authRoutes);

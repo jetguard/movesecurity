@@ -7,11 +7,10 @@ interface Props {
 }
 
 export default function ProtectedRoute({ children, perfis }: Props) {
-  const token = localStorage.getItem("token");
   const location = useLocation();
   const usuario = usuarioAtual();
 
-  if (!token) {
+  if (!usuario) {
     return <Navigate to="/login" />;
   }
 

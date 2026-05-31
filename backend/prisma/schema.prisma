@@ -65,6 +65,8 @@ model SessaoUsuario {
   id                  String    @id @default(cuid())
   usuarioId           Int
   tokenHash           String?   @unique
+  refreshTokenHash    String?   @unique
+  refreshExpiraEm     DateTime?
   status              String    @default("ATIVA")
   unidadeAtiva        String?
   equipe              String?
@@ -692,12 +694,16 @@ model CameraMonitoramento {
   infravermelho          String
   monitoramento          String    @default("Ativo")
   ultimaManutencao       DateTime?
-  observacoesTecnicas    String?
-  unidade                String    @default("GJA-T1")
-  cadastradoPorId        Int?
-  desconectadaDesde      DateTime?
-  totalIndisponibilidade Int       @default(0)
-  totalFalhas            Int       @default(0)
+    observacoesTecnicas    String?
+    unidade                String    @default("GJA-T1")
+    cadastradoPorId        Int?
+    statusCadastro         String    @default("Ativa")
+    removidaEm             DateTime?
+    removidaPorId          Int?
+    motivoRemocao          String?
+    desconectadaDesde      DateTime?
+    totalIndisponibilidade Int       @default(0)
+    totalFalhas            Int       @default(0)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 

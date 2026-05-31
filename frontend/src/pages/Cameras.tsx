@@ -1,7 +1,7 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Camera, Radio, ShieldCheck, Wifi, WifiOff } from "lucide-react";
 import { api } from "../services/api";
-import { podeAdministrar, podeAnalisar } from "../utils/permissoes";
+import { podeAdministrar, podeAnalisar, podeSuperAdmin } from "../utils/permissoes";
 
 type CameraItem = {
   id: number;
@@ -17,6 +17,9 @@ type CameraItem = {
   areaMonitorada: string;
   infravermelho: string;
   monitoramento: string;
+  statusCadastro?: string;
+  removidaEm?: string | null;
+  motivoRemocao?: string | null;
   ultimaManutencao?: string;
   observacoesTecnicas?: string;
   totalIndisponibilidade: number;
@@ -329,6 +332,29 @@ export default function Cameras() {
     if (!confirmar) return;
 
     await api.delete(`/cameras/${camera.id}`);
+    await carregar();
+  }
+  void excluirCamera;
+
+  async function removerCamera(camera: CameraItem) {
+    const motivo = window.prompt(
+      `Informe o motivo para remover/inativar a câmera ${camera.numeroCamera}:`,
+      "Remoção operacional"
+    );
+    if (!motivo) return;
+
+    await api.delete(`/cameras/${camera.id}`, { data: { motivo } });
+    await carregar();
+    alert("Câmera marcada como removida/inativa. O histórico foi preservado.");
+  }
+
+  async function excluirCameraDefinitivo(camera: CameraItem) {
+    const confirmar = window.confirm(
+      `Deseja realmente excluir definitivamente a câmera ${camera.numeroCamera}?\n\nEssa ação é permitida somente para Super Admin e remove o histórico de checklists e eventos.`
+    );
+    if (!confirmar) return;
+
+    await api.delete(`/cameras/${camera.id}?permanente=true`);
     await carregar();
   }
 
@@ -683,7 +709,8 @@ export default function Cameras() {
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
                       {podeAnalisar() && <button onClick={() => editarCamera(camera)} className="rounded bg-slate-200 px-3 py-1">Editar</button>}
-                      {podeAnalisar() && <button onClick={() => excluirCamera(camera)} className="rounded bg-red-600 px-3 py-1 text-white">Excluir</button>}
+                      {podeAnalisar() && <button onClick={() => removerCamera(camera)} className="rounded bg-amber-500 px-3 py-1 font-semibold text-slate-950">Remover/Inativar</button>}
+                      {podeSuperAdmin() && <button onClick={() => excluirCameraDefinitivo(camera)} className="rounded bg-red-700 px-3 py-1 text-white">Excluir definitivo</button>}
                       <button onClick={() => abrirChecklist(camera)} className="rounded bg-blue-600 px-3 py-1 text-white">Checklist</button>
                       <button onClick={() => abrirHistoricoIndisponibilidade(camera)} className="rounded bg-slate-900 px-3 py-1 text-white">Histórico</button>
                     </div>

@@ -39,7 +39,6 @@ export default function Login() {
         deviceId: obterDeviceId(),
       });
 
-      localStorage.setItem("token", response.data.token);
       localStorage.setItem("usuario", JSON.stringify(response.data.usuario));
       sessionStorage.setItem("loginInicio", String(Date.now()));
 

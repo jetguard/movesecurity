@@ -3,7 +3,7 @@ export function jwtSecret() {
 }
 
 export function jwtExpiresIn() {
-  return process.env.JWT_EXPIRES_IN || "8h";
+  return process.env.JWT_EXPIRES_IN || "15m";
 }
 
 export function corsOrigin() {
@@ -17,6 +17,7 @@ export const loginPolicy = {
 
 export const sessionPolicy = {
   idleMinutes: Number(process.env.SESSION_IDLE_MINUTES || 30),
+  refreshDays: Number(process.env.REFRESH_TOKEN_DAYS || 7),
 };
 
 export const uploadLimits = {

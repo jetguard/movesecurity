@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma";
-import { jwtExpiresIn, jwtSecret, loginPolicy } from "../config/security";
+import { jwtExpiresIn, jwtSecret, loginPolicy, sessionPolicy } from "../config/security";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
@@ -72,6 +72,55 @@ function sistemaDoUserAgent(userAgent: string) {
 
 function hashToken(token: string) {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+function cookieSeguro(req: Request) {
+  return req.secure || req.headers["x-forwarded-proto"] === "https" || process.env.NODE_ENV === "production";
+}
+
+function cookieOptions(req: Request, maxAge: number) {
+  return {
+    httpOnly: true,
+    secure: cookieSeguro(req),
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge,
+  };
+}
+
+function lerCookie(req: Request, nome: string) {
+  const cookies = String(req.headers.cookie || "");
+  return cookies
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${nome}=`))
+    ?.slice(nome.length + 1);
+}
+
+function criarAccessToken(usuarioId: number, sessaoId: string) {
+  return jwt.sign(
+    { id: usuarioId, sessaoId },
+    jwtSecret(),
+    { expiresIn: jwtExpiresIn() as jwt.SignOptions["expiresIn"] }
+  );
+}
+
+function criarRefreshToken() {
+  return crypto.randomBytes(48).toString("hex");
+}
+
+function refreshExpiraEm() {
+  return new Date(Date.now() + sessionPolicy.refreshDays * 24 * 60 * 60 * 1000);
+}
+
+function aplicarCookiesSessao(req: Request, res: Response, accessToken: string, refreshToken: string) {
+  res.cookie("jetguard_access", accessToken, cookieOptions(req, 15 * 60 * 1000));
+  res.cookie("jetguard_refresh", refreshToken, cookieOptions(req, sessionPolicy.refreshDays * 24 * 60 * 60 * 1000));
+}
+
+function limparCookiesSessao(req: Request, res: Response) {
+  res.clearCookie("jetguard_access", cookieOptions(req, 0));
+  res.clearCookie("jetguard_refresh", cookieOptions(req, 0));
 }
 
 function perfilSessaoUnica(perfil?: string) {
@@ -314,21 +363,19 @@ export async function login(req: Request, res: Response) {
       },
     });
 
-    const token = jwt.sign(
-      {
-        id: usuario.id,
-        sessaoId: sessao.id,
-      },
-      jwtSecret(),
-      {
-        expiresIn: jwtExpiresIn() as jwt.SignOptions["expiresIn"],
-      }
-    );
+    const token = criarAccessToken(usuario.id, sessao.id);
+    const refreshToken = criarRefreshToken();
 
     await prisma.sessaoUsuario.update({
       where: { id: sessao.id },
-      data: { tokenHash: hashToken(token) },
+      data: {
+        tokenHash: hashToken(token),
+        refreshTokenHash: hashToken(refreshToken),
+        refreshExpiraEm: refreshExpiraEm(),
+      },
     });
+
+    aplicarCookiesSessao(req, res, token, refreshToken);
 
     const agora = new Date();
     await prisma.usuario.update({
@@ -358,7 +405,6 @@ export async function login(req: Request, res: Response) {
     });
 
     return res.json({
-      token,
       usuario: {
         id: usuario.id,
         nome: usuario.nome,
@@ -497,6 +543,78 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
   }
 }
 
+export async function renovarSessao(req: Request, res: Response) {
+  try {
+    const refreshToken = lerCookie(req, "jetguard_refresh");
+    if (!refreshToken) {
+      return res.status(401).json({ error: "Refresh token não informado" });
+    }
+
+    const sessao = await prisma.sessaoUsuario.findFirst({
+      where: {
+        refreshTokenHash: hashToken(refreshToken),
+        status: "ATIVA",
+        refreshExpiraEm: { gt: new Date() },
+      },
+      include: {
+        usuario: {
+          select: {
+            id: true,
+            nome: true,
+            apelido: true,
+            fotoPerfil: true,
+            email: true,
+            perfilAcesso: true,
+            equipe: true,
+            unidade: true,
+            unidadesPermitidas: true,
+            statusUsuario: true,
+            deveAlterarSenha: true,
+          },
+        },
+      },
+    });
+
+    if (!sessao || sessao.usuario.statusUsuario !== "ATIVO") {
+      limparCookiesSessao(req, res);
+      return res.status(401).json({ error: "Sessão expirada" });
+    }
+
+    const novoAccessToken = criarAccessToken(sessao.usuarioId, sessao.id);
+    const novoRefreshToken = criarRefreshToken();
+
+    await prisma.sessaoUsuario.update({
+      where: { id: sessao.id },
+      data: {
+        tokenHash: hashToken(novoAccessToken),
+        refreshTokenHash: hashToken(novoRefreshToken),
+        refreshExpiraEm: refreshExpiraEm(),
+        ultimaAtividadeEm: new Date(),
+        ipUltimaAtividade: req.ip,
+      },
+    });
+
+    aplicarCookiesSessao(req, res, novoAccessToken, novoRefreshToken);
+
+    return res.json({
+      usuario: {
+        id: sessao.usuario.id,
+        nome: sessao.usuario.nome,
+        apelido: sessao.usuario.apelido,
+        fotoPerfil: sessao.usuario.fotoPerfil,
+        email: sessao.usuario.email,
+        perfilAcesso: sessao.usuario.perfilAcesso,
+        equipe: sessao.usuario.equipe,
+        unidade: sessao.usuario.unidade,
+        unidadesPermitidas: normalizarUnidadesPermitidas(sessao.usuario.unidadesPermitidas, sessao.usuario.unidade),
+        deveAlterarSenha: sessao.usuario.deveAlterarSenha,
+      },
+    });
+  } catch (error) {
+    return res.status(401).json({ error: "Erro ao renovar sessão" });
+  }
+}
+
 export async function logout(req: AuthRequest, res: Response) {
   if (req.sessaoId) {
     await prisma.sessaoUsuario.updateMany({
@@ -506,6 +624,9 @@ export async function logout(req: AuthRequest, res: Response) {
       },
       data: {
         status: "ENCERRADA",
+        tokenHash: null,
+        refreshTokenHash: null,
+        refreshExpiraEm: null,
         encerradaEm: new Date(),
         encerradaPor: "Usuario",
         encerradaPorId: req.usuarioId,
@@ -521,6 +642,7 @@ export async function logout(req: AuthRequest, res: Response) {
     registroId: req.usuarioId,
   });
 
+  limparCookiesSessao(req, res);
   return res.status(204).send();
 }
 

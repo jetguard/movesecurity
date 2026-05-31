@@ -17,20 +17,30 @@ type TokenPayload = {
   sessaoId?: string;
 };
 
+function lerCookie(req: Request, nome: string) {
+  const cookies = String(req.headers.cookie || "");
+  return cookies
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${nome}=`))
+    ?.slice(nome.length + 1);
+}
+
 export async function autenticarUsuario(
   req: AuthRequest,
   res: Response,
   next: NextFunction
 ) {
   const authHeader = req.headers.authorization;
+  const cookieToken = lerCookie(req, "jetguard_access");
 
-  if (!authHeader) {
+  if (!authHeader && !cookieToken) {
     return res.status(401).json({
       error: "Token não informado",
     });
   }
 
-  const [, token] = authHeader.split(" ");
+  const token = cookieToken || authHeader?.split(" ")[1] || "";
 
   try {
     const payload = jwt.verify(token, jwtSecret()) as TokenPayload;
