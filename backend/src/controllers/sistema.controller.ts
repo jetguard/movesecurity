@@ -151,12 +151,13 @@ async function dadosIntegridade() {
   const cwd = process.cwd();
   const backupsDir = path.resolve(cwd, "backups");
 
-  const [ocorrenciaAnexos, eventoAnexos, riscosFotos, quadraAnexos, sugestoes, sessoesAtivas, sessoesExpiradas, falhasLoginHoje] = await Promise.all([
+  const [ocorrenciaAnexos, eventoAnexos, riscosFotos, quadraAnexos, sugestoes, usuariosComFoto, sessoesAtivas, sessoesExpiradas, falhasLoginHoje] = await Promise.all([
     prisma.anexoOcorrencia.findMany({ include: { ocorrencia: { select: { codigo: true, unidade: true } } } }),
     prisma.anexoEvento.findMany({ include: { evento: { select: { codigo: true, unidade: true } } } }),
     prisma.fotoRisco.findMany({ include: { analiseRisco: { select: { codigo: true, unidade: true } } } }),
     prisma.quadraSegurancaAnexo.findMany({ include: { container: { select: { numeroContainer: true, unidade: true } } } }),
     prisma.sugestaoMelhoria.findMany({ where: { printTela: { not: null } }, select: { id: true, printTela: true, unidade: true } }),
+    prisma.usuario.findMany({ where: { fotoPerfil: { not: null } }, select: { id: true, nome: true, fotoPerfil: true, unidade: true } }),
     prisma.sessaoUsuario.count({ where: { status: "ATIVA" } }),
     prisma.sessaoUsuario.count({ where: { status: { in: ["ENCERRADA", "DESCONECTADA", "EXPIRADA"] } } }),
     prisma.logAuditoria.count({
@@ -173,6 +174,7 @@ async function dadosIntegridade() {
     ...riscosFotos.map((item) => ({ modulo: "Risco", id: item.id, caminho: item.caminho, hash: null, unidade: item.analiseRisco.unidade, codigo: item.analiseRisco.codigo })),
     ...quadraAnexos.map((item) => ({ modulo: "Quadra", id: item.id, caminho: item.caminho, hash: item.hashArquivo, unidade: item.container.unidade, codigo: item.container.numeroContainer })),
     ...sugestoes.map((item) => ({ modulo: "Sugestao", id: item.id, caminho: item.printTela || "", hash: null, unidade: item.unidade, codigo: `Sugestao ${item.id}` })),
+    ...usuariosComFoto.map((item) => ({ modulo: "Perfil", id: item.id, caminho: item.fotoPerfil || "", hash: "foto-perfil", unidade: item.unidade, codigo: item.nome })),
   ];
 
   const arquivosDisco = listarArquivosUploadsAtivos(cwd);
