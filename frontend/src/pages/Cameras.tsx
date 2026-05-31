@@ -230,6 +230,8 @@ export default function Cameras() {
   const [cameraEditando, setCameraEditando] = useState<CameraItem | null>(null);
   const [cameraChecklist, setCameraChecklist] = useState<CameraItem | null>(null);
   const [cameraHistorico, setCameraHistorico] = useState<CameraItem | null>(null);
+  const [buscaCamera, setBuscaCamera] = useState("");
+  const [statusFiltroCamera, setStatusFiltroCamera] = useState("");
   const [indisponibilidades, setIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
   const [formIndisponibilidade, setFormIndisponibilidade] = useState(indisponibilidadeInicial);
   const [indisponibilidadeEditando, setIndisponibilidadeEditando] = useState<IndisponibilidadeCamera | null>(null);
@@ -254,6 +256,13 @@ export default function Cameras() {
 
   const maxFalhas = useMemo(() => Math.max(...(dashboard?.instabilidadePorCamera || []).map(([, valor]) => valor), 1), [dashboard]);
   const maxAreas = useMemo(() => Math.max(...(dashboard?.falhasPorArea || []).map(([, valor]) => valor), 1), [dashboard]);
+  const camerasFiltradas = useMemo(() => {
+    const busca = buscaCamera.trim().toLocaleLowerCase("pt-BR");
+    return cameras.filter((camera) => {
+      const texto = `${camera.numeroCamera} ${camera.nomeCamera || ""}`.toLocaleLowerCase("pt-BR");
+      return (!busca || texto.includes(busca)) && (!statusFiltroCamera || camera.status === statusFiltroCamera);
+    });
+  }, [buscaCamera, cameras, statusFiltroCamera]);
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({ ...atual, [nome]: valor }));
@@ -694,15 +703,32 @@ export default function Cameras() {
       )}
 
       <section className="rounded-2xl bg-white p-5 shadow">
-        <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Inventário operacional</h2>
             <p className="text-sm text-slate-500">Cadastro, atualização de status e checklist semanal obrigatório.</p>
           </div>
+          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[minmax(220px,320px)_180px] lg:w-auto">
+            <input
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              placeholder="Buscar por número ou nome"
+              value={buscaCamera}
+              onChange={(e) => setBuscaCamera(e.target.value)}
+            />
+            <select
+              className="rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              value={statusFiltroCamera}
+              onChange={(e) => setStatusFiltroCamera(e.target.value)}
+            >
+              <option value="">Todos os status</option>
+              <option value="Conectada">Conectada</option>
+              <option value="Desconectada">Desconectada</option>
+            </select>
+          </div>
         </div>
-        <div className="overflow-x-auto">
+        <div className="max-h-[640px] overflow-auto">
           <table className="w-full min-w-[960px] text-left text-sm">
-            <thead className="bg-slate-50 text-slate-500">
+            <thead className="sticky top-0 z-10 bg-slate-50 text-slate-500 shadow-sm">
               <tr>
                 <th className="p-3">Câmera</th>
                 <th className="p-3">Servidor</th>
@@ -716,10 +742,10 @@ export default function Cameras() {
               </tr>
             </thead>
             <tbody>
-              {cameras.map((camera) => (
+              {camerasFiltradas.map((camera) => (
                 <tr key={camera.id} className="border-b border-slate-100">
-                  <td className="p-3 font-bold">Câmera {camera.numeroCamera}{camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}</td>
-                  <td className="p-3">Servidor {camera.numeroServidor}</td>
+                  <td className="p-3 font-bold">{camera.numeroCamera}{camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}</td>
+                  <td className="p-3">{camera.numeroServidor}</td>
                   <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${camera.status === "Conectada" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{camera.status}</span></td>
                   <td className="p-3">{camera.tipoCamera}</td>
                   <td className="p-3">{camera.tecnologia}</td>
@@ -737,6 +763,13 @@ export default function Cameras() {
                   </td>
                 </tr>
               ))}
+              {camerasFiltradas.length === 0 && (
+                <tr>
+                  <td className="p-6 text-center text-slate-500" colSpan={9}>
+                    Nenhuma câmera encontrada com os filtros selecionados.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
