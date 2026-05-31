@@ -145,9 +145,21 @@ export async function registrarLog(params: {
 }) {
   try {
     const authHeader = params.req.headers.authorization;
+    const usuarioIdReq = (params.req as Request & { usuarioId?: number }).usuarioId;
     let usuario = null;
 
-    if (authHeader) {
+    if (usuarioIdReq) {
+      usuario = await prisma.usuario.findUnique({
+        where: {
+          id: usuarioIdReq,
+        },
+        select: {
+          id: true,
+          nome: true,
+          apelido: true,
+        },
+      });
+    } else if (authHeader) {
       const [, token] = authHeader.split(" ");
       const payload = jwt.verify(token, jwtSecret()) as TokenPayload;
 

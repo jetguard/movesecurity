@@ -1,5 +1,10 @@
 import { Router } from "express";
-import { atualizacoesSistema, integridadeSistema } from "../controllers/sistema.controller";
+import {
+  atualizacoesSistema,
+  excluirArquivosQuarentena,
+  integridadeSistema,
+  moverOrfaosParaQuarentena,
+} from "../controllers/sistema.controller";
 import { acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
@@ -16,6 +21,20 @@ router.get(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   integridadeSistema
+);
+
+router.post(
+  "/integridade/orfaos/quarentena",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  moverOrfaosParaQuarentena
+);
+
+router.post(
+  "/integridade/quarentena/excluir",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  excluirArquivosQuarentena
 );
 
 export default router;
