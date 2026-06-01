@@ -8,6 +8,7 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { jwtSecret } from "../config/security";
 import { registrarLog } from "../services/auditoria.service";
+import { assinarDocumento, assinaturaValidaDocumento, criarUrlValidacaoAssinatura, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
 
 function inicioDia(data = new Date()) {
   const inicio = new Date(data);
@@ -550,15 +551,27 @@ export async function finalizarPassagemTurno(req: AuthRequest, res: Response) {
     if (!anterior) return res.status(404).json({ error: "Passagem não encontrada" });
     const usuario = await usuarioSolicitante(req.usuarioId);
     if (!podeGerenciarPassagem(req.usuarioPerfil) && anterior.equipe !== usuario?.equipe) return res.status(403).json({ error: "Apenas integrantes da equipe podem finalizar esta passagem." });
+    await exigirSenhaAssinatura(req);
     const passagem = await prisma.passagemTurno.update({
       where: { id: anterior.id },
       data: { status: "Enviado", horaEncerramento: new Date(), ...(await indicadoresPassagem(anterior.unidade)) },
       include: { responsavel: { select: { id: true, nome: true, apelido: true, equipe: true } }, postos: true },
     });
+    await assinarDocumento({
+      req,
+      modulo: "PassagemTurno",
+      registroId: passagem.id,
+      codigoRegistro: passagem.codigo,
+      unidade: passagem.unidade,
+      acao: "Envio e consolidação do Relatório CCOS",
+      dados: passagem,
+    });
     await registrarLog({ req, acao: `Finalização da passagem de turno ${passagem.codigo}`, tipoRegistro: "PassagemTurno", registroId: passagem.id, dadosAnteriores: anterior, dadosNovos: passagem });
     return res.json(serializarPassagem(passagem));
   } catch (error) {
     console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao finalizar passagem de turno" });
   }
 }
@@ -646,15 +659,18 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
       .digest("hex")
       .slice(0, 16)
       .toUpperCase();
+    const assinatura = await assinaturaValidaDocumento("PassagemTurno", passagem.id);
     const pdfUrl = criarUrlPublicaCcos(req, {
       id: passagem.id,
       codigo: passagem.codigo,
       unidade: passagem.unidade,
     });
-    const qrCodePdf = await QRCode.toDataURL(pdfUrl, {
+    const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
+    const qrCodePdf = await QRCode.toDataURL(validacaoUrl, {
       margin: 1,
       width: 112,
     });
+    const tokenRodape = assinatura?.token || tokenAssinatura;
     const pageBottom = 684;
 
     const watermark = () => {
@@ -677,7 +693,7 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
         responsavel,
         unidade: passagem.unidade,
         equipe: passagem.equipe,
-        token: tokenAssinatura,
+        token: tokenRodape,
         qrCode: qrCodePdf,
       });
       doc.moveTo(36, 760).lineTo(559, 760).strokeColor("#dbe4ef").lineWidth(0.8).stroke();

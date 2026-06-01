@@ -2,6 +2,7 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { criarUrlPublicaPdf, gerarRelatorioPdf } from "../services/relatorioPdf.service";
+import { assinaturaValidaDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
 import { registrarLog } from "../services/auditoria.service";
 import { estaAprovado } from "../utils/status";
 import { calcularHashArquivo } from "../utils/arquivoHash";
@@ -402,6 +403,11 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
       codigo: ocorrencia.codigo,
       unidade: ocorrencia.unidade,
     });
+    const assinatura =
+      (await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id)) ||
+      (ocorrencia.analise ? await assinaturaValidaDocumento("AnaliseOcorrencia", ocorrencia.analise.id) : null) ||
+      (ocorrencia.investigacao ? await assinaturaValidaDocumento("Investigacao", ocorrencia.investigacao.id) : null);
+    const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
 
     return gerarRelatorioPdf(
       res,
@@ -421,7 +427,8 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         analise: ocorrencia.analise,
       },
       usuario,
-      pdfUrl
+      validacaoUrl,
+      assinatura?.token
     );
   } catch (error) {
     console.error(error);

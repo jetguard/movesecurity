@@ -2,6 +2,7 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { assinarDocumento, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
 
 function normalizarBrl(valor: unknown) {
   return String(valor || "0,00").trim() || "0,00";
@@ -86,6 +87,7 @@ export async function atualizarAnaliseOcorrencia(req: AuthRequest, res: Response
 
     const status = req.body.status || anterior.status;
     const concluindo = status === "Concluído";
+    if (concluindo) await exigirSenhaAssinatura(req);
 
     const { analise, ocorrencia } = await prisma.$transaction(async (tx) => {
       const analiseAtual = await tx.analiseOcorrencia.update({
@@ -124,9 +126,23 @@ export async function atualizarAnaliseOcorrencia(req: AuthRequest, res: Response
       dadosNovos: { ...analise, codigo: ocorrencia.codigo },
     });
 
+    if (concluindo) {
+      await assinarDocumento({
+        req,
+        modulo: "AnaliseOcorrencia",
+        registroId: analise.id,
+        codigoRegistro: ocorrencia.codigo,
+        unidade: ocorrencia.unidade,
+        acao: "Conclusão da análise de ocorrência",
+        dados: analise,
+      });
+    }
+
     return res.json(analise);
   } catch (error) {
     console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao atualizar análise da ocorrência" });
   }
 }
@@ -210,6 +226,7 @@ export async function atualizarAnaliseEvento(req: AuthRequest, res: Response) {
 
     const status = req.body.status || anterior.status;
     const concluindo = status === "Concluído";
+    if (concluindo) await exigirSenhaAssinatura(req);
 
     const { analise, evento } = await prisma.$transaction(async (tx) => {
       const analiseAtual = await tx.analiseEvento.update({
@@ -248,9 +265,23 @@ export async function atualizarAnaliseEvento(req: AuthRequest, res: Response) {
       dadosNovos: { ...analise, codigo: evento.codigo },
     });
 
+    if (concluindo) {
+      await assinarDocumento({
+        req,
+        modulo: "AnaliseEvento",
+        registroId: analise.id,
+        codigoRegistro: evento.codigo,
+        unidade: evento.unidade,
+        acao: "Conclusão da análise de evento",
+        dados: analise,
+      });
+    }
+
     return res.json(analise);
   } catch (error) {
     console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao atualizar análise do evento" });
   }
 }

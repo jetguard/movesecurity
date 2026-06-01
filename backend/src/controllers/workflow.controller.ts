@@ -2,6 +2,7 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { assinarDocumento, invalidarAssinaturasDocumento } from "../services/assinaturaDocumento.service";
 
 type ModuloWorkflow = "ocorrencia" | "evento" | "investigacao";
 
@@ -46,6 +47,11 @@ function resumoRegistro(modulo: string, registro: any) {
   };
 }
 
+function codigoWorkflow(registro: unknown) {
+  const dados = registro as { codigo?: string | null; numeroOcorrencia?: string | null; id?: number };
+  return dados.codigo || dados.numeroOcorrencia || String(dados.id || "");
+}
+
 export async function listarWorkflow(req: AuthRequest, res: Response) {
   try {
     const [ocorrencias, eventos, investigacoes] = await Promise.all([
@@ -83,6 +89,15 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
     let acaoLog = "Atualizacao de workflow";
 
     if (acao === "enviar") {
+      await assinarDocumento({
+        req,
+        modulo: modulo === "ocorrencia" ? "Ocorrencia" : modulo === "evento" ? "Evento" : "Investigacao",
+        registroId: id,
+        codigoRegistro: codigoWorkflow(anterior),
+        unidade: anterior.unidade,
+        acao: "Envio para revisão",
+        dados: anterior,
+      });
       dados.fluxoStatus = "Aguardando Revisao";
       dados.motivoDevolucao = null;
       acaoLog = "Enviado para revisao";
@@ -92,6 +107,15 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
       dados.revisadoEm = agora;
       acaoLog = "Registro colocado em revisao";
     } else if (acao === "aprovar") {
+      await assinarDocumento({
+        req,
+        modulo: modulo === "ocorrencia" ? "Ocorrencia" : modulo === "evento" ? "Evento" : "Investigacao",
+        registroId: id,
+        codigoRegistro: codigoWorkflow(anterior),
+        unidade: anterior.unidade,
+        acao: "Aprovação do documento",
+        dados: anterior,
+      });
       dados.fluxoStatus = "Aprovado";
       dados.aprovadoPorId = req.usuarioId;
       dados.aprovadoEm = agora;
@@ -114,6 +138,11 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
       dados.aprovadoPorId = null;
       dados.aprovadoEm = null;
       dados.motivoDevolucao = `Reaberto pelo Super Admin: ${req.body.motivo}`;
+      await invalidarAssinaturasDocumento({
+        modulo: modulo === "ocorrencia" ? "Ocorrencia" : modulo === "evento" ? "Evento" : "Investigacao",
+        registroId: id,
+        motivo: `Registro reaberto: ${req.body.motivo}`,
+      });
       acaoLog = "Registro aprovado reaberto";
     } else {
       return res.status(400).json({ error: "Acao invalida" });
@@ -133,6 +162,8 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
     return res.json(atualizado);
   } catch (error) {
     console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao atualizar workflow" });
   }
 }

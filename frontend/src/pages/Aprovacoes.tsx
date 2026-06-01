@@ -57,9 +57,19 @@ export default function Aprovacoes() {
   }), [itens]);
 
   async function acao(item: ItemWorkflow, acaoWorkflow: string) {
-    await api.post(`/workflow/${item.modulo}/${item.id}`, {
+    const payload: Record<string, string> = {
       acao: acaoWorkflow,
       motivo,
+    };
+
+    if (["enviar", "aprovar"].includes(acaoWorkflow)) {
+      const senhaAssinatura = window.prompt("Confirme sua senha para assinar eletronicamente este documento:");
+      if (!senhaAssinatura) return;
+      payload.senhaAssinatura = senhaAssinatura;
+    }
+
+    await api.post(`/workflow/${item.modulo}/${item.id}`, {
+      ...payload,
     });
     await carregar();
   }

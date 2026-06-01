@@ -320,9 +320,11 @@ export default function OperacaoSOC() {
     if (!passagemSelecionada) return;
     const confirmar = window.confirm("Deseja realmente finalizar e enviar este relatório?");
     if (!confirmar) return;
+    const senhaAssinatura = window.prompt("Confirme sua senha para assinar eletronicamente o Relatório CCOS:");
+    if (!senhaAssinatura) return;
     setSalvando(true);
     try {
-      const response = await api.post(`/operacao/passagens-turno/${passagemSelecionada.id}/finalizar`);
+      const response = await api.post(`/operacao/passagens-turno/${passagemSelecionada.id}/finalizar`, { senhaAssinatura });
       preencherPassagem(response.data);
       await carregar();
       alert("Relatório enviado com sucesso. Obrigado!");

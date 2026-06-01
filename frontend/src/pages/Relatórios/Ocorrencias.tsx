@@ -374,11 +374,16 @@ export default function Ocorrencias() {
 
   async function salvarAnaliseOcorrencia() {
     if (!analiseAtual) return;
+    const senhaAssinatura = statusAnalise === "Concluído"
+      ? window.prompt("Confirme sua senha para assinar eletronicamente a conclusão da análise:")
+      : "";
+    if (statusAnalise === "Concluído" && !senhaAssinatura) return;
 
     const response = await api.put(`/analises/ocorrencias/${analiseAtual.id}`, {
       status: statusAnalise,
       prejuizoFinanceiro,
       conclusaoAnalise,
+      senhaAssinatura,
     });
 
     setAnaliseAtual(response.data);

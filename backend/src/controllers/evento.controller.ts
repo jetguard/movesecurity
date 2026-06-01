@@ -2,6 +2,7 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { criarUrlPublicaPdf, gerarRelatorioPdf } from "../services/relatorioPdf.service";
+import { assinaturaValidaDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
 import { registrarLog } from "../services/auditoria.service";
 import { estaAprovado } from "../utils/status";
 import { calcularHashArquivo } from "../utils/arquivoHash";
@@ -395,6 +396,10 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
       codigo: evento.codigo,
       unidade: evento.unidade,
     });
+    const assinatura =
+      (await assinaturaValidaDocumento("Evento", evento.id)) ||
+      (evento.analise ? await assinaturaValidaDocumento("AnaliseEvento", evento.analise.id) : null);
+    const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
 
     return gerarRelatorioPdf(
       res,
@@ -413,7 +418,8 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         analise: evento.analise,
       },
       usuario,
-      pdfUrl
+      validacaoUrl,
+      assinatura?.token
     );
   } catch (error) {
     console.error(error);

@@ -352,11 +352,16 @@ export default function Eventos() {
 
   async function salvarAnaliseEvento() {
     if (!analiseAtual) return;
+    const senhaAssinatura = statusAnalise === "Concluído"
+      ? window.prompt("Confirme sua senha para assinar eletronicamente a conclusão da análise:")
+      : "";
+    if (statusAnalise === "Concluído" && !senhaAssinatura) return;
 
     const response = await api.put(`/analises/eventos/${analiseAtual.id}`, {
       status: statusAnalise,
       valorRecuperado,
       conclusaoAnalise,
+      senhaAssinatura,
     });
 
     setAnaliseAtual(response.data);

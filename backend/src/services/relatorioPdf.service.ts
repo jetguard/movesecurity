@@ -740,9 +740,10 @@ export async function gerarRelatorioPdf(
   res: Response,
   relatorio: RelatorioPdf,
   usuario: UsuarioAssinatura,
-  pdfUrl: string
+  pdfUrl: string,
+  assinaturaToken?: string | null
 ) {
-  const token = criarToken(relatorio, usuario);
+  const token = assinaturaToken || criarToken(relatorio, usuario);
   const qrCode = await QRCode.toDataURL(pdfUrl, {
     margin: 1,
     width: 120,
