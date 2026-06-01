@@ -63,9 +63,9 @@ export default function Aprovacoes() {
     };
 
     if (["enviar", "aprovar"].includes(acaoWorkflow)) {
-      const senhaAssinatura = window.prompt("Confirme sua senha para assinar eletronicamente este documento:");
-      if (!senhaAssinatura) return;
-      payload.senhaAssinatura = senhaAssinatura;
+      const pinOperacional = window.prompt("Informe seu PIN operacional de 4 dígitos para assinar eletronicamente este documento:");
+      if (!pinOperacional) return;
+      payload.pinOperacional = pinOperacional;
     }
 
     await api.post(`/workflow/${item.modulo}/${item.id}`, {

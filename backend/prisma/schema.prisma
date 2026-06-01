@@ -25,6 +25,11 @@ model Usuario {
   statusUsuario      String    @default("ATIVO")
   deveAlterarSenha   Boolean   @default(true)
   senhaAlteradaEm    DateTime?
+  pinOperacionalHash String?
+  pinOperacionalCriadoEm DateTime?
+  pinOperacionalAtualizadoEm DateTime?
+  pinTentativasInvalidas Int @default(0)
+  pinBloqueadoAte   DateTime?
   ultimoAcesso       DateTime?
   createdAt          DateTime  @default(now())
 

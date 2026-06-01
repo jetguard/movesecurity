@@ -13,6 +13,14 @@
 
   body {
     background: #f1f5f9;
+    overflow-x: hidden;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    min-width: 0;
   }
 
   button:not(:disabled),
@@ -164,5 +172,75 @@
 
   .dark table {
     color: #e2e8f0;
+  }
+
+  @media (max-width: 767px) {
+    * {
+      max-width: 100%;
+    }
+
+    button,
+    a[role="button"],
+    .inline-flex {
+      max-width: 100%;
+    }
+
+    table {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      white-space: nowrap;
+    }
+
+    th,
+    td {
+      white-space: nowrap;
+    }
+
+    td:last-child {
+      white-space: normal;
+    }
+
+    td:last-child > div,
+    td:last-child .flex,
+    td:last-child .inline-flex {
+      flex-wrap: wrap;
+      max-width: calc(100vw - 3rem);
+      white-space: normal;
+    }
+
+    td:last-child button,
+    td:last-child a,
+    .listing-actions button,
+    .listing-actions a {
+      min-height: 2.25rem;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      text-align: center;
+    }
+
+    .listing-card-header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .listing-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      width: 100%;
+    }
+
+    .listing-actions > * {
+      flex: 1 1 8rem;
+      justify-content: center;
+    }
+
+    .recharts-wrapper,
+    .recharts-responsive-container {
+      max-width: 100%;
+    }
   }
 }

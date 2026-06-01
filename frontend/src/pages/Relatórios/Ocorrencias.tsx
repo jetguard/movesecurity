@@ -438,16 +438,16 @@ export default function Ocorrencias() {
 
   async function salvarAnaliseOcorrencia() {
     if (!analiseAtual) return;
-    const senhaAssinatura = statusAnalise === "Concluído"
-      ? window.prompt("Confirme sua senha para assinar eletronicamente a conclusão da análise:")
+    const pinOperacional = statusAnalise === "Concluído"
+      ? window.prompt("Informe seu PIN operacional de 4 dígitos para assinar eletronicamente a conclusão da análise:")
       : "";
-    if (statusAnalise === "Concluído" && !senhaAssinatura) return;
+    if (statusAnalise === "Concluído" && !pinOperacional) return;
 
     const response = await api.put(`/analises/ocorrencias/${analiseAtual.id}`, {
       status: statusAnalise,
       prejuizoFinanceiro,
       conclusaoAnalise,
-      senhaAssinatura,
+      pinOperacional,
     });
 
     setAnaliseAtual(response.data);
@@ -1043,8 +1043,8 @@ export default function Ocorrencias() {
         <div className="space-y-4">
           {ocorrencias.map((ocorrencia) => (
             <div key={ocorrencia.id} className="bg-white rounded-xl shadow p-5">
-              <div className="flex items-center justify-between gap-4">
-                <div>
+              <div className="listing-card-header flex items-center justify-between gap-4 md:flex-row">
+                <div className="min-w-0">
                   <h2 className="text-xl font-bold">{ocorrencia.codigo}</h2>
                   <p className="text-gray-600 mt-1">{ocorrencia.assunto}</p>
                   <p className="text-sm text-gray-500 mt-1">
@@ -1058,7 +1058,7 @@ export default function Ocorrencias() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="listing-actions flex items-center gap-2 md:w-auto md:flex-nowrap">
                   <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
                     {ocorrencia.status}
                   </span>

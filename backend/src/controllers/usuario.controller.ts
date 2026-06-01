@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
+import { gerarHashPin, validarFormatoPin, validarPinOperacional } from "../services/pinOperacional.service";
 
 const selectUsuario = {
   id: true,
@@ -22,6 +23,8 @@ const selectUsuario = {
   statusUsuario: true,
   deveAlterarSenha: true,
   senhaAlteradaEm: true,
+  pinOperacionalCriadoEm: true,
+  pinOperacionalAtualizadoEm: true,
   ultimoAcesso: true,
   createdAt: true,
 };
@@ -31,6 +34,7 @@ function formatarUsuario(usuario: any) {
   return {
     ...usuario,
     unidadesPermitidas: normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade),
+    possuiPinOperacional: Boolean(usuario.pinOperacionalCriadoEm || usuario.pinOperacionalAtualizadoEm),
   };
 }
 
@@ -472,6 +476,85 @@ export async function atualizarPerfil(req: AuthRequest, res: Response) {
     return res.status(500).json({
       error: "Erro ao atualizar perfil",
     });
+  }
+}
+
+export async function atualizarPinOperacional(req: AuthRequest, res: Response) {
+  try {
+    const { pinAtual, senhaAtual, novoPin, confirmarNovoPin } = req.body;
+
+    if (!novoPin || !confirmarNovoPin) {
+      return res.status(400).json({ error: "Informe e confirme o novo PIN de segurança." });
+    }
+
+    if (novoPin !== confirmarNovoPin) {
+      return res.status(400).json({ error: "Os PINs de segurança não coincidem." });
+    }
+
+    if (!validarFormatoPin(String(novoPin))) {
+      return res.status(400).json({ error: "O PIN de segurança deve possuir exatamente 4 dígitos numéricos." });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        senha: true,
+        pinOperacionalHash: true,
+        pinOperacionalCriadoEm: true,
+      },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    if (usuario.pinOperacionalHash) {
+      if (!pinAtual) {
+        return res.status(400).json({ error: "Informe o PIN atual para cadastrar um novo PIN." });
+      }
+      await validarPinOperacional(usuario.id, String(pinAtual));
+    } else {
+      if (!senhaAtual) {
+        return res.status(400).json({ error: "Informe sua senha atual para criar o PIN de segurança." });
+      }
+
+      const senhaValida = await bcrypt.compare(String(senhaAtual), usuario.senha);
+      if (!senhaValida) {
+        return res.status(400).json({ error: "Senha atual inválida." });
+      }
+    }
+
+    const atualizado = await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        pinOperacionalHash: await gerarHashPin(String(novoPin)),
+        pinOperacionalCriadoEm: usuario.pinOperacionalCriadoEm || new Date(),
+        pinOperacionalAtualizadoEm: new Date(),
+        pinTentativasInvalidas: 0,
+        pinBloqueadoAte: null,
+      },
+      select: selectUsuario,
+    });
+
+    await registrarLog({
+      req,
+      acao: usuario.pinOperacionalHash ? "Atualização de PIN operacional" : "Criação de PIN operacional",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosNovos: {
+        id: usuario.id,
+        email: usuario.email,
+        pinOperacionalAtualizadoEm: new Date().toISOString(),
+      },
+    });
+
+    return res.json(formatarUsuario(atualizado));
+  } catch (error: any) {
+    const status = error?.status || 500;
+    return res.status(status).json({ error: error?.message || "Erro ao atualizar PIN operacional" });
   }
 }
 

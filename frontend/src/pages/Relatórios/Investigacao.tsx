@@ -275,8 +275,8 @@ export default function Investigacao() {
         <div className="space-y-4">
           {investigacoes.map((item) => (
             <div key={item.id} className="bg-white rounded-xl shadow p-5">
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div>
+              <div className="listing-card-header flex flex-wrap items-center justify-between gap-4 md:flex-row">
+                <div className="min-w-0">
                   <h2 className="text-xl font-bold">
                     R.I. {numeroInvestigacao(item)}
                   </h2>
@@ -291,7 +291,7 @@ export default function Investigacao() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="listing-actions flex items-center gap-2 md:w-auto md:flex-nowrap">
                   <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
                     {item.status}
                   </span>

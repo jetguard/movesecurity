@@ -10,6 +10,7 @@ import {
   listarUsuarios,
   redefinirSenhaUsuario,
   resetarDispositivoUsuario,
+  atualizarPinOperacional,
   atualizarUsuario,
 } from "../controllers/usuario.controller";
 import { acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
@@ -47,6 +48,7 @@ router.get("/", autenticarUsuario, autorizarPerfis(acessoTotal), listarUsuarios)
 router.post("/", autenticarUsuario, autorizarPerfis(acessoTotal), criarUsuario);
 router.get("/me", autenticarUsuario, buscarPerfil);
 router.put("/me", autenticarUsuario, upload.single("fotoPerfil"), atualizarPerfil);
+router.put("/me/pin", autenticarUsuario, atualizarPinOperacional);
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), atualizarUsuario);
 router.put("/:id/status", autenticarUsuario, autorizarPerfis(acessoTotal), alterarStatusUsuario);
 router.put("/:id/senha", autenticarUsuario, autorizarPerfis(acessoTotal), redefinirSenhaUsuario);

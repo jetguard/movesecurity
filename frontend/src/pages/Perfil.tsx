@@ -14,6 +14,9 @@ type UsuarioPerfil = {
   unidade?: string;
   perfilAcesso?: string;
   statusUsuario?: string;
+  possuiPinOperacional?: boolean;
+  pinOperacionalCriadoEm?: string;
+  pinOperacionalAtualizadoEm?: string;
 };
 
 export default function Perfil() {
@@ -22,6 +25,15 @@ export default function Perfil() {
   const [fotoPerfil, setFotoPerfil] = useState<File | null>(null);
   const [previewFoto, setPreviewFoto] = useState("");
   const [removerFoto, setRemoverFoto] = useState(false);
+  const [pinAtual, setPinAtual] = useState("");
+  const [senhaAtualPin, setSenhaAtualPin] = useState("");
+  const [novoPin, setNovoPin] = useState("");
+  const [confirmarNovoPin, setConfirmarNovoPin] = useState("");
+  const [salvandoPin, setSalvandoPin] = useState(false);
+
+  function normalizarPin(valor: string) {
+    return valor.replace(/\D/g, "").slice(0, 4);
+  }
 
   async function carregarPerfil() {
     const response = await api.get("/usuarios/me");
@@ -80,6 +92,31 @@ export default function Perfil() {
     setRemoverFoto(false);
     setPreviewFoto(response.data.fotoPerfil || "");
     alert("Perfil atualizado com sucesso");
+  }
+
+  async function salvarPin(e: React.FormEvent) {
+    e.preventDefault();
+
+    try {
+      setSalvandoPin(true);
+      const response = await api.put("/usuarios/me/pin", {
+        pinAtual,
+        senhaAtual: senhaAtualPin,
+        novoPin,
+        confirmarNovoPin,
+      });
+
+      setPerfil(response.data);
+      setPinAtual("");
+      setSenhaAtualPin("");
+      setNovoPin("");
+      setConfirmarNovoPin("");
+      alert(perfil?.possuiPinOperacional ? "PIN atualizado com sucesso." : "PIN criado com sucesso.");
+    } catch (error: any) {
+      alert(error.response?.data?.error || "Erro ao atualizar PIN.");
+    } finally {
+      setSalvandoPin(false);
+    }
   }
 
   useEffect(() => {
@@ -260,6 +297,98 @@ export default function Perfil() {
         <div className="flex justify-end">
           <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg">
             Salvar Perfil
+          </button>
+        </div>
+      </form>
+
+      <form
+        onSubmit={salvarPin}
+        className="mt-6 rounded-xl bg-white p-6 shadow dark:border dark:border-slate-800 dark:bg-slate-900"
+      >
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">PIN de Segurança</h2>
+            <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+              Use um PIN de 4 dígitos para desbloquear sessão, enviar relatórios, concluir análises, aprovar e consolidar ações sensíveis.
+            </p>
+          </div>
+          <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
+            perfil.possuiPinOperacional
+              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+              : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"
+          }`}>
+            {perfil.possuiPinOperacional ? "PIN cadastrado" : "PIN pendente"}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {perfil.possuiPinOperacional ? (
+            <label className="space-y-2">
+              <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">PIN atual</span>
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
+                value={pinAtual}
+                onChange={(e) => setPinAtual(normalizarPin(e.target.value))}
+                className="w-full rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                placeholder="4 dígitos"
+                required
+              />
+            </label>
+          ) : (
+            <label className="space-y-2 md:col-span-2">
+              <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Senha atual</span>
+              <input
+                type="password"
+                value={senhaAtualPin}
+                onChange={(e) => setSenhaAtualPin(e.target.value)}
+                className="w-full rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                placeholder="Digite sua senha para criar o PIN"
+                required
+              />
+            </label>
+          )}
+
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Novo PIN</span>
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
+              value={novoPin}
+              onChange={(e) => setNovoPin(normalizarPin(e.target.value))}
+              className="w-full rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              placeholder="4 dígitos"
+              required
+            />
+          </label>
+
+          <label className="space-y-2">
+            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Confirmar PIN</span>
+            <input
+              type="password"
+              inputMode="numeric"
+              pattern="\d{4}"
+              maxLength={4}
+              value={confirmarNovoPin}
+              onChange={(e) => setConfirmarNovoPin(normalizarPin(e.target.value))}
+              className="w-full rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              placeholder="Repita o PIN"
+              required
+            />
+          </label>
+        </div>
+
+        <div className="mt-5 flex justify-end">
+          <button
+            type="submit"
+            disabled={salvandoPin}
+            className="rounded-lg bg-slate-900 px-5 py-2 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-500 dark:bg-blue-600 dark:hover:bg-blue-500"
+          >
+            {salvandoPin ? "Salvando..." : perfil.possuiPinOperacional ? "Atualizar PIN" : "Criar PIN"}
           </button>
         </div>
       </form>

@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { Request } from "express";
 import { prisma } from "../lib/prisma";
+import { validarPinOperacional } from "./pinOperacional.service";
 
 type AuthLikeRequest = Request & {
   usuarioId?: number;
@@ -95,9 +96,9 @@ export async function invalidarAssinaturasDocumento(params: {
 }
 
 export async function exigirSenhaAssinatura(req: AuthLikeRequest) {
-  const senha = String(req.body?.senhaAssinatura || "").trim();
-  if (!senha) {
-    const erro = new Error("Confirme sua senha para assinar eletronicamente este documento.");
+  const credencial = String(req.body?.pinOperacional || req.body?.senhaAssinatura || "").trim();
+  if (!credencial) {
+    const erro = new Error("Confirme seu PIN operacional para assinar eletronicamente este documento.");
     (erro as Error & { status?: number }).status = 400;
     throw erro;
   }
@@ -109,6 +110,7 @@ export async function exigirSenhaAssinatura(req: AuthLikeRequest) {
       nome: true,
       apelido: true,
       senha: true,
+      pinOperacionalHash: true,
       perfilAcesso: true,
     },
   });
@@ -119,11 +121,15 @@ export async function exigirSenhaAssinatura(req: AuthLikeRequest) {
     throw erro;
   }
 
-  const senhaValida = await bcrypt.compare(senha, usuario.senha);
-  if (!senhaValida) {
-    const erro = new Error("Senha inválida para assinatura eletrônica.");
-    (erro as Error & { status?: number }).status = 400;
-    throw erro;
+  if (usuario.pinOperacionalHash) {
+    await validarPinOperacional(usuario.id, credencial);
+  } else {
+    const senhaValida = await bcrypt.compare(credencial, usuario.senha);
+    if (!senhaValida) {
+      const erro = new Error("PIN ou senha inválida para assinatura eletrônica.");
+      (erro as Error & { status?: number }).status = 400;
+      throw erro;
+    }
   }
 
   return usuario;

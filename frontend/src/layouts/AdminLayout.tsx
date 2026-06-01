@@ -61,7 +61,7 @@ export default function AdminLayout() {
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
   const [passagensAbertas, setPassagensAbertas] = useState(0);
   const [sistemaBloqueado, setSistemaBloqueado] = useState(() => localStorage.getItem("sistemaBloqueado") === "true");
-  const [senhaDesbloqueio, setSenhaDesbloqueio] = useState("");
+  const [pinDesbloqueio, setPinDesbloqueio] = useState("");
   const [erroDesbloqueio, setErroDesbloqueio] = useState("");
   const [desbloqueando, setDesbloqueando] = useState(false);
   const [tema, setTema] = useState(() => {
@@ -87,7 +87,7 @@ export default function AdminLayout() {
     function sincronizarBloqueio(event: StorageEvent) {
       if (event.key === "sistemaBloqueado") {
         setSistemaBloqueado(event.newValue === "true");
-        setSenhaDesbloqueio("");
+        setPinDesbloqueio("");
         setErroDesbloqueio("");
       }
     }
@@ -227,7 +227,7 @@ export default function AdminLayout() {
     if (!confirmarBloqueio) return;
 
     localStorage.setItem("sistemaBloqueado", "true");
-    setSenhaDesbloqueio("");
+    setPinDesbloqueio("");
     setErroDesbloqueio("");
     setSistemaBloqueado(true);
   }
@@ -236,17 +236,17 @@ export default function AdminLayout() {
     event.preventDefault();
     setErroDesbloqueio("");
 
-    if (!senhaDesbloqueio) {
-      setErroDesbloqueio("Informe sua senha para desbloquear.");
+    if (!pinDesbloqueio) {
+      setErroDesbloqueio("Informe seu PIN operacional para desbloquear.");
       return;
     }
 
     try {
       setDesbloqueando(true);
-      await api.post("/auth/desbloquear-sessao", { senha: senhaDesbloqueio });
+      await api.post("/auth/desbloquear-sessao", { pinOperacional: pinDesbloqueio });
       localStorage.removeItem("sistemaBloqueado");
       sessionStorage.setItem("ultimaAtividade", String(Date.now()));
-      setSenhaDesbloqueio("");
+      setPinDesbloqueio("");
       setSistemaBloqueado(false);
     } catch (error: any) {
       setErroDesbloqueio(error.response?.data?.error || "Não foi possível desbloquear o sistema.");
@@ -549,29 +549,29 @@ export default function AdminLayout() {
         </nav>
       </aside>
 
-      <main className={`${mainOffset} min-w-0`}>
-        <header className="sticky top-0 z-20 flex min-h-20 flex-col gap-4 border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6 md:flex-row md:items-center md:justify-between lg:px-8">
+      <main className={`${mainOffset} min-w-0 overflow-x-hidden`}>
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-5 md:flex md:min-h-20 md:items-center md:justify-between md:gap-4 md:px-6 lg:px-8">
           <div className="flex min-w-0 items-center justify-between gap-2 md:hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="rounded-xl bg-slate-100 p-3 text-slate-700 transition hover:bg-slate-200"
+              className="shrink-0 rounded-xl bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200"
               aria-label="Abrir menu"
             >
-              <Menu size={22} />
+              <Menu size={21} />
             </button>
 
-            <div className="flex min-w-0 items-center gap-1.5">
-              <Link to="/notificacoes" className="relative rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200">
-                <Bell size={17} />
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
+              <Link to="/notificacoes" className="relative shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200">
+                <Bell size={16} />
                 {notificacoes.length > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">
                     {notificacoes.length}
                   </span>
                 )}
               </Link>
-              <Link to="/meus-dados?aba=mencoes" className="relative rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200">
-                <AtSign size={17} />
+              <Link to="/meus-dados?aba=mencoes" className="relative hidden shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200 min-[390px]:inline-flex">
+                <AtSign size={16} />
                 {mencoesPendentes > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
                     {mencoesPendentes}
@@ -580,10 +580,10 @@ export default function AdminLayout() {
               </Link>
               <Link
                 to="/operacao-soc"
-                className="relative rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200"
+                className="relative hidden shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200 min-[460px]:inline-flex"
                 title={passagensAbertas > 0 ? "Há Relatório CCOS em aberto" : "Relatório CCOS"}
               >
-                <Activity size={17} />
+                <Activity size={16} />
                 {passagensAbertas > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
                     {passagensAbertas}
@@ -593,25 +593,25 @@ export default function AdminLayout() {
               <button
                 type="button"
                 onClick={alternarTema}
-                className="rounded-full bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200"
+                className="shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200"
                 title={tema === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
               >
-                {tema === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+                {tema === "dark" ? <Sun size={16} /> : <Moon size={16} />}
               </button>
               <button
                 type="button"
                 onClick={bloquearSistema}
-                className="rounded-full bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200"
+                className="hidden shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200 min-[360px]:inline-flex"
                 title="Bloquear sistema"
               >
-                <Lock size={17} />
+                <Lock size={16} />
               </button>
 
-              <Link to="/meus-dados" className="min-w-0 text-right">
+              <Link to="/meus-dados" className="min-w-0 max-w-[6.5rem] text-right min-[430px]:max-w-[9rem]">
                 <p className="hidden truncate text-sm font-semibold text-slate-900 min-[430px]:block">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
-                <p className="truncate text-xs font-semibold text-slate-600">Unidade: {unidadeAtiva}</p>
+                <p className="truncate text-[11px] font-semibold text-slate-600">Unidade: {unidadeAtiva}</p>
               </Link>
-              <Link to="/meus-dados" className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200 ring-2 ring-transparent transition hover:ring-blue-400">
+              <Link to="/meus-dados" className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-200 ring-2 ring-transparent transition hover:ring-blue-400 min-[430px]:h-10 min-[430px]:w-10">
                 {usuario?.fotoPerfil ? (
                   <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
                 ) : (
@@ -703,7 +703,7 @@ export default function AdminLayout() {
           </div>
         </header>
 
-        <div className="p-4 sm:p-6 lg:p-8">
+        <div className="min-w-0 p-3 sm:p-5 lg:p-8">
           <Outlet />
         </div>
       </main>
@@ -722,7 +722,7 @@ export default function AdminLayout() {
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-200">JetGuard bloqueado</p>
               <h2 className="mt-2 text-2xl font-bold">Sessão protegida</h2>
               <p className="mt-2 text-sm text-slate-300">
-                O sistema está bloqueado para proteger as informações em tela. Digite a senha do usuário conectado para continuar.
+                O sistema está bloqueado para proteger as informações em tela. Digite o PIN operacional do usuário conectado para continuar.
               </p>
             </div>
 
@@ -743,14 +743,16 @@ export default function AdminLayout() {
             </div>
 
             <label className="mt-5 block">
-              <span className="mb-2 block text-sm font-semibold text-slate-200">Senha</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-200">PIN operacional</span>
               <input
                 autoFocus
                 type="password"
-                value={senhaDesbloqueio}
-                onChange={(event) => setSenhaDesbloqueio(event.target.value)}
+                inputMode="numeric"
+                maxLength={4}
+                value={pinDesbloqueio}
+                onChange={(event) => setPinDesbloqueio(event.target.value.replace(/\D/g, "").slice(0, 4))}
                 className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
-                placeholder="Digite sua senha para desbloquear"
+                placeholder="Digite os 4 dígitos"
               />
             </label>
 

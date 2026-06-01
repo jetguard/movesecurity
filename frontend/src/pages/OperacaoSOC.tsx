@@ -359,11 +359,11 @@ export default function OperacaoSOC() {
     if (!passagemSelecionada) return;
     const confirmar = window.confirm("Deseja realmente finalizar e enviar este relatório?");
     if (!confirmar) return;
-    const senhaAssinatura = window.prompt("Confirme sua senha para assinar eletronicamente o Relatório CCOS:");
-    if (!senhaAssinatura) return;
+    const pinOperacional = window.prompt("Informe seu PIN operacional de 4 dígitos para assinar eletronicamente o Relatório CCOS:");
+    if (!pinOperacional) return;
     setSalvando(true);
     try {
-      const response = await api.post(`/operacao/passagens-turno/${passagemSelecionada.id}/finalizar`, { senhaAssinatura });
+      const response = await api.post(`/operacao/passagens-turno/${passagemSelecionada.id}/finalizar`, { pinOperacional });
       await autoSaveCcos.descartar().catch(() => undefined);
       preencherPassagem(response.data);
       await carregar();

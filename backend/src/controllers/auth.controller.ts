@@ -9,6 +9,7 @@ import { registrarLog } from "../services/auditoria.service";
 import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
 import { hashIdentificadorDispositivo } from "../utils/arquivoHash";
 import { aplicarCookieCsrf, cookieSeguro, lerCookie, limparCookieCsrf } from "../utils/csrf";
+import { gerarHashPin, validarFormatoPin, validarPinOperacional } from "../services/pinOperacional.service";
 
 type TentativaLogin = {
   quantidade: number;
@@ -406,6 +407,7 @@ export async function login(req: Request, res: Response) {
         unidade: usuario.unidade,
         unidadesPermitidas: normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade),
         deveAlterarSenha: usuario.deveAlterarSenha,
+        possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
       },
     });
 
@@ -419,9 +421,9 @@ export async function login(req: Request, res: Response) {
 
 export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
   try {
-    const { senhaAtual, novaSenha, confirmarSenha } = req.body;
+    const { senhaAtual, novaSenha, confirmarSenha, pinOperacional, confirmarPinOperacional } = req.body;
 
-    if (!senhaAtual || !novaSenha || !confirmarSenha) {
+    if (!senhaAtual || !novaSenha || !confirmarSenha || !pinOperacional || !confirmarPinOperacional) {
       return res.status(400).json({ error: "Preencha todos os campos." });
     }
 
@@ -431,6 +433,14 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
 
     if (String(novaSenha).length < 8) {
       return res.status(400).json({ error: "A nova senha deve possuir pelo menos 8 caracteres." });
+    }
+
+    if (pinOperacional !== confirmarPinOperacional) {
+      return res.status(400).json({ error: "Os PINs de segurança não coincidem." });
+    }
+
+    if (!validarFormatoPin(String(pinOperacional))) {
+      return res.status(400).json({ error: "O PIN de segurança deve possuir exatamente 4 dígitos numéricos." });
     }
 
     const usuario = await prisma.usuario.findUnique({
@@ -457,6 +467,11 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
         senha: await bcrypt.hash(novaSenha, 10),
         deveAlterarSenha: false,
         senhaAlteradaEm: new Date(),
+        pinOperacionalHash: await gerarHashPin(String(pinOperacional)),
+        pinOperacionalCriadoEm: new Date(),
+        pinOperacionalAtualizadoEm: new Date(),
+        pinTentativasInvalidas: 0,
+        pinBloqueadoAte: null,
       },
       select: {
         id: true,
@@ -469,6 +484,7 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
         unidade: true,
         unidadesPermitidas: true,
         deveAlterarSenha: true,
+        pinOperacionalHash: true,
       },
     });
 
@@ -481,6 +497,7 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
         id: usuario.id,
         email: usuario.email,
         senhaAlteradaEm: atualizado.deveAlterarSenha ? null : new Date().toISOString(),
+        pinOperacionalCriado: true,
       },
     });
 
@@ -488,6 +505,8 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
       mensagem: "Senha alterada com sucesso.",
       usuario: {
         ...atualizado,
+        possuiPinOperacional: Boolean(atualizado.pinOperacionalHash),
+        pinOperacionalHash: undefined,
         unidadesPermitidas: normalizarUnidadesPermitidas(atualizado.unidadesPermitidas, atualizado.unidade),
       },
     });
@@ -498,10 +517,10 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
 
 export async function desbloquearSessao(req: AuthRequest, res: Response) {
   try {
-    const { senha } = req.body;
+    const { senha, pinOperacional } = req.body;
 
-    if (!senha) {
-      return res.status(400).json({ error: "Informe sua senha para desbloquear o sistema." });
+    if (!senha && !pinOperacional) {
+      return res.status(400).json({ error: "Informe seu PIN operacional para desbloquear o sistema." });
     }
 
     const usuario = await prisma.usuario.findUnique({
@@ -512,9 +531,13 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Usuario nao encontrado." });
     }
 
-    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
-    if (!senhaCorreta) {
-      return res.status(400).json({ error: "Senha invalida." });
+    if (usuario.pinOperacionalHash) {
+      await validarPinOperacional(usuario.id, String(pinOperacional || senha || ""));
+    } else {
+      const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+      if (!senhaCorreta) {
+        return res.status(400).json({ error: "Senha invalida." });
+      }
     }
 
     await registrarLog({
@@ -529,8 +552,8 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
     });
 
     return res.json({ mensagem: "Sessao desbloqueada com sucesso." });
-  } catch (error) {
-    return res.status(500).json({ error: "Erro ao desbloquear sessao" });
+  } catch (error: any) {
+    return res.status(error?.status || 500).json({ error: error?.message || "Erro ao desbloquear sessao" });
   }
 }
 
@@ -561,6 +584,7 @@ export async function renovarSessao(req: Request, res: Response) {
             unidadesPermitidas: true,
             statusUsuario: true,
             deveAlterarSenha: true,
+            pinOperacionalHash: true,
           },
         },
       },
@@ -599,6 +623,7 @@ export async function renovarSessao(req: Request, res: Response) {
         unidade: sessao.usuario.unidade,
         unidadesPermitidas: normalizarUnidadesPermitidas(sessao.usuario.unidadesPermitidas, sessao.usuario.unidade),
         deveAlterarSenha: sessao.usuario.deveAlterarSenha,
+        possuiPinOperacional: Boolean(sessao.usuario.pinOperacionalHash),
       },
     });
   } catch (error) {

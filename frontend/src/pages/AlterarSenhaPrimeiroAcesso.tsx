@@ -14,7 +14,13 @@ export default function AlterarSenhaPrimeiroAcesso() {
   const [senhaAtual, setSenhaAtual] = useState("");
   const [novaSenha, setNovaSenha] = useState("");
   const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [pinOperacional, setPinOperacional] = useState("");
+  const [confirmarPinOperacional, setConfirmarPinOperacional] = useState("");
   const [salvando, setSalvando] = useState(false);
+
+  function normalizarPin(valor: string) {
+    return valor.replace(/\D/g, "").slice(0, 4);
+  }
 
   async function salvar(event: FormEvent) {
     event.preventDefault();
@@ -25,6 +31,8 @@ export default function AlterarSenhaPrimeiroAcesso() {
         senhaAtual,
         novaSenha,
         confirmarSenha,
+        pinOperacional,
+        confirmarPinOperacional,
       });
 
       localStorage.setItem("usuario", JSON.stringify(response.data.usuario));
@@ -48,9 +56,9 @@ export default function AlterarSenhaPrimeiroAcesso() {
           </div>
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-200">Primeiro acesso</p>
-            <h1 className="mt-2 text-2xl font-bold">Altere sua senha provisória</h1>
+            <h1 className="mt-2 text-2xl font-bold">Configure seu acesso seguro</h1>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              Olá, {usuario?.apelido || usuario?.nome || "usuário"}. Para continuar no JetGuard, cadastre uma senha definitiva.
+              Olá, {usuario?.apelido || usuario?.nome || "usuário"}. Para continuar no JetGuard, cadastre uma senha definitiva e um PIN operacional.
             </p>
           </div>
         </div>
@@ -93,6 +101,38 @@ export default function AlterarSenhaPrimeiroAcesso() {
               required
             />
           </label>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-200">PIN operacional</span>
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
+                placeholder="4 dígitos"
+                value={pinOperacional}
+                onChange={(event) => setPinOperacional(normalizarPin(event.target.value))}
+                className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
+                required
+              />
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-semibold text-slate-200">Confirmar PIN</span>
+              <input
+                type="password"
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
+                placeholder="Repita o PIN"
+                value={confirmarPinOperacional}
+                onChange={(event) => setConfirmarPinOperacional(normalizarPin(event.target.value))}
+                className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
+                required
+              />
+            </label>
+          </div>
         </div>
 
         <div className="mt-6 rounded-2xl border border-blue-300/20 bg-blue-500/10 p-4 text-sm leading-6 text-blue-100">
@@ -100,7 +140,7 @@ export default function AlterarSenhaPrimeiroAcesso() {
             <ShieldCheck size={18} />
             Regra de segurança
           </div>
-          A nova senha deve ter pelo menos 8 caracteres e ser diferente da senha provisória.
+          A nova senha deve ter pelo menos 8 caracteres. O PIN deve ter 4 dígitos e será usado para desbloquear sessão, enviar relatórios e assinar ações sensíveis.
         </div>
 
         <button
@@ -108,7 +148,7 @@ export default function AlterarSenhaPrimeiroAcesso() {
           disabled={salvando}
           className="mt-7 w-full rounded-xl bg-blue-600 px-4 py-3 font-bold text-white shadow-lg shadow-blue-900/40 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-500"
         >
-          {salvando ? "Salvando..." : "Salvar nova senha e acessar"}
+          {salvando ? "Salvando..." : "Salvar senha, criar PIN e acessar"}
         </button>
       </form>
     </main>
