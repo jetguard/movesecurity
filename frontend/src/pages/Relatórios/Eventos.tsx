@@ -1,7 +1,10 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import LexicalEditor from "../../components/editor/LexicalEditor";
 import { podeAnalisar } from "../../utils/permissoes";
+import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
+import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
+import { PdfLightbox } from "../../components/ui/PdfLightbox";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -107,6 +110,7 @@ export default function Eventos() {
   const [motivoAnulacao, setMotivoAnulacao] = useState("");
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
+  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [locais, setLocais] = useState<LocalCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
@@ -132,6 +136,62 @@ export default function Eventos() {
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([
     { ...envolvidoVazio },
   ]);
+
+  const dadosRascunhoEvento = useMemo(
+    () => ({
+      assunto,
+      local,
+      natureza,
+      subNatureza,
+      dataEvento,
+      etapaFormulario,
+      relatoSeguranca,
+      acoesTomadas,
+      quantidadeEnvolvidos,
+      envolvidos,
+      statusAnalise,
+      valorRecuperado,
+      conclusaoAnalise,
+    }),
+    [
+      assunto,
+      local,
+      natureza,
+      subNatureza,
+      dataEvento,
+      etapaFormulario,
+      relatoSeguranca,
+      acoesTomadas,
+      quantidadeEnvolvidos,
+      envolvidos,
+      statusAnalise,
+      valorRecuperado,
+      conclusaoAnalise,
+    ]
+  );
+
+  const autoSaveEvento = useAutoSaveDraft({
+    modulo: "Evento",
+    chave: eventoEditando ? `editar-${eventoEditando.id}` : "novo",
+    dados: dadosRascunhoEvento,
+    ativo: abrirFormulario,
+    onRestore: (dados) => {
+      setAssunto(dados.assunto || "");
+      setLocal(dados.local || "");
+      setNatureza(dados.natureza || "");
+      setSubNatureza(dados.subNatureza || "");
+      setDataEvento(dados.dataEvento || "");
+      setEtapaFormulario(dados.etapaFormulario || 1);
+      setRelatoSeguranca(dados.relatoSeguranca || "");
+      setAcoesTomadas(dados.acoesTomadas || "");
+      const envolvidosRestaurados = dados.envolvidos?.length ? dados.envolvidos : [{ ...envolvidoVazio }];
+      setEnvolvidos(envolvidosRestaurados);
+      setQuantidadeEnvolvidos(dados.quantidadeEnvolvidos || envolvidosRestaurados.length || 1);
+      setStatusAnalise(dados.statusAnalise || "Em Análise");
+      setValorRecuperado(dados.valorRecuperado || "0,00");
+      setConclusaoAnalise(dados.conclusaoAnalise || "");
+    },
+  });
 
   async function carregarEventos() {
     const response = await api.get("/eventos");
@@ -188,12 +248,6 @@ export default function Eventos() {
     alert("Solicitação de anulação enviada aos analistas e administradores.");
   }
 
-  async function abrirVisualizacao(evento: Evento) {
-    setEventoVisualizando(evento);
-    const response = await api.get(`/comentarios/Evento/${evento.id}`);
-    setComentarios(response.data);
-  }
-
   async function salvarComentario() {
     if (!eventoVisualizando || !novoComentario.trim()) return;
     const response = await api.post(`/comentarios/Evento/${eventoVisualizando.id}`, {
@@ -204,6 +258,7 @@ export default function Eventos() {
   }
 
   async function abrirPdfEvento(id: number) {
+    const evento = eventos.find((item) => item.id === id);
     const response = await api.get(`/eventos/${id}/pdf`, {
       responseType: "blob",
     });
@@ -212,7 +267,16 @@ export default function Eventos() {
       new Blob([response.data], { type: "application/pdf" })
     );
 
-    window.open(url, "_blank");
+    setPdfLightbox({
+      url,
+      titulo: evento ? `Relatório de Evento ${evento.codigo}` : "Relatório de Evento",
+      nomeArquivo: `relatorio-evento-${evento?.codigo || id}.pdf`.replace(/\//g, "-"),
+    });
+  }
+
+  function fecharPdfLightbox() {
+    if (pdfLightbox?.url) URL.revokeObjectURL(pdfLightbox.url);
+    setPdfLightbox(null);
   }
 
   const subNaturezasDisponiveis =
@@ -401,6 +465,7 @@ export default function Eventos() {
       },
     });
 
+    await autoSaveEvento.descartar().catch(() => undefined);
     setAbrirFormulario(false);
     limparFormulario();
     carregarEventos();
@@ -444,6 +509,7 @@ export default function Eventos() {
               ? `Editar Evento ${eventoEditando.codigo}`
               : "Novo Evento"}
           </h2>
+          <AutoSaveStatus status={autoSaveEvento.status} ultima={autoSaveEvento.ultima} />
 
           {eventoEditando && (
             <div className="space-y-3">
@@ -963,14 +1029,6 @@ export default function Eventos() {
 
                   <button
                     type="button"
-                    onClick={() => abrirVisualizacao(evento)}
-                    className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1 rounded-lg text-sm"
-                  >
-                    Visualizar
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => setEventoMencao(evento)}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
                   >
@@ -1163,6 +1221,15 @@ export default function Eventos() {
             </div>
           </div>
         </div>
+      )}
+
+      {pdfLightbox && (
+        <PdfLightbox
+          url={pdfLightbox.url}
+          titulo={pdfLightbox.titulo}
+          nomeArquivo={pdfLightbox.nomeArquivo}
+          onClose={fecharPdfLightbox}
+        />
       )}
     </div>
   );

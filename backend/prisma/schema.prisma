@@ -60,6 +60,7 @@ model Usuario {
   sugestoesMelhoria            SugestaoMelhoria[]             @relation("SugestaoMelhoriaAutor")
   sugestoesMelhoriaAvaliadas   SugestaoMelhoria[]             @relation("SugestaoMelhoriaAvaliador")
   assinaturasDocumentos        AssinaturaDocumento[]
+  rascunhosFormulario          RascunhoFormulario[]
 }
 
 model SessaoUsuario {
@@ -476,6 +477,25 @@ model AssinaturaDocumento {
 
   @@index([modulo, registroId, status])
   @@index([token])
+}
+
+model RascunhoFormulario {
+  id              Int      @id @default(autoincrement())
+  usuarioId       Int
+  modulo          String
+  chave           String
+  unidade         String   @default("GJA-T1")
+  dadosJson       String
+  status          String   @default("EM_PREENCHIMENTO")
+  ultimaAlteracao DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, modulo, chave, unidade])
+  @@index([usuarioId, status, updatedAt])
+  @@index([modulo, chave, unidade])
 }
 
 model AnaliseRisco {

@@ -73,13 +73,13 @@ const page = {
 };
 const contentWidth = page.right - page.left;
 
-function desenharMarcaDagua(doc: PDFKit.PDFDocument) {
-  const largura = 280;
+function desenharMarcaDagua(doc: PDFKit.PDFDocument, opacity = 0.052) {
+  const largura = 270;
   const x = (doc.page.width - largura) / 2;
   const y = (doc.page.height - largura) / 2;
   doc
     .save()
-    .opacity(0.065)
+    .opacity(opacity)
     .image(watermarkPath, x, y, { width: largura })
     .restore();
 }
@@ -397,20 +397,18 @@ function escreverTituloSecao(doc: PDFKit.PDFDocument, titulo: string) {
   doc.moveDown(0.5);
   const y = doc.y;
   doc
-    .roundedRect(page.left, y - 3, contentWidth, 22, 5)
-    .fillColor("#f8fafc")
-    .fill();
+    .roundedRect(page.left, y - 3, contentWidth, 24, 6)
+    .fillColor("#0b74ff")
+    .fill()
+    .roundedRect(page.left, y - 3, contentWidth, 24, 6)
+    .strokeColor("#0b74ff")
+    .stroke();
   doc
     .font("Helvetica-Bold")
-    .fontSize(12)
-    .fillColor("#0f172a")
-    .text(textoPdf(titulo), page.left + 10, y + 2);
-  doc
-    .moveTo(page.left, y + 20)
-    .lineTo(page.right, y + 20)
-    .strokeColor("#dbe3ef")
-    .stroke();
-  doc.y = y + 28;
+    .fontSize(10.8)
+    .fillColor("#ffffff")
+    .text(textoPdf(titulo.toUpperCase()), page.left + 12, y + 4, { width: contentWidth - 24 });
+  doc.y = y + 31;
 }
 
 function escreverCampo(
@@ -421,17 +419,27 @@ function escreverCampo(
   y: number,
   width: number
 ) {
+  const altura = 36;
+  doc
+    .roundedRect(x, y - 4, width, altura, 6)
+    .fillColor("#f8fafc")
+    .fill()
+    .roundedRect(x, y - 4, width, altura, 6)
+    .strokeColor("#e2e8f0")
+    .lineWidth(0.55)
+    .stroke();
+
   doc
     .font("Helvetica-Bold")
-    .fontSize(8.5)
-    .fillColor("#64748b")
-    .text(textoPdf(rotulo.toUpperCase()), x, y, { width });
+    .fontSize(7.7)
+    .fillColor("#0b74ff")
+    .text(textoPdf(rotulo.toUpperCase()), x + 10, y + 3, { width: width - 20 });
 
   doc
     .font("Helvetica")
-    .fontSize(10)
+    .fontSize(9.3)
     .fillColor("#111827")
-    .text(textoPdf(conteudo), x, y + 14, { width, lineGap: 2 });
+    .text(textoPdf(conteudo), x + 10, y + 16, { width: width - 20, height: 14, lineGap: 1 });
 }
 
 function escreverDadosRelatorio(doc: PDFKit.PDFDocument, relatorio: RelatorioPdf) {
@@ -468,38 +476,64 @@ function escreverEnvolvidos(
 
   relatorio.envolvidos.forEach((envolvido, index) => {
     const relato = valor(envolvido.relato);
-    garantirEspaco(doc, 96, relatorio, usuario, qrCode, token);
+    garantirEspaco(doc, 108, relatorio, usuario, qrCode, token);
 
     const y = doc.y;
     doc
       .lineWidth(0.6)
-      .strokeColor("#e5e7eb")
-      .roundedRect(page.left, y, contentWidth, 82, 6)
+      .fillColor("#ffffff")
+      .roundedRect(page.left, y, contentWidth, 94, 8)
+      .fill()
+      .roundedRect(page.left, y, contentWidth, 94, 8)
+      .strokeColor("#dbeafe")
       .stroke();
+
+    doc
+      .roundedRect(page.left, y, contentWidth, 24, 8)
+      .fillColor("#eff6ff")
+      .fill();
 
     doc
       .font("Helvetica-Bold")
       .fontSize(10.5)
-      .fillColor("#111827")
-      .text(textoPdf(`${index + 1}. ${envolvido.nome}`), page.left + 14, y + 12, {
+      .fillColor("#0f172a")
+      .text(textoPdf(`${index + 1}. ${envolvido.nome}`), page.left + 14, y + 7, {
         width: 260,
+      });
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(7.2)
+      .fillColor("#2563eb")
+      .text(textoPdf(valor(envolvido.tipoEnvolvimento).toUpperCase()), page.right - 155, y + 8, {
+        width: 140,
+        align: "right",
       });
 
     doc
       .font("Helvetica")
       .fontSize(9)
       .fillColor("#334155")
-      .text(textoPdf(`Tipo: ${valor(envolvido.tipoEnvolvimento)}`), page.left + 14, y + 32, { width: 210 })
-      .text(textoPdf(`Documento: ${envolvido.tipoDocumento} ${envolvido.documento}`), page.left + 14, y + 47, { width: 250 })
-      .text(textoPdf(`Empresa: ${valor(envolvido.empresa)}`), page.left + 285, y + 32, { width: 200 });
+      .text(textoPdf(`Documento: ${envolvido.tipoDocumento} ${envolvido.documento}`), page.left + 14, y + 36, { width: 240 })
+      .text(textoPdf(`Empresa: ${valor(envolvido.empresa)}`), page.left + 285, y + 36, { width: 205 });
 
     const veiculo = envolvido.possuiVeiculo
       ? `Placa: ${valor(envolvido.placa)} | Reboque: ${valor(envolvido.reboque)}`
       : "Veículo: não informado";
 
-    doc.text(textoPdf(veiculo), page.left + 14, y + 62, { width: 245 });
+    doc
+      .font("Helvetica")
+      .fontSize(8.8)
+      .fillColor("#475569")
+      .text(textoPdf(veiculo), page.left + 14, y + 56, { width: 245 });
 
-    doc.y = y + 96;
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(7.5)
+      .fillColor("#64748b")
+      .text("REGISTRO DO ENVOLVIDO", page.left + 285, y + 56, { width: 205 });
+
+    doc.y = y + 108;
     garantirEspaco(doc, 52, relatorio, usuario, qrCode, token);
     doc
       .font("Helvetica-Bold")
@@ -779,6 +813,7 @@ export async function gerarRelatorioPdf(
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i += 1) {
     doc.switchToPage(i);
+    desenharMarcaDagua(doc, 0.028);
     doc
       .font("Helvetica")
       .fontSize(8)

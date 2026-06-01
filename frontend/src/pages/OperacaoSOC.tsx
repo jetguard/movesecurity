@@ -16,6 +16,9 @@ import {
 import { api } from "../services/api";
 import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
+import { AutoSaveStatus } from "../components/ui/AutoSaveStatus";
+import { useAutoSaveDraft } from "../hooks/useAutoSaveDraft";
+import { PdfLightbox } from "../components/ui/PdfLightbox";
 
 type UsuarioEquipe = {
   id: number;
@@ -170,6 +173,7 @@ export default function OperacaoSOC() {
   const [salvando, setSalvando] = useState(false);
   const [editandoInformacao, setEditandoInformacao] = useState<number | null>(null);
   const [rondasAberto, setRondasAberto] = useState(false);
+  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [form, setForm] = useState({
     dataPassagem: dataInput(),
     colaboradoresIds: [] as number[],
@@ -184,6 +188,41 @@ export default function OperacaoSOC() {
   });
 
   const equipeAtual = filtroEquipe || usuario?.equipe || "";
+  const dadosRascunhoCcos = useMemo(
+    () => ({
+      filtroEquipe,
+      titulo,
+      local,
+      observacoes,
+      form,
+    }),
+    [filtroEquipe, titulo, local, observacoes, form]
+  );
+
+  const autoSaveCcos = useAutoSaveDraft({
+    modulo: "RelatorioCCOS",
+    chave: passagemSelecionada ? `passagem-${passagemSelecionada.id}` : "novo",
+    dados: dadosRascunhoCcos,
+    ativo: Boolean(passagemSelecionada?.status === "Aberto"),
+    onRestore: (dados) => {
+      setFiltroEquipe(dados.filtroEquipe || usuario?.equipe || "");
+      setTitulo(dados.titulo || "");
+      setLocal(dados.local || "Centro de Operações");
+      setObservacoes(dados.observacoes || "");
+      setForm({
+        dataPassagem: dados.form?.dataPassagem || dataInput(),
+        colaboradoresIds: dados.form?.colaboradoresIds || [],
+        postos: dados.form?.postos?.length ? dados.form.postos : [{ ...postoVazio }],
+        statusPostoGocil: dados.form?.statusPostoGocil || "Completo",
+        observacaoPostoGocil: dados.form?.observacaoPostoGocil || "",
+        statusPostoScanner: dados.form?.statusPostoScanner || "Completo",
+        observacaoPostoScanner: dados.form?.observacaoPostoScanner || "",
+        informacoesComplementares: dados.form?.informacoesComplementares || "",
+        checklistEquipamentos: dados.form?.checklistEquipamentos?.length ? dados.form.checklistEquipamentos : checklistEquipamentosPadrao,
+        rondas: dados.form?.rondas?.length ? dados.form.rondas : rondasPadrao,
+      });
+    },
+  });
 
   const carregar = useCallback(async () => {
     const response = await api.get("/operacao/soc", { params: filtroEquipe ? { equipe: filtroEquipe } : {} });
@@ -325,6 +364,7 @@ export default function OperacaoSOC() {
     setSalvando(true);
     try {
       const response = await api.post(`/operacao/passagens-turno/${passagemSelecionada.id}/finalizar`, { senhaAssinatura });
+      await autoSaveCcos.descartar().catch(() => undefined);
       preencherPassagem(response.data);
       await carregar();
       alert("Relatório enviado com sucesso. Obrigado!");
@@ -337,9 +377,18 @@ export default function OperacaoSOC() {
   async function baixarPdf(id = passagemSelecionada?.id) {
     if (!id) return;
     const response = await api.get(`/operacao/passagens-turno/${id}/pdf`, { responseType: "blob" });
-    const url = URL.createObjectURL(response.data);
-    window.open(url, "_blank");
-    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
+    const passagem = dados?.passagensTurno.find((item) => item.id === id) || passagemSelecionada;
+    const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+    setPdfLightbox({
+      url,
+      titulo: passagem ? `Relatório CCOS ${passagem.codigo}` : "Relatório CCOS",
+      nomeArquivo: `relatorio-ccos-${passagem?.codigo || id}.pdf`.replace(/\//g, "-"),
+    });
+  }
+
+  function fecharPdfLightbox() {
+    if (pdfLightbox?.url) URL.revokeObjectURL(pdfLightbox.url);
+    setPdfLightbox(null);
   }
 
   async function excluirPassagem(passagem: PassagemTurno) {
@@ -349,6 +398,7 @@ export default function OperacaoSOC() {
     try {
       await api.delete(`/operacao/passagens-turno/${passagem.id}`);
       if (passagemSelecionada?.id === passagem.id) {
+        await autoSaveCcos.descartar().catch(() => undefined);
         setPassagemSelecionada(null);
         setForm({
           dataPassagem: dataInput(),
@@ -472,6 +522,7 @@ export default function OperacaoSOC() {
           Atualizar
         </button>
       </div>
+      <AutoSaveStatus status={autoSaveCcos.status} ultima={autoSaveCcos.ultima} />
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <label className="block text-sm font-bold text-slate-700 dark:text-slate-200">Filtrar informações por equipe</label>
@@ -880,6 +931,15 @@ export default function OperacaoSOC() {
             </div>
           </div>
         </div>
+      )}
+
+      {pdfLightbox && (
+        <PdfLightbox
+          url={pdfLightbox.url}
+          titulo={pdfLightbox.titulo}
+          nomeArquivo={pdfLightbox.nomeArquivo}
+          onClose={fecharPdfLightbox}
+        />
       )}
     </div>
   );

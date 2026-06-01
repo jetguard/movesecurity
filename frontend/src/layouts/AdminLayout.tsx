@@ -368,7 +368,7 @@ export default function AdminLayout() {
               </Link>
               <Link to="/planejamento" className={subItem}>
                 <Columns3 size={16} />
-                Planejamento
+                Tarefas
               </Link>
               <Link to="/quadra-seguranca" className={subItem}>
                 <PackageSearch size={16} />

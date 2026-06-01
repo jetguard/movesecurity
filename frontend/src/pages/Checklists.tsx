@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../services/api";
+import { AutoSaveStatus } from "../components/ui/AutoSaveStatus";
+import { useAutoSaveDraft } from "../hooks/useAutoSaveDraft";
 
 type Item = { categoria: string; descricao: string; conformidade: string; criticidade: string; observacao: string };
 type Checklist = {
@@ -95,6 +97,24 @@ export default function Checklists() {
     [form.local, locais]
   );
 
+  const autoSaveChecklist = useAutoSaveDraft({
+    modulo: "ChecklistInspecaoPreventiva",
+    chave: "novo",
+    dados: form,
+    ativo: abrir,
+    onRestore: (dados) => {
+      setForm({
+        titulo: dados.titulo || "",
+        setor: dados.setor || "",
+        local: dados.local || "",
+        tipo: dados.tipo || "Ronda Preventiva",
+        status: dados.status || "Aberto",
+        observacoes: dados.observacoes || "",
+        itens: dados.itens?.length ? dados.itens : [{ ...itemPadrao }],
+      });
+    },
+  });
+
   const graficoConformidade = useMemo(() => {
     const mapa = new Map<string, { nome: string; Conforme: number; "Não conforme": number; "Não aplicável": number }>();
 
@@ -128,6 +148,7 @@ export default function Checklists() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     await api.post("/checklists", form);
+    await autoSaveChecklist.descartar().catch(() => undefined);
     setAbrir(false);
     setForm({ titulo: "", setor: "", local: "", tipo: "Ronda Preventiva", status: "Aberto", observacoes: "", itens: [{ ...itemPadrao }] });
     await carregar();
@@ -176,6 +197,7 @@ export default function Checklists() {
 
       {abrir && (
         <form onSubmit={salvar} className="space-y-4 rounded-xl bg-white p-4 shadow dark:bg-slate-900 sm:p-6">
+          <AutoSaveStatus status={autoSaveChecklist.status} ultima={autoSaveChecklist.ultima} />
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
               <span>Nome do responsável pela inspeção preventiva</span>

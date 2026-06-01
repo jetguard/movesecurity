@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../services/api";
+import { PdfLightbox } from "../components/ui/PdfLightbox";
 
 type Risco = {
   id: number;
@@ -118,6 +119,7 @@ export default function Riscos() {
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [buscandoVinculo, setBuscandoVinculo] = useState(false);
   const [vinculoEncontrado, setVinculoEncontrado] = useState<DadosVinculo | null>(null);
+  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const formularioRef = useRef<HTMLFormElement | null>(null);
 
   async function carregarRiscos() {
@@ -265,8 +267,19 @@ export default function Riscos() {
   }
 
   async function abrirPdf(id: number) {
+    const risco = riscos.find((item) => item.id === id);
     const response = await api.get(`/riscos/${id}/pdf`, { responseType: "blob" });
-    window.open(URL.createObjectURL(new Blob([response.data], { type: "application/pdf" })), "_blank");
+    const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+    setPdfLightbox({
+      url,
+      titulo: risco ? `Análise de Risco ${risco.codigo}` : "Análise de Risco",
+      nomeArquivo: `analise-risco-${risco?.codigo || id}.pdf`.replace(/\//g, "-"),
+    });
+  }
+
+  function fecharPdfLightbox() {
+    if (pdfLightbox?.url) URL.revokeObjectURL(pdfLightbox.url);
+    setPdfLightbox(null);
   }
 
   const porUnidade = Object.entries(contarPor(riscosFiltrados, (r) => r.unidade));
@@ -430,6 +443,15 @@ export default function Riscos() {
           </div>
         ))}
       </div>
+
+      {pdfLightbox && (
+        <PdfLightbox
+          url={pdfLightbox.url}
+          titulo={pdfLightbox.titulo}
+          nomeArquivo={pdfLightbox.nomeArquivo}
+          onClose={fecharPdfLightbox}
+        />
+      )}
     </div>
   );
 }

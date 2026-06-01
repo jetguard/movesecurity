@@ -673,11 +673,11 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     const tokenRodape = assinatura?.token || tokenAssinatura;
     const pageBottom = 684;
 
-    const watermark = () => {
-      const largura = 280;
+    const watermark = (opacity = 0.052) => {
+      const largura = 270;
       const x = (doc.page.width - largura) / 2;
       const y = (doc.page.height - largura) / 2;
-      doc.save().opacity(0.065).image(watermarkPath, x, y, { width: largura }).restore();
+      doc.save().opacity(opacity).image(watermarkPath, x, y, { width: largura }).restore();
     };
 
     const header = () => {
@@ -717,14 +717,14 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     const section = (title: string) => {
       ensure(34);
       doc.moveDown(0.6);
-      doc.roundedRect(36, doc.y, 523, 22, 4).fillAndStroke("#0f8fdc", "#0f8fdc");
-      doc.font("Helvetica-Bold").fontSize(10).fillColor("#ffffff").text(title.toUpperCase(), 44, doc.y + 6, { align: "left", width: 507 });
+      doc.roundedRect(36, doc.y, 523, 24, 5).fillAndStroke("#0b74ff", "#0b74ff");
+      doc.font("Helvetica-Bold").fontSize(10).fillColor("#ffffff").text(title.toUpperCase(), 46, doc.y + 7, { align: "left", width: 497 });
       doc.y += 28;
     };
 
     const summaryBox = (x: number, y: number, w: number, label: string, value: unknown) => {
-      doc.roundedRect(x, y, w, 42, 5).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
-      doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#64748b").text(label.toUpperCase(), x + 10, y + 8, { width: w - 20 });
+      doc.roundedRect(x, y, w, 42, 6).fillAndStroke("#f8fafc", "#dbe4ef");
+      doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#0b74ff").text(label.toUpperCase(), x + 10, y + 8, { width: w - 20 });
       doc.font("Helvetica").fontSize(9.4).fillColor("#111827").text(String(value || "Não informado"), x + 10, y + 22, { width: w - 20, height: 16 });
     };
 
@@ -795,24 +795,24 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
       const desenharCabecalhoRondas = () => {
         section("Rondas operacionais");
         const yTableHeader = doc.y;
-        doc.rect(36, yTableHeader, 523, 20).fillAndStroke("#e0f2fe", "#94a3b8");
+        doc.roundedRect(36, yTableHeader, 523, 21, 4).fillAndStroke("#0f172a", "#0f172a");
         headers.forEach((headerItem, i) => {
-          doc.font("Helvetica-Bold").fontSize(7.2).fillColor("#0f172a").text(headerItem, xs[i] + 4, yTableHeader + 6, { width: widths[i] - 8 });
+          doc.font("Helvetica-Bold").fontSize(7.2).fillColor("#ffffff").text(headerItem, xs[i] + 4, yTableHeader + 7, { width: widths[i] - 8 });
         });
-        doc.y = yTableHeader + 20;
+        doc.y = yTableHeader + 21;
       };
 
       const widths = [92, 60, 60, 120, 72, 119];
       const xs = [36, 128, 188, 248, 368, 440];
       const headers = ["Ponto", "Início", "Término", "Responsável", "Alteração", "Observações"];
       desenharCabecalhoRondas();
-      rondas.forEach((ronda) => {
+      rondas.forEach((ronda, index) => {
         if (doc.y + 32 > pageBottom) {
           doc.addPage();
           desenharCabecalhoRondas();
         }
         const y = doc.y;
-        doc.rect(36, y, 523, 32).strokeColor("#cbd5e1").stroke();
+        doc.rect(36, y, 523, 32).fillAndStroke(index % 2 === 0 ? "#ffffff" : "#f8fafc", "#cbd5e1");
         xs.slice(1).forEach((xLine) => doc.moveTo(xLine, y).lineTo(xLine, y + 32).strokeColor("#cbd5e1").stroke());
         [
           ronda.ponto || "-",
@@ -856,15 +856,15 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
         const yTable = doc.y;
         const widths = [165, 74, 204, 80];
         const xs = [36, 201, 275, 479];
-        doc.rect(36, yTable, 523, 18).fillAndStroke("#e0f2fe", "#94a3b8");
+        doc.roundedRect(36, yTable, 523, 19, 4).fillAndStroke("#0f172a", "#0f172a");
         ["Equipamento", "Status", "Observação", "Nº chamado"].forEach((h, i) => {
-          doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#0f172a").text(h, xs[i] + 4, yTable + 5, { width: widths[i] - 8 });
+          doc.font("Helvetica-Bold").fontSize(7.5).fillColor("#ffffff").text(h, xs[i] + 4, yTable + 6, { width: widths[i] - 8 });
         });
-        doc.y = yTable + 18;
-        itens.forEach((item) => {
+        doc.y = yTable + 19;
+        itens.forEach((item, index) => {
           ensure(18);
           const y = doc.y;
-          doc.rect(36, y, 523, 18).strokeColor("#cbd5e1").stroke();
+          doc.rect(36, y, 523, 18).fillAndStroke(index % 2 === 0 ? "#ffffff" : "#f8fafc", "#cbd5e1");
           xs.slice(1).forEach((xLine) => doc.moveTo(xLine, y).lineTo(xLine, y + 18).strokeColor("#cbd5e1").stroke());
           doc.font("Helvetica").fontSize(7.5).fillColor("#111827")
             .text(item.nome || "-", xs[0] + 4, y + 5, { width: widths[0] - 8 })
@@ -890,6 +890,7 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     const paginas = doc.bufferedPageRange();
     for (let pagina = paginas.start; pagina < paginas.start + paginas.count; pagina++) {
       doc.switchToPage(pagina);
+      watermark(0.028);
       footer(pagina - paginas.start + 1, paginas.count);
     }
     doc.end();

@@ -1,7 +1,10 @@
-﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { api } from "../../services/api";
 import LexicalEditor from "../../components/editor/LexicalEditor";
 import { podeAnalisar } from "../../utils/permissoes";
+import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
+import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
+import { PdfLightbox } from "../../components/ui/PdfLightbox";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -115,6 +118,7 @@ export default function Ocorrencias() {
   const [motivoAnulacao, setMotivoAnulacao] = useState("");
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
+  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [locais, setLocais] = useState<LocalCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
@@ -141,6 +145,62 @@ export default function Ocorrencias() {
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([
     { ...envolvidoVazio },
   ]);
+
+  const dadosRascunhoOcorrencia = useMemo(
+    () => ({
+      assunto,
+      local,
+      natureza,
+      subNatureza,
+      dataOcorrencia,
+      etapaFormulario,
+      relatoSeguranca,
+      acoesTomadas,
+      quantidadeEnvolvidos,
+      envolvidos,
+      statusAnalise,
+      prejuizoFinanceiro,
+      conclusaoAnalise,
+    }),
+    [
+      assunto,
+      local,
+      natureza,
+      subNatureza,
+      dataOcorrencia,
+      etapaFormulario,
+      relatoSeguranca,
+      acoesTomadas,
+      quantidadeEnvolvidos,
+      envolvidos,
+      statusAnalise,
+      prejuizoFinanceiro,
+      conclusaoAnalise,
+    ]
+  );
+
+  const autoSaveOcorrencia = useAutoSaveDraft({
+    modulo: "Ocorrencia",
+    chave: ocorrenciaEditando ? `editar-${ocorrenciaEditando.id}` : "novo",
+    dados: dadosRascunhoOcorrencia,
+    ativo: abrirFormulario,
+    onRestore: (dados) => {
+      setAssunto(dados.assunto || "");
+      setLocal(dados.local || "");
+      setNatureza(dados.natureza || "");
+      setSubNatureza(dados.subNatureza || "");
+      setDataOcorrencia(dados.dataOcorrencia || "");
+      setEtapaFormulario(dados.etapaFormulario || 1);
+      setRelatoSeguranca(dados.relatoSeguranca || "");
+      setAcoesTomadas(dados.acoesTomadas || "");
+      const envolvidosRestaurados = dados.envolvidos?.length ? dados.envolvidos : [{ ...envolvidoVazio }];
+      setEnvolvidos(envolvidosRestaurados);
+      setQuantidadeEnvolvidos(dados.quantidadeEnvolvidos || envolvidosRestaurados.length || 1);
+      setStatusAnalise(dados.statusAnalise || "Em Análise");
+      setPrejuizoFinanceiro(dados.prejuizoFinanceiro || "0,00");
+      setConclusaoAnalise(dados.conclusaoAnalise || "");
+    },
+  });
 
   async function carregarOcorrencias() {
     const response = await api.get("/ocorrencias");
@@ -197,12 +257,6 @@ export default function Ocorrencias() {
     alert("Solicitação de anulação enviada aos analistas e administradores.");
   }
 
-  async function abrirVisualizacao(ocorrencia: Ocorrencia) {
-    setOcorrenciaVisualizando(ocorrencia);
-    const response = await api.get(`/comentarios/Ocorrencia/${ocorrencia.id}`);
-    setComentarios(response.data);
-  }
-
   async function salvarComentario() {
     if (!ocorrenciaVisualizando || !novoComentario.trim()) return;
     const response = await api.post(`/comentarios/Ocorrencia/${ocorrenciaVisualizando.id}`, {
@@ -213,6 +267,7 @@ export default function Ocorrencias() {
   }
 
   async function abrirPdfOcorrencia(id: number) {
+    const ocorrencia = ocorrencias.find((item) => item.id === id);
     const response = await api.get(`/ocorrencias/${id}/pdf`, {
       responseType: "blob",
     });
@@ -221,7 +276,16 @@ export default function Ocorrencias() {
       new Blob([response.data], { type: "application/pdf" })
     );
 
-    window.open(url, "_blank");
+    setPdfLightbox({
+      url,
+      titulo: ocorrencia ? `Relatório de Ocorrência ${ocorrencia.codigo}` : "Relatório de Ocorrência",
+      nomeArquivo: `relatorio-ocorrencia-${ocorrencia?.codigo || id}.pdf`.replace(/\//g, "-"),
+    });
+  }
+
+  function fecharPdfLightbox() {
+    if (pdfLightbox?.url) URL.revokeObjectURL(pdfLightbox.url);
+    setPdfLightbox(null);
   }
 
   const subNaturezasDisponiveis =
@@ -441,6 +505,7 @@ export default function Ocorrencias() {
       },
     });
 
+    await autoSaveOcorrencia.descartar().catch(() => undefined);
     setAbrirFormulario(false);
     limparFormulario();
     carregarOcorrencias();
@@ -484,6 +549,7 @@ export default function Ocorrencias() {
               ? `Editar Ocorrência ${ocorrenciaEditando.codigo}`
               : "Nova Ocorrência"}
           </h2>
+          <AutoSaveStatus status={autoSaveOcorrencia.status} ultima={autoSaveOcorrencia.ultima} />
 
           {ocorrenciaEditando && (
             <div className="space-y-3">
@@ -999,14 +1065,6 @@ export default function Ocorrencias() {
 
                   <button
                     type="button"
-                    onClick={() => abrirVisualizacao(ocorrencia)}
-                    className="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1 rounded-lg text-sm"
-                  >
-                    Visualizar
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={() => setOcorrenciaMencao(ocorrencia)}
                     className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
                   >
@@ -1199,6 +1257,15 @@ export default function Ocorrencias() {
             </div>
           </div>
         </div>
+      )}
+
+      {pdfLightbox && (
+        <PdfLightbox
+          url={pdfLightbox.url}
+          titulo={pdfLightbox.titulo}
+          nomeArquivo={pdfLightbox.nomeArquivo}
+          onClose={fecharPdfLightbox}
+        />
       )}
     </div>
   );

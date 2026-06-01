@@ -222,7 +222,7 @@ export default function Planejamento() {
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Operacao</p>
-          <h1 className="text-2xl font-bold sm:text-3xl">Planejamento Operacional</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Tarefas Operacionais</h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
             Quadro colaborativo para operadores, analistas e administradores acompanharem tratativas, prazos e prioridades da unidade {unidade}.
           </p>
