@@ -7,6 +7,7 @@ import {
   excluirCamera,
   exportarHistoricoCameras,
   exportarInventarioCameras,
+  gerarRelatorioDisponibilidadeCameras,
   atualizarIndisponibilidadeCamera,
   listarCameras,
   listarChecklistCamera,
@@ -20,6 +21,7 @@ const router = Router();
 router.get("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarCameras);
 router.get("/exportar/inventario", autenticarUsuario, autorizarPerfis(acessoRelatorios), exportarInventarioCameras);
 router.get("/exportar/historico", autenticarUsuario, autorizarPerfis(acessoRelatorios), exportarHistoricoCameras);
+router.post("/relatorio-disponibilidade/pdf", autenticarUsuario, autorizarPerfis(acessoRelatorios), gerarRelatorioDisponibilidadeCameras);
 router.post("/", autenticarUsuario, autorizarPerfis(acessoAnalise), criarCamera);
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), atualizarCamera);
 router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), excluirCamera);

@@ -1,8 +1,15 @@
 import { Response } from "express";
+import crypto from "crypto";
+import fs from "fs";
+import path from "path";
+import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { emitirRealtime } from "../services/realtime.service";
+import { assinarDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
+import { jwtSecret } from "../config/security";
 
 const STATUS_CONECTADA = "Conectada";
 const STATUS_DESCONECTADA = "Desconectada";
@@ -48,6 +55,34 @@ function formatarIndisponibilidade(minutosTotais: number) {
   if (horas) partes.push(`${horas} hora${horas === 1 ? "" : "s"}`);
   if (!dias && !horas) partes.push(`${minutosRestantes} minuto${minutosRestantes === 1 ? "" : "s"}`);
   return partes.join(" e ");
+}
+
+function dataPt(data?: Date | null) {
+  return data ? data.toLocaleString("pt-BR") : "Nao informado";
+}
+
+function textoPdf(valor?: string | number | null) {
+  const texto = String(valor ?? "").trim();
+  return texto || "Nao informado";
+}
+
+function tokenRelatorioCftv(params: { id: number; codigo: string; unidade: string }) {
+  return crypto
+    .createHmac("sha256", jwtSecret())
+    .update(`relatorio-cftv:${params.id}:${params.codigo}:${params.unidade}`)
+    .digest("hex")
+    .slice(0, 32);
+}
+
+export function criarUrlPublicaRelatorioCftv(req: Pick<AuthRequest, "protocol" | "get">, params: { id: number; codigo: string; unidade: string }) {
+  const token = tokenRelatorioCftv(params);
+  return `${req.protocol}://${req.get("host")}/api/public/cameras/relatorios-cftv/${params.id}/pdf?token=${token}`;
+}
+
+export function validarTokenAcessoRelatorioCftv(params: { id: number; codigo: string; unidade: string; token: string }) {
+  const esperado = tokenRelatorioCftv(params);
+  if (!params.token || params.token.length !== esperado.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(params.token));
 }
 
 function calcularMinutosIndisponiveisNoIntervalo(
@@ -1057,6 +1092,448 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao exportar inventário de câmeras" });
+  }
+}
+
+export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res: Response) {
+  try {
+    const cameraIds = Array.isArray(req.body?.cameraIds)
+      ? req.body.cameraIds.map((id: unknown) => Number(id)).filter((id: number) => Number.isFinite(id))
+      : [];
+
+    if (cameraIds.length === 0) {
+      return res.status(400).json({ error: "Selecione ao menos uma câmera para gerar o relatório." });
+    }
+
+    const cameras = await prisma.cameraMonitoramento.findMany({
+      where: {
+        id: { in: cameraIds },
+        unidade: req.unidadeAtiva,
+        statusCadastro: STATUS_CADASTRO_ATIVA,
+      },
+      orderBy: [{ numeroServidor: "asc" }, { numeroCamera: "asc" }],
+      include: {
+        checklists: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: { responsavel: { select: { nome: true, apelido: true } } },
+        },
+        eventos: {
+          where: { statusNovo: STATUS_DESCONECTADA },
+          orderBy: { iniciadoEm: "desc" },
+        },
+      },
+    });
+
+    if (cameras.length === 0) {
+      return res.status(404).json({ error: "Nenhuma câmera encontrada para os filtros selecionados." });
+    }
+
+    const responsaveisIds = [...new Set(cameras.flatMap((camera) => camera.eventos.map((evento) => evento.responsavelId).filter(Boolean)))] as number[];
+    const responsaveis = await prisma.usuario.findMany({
+      where: { id: { in: responsaveisIds } },
+      select: { id: true, nome: true, apelido: true },
+    });
+    const usuarios = new Map(responsaveis.map((usuario) => [usuario.id, usuario]));
+
+    const camerasRelatorio = cameras.map((camera) => {
+      const checklist = camera.checklists[0];
+      const retencao = checklist
+        ? calcularRetencaoEfetiva({
+            dataMaisAntiga: checklist.dataInicialGravacao,
+            dataMaisRecente: checklist.dataMaisRecenteGravacao,
+            statusCamera: camera.status,
+            eventos: camera.eventos,
+          })
+        : null;
+      const totalIndisponibilidade = camera.eventos.reduce((soma, evento) => {
+        return soma + (evento.duracaoIndisponivel ?? minutosEntre(evento.iniciadoEm, evento.encerradoEm || new Date()));
+      }, 0);
+      return {
+        camera,
+        checklist,
+        retencao,
+        diasRetencao: retencao ? Math.floor(retencao.retencaoMinutos / 1440) : null,
+        totalIndisponibilidade,
+        eventos: camera.eventos.map((evento) => {
+          const duracao = evento.duracaoIndisponivel ?? minutosEntre(evento.iniciadoEm, evento.encerradoEm || new Date());
+          const responsavel = evento.responsavelId ? usuarios.get(evento.responsavelId) : null;
+          return {
+            ...evento,
+            duracaoCalculada: duracao,
+            responsavelNome: responsavel ? responsavel.apelido || responsavel.nome : "Sistema",
+          };
+        }),
+      };
+    });
+
+    const total = camerasRelatorio.length;
+    const conectadas = camerasRelatorio.filter(({ camera }) => camera.status === STATUS_CONECTADA).length;
+    const desconectadas = camerasRelatorio.filter(({ camera }) => camera.status === STATUS_DESCONECTADA).length;
+    const totalEventos = camerasRelatorio.reduce((soma, item) => soma + item.eventos.length, 0);
+    const totalIndisponibilidade = camerasRelatorio.reduce((soma, item) => soma + item.totalIndisponibilidade, 0);
+    const retencoesValidas = camerasRelatorio.map((item) => item.diasRetencao).filter((dias): dias is number => typeof dias === "number");
+    const retencaoMedia = retencoesValidas.length ? Math.round(retencoesValidas.reduce((soma, dias) => soma + dias, 0) / retencoesValidas.length) : 0;
+    const snapshotAtual = camerasRelatorio.map(({ camera, diasRetencao, totalIndisponibilidade: totalCamera }) => ({
+      cameraId: camera.id,
+      numeroCamera: camera.numeroCamera,
+      nomeCamera: camera.nomeCamera,
+      servidor: camera.numeroServidor,
+      area: camera.areaMonitorada,
+      status: camera.status,
+      diasRetencao,
+      totalFalhas: camera.totalFalhas,
+      totalIndisponibilidade: totalCamera,
+    }));
+    const relatorioAnterior = await prisma.relatorioCftv.findFirst({
+      where: { unidade: req.unidadeAtiva || "GJA-T1", snapshotJson: { not: null } },
+      orderBy: { createdAt: "desc" },
+    });
+    const snapshotAnterior = relatorioAnterior?.snapshotJson
+      ? JSON.parse(relatorioAnterior.snapshotJson) as Array<{ cameraId: number; numeroCamera: string; diasRetencao: number | null; totalFalhas: number; totalIndisponibilidade: number; status: string }>
+      : [];
+    const mapaAnterior = new Map(snapshotAnterior.map((item) => [item.cameraId, item]));
+    const comparativoCameras = snapshotAtual.map((atual) => {
+      const anterior = mapaAnterior.get(atual.cameraId);
+      const variacaoRetencao =
+        anterior && typeof atual.diasRetencao === "number" && typeof anterior.diasRetencao === "number"
+          ? atual.diasRetencao - anterior.diasRetencao
+          : null;
+      return {
+        ...atual,
+        anterior,
+        variacaoRetencao,
+        variacaoFalhas: anterior ? atual.totalFalhas - anterior.totalFalhas : null,
+        variacaoIndisponibilidade: anterior ? atual.totalIndisponibilidade - anterior.totalIndisponibilidade : null,
+      };
+    });
+    const ganhoRetencao = comparativoCameras.filter((item) => (item.variacaoRetencao ?? 0) > 0).length;
+    const perdaRetencao = comparativoCameras.filter((item) => (item.variacaoRetencao ?? 0) < 0).length;
+    const variacaoRetencaoMedia = relatorioAnterior ? retencaoMedia - relatorioAnterior.retencaoMedia : null;
+    const variacaoIndisponibilidadeTotal = relatorioAnterior ? totalIndisponibilidade - relatorioAnterior.totalIndisponibilidade : null;
+
+    const ano = new Date().getFullYear();
+    const relatorioCftv = await prisma.$transaction(async (tx) => {
+      const ultimo = await tx.relatorioCftv.findFirst({
+        where: { ano, unidade: req.unidadeAtiva || "GJA-T1" },
+        orderBy: { numero: "desc" },
+      });
+      const numero = ultimo ? ultimo.numero + 1 : 1;
+      return tx.relatorioCftv.create({
+        data: {
+          numero,
+          ano,
+          codigo: `CFTV${String(numero).padStart(3, "0")}/${ano}`,
+          unidade: req.unidadeAtiva || "GJA-T1",
+          responsavelId: req.usuarioId,
+          camerasIdsJson: JSON.stringify(cameraIds),
+          snapshotJson: JSON.stringify(snapshotAtual),
+          retencaoMedia,
+          totalEventos,
+          totalIndisponibilidade,
+          totalCameras: cameras.length,
+        },
+      });
+    });
+    const protocolo = relatorioCftv.codigo;
+    const assinatura = await assinarDocumento({
+      req,
+      modulo: "RelatorioCftv",
+      registroId: relatorioCftv.id,
+      codigoRegistro: relatorioCftv.codigo,
+      unidade: relatorioCftv.unidade,
+      acao: "Emissao do Relatorio Tecnico CFTV",
+      dados: {
+        total,
+        conectadas,
+        desconectadas,
+        totalEventos,
+        retencaoMedia,
+        cameras: cameraIds,
+      },
+    });
+    const validacaoUrl = criarUrlValidacaoAssinatura(req, assinatura.token);
+    const qrCode = await QRCode.toDataURL(validacaoUrl, {
+      width: 180,
+      margin: 1,
+      color: { dark: "#0f172a", light: "#ffffff" },
+    });
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+      select: { nome: true, apelido: true },
+    });
+    const responsavelEmissao = usuario?.apelido || usuario?.nome || "Usuario autenticado";
+
+    const doc = new PDFDocument({ size: "A4", margin: 42, bufferPages: true });
+    const pageWidth = doc.page.width;
+    const pageHeight = doc.page.height;
+    const contentWidth = pageWidth - 84;
+    const footerY = pageHeight - 116;
+    const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
+    const watermarkPath = path.resolve(process.cwd(), "assets", "jetguard-watermark.png");
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=relatorio-disponibilidade-cftv-${protocolo.replace("/", "-")}.pdf`);
+    doc.pipe(res);
+
+    function watermark() {
+      if (!fs.existsSync(watermarkPath)) return;
+      const largura = 250;
+      doc.save().opacity(0.035).image(watermarkPath, (pageWidth - largura) / 2, (pageHeight - largura) / 2, { width: largura }).restore();
+    }
+
+    function header() {
+      watermark();
+      doc.roundedRect(42, 28, contentWidth, 74, 10).fill("#0f172a");
+      if (fs.existsSync(logoPath)) {
+        doc.roundedRect(54, 42, 126, 38, 8).fill("#ffffff");
+        doc.image(logoPath, 62, 50, { width: 110, height: 22, fit: [110, 22] });
+      }
+      doc.fillColor("#dbeafe").fontSize(8).text("RELATORIO TECNICO CFTV", 190, 43, { width: 240 });
+      doc.fillColor("#ffffff").fontSize(14).text("Disponibilidade e Indisponibilidade", 190, 59, { width: 280 });
+      doc.fillColor("#cbd5e1").fontSize(9).text(`Protocolo: ${protocolo}`, 190, 80, { width: 240 });
+      doc.fillColor("#bfdbfe").fontSize(9).text(`Emitido em ${new Date().toLocaleString("pt-BR")}`, pageWidth - 235, 52, { width: 175, align: "right" });
+      doc.fillColor("#ffffff").fontSize(10).text(`Unidade: ${req.unidadeAtiva || "GJA-T1"}`, pageWidth - 235, 75, { width: 175, align: "right" });
+      doc.moveTo(42, 116).lineTo(pageWidth - 42, 116).strokeColor("#dbe4f0").lineWidth(0.8).stroke();
+      doc.y = 130;
+    }
+
+    function footer(numeroPagina?: number, totalPaginas?: number) {
+      doc.moveTo(42, footerY - 10).lineTo(pageWidth - 42, footerY - 10).strokeColor("#dbe4f0").lineWidth(0.8).stroke();
+      const seloW = contentWidth - 102;
+      const qrX = pageWidth - 110;
+      doc.roundedRect(42, footerY, seloW, 54, 8).strokeColor("#bfdbfe").lineWidth(1).stroke();
+      doc.rect(42, footerY, 4, 54).fill("#0b74ff");
+      doc.fillColor("#0f172a").fontSize(9).text("Assinatura eletronica JetGuard", 56, footerY + 9, { width: seloW - 24, lineBreak: false });
+      doc.fillColor("#475569").fontSize(8).text(
+        `Documento validado por ${assinatura.usuarioNome} em ${assinatura.createdAt.toLocaleString("pt-BR")}`,
+        56,
+        footerY + 25,
+        { width: seloW - 24, lineBreak: false, ellipsis: true }
+      );
+      doc.fillColor("#475569").fontSize(7).text(`Token: ${assinatura.token}`, 56, footerY + 38, { width: seloW - 24, lineBreak: false, ellipsis: true });
+      doc.fillColor("#64748b").fontSize(8).text(
+        numeroPagina && totalPaginas ? `Pagina ${numeroPagina} de ${totalPaginas}` : "",
+        qrX - 8,
+        footerY - 8,
+        { width: 74, align: "center", lineBreak: false }
+      );
+      doc.image(qrCode, qrX, footerY + 2, { width: 54, height: 54 });
+    }
+
+    function ensureSpace(height = 80) {
+      if (doc.y + height < footerY - 20) return;
+      doc.addPage();
+      header();
+    }
+
+    function card(x: number, y: number, w: number, label: string, value: string, color = "#0f172a") {
+      doc.roundedRect(x, y, w, 48, 8).fillAndStroke("#f8fafc", "#e2e8f0");
+      doc.fillColor("#64748b").fontSize(7).text(label.toUpperCase(), x + 10, y + 9, { width: w - 20 });
+      doc.fillColor(color).fontSize(15).text(value, x + 10, y + 24, { width: w - 20, lineBreak: false, ellipsis: true });
+    }
+
+    function graficoBarras(titulo: string, dados: Array<{ label: string; value: number; color: string }>) {
+      ensureSpace(120);
+      doc.fillColor("#0f172a").fontSize(12).text(titulo, 42, doc.y);
+      doc.moveDown(0.6);
+      const max = Math.max(...dados.map((item) => item.value), 1);
+      dados.forEach((item) => {
+        const y = doc.y;
+        doc.fillColor("#334155").fontSize(8).text(item.label, 42, y + 2, { width: 116, lineBreak: false, ellipsis: true });
+        doc.roundedRect(164, y, 300, 12, 6).fill("#e2e8f0");
+        doc.roundedRect(164, y, Math.max(8, (item.value / max) * 300), 12, 6).fill(item.color);
+        doc.fillColor("#0f172a").fontSize(8).text(String(item.value), 474, y + 1, { width: 40, align: "right" });
+        doc.y += 20;
+      });
+      doc.moveDown(0.3);
+    }
+
+    function tabela(headers: string[], widths: number[], rows: string[][]) {
+      ensureSpace(44);
+      let y = doc.y;
+      doc.roundedRect(42, y, contentWidth, 24, 6).fill("#0f172a");
+      let x = 42;
+      headers.forEach((head, i) => {
+        doc.fillColor("#ffffff").fontSize(7).text(head.toUpperCase(), x + 5, y + 8, { width: widths[i] - 8, lineBreak: false, ellipsis: true });
+        x += widths[i];
+      });
+      doc.y = y + 28;
+      rows.forEach((row, index) => {
+        const rowH = 34;
+        ensureSpace(rowH + 8);
+        y = doc.y;
+        doc.rect(42, y, contentWidth, rowH).fill(index % 2 === 0 ? "#ffffff" : "#f8fafc").strokeColor("#e2e8f0").stroke();
+        x = 42;
+        row.forEach((cell, i) => {
+          doc.fillColor("#334155").fontSize(7.2).text(cell, x + 5, y + 8, { width: widths[i] - 8, height: rowH - 10, ellipsis: true });
+          x += widths[i];
+        });
+        doc.y = y + rowH;
+      });
+      doc.moveDown(0.8);
+    }
+
+    header();
+
+    doc.fillColor("#0f172a").fontSize(12).text("Resumo executivo", 42, doc.y);
+    doc.moveDown(0.7);
+    const col = (contentWidth - 36) / 4;
+    const yCards = doc.y;
+    card(42, yCards, col, "Cameras avaliadas", String(total));
+    card(42 + col + 12, yCards, col, "Conectadas", String(conectadas), "#059669");
+    card(42 + (col + 12) * 2, yCards, col, "Desconectadas", String(desconectadas), "#dc2626");
+    card(42 + (col + 12) * 3, yCards, col, "Retencao media", `${retencaoMedia} dias`, "#2563eb");
+    doc.y = yCards + 68;
+
+    const intro =
+      "Conforme analise realizada no modulo de Gestao e Monitoramento de Cameras CFTV do JetGuard, este relatorio consolida o status operacional, a retencao de gravacao e os registros de conexao, desconexao e indisponibilidade das cameras selecionadas. As informacoes apresentadas apoiam a auditoria tecnica, o acompanhamento de SLA, a rastreabilidade das falhas e a tomada de decisao para tratativas preventivas ou corretivas.";
+    const introY = doc.y;
+    const introH = 74;
+    doc.roundedRect(42, introY, contentWidth, introH, 10).fillAndStroke("#f8fafc", "#dbeafe");
+    doc.fillColor("#0f172a").fontSize(8.8).text(intro, 56, introY + 11, { width: contentWidth - 28, align: "justify", lineGap: 1.5 });
+    doc.y = introY + introH + 10;
+
+    graficoBarras("Mapa grafico de status", [
+      { label: "Conectadas", value: conectadas, color: "#10b981" },
+      { label: "Desconectadas", value: desconectadas, color: "#ef4444" },
+      { label: "Eventos de indisponibilidade", value: totalEventos, color: "#2563eb" },
+      { label: "Horas indisponiveis", value: Math.round(totalIndisponibilidade / 60), color: "#f59e0b" },
+    ]);
+
+    tabela(
+      ["Camera", "Servidor", "Status", "Area monitorada", "Retencao", "Falhas"],
+      [70, 70, 70, 165, 85, contentWidth - 70 - 70 - 70 - 165 - 85],
+      camerasRelatorio.map(({ camera, diasRetencao }) => [
+        `${camera.numeroCamera}${camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}`,
+        camera.numeroServidor,
+        camera.status,
+        camera.areaMonitorada,
+        diasRetencao === null ? "Sem checklist" : `${diasRetencao} dias`,
+        String(camera.totalFalhas),
+      ])
+    );
+
+    ensureSpace(150);
+    doc.fillColor("#0f172a").fontSize(12).text("Analise comparativa de retencao e disponibilidade", 42, doc.y);
+    doc.moveDown(0.6);
+    if (!relatorioAnterior) {
+      doc.roundedRect(42, doc.y, contentWidth, 42, 8).fillAndStroke("#f8fafc", "#e2e8f0");
+      doc.fillColor("#475569").fontSize(9).text(
+        "Este e o primeiro relatorio CFTV com base comparativa armazenada para esta unidade. A partir da proxima emissao, o JetGuard apresentara ganhos, perdas e variacoes em relacao ao relatorio anterior.",
+        56,
+        doc.y + 12,
+        { width: contentWidth - 28 }
+      );
+      doc.y += 54;
+    } else {
+      const yComp = doc.y;
+      const compCol = (contentWidth - 36) / 4;
+      card(42, yComp, compCol, "Comparado com", relatorioAnterior.codigo, "#2563eb");
+      card(42 + compCol + 12, yComp, compCol, "Variacao retencao", `${variacaoRetencaoMedia && variacaoRetencaoMedia > 0 ? "+" : ""}${variacaoRetencaoMedia ?? 0} dias`, (variacaoRetencaoMedia ?? 0) < 0 ? "#dc2626" : "#059669");
+      card(42 + (compCol + 12) * 2, yComp, compCol, "Cameras com ganho", String(ganhoRetencao), "#059669");
+      card(42 + (compCol + 12) * 3, yComp, compCol, "Cameras com perda", String(perdaRetencao), "#dc2626");
+      doc.y = yComp + 64;
+
+      const variacaoIndisponibilidadeTexto = variacaoIndisponibilidadeTotal === null
+        ? ""
+        : ` A variacao total de indisponibilidade foi de ${variacaoIndisponibilidadeTotal > 0 ? "+" : ""}${Math.round(variacaoIndisponibilidadeTotal / 60)} hora(s).`;
+      const textoComparativo =
+        (variacaoRetencaoMedia ?? 0) < 0
+          ? `Em comparacao com o relatorio ${relatorioAnterior.codigo}, houve reducao media de ${Math.abs(variacaoRetencaoMedia || 0)} dia(s) de retencao. Este comportamento pode indicar impacto por indisponibilidade, falha de gravacao ou sobrescrita operacional no Digifort.${variacaoIndisponibilidadeTexto}`
+          : `Em comparacao com o relatorio ${relatorioAnterior.codigo}, houve ganho ou estabilidade na retencao media das cameras avaliadas.${variacaoIndisponibilidadeTexto} Recomenda-se manter o acompanhamento para confirmar a tendencia operacional.`;
+      const textoCompH = Math.max(42, doc.heightOfString(textoComparativo, { width: contentWidth - 28, lineGap: 2 }) + 22);
+      doc.roundedRect(42, doc.y, contentWidth, textoCompH, 8).fillAndStroke("#f8fafc", "#dbeafe");
+      doc.fillColor("#334155").fontSize(9).text(textoComparativo, 56, doc.y + 11, { width: contentWidth - 28, lineGap: 2 });
+      doc.y += textoCompH + 10;
+
+      const linhasComparativo = comparativoCameras
+        .filter((item) => item.anterior)
+        .sort((a, b) => (a.variacaoRetencao ?? 0) - (b.variacaoRetencao ?? 0))
+        .slice(0, 10)
+        .map((item) => [
+          `${item.numeroCamera}${item.nomeCamera ? ` - ${item.nomeCamera}` : ""}`,
+          item.anterior?.diasRetencao === null || item.anterior?.diasRetencao === undefined ? "Sem base" : `${item.anterior.diasRetencao} dias`,
+          item.diasRetencao === null ? "Sem checklist" : `${item.diasRetencao} dias`,
+          item.variacaoRetencao === null ? "N/A" : `${item.variacaoRetencao > 0 ? "+" : ""}${item.variacaoRetencao} dias`,
+          item.variacaoIndisponibilidade === null ? "N/A" : `${item.variacaoIndisponibilidade > 0 ? "+" : ""}${Math.round(item.variacaoIndisponibilidade / 60)} h`,
+        ]);
+      if (linhasComparativo.length > 0) {
+        tabela(
+          ["Camera", "Retencao anterior", "Retencao atual", "Ganho/perda", "Indisp."],
+          [132, 96, 90, 82, contentWidth - 132 - 96 - 90 - 82],
+          linhasComparativo
+        );
+      }
+    }
+
+    camerasRelatorio.forEach(({ camera, checklist, eventos, totalIndisponibilidade: totalCamera, diasRetencao }) => {
+      ensureSpace(116);
+      doc.fillColor("#0f172a").fontSize(12).text(`Historico - Camera ${camera.numeroCamera}${camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}`, 42, doc.y);
+      doc.moveDown(0.4);
+      doc.fillColor("#475569").fontSize(8.5).text(
+        `Servidor ${camera.numeroServidor} | ${camera.areaMonitorada} | ${camera.localInstalado} | Status atual: ${camera.status} | Retencao: ${diasRetencao === null ? "Sem checklist" : `${diasRetencao} dias`} | Indisponibilidade acumulada: ${formatarIndisponibilidade(totalCamera)}`,
+        42,
+        doc.y,
+        { width: contentWidth }
+      );
+      doc.moveDown(0.6);
+      if (checklist) {
+        doc.fillColor("#64748b").fontSize(8).text(
+          `Ultimo checklist: ${dataPt(checklist.createdAt)} | Data mais antiga: ${dataPt(checklist.dataInicialGravacao)} | Data mais recente: ${dataPt(checklist.dataMaisRecenteGravacao)} | Responsavel: ${checklist.responsavel?.apelido || checklist.responsavel?.nome || "Nao informado"}`,
+          42,
+          doc.y,
+          { width: contentWidth }
+        );
+        doc.moveDown(0.7);
+      }
+      if (eventos.length === 0) {
+        doc.roundedRect(42, doc.y, contentWidth, 30, 6).fillAndStroke("#f0fdf4", "#bbf7d0");
+        doc.fillColor("#047857").fontSize(8.5).text("Sem registros de indisponibilidade para a camera no historico selecionado.", 54, doc.y + 10, { width: contentWidth - 24 });
+        doc.y += 40;
+        return;
+      }
+      tabela(
+        ["Inicio", "Fim", "Duracao", "Motivo", "Responsavel"],
+        [88, 88, 80, 156, contentWidth - 88 - 88 - 80 - 156],
+        eventos.slice(0, 12).map((evento) => [
+          dataPt(evento.iniciadoEm),
+          dataPt(evento.encerradoEm),
+          formatarIndisponibilidade(evento.duracaoCalculada),
+          textoPdf(evento.motivo || evento.observacao),
+          evento.responsavelNome,
+        ])
+      );
+    });
+
+    ensureSpace(92);
+    const conclusao = desconectadas > 0 || totalEventos > 0
+      ? "Foram identificados registros de indisponibilidade ou cameras desconectadas entre os itens avaliados. Recomenda-se acompanhamento tecnico, verificacao das causas recorrentes e priorizacao das cameras com maior impacto operacional para preservacao da cobertura de seguranca patrimonial."
+      : "As cameras selecionadas apresentam condicao operacional satisfatoria no momento da emissao, sem registros de indisponibilidade no historico avaliado. Recomenda-se manter a rotina de checklist e a verificacao periodica da retencao real no Digifort.";
+    doc.fillColor("#0f172a").fontSize(12).text("Conclusao tecnica", 42, doc.y);
+    doc.moveDown(0.5);
+    const conclusaoH = Math.max(62, doc.heightOfString(conclusao, { width: contentWidth - 32, align: "justify", lineGap: 3 }) + 26);
+    doc.roundedRect(42, doc.y, contentWidth, conclusaoH, 9).fillAndStroke(desconectadas > 0 || totalEventos > 0 ? "#fff7ed" : "#f0fdf4", desconectadas > 0 || totalEventos > 0 ? "#fed7aa" : "#bbf7d0");
+    doc.rect(42, doc.y, 4, conclusaoH).fill(desconectadas > 0 || totalEventos > 0 ? "#f97316" : "#10b981");
+    doc.fillColor("#334155").fontSize(9.5).text(conclusao, 58, doc.y + 14, { width: contentWidth - 32, align: "justify", lineGap: 3 });
+
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i += 1) {
+      doc.switchToPage(i);
+      footer(i + 1, range.count);
+    }
+    doc.end();
+
+    await registrarLog({
+      req,
+      acao: `Emissao de relatorio tecnico CFTV ${protocolo}`,
+      tipoRegistro: "RelatorioCftv",
+      registroId: relatorioCftv.id,
+      dadosNovos: { protocolo, cameras: cameraIds, unidade: req.unidadeAtiva },
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(error?.status || 500).json({ error: error?.message || "Erro ao gerar relatorio tecnico CFTV" });
   }
 }
 

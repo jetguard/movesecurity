@@ -18,7 +18,8 @@ export type ModuloAssinavel =
   | "AnaliseOcorrencia"
   | "AnaliseEvento"
   | "PassagemTurno"
-  | "ChecklistInspecao";
+  | "ChecklistInspecao"
+  | "RelatorioCftv";
 
 function hashDocumento(params: {
   modulo: string;

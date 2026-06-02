@@ -66,6 +66,7 @@ model Usuario {
   sugestoesMelhoriaAvaliadas   SugestaoMelhoria[]             @relation("SugestaoMelhoriaAvaliador")
   assinaturasDocumentos        AssinaturaDocumento[]
   rascunhosFormulario          RascunhoFormulario[]
+  relatoriosCftvEmitidos       RelatorioCftv[]                @relation("RelatorioCftvResponsavel")
 }
 
 model SessaoUsuario {
@@ -811,6 +812,26 @@ model CameraEventoStatus {
   createdAt           DateTime  @default(now())
 
   camera CameraMonitoramento @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+}
+
+model RelatorioCftv {
+  id             Int      @id @default(autoincrement())
+  numero         Int
+  ano            Int
+  codigo         String
+  unidade        String
+  responsavelId  Int?
+  camerasIdsJson String
+  snapshotJson    String?
+  retencaoMedia   Int      @default(0)
+  totalEventos    Int      @default(0)
+  totalIndisponibilidade Int @default(0)
+  totalCameras   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  responsavel Usuario? @relation("RelatorioCftvResponsavel", fields: [responsavelId], references: [id])
+
+  @@unique([codigo, unidade])
 }
 
 model ConfiguracaoSistema {

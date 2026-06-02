@@ -1,6 +1,8 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Camera, Radio, ShieldCheck, Wifi, WifiOff } from "lucide-react";
+import { AlertTriangle, Camera, FileText, Radio, ShieldCheck, Wifi, WifiOff } from "lucide-react";
+import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
+import { solicitarPinOperacional } from "../utils/pinPrompt";
 import { podeAdministrar, podeAnalisar, podeSuperAdmin } from "../utils/permissoes";
 
 type CameraItem = {
@@ -232,6 +234,8 @@ export default function Cameras() {
   const [cameraHistorico, setCameraHistorico] = useState<CameraItem | null>(null);
   const [buscaCamera, setBuscaCamera] = useState("");
   const [statusFiltroCamera, setStatusFiltroCamera] = useState("");
+  const [camerasSelecionadas, setCamerasSelecionadas] = useState<number[]>([]);
+  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [indisponibilidades, setIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
   const [formIndisponibilidade, setFormIndisponibilidade] = useState(indisponibilidadeInicial);
   const [indisponibilidadeEditando, setIndisponibilidadeEditando] = useState<IndisponibilidadeCamera | null>(null);
@@ -263,6 +267,7 @@ export default function Cameras() {
       return (!busca || texto.includes(busca)) && (!statusFiltroCamera || camera.status === statusFiltroCamera);
     });
   }, [buscaCamera, cameras, statusFiltroCamera]);
+  const todasFiltradasSelecionadas = camerasFiltradas.length > 0 && camerasFiltradas.every((camera) => camerasSelecionadas.includes(camera.id));
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({ ...atual, [nome]: valor }));
@@ -456,6 +461,47 @@ export default function Cameras() {
     link.download = `${tipo}-cameras.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  function alternarCameraSelecionada(cameraId: number) {
+    setCamerasSelecionadas((atuais) =>
+      atuais.includes(cameraId) ? atuais.filter((id) => id !== cameraId) : [...atuais, cameraId]
+    );
+  }
+
+  function alternarTodasFiltradas() {
+    const idsFiltrados = camerasFiltradas.map((camera) => camera.id);
+    setCamerasSelecionadas((atuais) => {
+      if (idsFiltrados.every((id) => atuais.includes(id))) {
+        return atuais.filter((id) => !idsFiltrados.includes(id));
+      }
+      return Array.from(new Set([...atuais, ...idsFiltrados]));
+    });
+  }
+
+  async function gerarRelatorioDisponibilidade() {
+    if (camerasSelecionadas.length === 0) {
+      alert("Selecione ao menos uma câmera para gerar o relatório.");
+      return;
+    }
+    const pinOperacional = await solicitarPinOperacional("Informe seu PIN para assinar e emitir o relatório técnico CFTV.");
+    if (!pinOperacional) return;
+    const response = await api.post(
+      "/cameras/relatorio-disponibilidade/pdf",
+      { cameraIds: camerasSelecionadas, pinOperacional },
+      { responseType: "blob" }
+    );
+    const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+    setPdfLightbox({
+      url,
+      titulo: "Relatório Técnico CFTV",
+      nomeArquivo: `relatorio-tecnico-cftv-${new Date().toISOString().slice(0, 10)}.pdf`,
+    });
+  }
+
+  function fecharPdfLightbox() {
+    if (pdfLightbox?.url) URL.revokeObjectURL(pdfLightbox.url);
+    setPdfLightbox(null);
   }
 
   return (
@@ -726,10 +772,41 @@ export default function Cameras() {
             </select>
           </div>
         </div>
+        <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center">
+          <div>
+            <p className="text-sm font-bold text-blue-900">Relatório Técnico CFTV</p>
+            <p className="text-xs text-blue-700">
+              Selecione câmeras filtradas ou específicas para emitir um PDF com status, retenção e histórico de conexão/desconexão.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={alternarTodasFiltradas} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-sm hover:bg-blue-100">
+              {todasFiltradasSelecionadas ? "Limpar filtradas" : "Selecionar filtradas"}
+            </button>
+            <button
+              type="button"
+              onClick={gerarRelatorioDisponibilidade}
+              disabled={camerasSelecionadas.length === 0}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <FileText size={16} />
+              Gerar relatório ({camerasSelecionadas.length})
+            </button>
+          </div>
+        </div>
         <div className="max-h-[640px] overflow-auto">
-          <table className="w-full min-w-[960px] text-left text-sm">
+          <table className="w-full min-w-[1040px] text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50 text-slate-500 shadow-sm">
               <tr>
+                <th className="p-3">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-blue-600"
+                    checked={todasFiltradasSelecionadas}
+                    onChange={alternarTodasFiltradas}
+                    aria-label="Selecionar todas as câmeras filtradas"
+                  />
+                </th>
                 <th className="p-3">Câmera</th>
                 <th className="p-3">Servidor</th>
                 <th className="p-3">Status</th>
@@ -744,6 +821,15 @@ export default function Cameras() {
             <tbody>
               {camerasFiltradas.map((camera) => (
                 <tr key={camera.id} className="border-b border-slate-100">
+                  <td className="p-3">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-blue-600"
+                      checked={camerasSelecionadas.includes(camera.id)}
+                      onChange={() => alternarCameraSelecionada(camera.id)}
+                      aria-label={`Selecionar câmera ${camera.numeroCamera}`}
+                    />
+                  </td>
                   <td className="p-3 font-bold">{camera.numeroCamera}{camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}</td>
                   <td className="p-3">{camera.numeroServidor}</td>
                   <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${camera.status === "Conectada" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{camera.status}</span></td>
@@ -765,7 +851,7 @@ export default function Cameras() {
               ))}
               {camerasFiltradas.length === 0 && (
                 <tr>
-                  <td className="p-6 text-center text-slate-500" colSpan={9}>
+                  <td className="p-6 text-center text-slate-500" colSpan={10}>
                     Nenhuma câmera encontrada com os filtros selecionados.
                   </td>
                 </tr>
@@ -902,6 +988,15 @@ export default function Cameras() {
             <button className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-bold text-white">Salvar checklist</button>
           </form>
         </div>
+      )}
+
+      {pdfLightbox && (
+        <PdfLightbox
+          url={pdfLightbox.url}
+          titulo={pdfLightbox.titulo}
+          nomeArquivo={pdfLightbox.nomeArquivo}
+          onClose={fecharPdfLightbox}
+        />
       )}
     </div>
   );
