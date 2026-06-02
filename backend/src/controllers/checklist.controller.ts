@@ -11,6 +11,7 @@ import {
   assinarDocumento,
   assinaturaValidaDocumento,
   criarUrlValidacaoAssinatura,
+  invalidarAssinaturasDocumento,
 } from "../services/assinaturaDocumento.service";
 import { jwtSecret } from "../config/security";
 
@@ -345,7 +346,11 @@ export async function atualizarChecklist(req: AuthRequest, res: Response) {
     if (!anterior) return res.status(404).json({ error: "Checklist nao encontrado" });
 
     const itens = normalizarItens(req.body.itens);
+    if (itens.length === 0) {
+      return res.status(400).json({ error: "Informe ao menos um item verificado." });
+    }
     const pontuacao = calcularPontuacao(itens);
+    const status = req.body.status === "Concluido" ? "Concluido" : "Aberto";
 
     const checklist = await prisma.$transaction(async (tx) => {
       await tx.checklistItem.deleteMany({ where: { checklistId: Number(id) } });
@@ -355,9 +360,9 @@ export async function atualizarChecklist(req: AuthRequest, res: Response) {
           titulo: req.body.titulo,
           setor: req.body.setor,
           local: req.body.local,
-          tipo: req.body.tipo,
+          tipo: "Ronda Preventiva",
           dataHora: req.body.dataHora ? new Date(req.body.dataHora) : anterior.dataHora,
-          status: req.body.status || anterior.status,
+          status,
           pontuacao,
           observacoes: req.body.observacoes,
           itens: {
@@ -374,6 +379,11 @@ export async function atualizarChecklist(req: AuthRequest, res: Response) {
       });
     });
 
+    await invalidarAssinaturasDocumento({
+      modulo: "ChecklistInspecao",
+      registroId: checklist.id,
+      motivo: `Checklist ${checklist.codigo} atualizado apos assinatura.`,
+    });
     await registrarLog({ req, acao: `Atualizacao de checklist ${checklist.codigo}`, tipoRegistro: "ChecklistInspecao", registroId: checklist.id, dadosAnteriores: anterior, dadosNovos: checklist });
     return res.json(checklist);
   } catch (error) {

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { api } from "../services/api";
 import { AutoSaveStatus } from "../components/ui/AutoSaveStatus";
-import { useAutoSaveDraft } from "../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
+import { useAutoSaveDraft } from "../hooks/useAutoSaveDraft";
+import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type Item = { categoria: string; descricao: string; conformidade: string; criticidade: string; observacao: string };
@@ -61,20 +61,23 @@ const categoriasInspecao = [
 
 const itemPadrao: Item = { categoria: "Câmera CFTV", descricao: "", conformidade: "Conforme", criticidade: "Media", observacao: "" };
 
+const formVazio = {
+  titulo: "",
+  setor: "",
+  local: "",
+  tipo: "Ronda Preventiva",
+  status: "Aberto",
+  observacoes: "",
+  itens: [{ ...itemPadrao }],
+};
+
 export default function Checklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [locais, setLocais] = useState<LocalTerminal[]>([]);
   const [abrir, setAbrir] = useState(false);
+  const [checklistEmEdicao, setChecklistEmEdicao] = useState<Checklist | null>(null);
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
-  const [form, setForm] = useState({
-    titulo: "",
-    setor: "",
-    local: "",
-    tipo: "Ronda Preventiva",
-    status: "Aberto",
-    observacoes: "",
-    itens: [{ ...itemPadrao }],
-  });
+  const [form, setForm] = useState(formVazio);
 
   async function carregar() {
     const [checklistsResponse, locaisResponse] = await Promise.all([
@@ -92,6 +95,7 @@ export default function Checklists() {
   const resumo = useMemo(() => ({
     total: checklists.length,
     abertos: checklists.filter((checklist) => checklist.status !== "Concluido").length,
+    concluidos: checklists.filter((checklist) => checklist.status === "Concluido").length,
     criticos: checklists.filter((checklist) => checklist.pontuacao >= 40).length,
   }), [checklists]);
 
@@ -102,7 +106,7 @@ export default function Checklists() {
 
   const autoSaveChecklist = useAutoSaveDraft({
     modulo: "ChecklistInspecaoPreventiva",
-    chave: "novo",
+    chave: checklistEmEdicao ? `edicao-${checklistEmEdicao.id}` : "novo",
     dados: form,
     ativo: abrir,
     onRestore: (dados) => {
@@ -110,7 +114,7 @@ export default function Checklists() {
         titulo: dados.titulo || "",
         setor: dados.setor || "",
         local: dados.local || "",
-        tipo: dados.tipo || "Ronda Preventiva",
+        tipo: "Ronda Preventiva",
         status: dados.status || "Aberto",
         observacoes: dados.observacoes || "",
         itens: dados.itens?.length ? dados.itens : [{ ...itemPadrao }],
@@ -148,12 +152,60 @@ export default function Checklists() {
     }));
   }
 
+  function abrirNovoChecklist() {
+    setChecklistEmEdicao(null);
+    setForm(formVazio);
+    setAbrir(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function tratarChecklist(checklist: Checklist) {
+    setChecklistEmEdicao(checklist);
+    setForm({
+      titulo: checklist.titulo || "",
+      setor: checklist.setor || "",
+      local: checklist.local || "",
+      tipo: "Ronda Preventiva",
+      status: checklist.status || "Aberto",
+      observacoes: checklist.observacoes || "",
+      itens: checklist.itens?.length ? checklist.itens.map((item) => ({ ...item })) : [{ ...itemPadrao }],
+    });
+    setAbrir(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarFormulario() {
+    setAbrir(false);
+    setChecklistEmEdicao(null);
+    setForm(formVazio);
+  }
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
-    await api.post("/checklists", form);
+    if (checklistEmEdicao) {
+      await api.put(`/checklists/${checklistEmEdicao.id}`, form);
+    } else {
+      await api.post("/checklists", form);
+    }
     await autoSaveChecklist.descartar().catch(() => undefined);
-    setAbrir(false);
-    setForm({ titulo: "", setor: "", local: "", tipo: "Ronda Preventiva", status: "Aberto", observacoes: "", itens: [{ ...itemPadrao }] });
+    cancelarFormulario();
+    await carregar();
+  }
+
+  async function concluirChecklist(checklist: Checklist) {
+    if (checklist.status === "Concluido") return;
+    const confirmar = window.confirm(`Deseja finalizar o checklist ${checklist.codigo} como concluído?`);
+    if (!confirmar) return;
+
+    await api.put(`/checklists/${checklist.id}`, {
+      titulo: checklist.titulo,
+      setor: checklist.setor || "",
+      local: checklist.local,
+      tipo: "Ronda Preventiva",
+      status: "Concluido",
+      observacoes: checklist.observacoes || "",
+      itens: checklist.itens,
+    });
     await carregar();
   }
 
@@ -183,12 +235,13 @@ export default function Checklists() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Checklist Inspeção Preventiva</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-300">Rondas preventivas com verificação estruturada dos locais cadastrados.</p>
         </div>
-        <button onClick={() => setAbrir(true)} className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white sm:w-auto">Novo Checklist</button>
+        <button onClick={abrirNovoChecklist} className="w-full rounded-lg bg-blue-600 px-4 py-2 text-white sm:w-auto">Novo Checklist</button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="rounded-xl bg-white p-5 shadow dark:bg-slate-900"><p className="text-sm text-slate-500 dark:text-slate-300">Total</p><p className="text-3xl font-bold dark:text-white">{resumo.total}</p></div>
         <div className="rounded-xl bg-white p-5 shadow dark:bg-slate-900"><p className="text-sm text-slate-500 dark:text-slate-300">Abertos</p><p className="text-3xl font-bold text-blue-600">{resumo.abertos}</p></div>
+        <div className="rounded-xl bg-white p-5 shadow dark:bg-slate-900"><p className="text-sm text-slate-500 dark:text-slate-300">Concluídos</p><p className="text-3xl font-bold text-emerald-600">{resumo.concluidos}</p></div>
         <div className="rounded-xl bg-white p-5 shadow dark:bg-slate-900"><p className="text-sm text-slate-500 dark:text-slate-300">Críticos</p><p className="text-3xl font-bold text-red-600">{resumo.criticos}</p></div>
       </div>
 
@@ -220,6 +273,20 @@ export default function Checklists() {
       {abrir && (
         <form onSubmit={salvar} className="space-y-4 rounded-xl bg-white p-4 shadow dark:bg-slate-900 sm:p-6">
           <AutoSaveStatus status={autoSaveChecklist.status} ultima={autoSaveChecklist.ultima} />
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3 dark:border-blue-500/20 dark:bg-blue-500/10">
+            <div>
+              <p className="text-sm font-bold text-blue-900 dark:text-blue-100">
+                {checklistEmEdicao ? `Tratando checklist ${checklistEmEdicao.codigo}` : "Novo checklist de inspeção preventiva"}
+              </p>
+              <p className="text-xs text-blue-700 dark:text-blue-200">
+                Edite as informações, salve o andamento e finalize como concluído quando a tratativa estiver encerrada.
+              </p>
+            </div>
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-blue-700 shadow dark:bg-slate-950 dark:text-blue-200">
+              Status: {form.status}
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="space-y-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
               <span>Nome do responsável pela inspeção preventiva</span>
@@ -252,8 +319,17 @@ export default function Checklists() {
                 <option>Ronda Preventiva</option>
               </select>
             </label>
+            <label className="space-y-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+              <span>Status do checklist</span>
+              <select className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" value={form.status} onChange={(e) => campo("status", e.target.value)}>
+                <option value="Aberto">Aberto</option>
+                <option value="Concluido">Concluído</option>
+              </select>
+            </label>
           </div>
+
           <textarea className="w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" placeholder="Observações gerais da inspeção preventiva" value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} />
+
           <div className="space-y-3">
             {form.itens.map((item, index) => (
               <div key={index} className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700 md:grid-cols-[1.2fr_2fr_1fr_1fr]">
@@ -278,8 +354,17 @@ export default function Checklists() {
               </div>
             ))}
           </div>
+
           <button type="button" onClick={() => setForm((atual) => ({ ...atual, itens: [...atual.itens, { ...itemPadrao }] }))} className="rounded bg-slate-200 px-4 py-2 text-slate-900 dark:bg-slate-700 dark:text-white">Adicionar item</button>
-          <div className="flex flex-col gap-3 sm:flex-row"><button className="rounded bg-green-600 px-4 py-2 text-white">Salvar</button><button type="button" onClick={() => setAbrir(false)} className="rounded bg-slate-200 px-4 py-2 text-slate-900 dark:bg-slate-700 dark:text-white">Cancelar</button></div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button className="rounded bg-green-600 px-4 py-2 text-white">{checklistEmEdicao ? "Salvar tratativa" : "Salvar"}</button>
+            {checklistEmEdicao && form.status !== "Concluido" && (
+              <button type="button" onClick={() => campo("status", "Concluido")} className="rounded bg-blue-600 px-4 py-2 text-white">
+                Marcar como concluído
+              </button>
+            )}
+            <button type="button" onClick={cancelarFormulario} className="rounded bg-slate-200 px-4 py-2 text-slate-900 dark:bg-slate-700 dark:text-white">Cancelar</button>
+          </div>
         </form>
       )}
 
@@ -293,7 +378,23 @@ export default function Checklists() {
                 <p className="text-sm text-slate-500 dark:text-slate-300">{checklist.local} | {checklist.setor || "Sem setor"} | Pontuação: {checklist.pontuacao}</p>
               </div>
               <div className="listing-actions flex flex-wrap gap-2 md:w-auto md:flex-nowrap">
-                <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">{checklist.status}</span>
+                <span className={`rounded-full px-3 py-1 text-sm ${checklist.status === "Concluido" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>{checklist.status}</span>
+                <button
+                  type="button"
+                  onClick={() => tratarChecklist(checklist)}
+                  className="rounded-lg bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-700"
+                >
+                  Tratar
+                </button>
+                {checklist.status !== "Concluido" && (
+                  <button
+                    type="button"
+                    onClick={() => concluirChecklist(checklist)}
+                    className="rounded-lg bg-emerald-600 px-3 py-1 text-sm font-semibold text-white hover:bg-emerald-700"
+                  >
+                    Concluir
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => assinarEAbrirPdf(checklist)}
