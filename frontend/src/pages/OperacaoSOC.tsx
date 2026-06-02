@@ -19,6 +19,7 @@ import { SkeletonDashboard } from "../components/ui/Skeleton";
 import { AutoSaveStatus } from "../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
+import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type UsuarioEquipe = {
   id: number;
@@ -359,7 +360,7 @@ export default function OperacaoSOC() {
     if (!passagemSelecionada) return;
     const confirmar = window.confirm("Deseja realmente finalizar e enviar este relatório?");
     if (!confirmar) return;
-    const pinOperacional = window.prompt("Informe seu PIN operacional de 4 dígitos para assinar eletronicamente o Relatório CCOS:");
+    const pinOperacional = await solicitarPinOperacional("Informe seu PIN para assinar eletronicamente o Relatório CCOS.");
     if (!pinOperacional) return;
     setSalvando(true);
     try {

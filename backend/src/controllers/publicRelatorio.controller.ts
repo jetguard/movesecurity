@@ -5,6 +5,7 @@ import {
   criarUrlPublicaCcos,
   validarTokenAcessoCcos,
 } from "./operacao.controller";
+import { criarUrlPublicaChecklist, gerarPdfPublicoChecklist } from "./checklist.controller";
 import {
   criarUrlPublicaPdf,
   gerarRelatorioPdf,
@@ -241,8 +242,15 @@ async function linkPdfAssinatura(req: Request, assinatura: {
     return passagem ? criarUrlPublicaCcos(req, { id: passagem.id, codigo: passagem.codigo, unidade: passagem.unidade }) : "";
   }
 
+  if (assinatura.modulo === "ChecklistInspecao") {
+    const checklist = await prisma.checklistInspecao.findUnique({ where: { id: assinatura.registroId }, select: { id: true, codigo: true, unidade: true } });
+    return checklist ? criarUrlPublicaChecklist(req, { id: checklist.id, codigo: checklist.codigo, unidade: checklist.unidade }) : "";
+  }
+
   return "";
 }
+
+export { gerarPdfPublicoChecklist };
 
 export async function validarAssinaturaPublica(req: Request, res: Response) {
   try {

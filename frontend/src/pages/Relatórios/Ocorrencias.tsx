@@ -5,6 +5,7 @@ import { podeAnalisar } from "../../utils/permissoes";
 import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../../components/ui/PdfLightbox";
+import { solicitarPinOperacional } from "../../utils/pinPrompt";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -439,7 +440,7 @@ export default function Ocorrencias() {
   async function salvarAnaliseOcorrencia() {
     if (!analiseAtual) return;
     const pinOperacional = statusAnalise === "Concluído"
-      ? window.prompt("Informe seu PIN operacional de 4 dígitos para assinar eletronicamente a conclusão da análise:")
+      ? await solicitarPinOperacional("Informe seu PIN para assinar eletronicamente a conclusão da análise.")
       : "";
     if (statusAnalise === "Concluído" && !pinOperacional) return;
 

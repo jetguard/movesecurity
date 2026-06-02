@@ -3,6 +3,8 @@ import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAx
 import { api } from "../services/api";
 import { AutoSaveStatus } from "../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../hooks/useAutoSaveDraft";
+import { PdfLightbox } from "../components/ui/PdfLightbox";
+import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type Item = { categoria: string; descricao: string; conformidade: string; criticidade: string; observacao: string };
 type Checklist = {
@@ -63,6 +65,7 @@ export default function Checklists() {
   const [checklists, setChecklists] = useState<Checklist[]>([]);
   const [locais, setLocais] = useState<LocalTerminal[]>([]);
   const [abrir, setAbrir] = useState(false);
+  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [form, setForm] = useState({
     titulo: "",
     setor: "",
@@ -152,6 +155,25 @@ export default function Checklists() {
     setAbrir(false);
     setForm({ titulo: "", setor: "", local: "", tipo: "Ronda Preventiva", status: "Aberto", observacoes: "", itens: [{ ...itemPadrao }] });
     await carregar();
+  }
+
+  async function assinarEAbrirPdf(checklist: Checklist) {
+    const pinOperacional = await solicitarPinOperacional("Informe seu PIN para assinar o checklist e gerar o PDF.");
+    if (!pinOperacional) return;
+
+    await api.post(`/checklists/${checklist.id}/assinar`, { pinOperacional });
+    const response = await api.get(`/checklists/${checklist.id}/pdf`, { responseType: "blob" });
+    const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+    setPdfLightbox({
+      url,
+      titulo: `Checklist Inspeção Preventiva ${checklist.codigo}`,
+      nomeArquivo: `checklist-inspecao-${checklist.codigo}.pdf`.replace(/\//g, "-"),
+    });
+  }
+
+  function fecharPdfLightbox() {
+    if (pdfLightbox?.url) URL.revokeObjectURL(pdfLightbox.url);
+    setPdfLightbox(null);
   }
 
   return (
@@ -270,7 +292,16 @@ export default function Checklists() {
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">{checklist.titulo}</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-300">{checklist.local} | {checklist.setor || "Sem setor"} | Pontuação: {checklist.pontuacao}</p>
               </div>
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">{checklist.status}</span>
+              <div className="listing-actions flex flex-wrap gap-2 md:w-auto md:flex-nowrap">
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">{checklist.status}</span>
+                <button
+                  type="button"
+                  onClick={() => assinarEAbrirPdf(checklist)}
+                  className="rounded-lg bg-red-600 px-3 py-1 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Assinar e PDF
+                </button>
+              </div>
             </div>
             <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
               {checklist.itens.map((item, index) => (
@@ -283,6 +314,15 @@ export default function Checklists() {
           </div>
         ))}
       </div>
+
+      {pdfLightbox && (
+        <PdfLightbox
+          url={pdfLightbox.url}
+          titulo={pdfLightbox.titulo}
+          nomeArquivo={pdfLightbox.nomeArquivo}
+          onClose={fecharPdfLightbox}
+        />
+      )}
     </div>
   );
 }

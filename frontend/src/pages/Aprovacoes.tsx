@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 import { api } from "../services/api";
+import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type ItemWorkflow = {
   id: number;
@@ -63,7 +64,7 @@ export default function Aprovacoes() {
     };
 
     if (["enviar", "aprovar"].includes(acaoWorkflow)) {
-      const pinOperacional = window.prompt("Informe seu PIN operacional de 4 dígitos para assinar eletronicamente este documento:");
+      const pinOperacional = await solicitarPinOperacional("Informe seu PIN para assinar eletronicamente este documento.");
       if (!pinOperacional) return;
       payload.pinOperacional = pinOperacional;
     }
