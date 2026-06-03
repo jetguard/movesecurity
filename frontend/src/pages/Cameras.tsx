@@ -318,12 +318,13 @@ export default function Cameras() {
   }, [timelineChecklists]);
   const periodoTimeline = useMemo(() => {
     if (!checklistReferenciaTimeline?.dataInicialGravacao || !timelineAgora) return null;
-    const inicio = new Date(checklistReferenciaTimeline.dataInicialGravacao).getTime();
+    const dataInicialOperacional = dataAntigaOperacional(checklistReferenciaTimeline.dataInicialGravacao, cameraTimeline?.status);
+    const inicio = new Date(dataInicialOperacional || checklistReferenciaTimeline.dataInicialGravacao).getTime();
     const fim = timelineAgora;
     if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio) return null;
 
     return { inicio, fim, totalMinutos: Math.round((fim - inicio) / 60000) };
-  }, [checklistReferenciaTimeline, timelineAgora]);
+  }, [cameraTimeline?.status, checklistReferenciaTimeline, timelineAgora]);
   const segmentosIndisponibilidade = useMemo<SegmentoIndisponibilidade[]>(() => {
     if (!periodoTimeline) return [];
     const total = Math.max(periodoTimeline.fim - periodoTimeline.inicio, 1);
@@ -1064,7 +1065,7 @@ export default function Cameras() {
                   <div>
                     <h3 className="font-bold text-slate-100">Linha temporal da gravacao atual</h3>
                     <p className="text-sm text-slate-400">
-                      Mostra a data mais antiga registrada no ultimo checklist ate a data atual. Trechos vermelhos indicam falhas dentro deste intervalo.
+                      Mostra a data mais antiga operacional ajustada pela retenção até a data atual. Trechos vermelhos indicam falhas dentro deste intervalo.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
@@ -1091,18 +1092,20 @@ export default function Cameras() {
                       <span>{formatarDataHora(periodoTimeline.fim)}</span>
                     </div>
 
-                    <div className="relative h-24 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-8">
-                      <div className="absolute left-4 right-4 top-1/2 h-2 -translate-y-1/2 rounded-full bg-emerald-500 shadow-[0_0_18px_rgba(34,197,94,.35)]" />
-                      {segmentosIndisponibilidade.map((segmento) => (
-                        <div
-                          key={segmento.id}
-                          title={`${segmento.motivo || "Falha de conexao"} | ${segmento.label}`}
-                          className="absolute top-1/2 h-3 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_18px_rgba(239,68,68,.55)]"
-                          style={{ left: `calc(1rem + ${segmento.left}%)`, width: `${Math.max(segmento.width, 1)}%`, maxWidth: "calc(100% - 2rem)" }}
-                        />
-                      ))}
-                      <div className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-emerald-400" />
-                      <div className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-blue-400" />
+                    <div className="relative h-20 overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 px-5 py-7">
+                      <div className="absolute left-5 right-5 top-1/2 h-px -translate-y-1/2 rounded-full bg-slate-700" />
+                      <div className="absolute left-5 right-5 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-emerald-500 shadow-[0_0_14px_rgba(34,197,94,.28)]">
+                        {segmentosIndisponibilidade.map((segmento) => (
+                          <span
+                            key={segmento.id}
+                            title={`${segmento.motivo || "Falha de conexão"} | ${segmento.label}`}
+                            className="absolute top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_14px_rgba(239,68,68,.45)]"
+                            style={{ left: `${segmento.left}%`, width: `${Math.min(Math.max(segmento.width, 0.8), 100 - segmento.left)}%` }}
+                          />
+                        ))}
+                      </div>
+                      <div className="absolute left-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-emerald-400" />
+                      <div className="absolute right-5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-blue-400" />
                     </div>
 
                     {segmentosIndisponibilidade.length > 0 && (
