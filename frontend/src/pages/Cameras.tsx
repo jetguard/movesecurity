@@ -1,5 +1,16 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Camera, FileText, Radio, ShieldCheck, Wifi, WifiOff } from "lucide-react";
+import { Activity, AlertTriangle, Camera, FileText, Radio, ShieldCheck, Wifi, WifiOff, X } from "lucide-react";
+import {
+  Brush,
+  CartesianGrid,
+  Line,
+  LineChart as RechartsLineChart,
+  ReferenceArea,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
@@ -32,9 +43,24 @@ type CameraItem = {
     tempoGravacaoDisponivel: number;
     dataInicialGravacao?: string | null;
     dataMaisRecenteGravacao?: string | null;
+    retencaoEstimadaMinutos?: number | null;
     retencaoEstimadaTexto?: string | null;
+    statusAtual?: string;
     createdAt: string;
   }>;
+};
+
+type CameraChecklistHistorico = {
+  id: number;
+  tempoGravacaoDisponivel: number;
+  dataInicialGravacao?: string | null;
+  dataMaisRecenteGravacao?: string | null;
+  retencaoEstimadaMinutos?: number | null;
+  retencaoEstimadaTexto?: string | null;
+  statusAtual?: string;
+  observacoesOperacionais?: string | null;
+  createdAt: string;
+  responsavel?: { nome: string; apelido?: string | null } | null;
 };
 
 type DashboardCameras = {
@@ -113,6 +139,22 @@ const indisponibilidadeInicial = {
   observacao: "",
 };
 
+type TimelinePonto = {
+  timestamp: number;
+  data: string;
+  retencaoDias: number;
+  status: string;
+  dataMaisAntiga?: string | null;
+  dataMaisRecente?: string | null;
+  responsavel?: string;
+  observacao?: string | null;
+};
+
+type TimelineTooltipProps = {
+  active?: boolean;
+  payload?: Array<{ payload?: TimelinePonto }>;
+};
+
 const RETENCAO_MAXIMA_MS = 181 * 24 * 60 * 60 * 1000;
 
 const motivosIndisponibilidade = [
@@ -175,6 +217,25 @@ function formatarRetencao(minutosTotais: number) {
   return `${dias} dias, ${String(horas).padStart(2, "0")} horas e ${String(minutosRestantes).padStart(2, "0")} minutos`;
 }
 
+function formatarDataHora(valor?: string | number | null) {
+  if (!valor) return "Nao informado";
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return "Nao informado";
+  return data.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatarEixoTemporal(valor: number) {
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return "";
+  return data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
 function calcularRetencaoChecklist(_camera: CameraItem | null, dados: typeof checklistInicial) {
   if (!dados.dataInicialGravacao) {
     return "informe a data e hora mais antiga encontrada no Digifort";
@@ -232,11 +293,16 @@ export default function Cameras() {
   const [cameraEditando, setCameraEditando] = useState<CameraItem | null>(null);
   const [cameraChecklist, setCameraChecklist] = useState<CameraItem | null>(null);
   const [cameraHistorico, setCameraHistorico] = useState<CameraItem | null>(null);
+  const [cameraTimeline, setCameraTimeline] = useState<CameraItem | null>(null);
   const [buscaCamera, setBuscaCamera] = useState("");
   const [statusFiltroCamera, setStatusFiltroCamera] = useState("");
   const [camerasSelecionadas, setCamerasSelecionadas] = useState<number[]>([]);
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [indisponibilidades, setIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
+  const [timelineChecklists, setTimelineChecklists] = useState<CameraChecklistHistorico[]>([]);
+  const [timelineIndisponibilidades, setTimelineIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
+  const [timelineAgora, setTimelineAgora] = useState(0);
+  const [carregandoTimeline, setCarregandoTimeline] = useState(false);
   const [formIndisponibilidade, setFormIndisponibilidade] = useState(indisponibilidadeInicial);
   const [indisponibilidadeEditando, setIndisponibilidadeEditando] = useState<IndisponibilidadeCamera | null>(null);
   const [formIndisponibilidadeAberto, setFormIndisponibilidadeAberto] = useState(false);
@@ -268,6 +334,50 @@ export default function Cameras() {
     });
   }, [buscaCamera, cameras, statusFiltroCamera]);
   const todasFiltradasSelecionadas = camerasFiltradas.length > 0 && camerasFiltradas.every((camera) => camerasSelecionadas.includes(camera.id));
+  const pontosTimeline = useMemo<TimelinePonto[]>(() => {
+    return [...timelineChecklists]
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+      .map((item) => {
+        const timestamp = new Date(item.createdAt).getTime();
+        const minutosRetencao = item.retencaoEstimadaMinutos ?? item.tempoGravacaoDisponivel * 1440;
+        return {
+          timestamp,
+          data: formatarDataHora(timestamp),
+          retencaoDias: Number((Math.max(0, minutosRetencao) / 1440).toFixed(2)),
+          status: item.statusAtual || "Nao informado",
+          dataMaisAntiga: item.dataInicialGravacao,
+          dataMaisRecente: item.dataMaisRecenteGravacao,
+          responsavel: item.responsavel?.apelido || item.responsavel?.nome,
+          observacao: item.observacoesOperacionais,
+        };
+      })
+      .filter((item) => Number.isFinite(item.timestamp) && Number.isFinite(item.retencaoDias));
+  }, [timelineChecklists]);
+  const faixasIndisponibilidade = useMemo(() => {
+    return timelineIndisponibilidades
+      .map((evento) => {
+        const inicio = new Date(evento.iniciadoEm).getTime();
+        const fim = evento.encerradoEm ? new Date(evento.encerradoEm).getTime() : timelineAgora;
+        return {
+          ...evento,
+          inicio,
+          fim,
+        };
+      })
+      .filter((evento) => Number.isFinite(evento.inicio) && Number.isFinite(evento.fim) && evento.fim >= evento.inicio);
+  }, [timelineAgora, timelineIndisponibilidades]);
+  const resumoTimeline = useMemo(() => {
+    const retencoes = pontosTimeline.map((ponto) => ponto.retencaoDias);
+    const atual = retencoes.length ? retencoes[retencoes.length - 1] : null;
+    const menor = retencoes.length ? Math.min(...retencoes) : null;
+    const totalIndisponivel = timelineIndisponibilidades.reduce((total, item) => total + (item.duracaoIndisponivel || 0), 0);
+    return {
+      atual,
+      menor,
+      falhas: timelineIndisponibilidades.length,
+      indisponibilidade: totalIndisponivel,
+    };
+  }, [pontosTimeline, timelineIndisponibilidades]);
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({ ...atual, [nome]: valor }));
@@ -395,6 +505,24 @@ export default function Cameras() {
     setFormIndisponibilidadeAberto(false);
     const response = await api.get(`/cameras/${camera.id}/indisponibilidades`);
     setIndisponibilidades(response.data);
+  }
+
+  async function abrirTimelineRetencao(camera: CameraItem) {
+    setCameraTimeline(camera);
+    setTimelineChecklists([]);
+    setTimelineIndisponibilidades([]);
+    setTimelineAgora(new Date().getTime());
+    setCarregandoTimeline(true);
+    try {
+      const [checklistsResponse, indisponibilidadesResponse] = await Promise.all([
+        api.get(`/cameras/${camera.id}/checklists`),
+        api.get(`/cameras/${camera.id}/indisponibilidades`),
+      ]);
+      setTimelineChecklists(checklistsResponse.data);
+      setTimelineIndisponibilidades(indisponibilidadesResponse.data);
+    } finally {
+      setCarregandoTimeline(false);
+    }
   }
 
   function editarIndisponibilidade(registro: IndisponibilidadeCamera) {
@@ -836,7 +964,19 @@ export default function Cameras() {
                   <td className="p-3">{camera.tipoCamera}</td>
                   <td className="p-3">{camera.tecnologia}</td>
                   <td className="p-3">{camera.areaMonitorada}</td>
-                  <td className="p-3 font-bold">{camera.checklists?.[0]?.tempoGravacaoDisponivel ?? "Sem checklist"}</td>
+                  <td className="p-3 font-bold">
+                    <div className="flex items-center gap-2">
+                      <span>{camera.checklists?.[0]?.tempoGravacaoDisponivel ?? "Sem checklist"}</span>
+                      <button
+                        type="button"
+                        onClick={() => abrirTimelineRetencao(camera)}
+                        title="Abrir linha do tempo de retencao e falhas"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100"
+                      >
+                        <Activity size={15} />
+                      </button>
+                    </div>
+                  </td>
                   <td className="p-3">{camera.totalFalhas}</td>
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
@@ -860,6 +1000,168 @@ export default function Cameras() {
           </table>
         </div>
       </section>
+
+      {cameraTimeline && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-7xl overflow-auto rounded-3xl border border-slate-800 bg-slate-950 text-white shadow-2xl shadow-slate-950/60">
+            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.22),transparent_36%),linear-gradient(135deg,#020617,#0f172a)] p-6">
+              <div>
+                <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.22em] text-cyan-300">
+                  <Activity size={16} /> Linha do tempo de retencao
+                </p>
+                <h2 className="mt-3 text-2xl font-black">
+                  Camera {cameraTimeline.numeroCamera}{cameraTimeline.nomeCamera ? ` - ${cameraTimeline.nomeCamera}` : ""}
+                </h2>
+                <p className="mt-1 text-sm text-slate-400">
+                  {cameraTimeline.areaMonitorada} | {cameraTimeline.localInstalado} | Servidor {cameraTimeline.numeroServidor}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCameraTimeline(null)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-700 bg-slate-900 text-slate-200 transition hover:border-cyan-400 hover:text-cyan-200"
+                aria-label="Fechar grafico temporal"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-5 p-5 sm:p-6">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
+                  <p className="text-xs text-cyan-200">Retencao atual</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.atual === null ? "Sem dados" : `${resumoTimeline.atual.toLocaleString("pt-BR")} dias`}</p>
+                </div>
+                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
+                  <p className="text-xs text-amber-200">Menor retencao</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.menor === null ? "Sem dados" : `${resumoTimeline.menor.toLocaleString("pt-BR")} dias`}</p>
+                </div>
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
+                  <p className="text-xs text-red-200">Falhas registradas</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.falhas}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4">
+                  <p className="text-xs text-slate-400">Indisponibilidade acumulada</p>
+                  <p className="mt-2 text-2xl font-black text-white">{minutos(resumoTimeline.indisponibilidade)}</p>
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="font-bold text-slate-100">Retencao real por checklist</h3>
+                    <p className="text-sm text-slate-400">
+                      Use a barra inferior para aproximar por mes, dia, hora ou minuto. As faixas vermelhas indicam periodos de indisponibilidade.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full bg-cyan-500/15 px-3 py-1 font-bold text-cyan-200">Linha azul: retencao</span>
+                    <span className="rounded-full bg-red-500/15 px-3 py-1 font-bold text-red-200">Faixa vermelha: falha</span>
+                  </div>
+                </div>
+
+                {carregandoTimeline ? (
+                  <div className="flex h-96 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-slate-400">
+                    Carregando linha do tempo...
+                  </div>
+                ) : pontosTimeline.length === 0 ? (
+                  <div className="flex h-96 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-center text-slate-400">
+                    <Activity size={34} className="mb-3 text-slate-600" />
+                    <p className="font-bold text-slate-200">Sem checklists para gerar grafico</p>
+                    <p className="mt-1 max-w-md text-sm">Registre ao menos um checklist CFTV nesta camera para acompanhar a evolucao da retencao.</p>
+                  </div>
+                ) : (
+                  <div className="h-[430px] rounded-2xl border border-slate-800 bg-slate-950 p-3">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <RechartsLineChart data={pontosTimeline} margin={{ top: 14, right: 24, left: 0, bottom: 24 }}>
+                        <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
+                        <XAxis
+                          dataKey="timestamp"
+                          type="number"
+                          domain={["dataMin", "dataMax"]}
+                          tickFormatter={formatarEixoTemporal}
+                          stroke="#94a3b8"
+                          tick={{ fontSize: 11 }}
+                        />
+                        <YAxis
+                          stroke="#94a3b8"
+                          tick={{ fontSize: 11 }}
+                          tickFormatter={(valor) => `${valor}d`}
+                          width={54}
+                          allowDecimals
+                        />
+                        <Tooltip content={<TooltipTimelineRetencao />} />
+                        {faixasIndisponibilidade.map((evento) => (
+                          <ReferenceArea
+                            key={evento.id}
+                            x1={evento.inicio}
+                            x2={evento.fim}
+                            strokeOpacity={0}
+                            fill="#ef4444"
+                            fillOpacity={0.16}
+                          />
+                        ))}
+                        <Line
+                          type="monotone"
+                          dataKey="retencaoDias"
+                          name="Retencao"
+                          stroke="#38bdf8"
+                          strokeWidth={3}
+                          dot={{ r: 4, fill: "#0f172a", stroke: "#38bdf8", strokeWidth: 2 }}
+                          activeDot={{ r: 7, fill: "#38bdf8", stroke: "#e0f2fe", strokeWidth: 2 }}
+                        />
+                        <Brush
+                          dataKey="timestamp"
+                          height={34}
+                          stroke="#38bdf8"
+                          fill="#0f172a"
+                          travellerWidth={12}
+                          tickFormatter={formatarEixoTemporal}
+                        />
+                      </RechartsLineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <h3 className="font-bold text-slate-100">Ultimos checklists</h3>
+                  <div className="mt-3 max-h-56 space-y-2 overflow-auto pr-2">
+                    {timelineChecklists.slice(0, 8).map((item) => (
+                      <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <strong>{formatarDataHora(item.createdAt)}</strong>
+                          <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.statusAtual === "Conectada" ? "bg-emerald-500/15 text-emerald-200" : "bg-red-500/15 text-red-200"}`}>
+                            {item.statusAtual || "Nao informado"}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-slate-400">Retencao: {item.retencaoEstimadaTexto || `${item.tempoGravacaoDisponivel} dias`}</p>
+                      </div>
+                    ))}
+                    {timelineChecklists.length === 0 && <p className="text-sm text-slate-500">Nenhum checklist registrado.</p>}
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                  <h3 className="font-bold text-slate-100">Periodos de indisponibilidade</h3>
+                  <div className="mt-3 max-h-56 space-y-2 overflow-auto pr-2">
+                    {timelineIndisponibilidades.slice(0, 8).map((item) => (
+                      <div key={item.id} className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <strong>{item.motivo || "Indisponibilidade"}</strong>
+                          <span className="rounded-full bg-red-500/15 px-2 py-1 text-xs font-bold text-red-200">{item.tempoIndisponibilidade}</span>
+                        </div>
+                        <p className="mt-1 text-slate-400">{formatarDataHora(item.iniciadoEm)} ate {formatarDataHora(item.encerradoEm)}</p>
+                      </div>
+                    ))}
+                    {timelineIndisponibilidades.length === 0 && <p className="text-sm text-slate-500">Nenhum periodo de indisponibilidade registrado.</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {cameraHistorico && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -998,6 +1300,26 @@ export default function Cameras() {
           onClose={fecharPdfLightbox}
         />
       )}
+    </div>
+  );
+}
+
+function TooltipTimelineRetencao({ active, payload }: TimelineTooltipProps) {
+  const ponto = payload?.[0]?.payload;
+  if (!active || !ponto) return null;
+
+  return (
+    <div className="min-w-64 rounded-2xl border border-slate-700 bg-slate-950/95 p-4 text-sm text-slate-100 shadow-2xl shadow-slate-950/40">
+      <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Checklist CFTV</p>
+      <p className="mt-1 text-base font-black">{ponto.retencaoDias.toLocaleString("pt-BR")} dias de retencao</p>
+      <div className="mt-3 space-y-1 text-xs text-slate-300">
+        <p><span className="text-slate-500">Inspecao:</span> {ponto.data}</p>
+        <p><span className="text-slate-500">Status:</span> {ponto.status}</p>
+        <p><span className="text-slate-500">Mais antiga:</span> {formatarDataHora(ponto.dataMaisAntiga)}</p>
+        <p><span className="text-slate-500">Mais recente:</span> {formatarDataHora(ponto.dataMaisRecente)}</p>
+        {ponto.responsavel && <p><span className="text-slate-500">Responsavel:</span> {ponto.responsavel}</p>}
+        {ponto.observacao && <p className="pt-1 text-slate-400">{ponto.observacao}</p>}
+      </div>
     </div>
   );
 }
