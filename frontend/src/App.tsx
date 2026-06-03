@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Navigate, Routes, Route } from "react-router-dom";
 
 import AdminLayout from "./layouts/AdminLayout";
 import ProtectedRoute from "./routes/ProtectedRoute";
@@ -29,7 +29,6 @@ const AlertasOperacionais = lazyWithReload(() => import("./pages/AlertasOperacio
 const BuscaGlobal = lazyWithReload(() => import("./pages/BuscaGlobal"));
 const Timeline = lazyWithReload(() => import("./pages/Timeline"));
 const InteligenciaOperacional = lazyWithReload(() => import("./pages/InteligenciaOperacional"));
-const Aprovacoes = lazyWithReload(() => import("./pages/Aprovacoes"));
 const PlanosAcao = lazyWithReload(() => import("./pages/PlanosAcao"));
 const MatrizRisco = lazyWithReload(() => import("./pages/MatrizRisco"));
 const Checklists = lazyWithReload(() => import("./pages/Checklists"));
@@ -120,7 +119,7 @@ export default function App() {
               path="aprovacoes"
               element={
                 <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
-                  <Aprovacoes />
+                  <Navigate to="/documentos" replace />
                 </ProtectedRoute>
               }
             />

@@ -4,6 +4,15 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.6] - 2026-06-03
+
+### Melhorado
+
+- Central de Documentos passa a concentrar tambem as tratativas de revisao, aprovacao, devolucao e reabertura de documentos.
+- Documentos de Ocorrencia, Evento e Investigacao exibem status de tratativa, motivos de devolucao e acoes operacionais diretamente na previa documental.
+- A antiga pagina separada de Aprovacoes foi removida do menu e redirecionada para a Central de Documentos.
+- Pendencias de aprovacao no painel de gestao agora apontam para a Central de Documentos.
+
 ## [1.1.5] - 2026-06-03
 
 ### Corrigido

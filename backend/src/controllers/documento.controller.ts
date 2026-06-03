@@ -12,6 +12,8 @@ type DocumentoCentral = {
   titulo: string;
   unidade: string;
   status: string;
+  fluxoStatus?: string | null;
+  motivoDevolucao?: string | null;
   emitidoEm: Date;
   assinaturaStatus: "Assinado" | "Pendente";
   assinaturaToken?: string | null;
@@ -118,17 +120,17 @@ export async function listarDocumentos(req: AuthRequest, res: Response) {
     ] = await Promise.all([
       consultaSegura("Ocorrencia", prisma.ocorrencia.findMany({
         where: { unidade: filtroUnidade },
-        select: { id: true, codigo: true, assunto: true, status: true, createdAt: true, unidade: true },
+        select: { id: true, codigo: true, assunto: true, status: true, fluxoStatus: true, motivoDevolucao: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
       })),
       consultaSegura("Evento", prisma.evento.findMany({
         where: { unidade: filtroUnidade },
-        select: { id: true, codigo: true, assunto: true, status: true, createdAt: true, unidade: true },
+        select: { id: true, codigo: true, assunto: true, status: true, fluxoStatus: true, motivoDevolucao: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
       })),
       consultaSegura("Investigacao", prisma.investigacao.findMany({
         where: { unidade: filtroUnidade },
-        select: { id: true, codigo: true, titulo: true, status: true, createdAt: true, unidade: true, ocorrenciaId: true },
+        select: { id: true, codigo: true, titulo: true, status: true, fluxoStatus: true, motivoDevolucao: true, createdAt: true, unidade: true, ocorrenciaId: true },
         orderBy: { createdAt: "desc" },
       })),
       consultaSegura("PassagemTurno", prisma.passagemTurno.findMany({
@@ -171,6 +173,8 @@ export async function listarDocumentos(req: AuthRequest, res: Response) {
           titulo: item.assunto,
           unidade: item.unidade,
           status: item.status,
+          fluxoStatus: item.fluxoStatus,
+          motivoDevolucao: item.motivoDevolucao,
           emitidoEm: item.createdAt,
           pdfUrl: `/api/ocorrencias/${item.id}/pdf`,
         }, mapaAssinaturas.get(chaveAssinatura("Ocorrencia", item.id)))
@@ -185,6 +189,8 @@ export async function listarDocumentos(req: AuthRequest, res: Response) {
           titulo: item.assunto,
           unidade: item.unidade,
           status: item.status,
+          fluxoStatus: item.fluxoStatus,
+          motivoDevolucao: item.motivoDevolucao,
           emitidoEm: item.createdAt,
           pdfUrl: `/api/eventos/${item.id}/pdf`,
         }, mapaAssinaturas.get(chaveAssinatura("Evento", item.id)))
@@ -199,6 +205,8 @@ export async function listarDocumentos(req: AuthRequest, res: Response) {
           titulo: item.titulo,
           unidade: item.unidade,
           status: item.status,
+          fluxoStatus: item.fluxoStatus,
+          motivoDevolucao: item.motivoDevolucao,
           emitidoEm: item.createdAt,
           pdfUrl: `/api/ocorrencias/${item.ocorrenciaId}/pdf`,
         }, mapaAssinaturas.get(chaveAssinatura("Investigacao", item.id)))

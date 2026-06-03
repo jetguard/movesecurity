@@ -517,7 +517,7 @@ export async function centralTarefas(req: AuthRequest, res: Response) {
         status: item.fluxoStatus,
         prazo: null,
         prioridade: "Revisao",
-        link: "/aprovacoes",
+        link: "/documentos",
       })),
       ...eventos.map((item) => ({
         id: `workflow-evento-${item.id}`,
@@ -528,7 +528,7 @@ export async function centralTarefas(req: AuthRequest, res: Response) {
         status: item.fluxoStatus,
         prazo: null,
         prioridade: "Revisao",
-        link: "/aprovacoes",
+        link: "/documentos",
       })),
       ...investigacoes.map((item) => ({
         id: `workflow-investigacao-${item.id}`,
@@ -539,7 +539,7 @@ export async function centralTarefas(req: AuthRequest, res: Response) {
         status: item.fluxoStatus,
         prazo: null,
         prioridade: "Revisao",
-        link: "/aprovacoes",
+        link: "/documentos",
       })),
     ].sort((a, b) => (diasAte(a.prazo) ?? 9999) - (diasAte(b.prazo) ?? 9999));
 

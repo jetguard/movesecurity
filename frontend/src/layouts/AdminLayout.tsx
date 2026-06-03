@@ -445,10 +445,6 @@ export default function AdminLayout() {
                     <ClipboardCheck size={16} />
                     Checklist Inspeção Preventiva
                   </Link>
-                  <Link to="/aprovacoes" className={subItem}>
-                    <CheckCircle2 size={16} />
-                    Aprovações
-                  </Link>
                 </div>
               )}
             </>
