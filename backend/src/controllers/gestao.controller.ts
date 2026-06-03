@@ -506,7 +506,7 @@ export async function centralTarefas(req: AuthRequest, res: Response) {
         status: item.status,
         prazo: null,
         prioridade: "Acordo/Decisao",
-        link: "/anulacoes",
+        link: "/documentos",
       })),
       ...ocorrencias.map((item) => ({
         id: `workflow-ocorrencia-${item.id}`,

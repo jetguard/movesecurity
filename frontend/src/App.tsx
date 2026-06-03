@@ -38,7 +38,6 @@ const Historico = lazyWithReload(() => import("./pages/Historico"));
 const Cameras = lazyWithReload(() => import("./pages/Cameras"));
 const Configuracoes = lazyWithReload(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
-const Anulacoes = lazyWithReload(() => import("./pages/Anulacoes"));
 const GestaoPatrimonialAvancada = lazyWithReload(() => import("./pages/GestaoPatrimonialAvancada"));
 const Governanca = lazyWithReload(() => import("./pages/Governanca"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
@@ -92,7 +91,7 @@ export default function App() {
             <Route path="mencoes" element={<Mencoes />} />
             <Route path="tarefas" element={<Tarefas />} />
             <Route path="minha-jornada" element={<MinhaJornada />} />
-            <Route path="anulacoes" element={<Anulacoes />} />
+            <Route path="anulacoes" element={<Navigate to="/documentos" replace />} />
             <Route path="cameras" element={<Cameras />} />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
             <Route path="mapa-operacional" element={<MapaOperacional />} />

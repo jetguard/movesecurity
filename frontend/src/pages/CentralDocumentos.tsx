@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
+  Clock,
   Download,
   ExternalLink,
   FileSearch,
@@ -19,7 +21,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { api } from "../services/api";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
-import { podeAnalisar, podeSuperAdmin, unidadesPermitidasUsuario } from "../utils/permissoes";
+import { podeAdministrar, podeAnalisar, podeSuperAdmin, unidadesPermitidasUsuario, usuarioAtual } from "../utils/permissoes";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type DocumentoCentral = {
@@ -47,6 +49,31 @@ type Resumo = {
   assinados: number;
   pendentes: number;
   comPdf: number;
+};
+
+type AcordoAnulacao = {
+  id: number;
+  status: string;
+  observacao?: string | null;
+  decididoEm?: string | null;
+  analistaId: number;
+  analista: { nome: string; apelido?: string; email: string };
+};
+
+type SolicitacaoAnulacao = {
+  id: number;
+  modulo: string;
+  registroId: number;
+  codigoRegistro: string;
+  tituloRegistro: string;
+  unidade: string;
+  motivo: string;
+  status: string;
+  decisaoMotivo?: string | null;
+  createdAt: string;
+  solicitante: { nome: string; apelido?: string; email: string };
+  decididoPor?: { nome: string; apelido?: string } | null;
+  acordos: AcordoAnulacao[];
 };
 
 const modulos = [
@@ -110,6 +137,7 @@ function formatarData(valor?: string | null) {
 
 export default function CentralDocumentos() {
   const [documentos, setDocumentos] = useState<DocumentoCentral[]>([]);
+  const [anulacoes, setAnulacoes] = useState<SolicitacaoAnulacao[]>([]);
   const [selecionado, setSelecionado] = useState<DocumentoCentral | null>(null);
   const [resumo, setResumo] = useState<Resumo>({ total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
   const [carregando, setCarregando] = useState(true);
@@ -122,8 +150,12 @@ export default function CentralDocumentos() {
   const [fim, setFim] = useState("");
   const [motivoDevolucao, setMotivoDevolucao] = useState("Ajustes solicitados pela revisão documental.");
   const [motivoReabertura, setMotivoReabertura] = useState("Reabertura para ajuste controlado.");
+  const [observacaoAcordo, setObservacaoAcordo] = useState("");
+  const [justificativaAnulacao, setJustificativaAnulacao] = useState("");
   const [processandoTratativa, setProcessandoTratativa] = useState(false);
+  const [processandoAnulacao, setProcessandoAnulacao] = useState(false);
   const unidades = useMemo(() => unidadesPermitidasUsuario(), []);
+  const usuario = usuarioAtual();
 
   const params = useMemo(() => ({
     busca,
@@ -137,10 +169,15 @@ export default function CentralDocumentos() {
   async function carregarDocumentos() {
     setCarregando(true);
     try {
-      const response = await api.get("/documentos", { params });
-      const lista = response.data.documentos || [];
+      const [documentosResponse, anulacoesResponse] = await Promise.allSettled([
+        api.get("/documentos", { params }),
+        api.get("/anulacoes"),
+      ]);
+      const dadosDocumentos = documentosResponse.status === "fulfilled" ? documentosResponse.value.data : {};
+      const lista = dadosDocumentos.documentos || [];
       setDocumentos(lista);
-      setResumo(response.data.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
+      setResumo(dadosDocumentos.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
+      setAnulacoes(anulacoesResponse.status === "fulfilled" ? anulacoesResponse.value.data || [] : []);
       setSelecionado((atual) => lista.find((documento: DocumentoCentral) => documento.id === atual?.id) || lista[0] || null);
     } finally {
       setCarregando(false);
@@ -179,6 +216,29 @@ export default function CentralDocumentos() {
     aprovados: documentos.filter((item) => item.fluxoStatus === "Aprovado").length,
   }), [documentos]);
 
+  const resumoAnulacoes = useMemo(() => ({
+    pendentes: anulacoes.filter((item) => item.status === "Pendente").length,
+    anuladas: anulacoes.filter((item) => item.status === "Anulado").length,
+    recusadas: anulacoes.filter((item) => item.status === "Recusado").length,
+  }), [anulacoes]);
+
+  const anulacaoSelecionada = useMemo(() => {
+    if (!selecionado) return null;
+    return anulacoes.find((item) => item.modulo === selecionado.modulo && item.registroId === selecionado.registroId) || null;
+  }, [anulacoes, selecionado]);
+
+  const meuAcordoAnulacao = useMemo(() => {
+    if (!anulacaoSelecionada || !usuario?.id) return null;
+    return anulacaoSelecionada.acordos.find((acordo) => acordo.analistaId === usuario.id) || null;
+  }, [anulacaoSelecionada, usuario?.id]);
+
+  const todosAcordosAprovados = anulacaoSelecionada
+    ? anulacaoSelecionada.acordos.length === 0 || anulacaoSelecionada.acordos.every((acordo) => acordo.status === "Aprovado")
+    : false;
+
+  const podeResponderAnulacao = anulacaoSelecionada?.status === "Pendente" && meuAcordoAnulacao?.status === "Pendente";
+  const podeDecidirAnulacao = Boolean(anulacaoSelecionada && podeAdministrar() && anulacaoSelecionada.status === "Pendente");
+
   async function executarTratativa(documento: DocumentoCentral, acao: string) {
     const moduloTratativa = moduloWorkflow(documento);
     if (!moduloTratativa) return;
@@ -201,6 +261,32 @@ export default function CentralDocumentos() {
       alert("Tratativa registrada com sucesso.");
     } finally {
       setProcessandoTratativa(false);
+    }
+  }
+
+  async function registrarAcordoAnulacao(status: string) {
+    if (!anulacaoSelecionada) return;
+    setProcessandoAnulacao(true);
+    try {
+      await api.put(`/anulacoes/${anulacaoSelecionada.id}/acordo`, { status, observacao: observacaoAcordo });
+      setObservacaoAcordo("");
+      await carregarDocumentos();
+      alert("Acordo de anulação registrado com sucesso.");
+    } finally {
+      setProcessandoAnulacao(false);
+    }
+  }
+
+  async function decidirAnulacao(decisao: string) {
+    if (!anulacaoSelecionada) return;
+    setProcessandoAnulacao(true);
+    try {
+      await api.put(`/anulacoes/${anulacaoSelecionada.id}/decisao`, { decisao, justificativa: justificativaAnulacao });
+      setJustificativaAnulacao("");
+      await carregarDocumentos();
+      alert("Decisão de anulação registrada com sucesso.");
+    } finally {
+      setProcessandoAnulacao(false);
     }
   }
 
@@ -322,6 +408,17 @@ export default function CentralDocumentos() {
                 </button>
               ))}
             </div>
+            <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 p-3 text-xs text-orange-800 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200">
+              <div className="mb-2 flex items-center gap-2 font-bold">
+                <AlertTriangle size={15} />
+                Solicitações de anulação
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <span><b className="block text-base">{resumoAnulacoes.pendentes}</b>Pendentes</span>
+                <span><b className="block text-base">{resumoAnulacoes.anuladas}</b>Anuladas</span>
+                <span><b className="block text-base">{resumoAnulacoes.recusadas}</b>Recusadas</span>
+              </div>
+            </div>
           </section>
 
           <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -338,6 +435,7 @@ export default function CentralDocumentos() {
               <div className="max-h-[520px] space-y-2 overflow-y-auto p-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
                 {documentosTratados.map((documento) => {
                   const ativo = selecionado?.id === documento.id;
+                  const anulacaoDocumento = anulacoes.find((item) => item.modulo === documento.modulo && item.registroId === documento.registroId);
                   return (
                     <button
                       key={documento.id}
@@ -370,6 +468,11 @@ export default function CentralDocumentos() {
                         <span className={`rounded-full border px-2 py-0.5 font-bold ${statusTratativaClasse(documento.fluxoStatus)}`}>
                           {documento.fluxoStatus || "Sem tratativa"}
                         </span>
+                        {anulacaoDocumento && (
+                          <span className="rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 font-bold text-orange-700 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-200">
+                            Anulação: {anulacaoDocumento.status}
+                          </span>
+                        )}
                       </div>
                     </button>
                   );
@@ -519,6 +622,97 @@ export default function CentralDocumentos() {
                           <a href={`/timeline/${moduloWorkflow(selecionado)}/${selecionado.registroId}`} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">
                             <History size={15} /> Timeline
                           </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {anulacaoSelecionada && (
+                  <div className="mb-5 rounded-3xl border border-orange-200 bg-orange-50 p-4 dark:border-orange-500/20 dark:bg-orange-500/10">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-200">
+                          <AlertTriangle size={15} />
+                          Solicitação de anulação
+                        </p>
+                        <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{anulacaoSelecionada.status}</h3>
+                        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                          Solicitado por {anulacaoSelecionada.solicitante.apelido || anulacaoSelecionada.solicitante.nome} em {formatarData(anulacaoSelecionada.createdAt)}
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-orange-300 bg-white px-3 py-1 text-xs font-bold text-orange-700 dark:border-orange-500/30 dark:bg-slate-950 dark:text-orange-200">
+                        {anulacaoSelecionada.codigoRegistro}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 rounded-2xl bg-white p-3 text-sm text-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                      <b>Motivo:</b> {anulacaoSelecionada.motivo}
+                      {anulacaoSelecionada.decisaoMotivo && (
+                        <p className="mt-2"><b>Decisão:</b> {anulacaoSelecionada.decisaoMotivo}</p>
+                      )}
+                    </div>
+
+                    <div className="mt-4">
+                      <h4 className="font-bold text-slate-900 dark:text-white">Acordo dos analistas</h4>
+                      <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+                        {anulacaoSelecionada.acordos.map((acordo) => (
+                          <div key={acordo.id} className="rounded-2xl border border-orange-100 bg-white p-3 text-sm dark:border-orange-500/20 dark:bg-slate-950">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="font-semibold text-slate-800 dark:text-slate-100">{acordo.analista.apelido || acordo.analista.nome}</span>
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{acordo.status}</span>
+                            </div>
+                            {acordo.observacao && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{acordo.observacao}</p>}
+                          </div>
+                        ))}
+                        {anulacaoSelecionada.acordos.length === 0 && (
+                          <div className="rounded-2xl border border-dashed border-orange-200 bg-white p-3 text-sm text-slate-500 dark:border-orange-500/20 dark:bg-slate-950 dark:text-slate-400">
+                            Nenhum acordo de analista pendente.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {podeResponderAnulacao && (
+                      <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-500/20 dark:bg-blue-500/10">
+                        <p className="mb-2 flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-200">
+                          <Clock size={15} /> Registrar seu acordo
+                        </p>
+                        <textarea
+                          className="min-h-[80px] w-full rounded-xl border border-blue-200 bg-white p-3 text-sm text-slate-900 outline-none dark:border-blue-500/20 dark:bg-slate-950 dark:text-white"
+                          placeholder="Observação opcional"
+                          value={observacaoAcordo}
+                          onChange={(event) => setObservacaoAcordo(event.target.value)}
+                        />
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button disabled={processandoAnulacao} onClick={() => registrarAcordoAnulacao("Aprovado")} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                            Concordo
+                          </button>
+                          <button disabled={processandoAnulacao} onClick={() => registrarAcordoAnulacao("Recusado")} className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                            Recusar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {podeDecidirAnulacao && (
+                      <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                          Decisão administrativa {todosAcordosAprovados ? "" : "(aguardando acordo de todos os analistas)"}
+                        </p>
+                        <textarea
+                          className="mt-2 min-h-[80px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                          placeholder="Justificativa da decisão"
+                          value={justificativaAnulacao}
+                          onChange={(event) => setJustificativaAnulacao(event.target.value)}
+                        />
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <button disabled={!todosAcordosAprovados || processandoAnulacao} onClick={() => decidirAnulacao("Aprovado")} className="rounded-xl bg-orange-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                            Aprovar anulação
+                          </button>
+                          <button disabled={processandoAnulacao} onClick={() => decidirAnulacao("Recusado")} className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-slate-700">
+                            Recusar solicitação
+                          </button>
                         </div>
                       </div>
                     )}

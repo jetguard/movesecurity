@@ -4,6 +4,15 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.7] - 2026-06-03
+
+### Melhorado
+
+- Central de Documentos passa a concentrar tambem as solicitacoes de anulacao de relatorios.
+- Documentos com anulacao vinculada exibem status, motivo, solicitante, acordos dos analistas e decisao administrativa no proprio painel documental.
+- A antiga pagina separada de Anulacoes foi removida do menu e redirecionada para a Central de Documentos.
+- Pendencias de anulacao no painel de gestao agora apontam para a Central de Documentos.
+
 ## [1.1.6] - 2026-06-03
 
 ### Melhorado

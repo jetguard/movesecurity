@@ -29,7 +29,6 @@ import {
   Video,
   Menu,
   X,
-  AlertTriangle,
   MapPinned,
   Server,
   Columns3,
@@ -397,10 +396,6 @@ export default function AdminLayout() {
               <Link to="/evidencias" className={subItem}>
                 <Paperclip size={16} />
                 Evidências
-              </Link>
-              <Link to="/anulacoes" className={subItem}>
-                <AlertTriangle size={16} />
-                Anulações
               </Link>
             </div>
           )}
