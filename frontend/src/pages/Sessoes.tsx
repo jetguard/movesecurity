@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock, LogOut, RefreshCw, ShieldCheck, UserRound } from "lucide-react";
 import { api } from "../services/api";
 import { usuarioAtual } from "../utils/permissoes";
@@ -57,7 +57,7 @@ export default function Sessoes() {
   const [carregando, setCarregando] = useState(true);
   const usuarioLogado = usuarioAtual();
 
-  async function carregarSessoes() {
+  const carregarSessoes = useCallback(async () => {
     setCarregando(true);
     try {
       const response = await api.get("/sessoes", { params: { status } });
@@ -65,11 +65,11 @@ export default function Sessoes() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [status]);
 
   useEffect(() => {
     carregarSessoes();
-  }, [status]);
+  }, [carregarSessoes]);
 
   const resumo = useMemo(() => ({
     total: sessoes.length,

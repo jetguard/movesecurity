@@ -27,10 +27,15 @@ export function useAutoSaveDraft<T>({
   const ultimoJson = useRef("");
   const ignorarProximo = useRef(false);
   const dadosAtuais = useRef(dados);
+  const onRestoreRef = useRef(onRestore);
 
   useEffect(() => {
     dadosAtuais.current = dados;
   }, [dados]);
+
+  useEffect(() => {
+    onRestoreRef.current = onRestore;
+  }, [onRestore]);
 
   useEffect(() => {
     carregou.current = false;
@@ -55,7 +60,7 @@ export function useAutoSaveDraft<T>({
           if (restaurar) {
             ignorarProximo.current = true;
             ultimoJson.current = JSON.stringify(rascunho.dados);
-            onRestore(rascunho.dados as T);
+            onRestoreRef.current(rascunho.dados as T);
           }
         } else {
           ultimoJson.current = JSON.stringify(dadosAtuais.current || {});

@@ -258,9 +258,10 @@ export default function Riscos() {
     try {
       const response = await api.get("/riscos/vinculo", { params });
       aplicarDadosVinculo(response.data);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
       setVinculoEncontrado(null);
-      alert(error.response?.data?.error || "Não foi possível localizar o relatório vinculado.");
+      alert(apiError.response?.data?.error || "Não foi possível localizar o relatório vinculado.");
     } finally {
       setBuscandoVinculo(false);
     }

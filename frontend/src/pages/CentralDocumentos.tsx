@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
@@ -166,7 +166,7 @@ export default function CentralDocumentos() {
     fim,
   }), [assinatura, busca, fim, inicio, modulo, unidade]);
 
-  async function carregarDocumentos() {
+  const carregarDocumentos = useCallback(async () => {
     setCarregando(true);
     try {
       const [documentosResponse, anulacoesResponse] = await Promise.allSettled([
@@ -182,11 +182,11 @@ export default function CentralDocumentos() {
     } finally {
       setCarregando(false);
     }
-  }
+  }, [params]);
 
   useEffect(() => {
     carregarDocumentos();
-  }, []);
+  }, [carregarDocumentos]);
 
   function aplicarFiltros(event: React.FormEvent) {
     event.preventDefault();

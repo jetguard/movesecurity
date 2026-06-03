@@ -247,8 +247,9 @@ export default function AdminLayout() {
       sessionStorage.setItem("ultimaAtividade", String(Date.now()));
       setPinDesbloqueio("");
       setSistemaBloqueado(false);
-    } catch (error: any) {
-      setErroDesbloqueio(error.response?.data?.error || "Não foi possível desbloquear o sistema.");
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      setErroDesbloqueio(apiError.response?.data?.error || "Não foi possível desbloquear o sistema.");
     } finally {
       setDesbloqueando(false);
     }

@@ -112,8 +112,9 @@ export default function Perfil() {
       setNovoPin("");
       setConfirmarNovoPin("");
       alert(perfil?.possuiPinOperacional ? "PIN atualizado com sucesso." : "PIN criado com sucesso.");
-    } catch (error: any) {
-      alert(error.response?.data?.error || "Erro ao atualizar PIN.");
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      alert(apiError.response?.data?.error || "Erro ao atualizar PIN.");
     } finally {
       setSalvandoPin(false);
     }

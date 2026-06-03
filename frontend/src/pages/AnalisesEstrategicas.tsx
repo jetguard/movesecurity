@@ -55,7 +55,7 @@ type DadosVinculo = {
   ocorrenciaCodigo?: string | null;
   eventoCodigo?: string | null;
   investigacaoCodigo?: string | null;
-  contexto?: Record<string, any>;
+  contexto?: Record<string, unknown>;
 };
 
 const tipos = [
@@ -207,8 +207,9 @@ export default function AnalisesEstrategicas() {
     try {
       const response = await api.get("/analises-estrategicas/vinculo", { params });
       aplicarDadosVinculo(response.data);
-    } catch (error: any) {
-      alert(error.response?.data?.error || "Nao foi possivel carregar os dados vinculados.");
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      alert(apiError.response?.data?.error || "Nao foi possivel carregar os dados vinculados.");
     } finally {
       setBuscandoVinculo(false);
     }

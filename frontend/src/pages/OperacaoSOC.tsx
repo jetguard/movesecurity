@@ -225,27 +225,7 @@ export default function OperacaoSOC() {
     },
   });
 
-  const carregar = useCallback(async () => {
-    const response = await api.get("/operacao/soc", { params: filtroEquipe ? { equipe: filtroEquipe } : {} });
-    setDados(response.data);
-    const passagemAberta = response.data.passagensTurno?.find((item: PassagemTurno) => item.status === "Aberto");
-    if (!passagemSelecionada && passagemAberta) preencherPassagem(passagemAberta);
-  }, [filtroEquipe, passagemSelecionada]);
-
-  const carregarUsuariosEquipe = useCallback(async () => {
-    const response = await api.get("/operacao/usuarios-equipe", { params: equipeAtual ? { equipe: equipeAtual } : {} });
-    setUsuariosEquipe(response.data);
-  }, [equipeAtual]);
-
-  useEffect(() => {
-    carregar();
-  }, [carregar]);
-
-  useEffect(() => {
-    carregarUsuariosEquipe();
-  }, [carregarUsuariosEquipe]);
-
-  function preencherPassagem(passagem: PassagemTurno) {
+  const preencherPassagem = useCallback((passagem: PassagemTurno) => {
     setPassagemSelecionada(passagem);
     setFiltroEquipe(passagem.equipe || usuario?.equipe || "");
     setForm({
@@ -260,7 +240,27 @@ export default function OperacaoSOC() {
       checklistEquipamentos: passagem.checklistEquipamentos?.length ? passagem.checklistEquipamentos : checklistEquipamentosPadrao,
       rondas: passagem.rondas?.length ? passagem.rondas : rondasPadrao,
     });
-  }
+  }, [usuario?.equipe]);
+
+  const carregar = useCallback(async () => {
+    const response = await api.get("/operacao/soc", { params: filtroEquipe ? { equipe: filtroEquipe } : {} });
+    setDados(response.data);
+    const passagemAberta = response.data.passagensTurno?.find((item: PassagemTurno) => item.status === "Aberto");
+    if (!passagemSelecionada && passagemAberta) preencherPassagem(passagemAberta);
+  }, [filtroEquipe, passagemSelecionada, preencherPassagem]);
+
+  const carregarUsuariosEquipe = useCallback(async () => {
+    const response = await api.get("/operacao/usuarios-equipe", { params: equipeAtual ? { equipe: equipeAtual } : {} });
+    setUsuariosEquipe(response.data);
+  }, [equipeAtual]);
+
+  useEffect(() => {
+    carregar();
+  }, [carregar]);
+
+  useEffect(() => {
+    carregarUsuariosEquipe();
+  }, [carregarUsuariosEquipe]);
 
   function novoPosto() {
     setForm((atual) => ({ ...atual, postos: [...atual.postos, { ...postoVazio }] }));
