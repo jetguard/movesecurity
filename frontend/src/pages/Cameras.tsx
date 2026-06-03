@@ -213,6 +213,13 @@ function formatarDataHora(valor?: string | number | null) {
   });
 }
 
+function formatarDiaGrafico(valor: string) {
+  const partes = valor.split("-");
+  if (partes.length >= 3) return `${partes[2]}/${partes[1]}`;
+  if (partes.length === 2) return `${partes[1]}/${partes[0]}`;
+  return valor;
+}
+
 function calcularRetencaoChecklist(_camera: CameraItem | null, dados: typeof checklistInicial) {
   if (!dados.dataInicialGravacao) {
     return "informe a data e hora mais antiga encontrada no Digifort";
@@ -825,7 +832,7 @@ export default function Cameras() {
                   {dashboard.falhasPorDia.length === 0 ? <p className="self-start text-sm text-slate-500">Sem falhas registradas.</p> : dashboard.falhasPorDia.map(([dia, valor]) => (
                     <div key={dia} className="flex min-w-14 flex-col items-center gap-2">
                       <div className="w-8 rounded-t bg-cyan-400" style={{ height: `${Math.max(valor * 28, 8)}px` }} />
-                      <span className="text-[10px] text-slate-500">{dia.slice(5)}</span>
+                      <span className="text-[10px] text-slate-500">{formatarDiaGrafico(dia)}</span>
                     </div>
                   ))}
                 </div>
