@@ -4,6 +4,21 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.2] - 2026-06-03
+
+### Adicionado
+
+- Central de Documentos reunindo PDFs de Ocorrências, Eventos, Investigações, Relatório CCOS, Checklist de Inspeção Preventiva, CFTV e Análises de Risco.
+- Filtros por protocolo, módulo, unidade, período, status de assinatura e busca textual.
+- Painel moderno com lista de documentos à esquerda e prévia do PDF à direita, incluindo ações para abrir, baixar e validar assinatura.
+- Serviço base para padronização visual dos PDFs do JetGuard.
+
+### Melhorado
+
+- PDFs de Ocorrência, Eventos, Investigação, Relatório CCOS e CFTV passam a seguir o padrão visual do CIP.
+- Cabeçalho, marca d'água, rodapé, paginação, assinatura digital e QR Code de validação foram alinhados entre os principais documentos.
+- Prévia de PDFs no próprio sistema liberada de forma controlada para o mesmo domínio.
+
 ## [1.1.0] - 2026-05-29
 
 ### Adicionado

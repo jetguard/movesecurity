@@ -71,12 +71,12 @@ function desenharAssinaturaDigitalCcos(
   }
 ) {
   const x = 36;
-  const y = 692;
+  const y = 725;
   const width = 523;
-  const height = 62;
-  const qrSize = 54;
-  const qrX = x + width - qrSize - 12;
-  const qrY = y + 5;
+  const height = 54;
+  const qrSize = 46;
+  const qrX = x + width - qrSize - 10;
+  const qrY = y + 4;
   const textoX = x + 18;
   const textoWidth = width - qrSize - 42;
 
@@ -104,21 +104,21 @@ function desenharAssinaturaDigitalCcos(
     .font("Helvetica")
     .fontSize(7.2)
     .fillColor("#334155")
-    .text(`Relatório CCOS validado por ${params.responsavel}`, textoX, y + 23, { width: textoWidth })
-    .text(`Unidade: ${params.unidade} | Equipe: ${params.equipe}`, textoX, y + 37, { width: textoWidth });
+    .text(`Relatório CCOS validado por ${params.responsavel}`, textoX, y + 22, { width: textoWidth })
+    .text(`Unidade: ${params.unidade} | Equipe: ${params.equipe}`, textoX, y + 34, { width: textoWidth });
 
   doc
     .font("Helvetica-Bold")
     .fontSize(6.8)
     .fillColor("#0b74ff")
-    .text(`Código: ${params.token}`, textoX, y + 50, { width: textoWidth });
+    .text(`Código: ${params.token}`, textoX, y + 45, { width: textoWidth });
 
   doc.image(params.qrCode, qrX, qrY, { width: qrSize });
   doc
     .font("Helvetica")
     .fontSize(6.2)
     .fillColor("#64748b")
-    .text("Baixar PDF", qrX - 5, qrY + qrSize + 1, {
+    .text("Validar", qrX - 5, y + height - 9, {
       width: qrSize + 10,
       align: "center",
     });
@@ -671,7 +671,7 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
       width: 112,
     });
     const tokenRodape = assinatura?.token || tokenAssinatura;
-    const pageBottom = 684;
+    const pageBottom = 708;
 
     const watermark = (opacity = 0.052) => {
       const largura = 270;
@@ -681,11 +681,15 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     };
 
     const header = () => {
-      doc.image(logoPath, 36, 28, { width: 125 });
-      doc.font("Helvetica-Bold").fontSize(16).fillColor("#0f172a").text("Relatório Operacional de Passagem de Turno", 190, 30, { align: "right", width: 369 });
-      doc.font("Helvetica").fontSize(9).fillColor("#475569").text(`Código: ${passagem.codigo}`, 190, 53, { align: "right", width: 369 });
-      doc.text(`Unidade: ${passagem.unidade} | Equipe: ${passagem.equipe}`, 190, 68, { align: "right", width: 369 });
-      doc.moveTo(36, 88).lineTo(559, 88).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
+      doc.roundedRect(36, 28, 523, 72, 10).fill("#0f172a");
+      doc.roundedRect(48, 42, 126, 38, 8).fill("#ffffff");
+      doc.image(logoPath, 56, 50, { width: 110, height: 22, fit: [110, 22] });
+      doc.font("Helvetica").fontSize(8).fillColor("#dbeafe").text("RELATÓRIO CCOS", 184, 42, { width: 230 });
+      doc.font("Helvetica-Bold").fontSize(18).fillColor("#ffffff").text(passagem.codigo, 184, 56, { width: 230 });
+      doc.font("Helvetica").fontSize(9).fillColor("#cbd5e1").text(`Unidade: ${passagem.unidade} | Equipe: ${passagem.equipe}`, 184, 79, { width: 250 });
+      doc.font("Helvetica").fontSize(8.5).fillColor("#bfdbfe").text(`Emitido em ${new Date().toLocaleString("pt-BR")}`, 370, 52, { align: "right", width: 174 });
+      doc.font("Helvetica-Bold").fontSize(10).fillColor("#ffffff").text(passagem.status, 370, 74, { align: "right", width: 174 });
+      doc.moveTo(36, 114).lineTo(559, 114).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
     };
 
     const footer = (pagina: number, total: number) => {
@@ -696,16 +700,15 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
         token: tokenRodape,
         qrCode: qrCodePdf,
       });
-      doc.moveTo(36, 760).lineTo(559, 760).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
+      doc.moveTo(36, 715).lineTo(559, 715).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
       doc.font("Helvetica").fontSize(7.8).fillColor("#64748b")
-        .text(`Emitido em ${new Date().toLocaleString("pt-BR")} por ${responsavel}`, 36, 770, { align: "left", width: 360 })
-        .text(`Página ${pagina} de ${total}`, 430, 770, { align: "right", width: 129 });
+        .text(`Página ${pagina} de ${total}`, 468, 745, { align: "right", width: 91 });
     };
 
     const decorarPagina = () => {
       watermark();
       header();
-      doc.y = 102;
+      doc.y = 128;
     };
 
     doc.on("pageAdded", decorarPagina);

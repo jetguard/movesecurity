@@ -322,7 +322,7 @@ export default function AdminLayout() {
           <button onClick={() => setRelatoriosOpen(!relatoriosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
             <div className="flex items-center gap-3">
               <FolderOpen size={20} className="shrink-0" />
-              <span className={menuText}>Relatorios</span>
+              <span className={menuText}>Relatórios</span>
             </div>
             <span className={menuToggle}>{relatoriosOpen ? "-" : "+"}</span>
           </button>
@@ -331,15 +331,19 @@ export default function AdminLayout() {
             <div className={submenuClass}>
               <Link to="/ocorrencias" className={subItem}>
                 <FileText size={16} />
-                Ocorrencias
+                Ocorrências
               </Link>
               <Link to="/investigacao" className={subItem}>
                 <Search size={16} />
-                Investigacao
+                Investigação
               </Link>
               <Link to="/eventos" className={subItem}>
                 <CalendarDays size={16} />
                 Eventos
+              </Link>
+              <Link to="/documentos" className={subItem}>
+                <FolderOpen size={16} />
+                Central de Documentos
               </Link>
               <Link to="/operacao-soc" className={subItem}>
                 <Activity size={16} />
@@ -362,13 +366,13 @@ export default function AdminLayout() {
                 <Video size={16} />
                 Câmeras CFTV
               </Link>
-              <Link to="/tarefas" className={subItem}>
-                <CheckCircle2 size={16} />
-                Central de Tarefas
-              </Link>
               <Link to="/planejamento" className={subItem}>
                 <Columns3 size={16} />
-                Tarefas
+                Quadro de Tarefas
+              </Link>
+              <Link to="/tarefas" className={subItem}>
+                <CheckCircle2 size={16} />
+                Minhas Tarefas
               </Link>
               <Link to="/quadra-seguranca" className={subItem}>
                 <PackageSearch size={16} />

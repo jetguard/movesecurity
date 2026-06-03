@@ -407,6 +407,7 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         tipo: "Evento",
         codigo: evento.codigo,
         assunto: evento.assunto,
+        unidade: evento.unidade,
         local: evento.local,
         natureza: evento.natureza,
         subNatureza: evento.subNatureza,

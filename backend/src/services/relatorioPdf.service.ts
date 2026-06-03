@@ -21,6 +21,7 @@ type RelatorioPdf = {
   tipo: "Ocorrência" | "Evento" | "Investigação";
   codigo: string;
   assunto: string;
+  unidade?: string | null;
   local?: string | null;
   natureza?: string | null;
   subNatureza?: string | null;
@@ -63,12 +64,12 @@ export type TipoRelatorioPublico = "ocorrencias" | "eventos";
 const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
 const watermarkPath = path.resolve(process.cwd(), "assets", "jetguard-watermark.png");
 const page = {
-  left: 45,
-  right: 550,
-  top: 34,
-  headerBottom: 108,
-  contentTop: 124,
-  footerTop: 704,
+  left: 42,
+  right: 553,
+  top: 28,
+  headerBottom: 114,
+  contentTop: 128,
+  footerTop: 725,
   bottom: 804,
 };
 const contentWidth = page.right - page.left;
@@ -167,9 +168,9 @@ function desenharAssinaturaDigital(
     qrCode: string;
   }
 ) {
-  const qrSize = 64;
-  const qrX = params.x + params.width - qrSize - 13;
-  const qrY = params.y + 8;
+  const qrSize = Math.min(54, params.height - 8);
+  const qrX = params.x + params.width - qrSize - 10;
+  const qrY = params.y + (params.height - qrSize) / 2;
   const textoX = params.x + 18;
   const textoWidth = params.width - qrSize - 42;
 
@@ -200,17 +201,17 @@ function desenharAssinaturaDigital(
     .font("Helvetica-Bold")
     .fontSize(8.6)
     .fillColor("#0f172a")
-    .text("Assinatura digital JetGuard", textoX, params.y + 10, { width: textoWidth });
+    .text("Assinatura digital JetGuard", textoX, params.y + 8, { width: textoWidth });
 
   doc
     .font("Helvetica")
     .fontSize(7.4)
     .fillColor("#334155")
-    .text(textoPdf(`Documento validado por ${params.usuario.nome}`), textoX, params.y + 26, {
+    .text(textoPdf(`Documento validado por ${params.usuario.nome}`), textoX, params.y + 22, {
       width: textoWidth,
     });
 
-  if (detalhesUsuario) {
+  if (detalhesUsuario && params.height >= 68) {
     doc
       .fontSize(6.8)
       .fillColor("#64748b")
@@ -221,7 +222,7 @@ function desenharAssinaturaDigital(
     .font("Helvetica-Bold")
     .fontSize(6.9)
     .fillColor("#0b74ff")
-    .text(textoPdf(`Código: ${params.token}`), textoX, params.y + params.height - 16, {
+    .text(textoPdf(`Código: ${params.token}`), textoX, params.y + params.height - 14, {
       width: textoWidth,
     });
 
@@ -230,7 +231,7 @@ function desenharAssinaturaDigital(
     .font("Helvetica")
     .fontSize(6.4)
     .fillColor("#64748b")
-    .text("Baixar PDF", qrX - 6, qrY + qrSize + 1, {
+    .text("Validar", qrX - 6, params.y + params.height - 10, {
       width: qrSize + 12,
       align: "center",
     });
@@ -309,56 +310,54 @@ function desenharBasePagina(
   doc.save();
 
   desenharMarcaDagua(doc);
+  doc.roundedRect(page.left, page.top, contentWidth, 72, 10).fill("#0f172a");
+  doc.roundedRect(page.left + 12, page.top + 14, 126, 38, 8).fill("#ffffff");
+  doc.image(logoPath, page.left + 20, page.top + 22, { width: 110, height: 22, fit: [110, 22] });
 
   doc
-    .lineWidth(0.7)
-    .strokeColor("#e5e7eb")
-    .roundedRect(28, 24, 539, 792, 8)
-    .stroke();
-
-  doc
-    .lineWidth(3)
-    .strokeColor("#0b74ff")
-    .moveTo(36, 30)
-    .lineTo(559, 30)
-    .stroke();
-
-  doc.image(logoPath, page.left, page.top + 7, { width: 145 });
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor("#dbeafe")
+    .text(textoPdf(`RELATÓRIO DE ${relatorio.tipo}`).toUpperCase(), page.left + 148, page.top + 14, { width: 230 });
 
   doc
     .font("Helvetica-Bold")
-    .fontSize(16)
-    .fillColor("#111827")
-    .text(textoPdf(`Relatório de ${relatorio.tipo}`), 215, page.top + 16, {
-      width: 200,
-      align: "center",
-    });
+    .fontSize(18)
+    .fillColor("#ffffff")
+    .text(textoPdf(relatorio.codigo), page.left + 148, page.top + 29, { width: 230 });
 
   doc
-    .font("Helvetica-Bold")
-    .fontSize(14)
-    .text(textoPdf(relatorio.codigo), 430, page.top + 18, {
-      width: 115,
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor("#cbd5e1")
+    .text(`Unidade: ${textoPdf(relatorio.unidade || "GJA-T1")}`, page.left + 148, page.top + 53, { width: 230 });
+
+  doc
+    .font("Helvetica")
+    .fontSize(8.5)
+    .fillColor("#bfdbfe")
+    .text(`Emitido em ${new Date().toLocaleString("pt-BR")}`, page.right - 178, page.top + 24, {
+      width: 166,
       align: "right",
     });
 
   doc
-    .moveTo(page.left, page.headerBottom)
-    .lineTo(page.right, page.headerBottom)
-    .strokeColor("#cbd5e1")
-    .stroke();
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .fillColor("#ffffff")
+    .text(textoPdf(relatorio.status), page.right - 178, page.top + 48, {
+      width: 166,
+      align: "right",
+    });
 
-  doc
-    .moveTo(page.left, page.footerTop)
-    .lineTo(page.right, page.footerTop)
-    .strokeColor("#cbd5e1")
-    .stroke();
+  doc.moveTo(page.left, page.headerBottom).lineTo(page.right, page.headerBottom).strokeColor("#dbe4f0").lineWidth(0.8).stroke();
+  doc.moveTo(page.left, page.footerTop - 10).lineTo(page.right, page.footerTop - 10).strokeColor("#dbe4f0").lineWidth(0.8).stroke();
 
   desenharAssinaturaDigital(doc, {
     x: page.left,
-    y: page.footerTop + 9,
-    width: contentWidth,
-    height: 78,
+    y: page.footerTop,
+    width: contentWidth - 72,
+    height: 54,
     usuario,
     token,
     qrCode,
@@ -818,9 +817,9 @@ export async function gerarRelatorioPdf(
       .font("Helvetica")
       .fontSize(8)
       .fillColor("#6b7280")
-      .text(textoPdf(`Página ${i + 1} de ${range.count}`), page.left, 786, {
-        width: contentWidth,
-        align: "center",
+      .text(textoPdf(`Página ${i + 1} de ${range.count}`), page.right - 82, page.footerTop + 20, {
+        width: 82,
+        align: "right",
       });
   }
 

@@ -415,6 +415,7 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         tipo: "Ocorrência",
         codigo: ocorrencia.codigo,
         assunto: ocorrencia.assunto,
+        unidade: ocorrencia.unidade,
         local: ocorrencia.local,
         natureza: ocorrencia.natureza,
         subNatureza: ocorrencia.subNatureza,

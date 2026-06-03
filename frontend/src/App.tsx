@@ -11,6 +11,7 @@ const Dashboard = lazyWithReload(() => import("./pages/Dashboard"));
 const Ocorrencias = lazyWithReload(() => import("./pages/Relatórios/Ocorrencias"));
 const Investigacao = lazyWithReload(() => import("./pages/Relatórios/Investigacao"));
 const Eventos = lazyWithReload(() => import("./pages/Relatórios/Eventos"));
+const CentralDocumentos = lazyWithReload(() => import("./pages/CentralDocumentos"));
 const Naturezas = lazyWithReload(() => import("./pages/Cadastros/Naturezas"));
 const Locais = lazyWithReload(() => import("./pages/Cadastros/Locais"));
 const Login = lazyWithReload(() => import("./pages/Login"));
@@ -81,6 +82,7 @@ export default function App() {
             <Route path="ocorrencias" element={<Ocorrencias />} />
             <Route path="investigacao" element={<Investigacao />} />
             <Route path="eventos" element={<Eventos />} />
+            <Route path="documentos" element={<CentralDocumentos />} />
             <Route path="evidencias" element={<Evidencias />} />
             <Route path="pendencias" element={<Pendencias />} />
             <Route path="notificacoes" element={<Notificacoes />} />

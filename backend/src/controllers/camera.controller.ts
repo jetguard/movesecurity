@@ -3,13 +3,13 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
-import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { emitirRealtime } from "../services/realtime.service";
 import { assinarDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
 import { jwtSecret } from "../config/security";
+import { criarQrCodeValidacao, desenharCabecalhoPadrao, desenharRodapeAssinaturaPadrao } from "../services/documentoPdfBase.service";
 
 const STATUS_CONECTADA = "Conectada";
 const STATUS_DESCONECTADA = "Desconectada";
@@ -1253,11 +1253,7 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
       },
     });
     const validacaoUrl = criarUrlValidacaoAssinatura(req, assinatura.token);
-    const qrCode = await QRCode.toDataURL(validacaoUrl, {
-      width: 180,
-      margin: 1,
-      color: { dark: "#0f172a", light: "#ffffff" },
-    });
+    const qrCode = await criarQrCodeValidacao(validacaoUrl);
     const usuario = await prisma.usuario.findUnique({
       where: { id: req.usuarioId },
       select: { nome: true, apelido: true },
@@ -1269,56 +1265,27 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
     const pageHeight = doc.page.height;
     const contentWidth = pageWidth - 84;
     const footerY = pageHeight - 116;
-    const logoPath = path.resolve(process.cwd(), "assets", "movecta-logo.png");
-    const watermarkPath = path.resolve(process.cwd(), "assets", "jetguard-watermark.png");
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=relatorio-disponibilidade-cftv-${protocolo.replace("/", "-")}.pdf`);
     doc.pipe(res);
 
-    function watermark() {
-      if (!fs.existsSync(watermarkPath)) return;
-      const largura = 250;
-      doc.save().opacity(0.035).image(watermarkPath, (pageWidth - largura) / 2, (pageHeight - largura) / 2, { width: largura }).restore();
-    }
-
     function header() {
-      watermark();
-      doc.roundedRect(42, 28, contentWidth, 74, 10).fill("#0f172a");
-      if (fs.existsSync(logoPath)) {
-        doc.roundedRect(54, 42, 126, 38, 8).fill("#ffffff");
-        doc.image(logoPath, 62, 50, { width: 110, height: 22, fit: [110, 22] });
-      }
-      doc.fillColor("#dbeafe").fontSize(8).text("RELATORIO TECNICO CFTV", 190, 43, { width: 240 });
-      doc.fillColor("#ffffff").fontSize(14).text("Disponibilidade e Indisponibilidade", 190, 59, { width: 280 });
-      doc.fillColor("#cbd5e1").fontSize(9).text(`Protocolo: ${protocolo}`, 190, 80, { width: 240 });
-      doc.fillColor("#bfdbfe").fontSize(9).text(`Emitido em ${new Date().toLocaleString("pt-BR")}`, pageWidth - 235, 52, { width: 175, align: "right" });
-      doc.fillColor("#ffffff").fontSize(10).text(`Unidade: ${req.unidadeAtiva || "GJA-T1"}`, pageWidth - 235, 75, { width: 175, align: "right" });
-      doc.moveTo(42, 116).lineTo(pageWidth - 42, 116).strokeColor("#dbe4f0").lineWidth(0.8).stroke();
-      doc.y = 130;
+      desenharCabecalhoPadrao(doc, {
+        titulo: "Relatório Técnico CFTV",
+        subtitulo: "Disponibilidade e indisponibilidade",
+        codigo: protocolo,
+        unidade: req.unidadeAtiva || "GJA-T1",
+      });
     }
 
     function footer(numeroPagina?: number, totalPaginas?: number) {
-      doc.moveTo(42, footerY - 10).lineTo(pageWidth - 42, footerY - 10).strokeColor("#dbe4f0").lineWidth(0.8).stroke();
-      const seloW = contentWidth - 102;
-      const qrX = pageWidth - 110;
-      doc.roundedRect(42, footerY, seloW, 54, 8).strokeColor("#bfdbfe").lineWidth(1).stroke();
-      doc.rect(42, footerY, 4, 54).fill("#0b74ff");
-      doc.fillColor("#0f172a").fontSize(9).text("Assinatura eletronica JetGuard", 56, footerY + 9, { width: seloW - 24, lineBreak: false });
-      doc.fillColor("#475569").fontSize(8).text(
-        `Documento validado por ${assinatura.usuarioNome} em ${assinatura.createdAt.toLocaleString("pt-BR")}`,
-        56,
-        footerY + 25,
-        { width: seloW - 24, lineBreak: false, ellipsis: true }
-      );
-      doc.fillColor("#475569").fontSize(7).text(`Token: ${assinatura.token}`, 56, footerY + 38, { width: seloW - 24, lineBreak: false, ellipsis: true });
-      doc.fillColor("#64748b").fontSize(8).text(
-        numeroPagina && totalPaginas ? `Pagina ${numeroPagina} de ${totalPaginas}` : "",
-        qrX - 8,
-        footerY - 8,
-        { width: 74, align: "center", lineBreak: false }
-      );
-      doc.image(qrCode, qrX, footerY + 2, { width: 54, height: 54 });
+      desenharRodapeAssinaturaPadrao(doc, {
+        assinatura,
+        qrCode,
+        pagina: numeroPagina,
+        totalPaginas,
+      });
     }
 
     function ensureSpace(height = 80) {

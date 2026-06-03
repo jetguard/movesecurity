@@ -35,6 +35,7 @@ import sistemaRoutes from "./routes/sistema.routes";
 import sugestaoMelhoriaRoutes from "./routes/sugestaoMelhoria.routes";
 import sessaoRoutes from "./routes/sessao.routes";
 import rascunhoRoutes from "./routes/rascunho.routes";
+import documentoRoutes from "./routes/documento.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -105,7 +106,7 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
   res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Unidade-Ativa, X-CSRF-Token");
   res.header("X-Content-Type-Options", "nosniff");
-  res.header("X-Frame-Options", "DENY");
+  res.header("X-Frame-Options", "SAMEORIGIN");
   res.header("Referrer-Policy", "no-referrer");
   res.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   res.header("Cross-Origin-Resource-Policy", "same-site");
@@ -151,6 +152,7 @@ app.use("/api/sistema", sistemaRoutes);
 app.use("/api/sugestoes-melhoria", sugestaoMelhoriaRoutes);
 app.use("/api/sessoes", sessaoRoutes);
 app.use("/api/rascunhos", rascunhoRoutes);
+app.use("/api/documentos", documentoRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);
