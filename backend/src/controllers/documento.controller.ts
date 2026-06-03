@@ -87,6 +87,15 @@ function anexarAssinatura(
   };
 }
 
+async function consultaSegura<T>(nome: string, consulta: Promise<T[]>): Promise<T[]> {
+  try {
+    return await consulta;
+  } catch (error) {
+    console.error(`Erro ao consultar documentos do modulo ${nome}`, error);
+    return [];
+  }
+}
+
 export async function listarDocumentos(req: AuthRequest, res: Response) {
   try {
     const unidades = unidadesConsulta(req);
@@ -107,46 +116,46 @@ export async function listarDocumentos(req: AuthRequest, res: Response) {
       relatoriosCftv,
       assinaturas,
     ] = await Promise.all([
-      prisma.ocorrencia.findMany({
+      consultaSegura("Ocorrencia", prisma.ocorrencia.findMany({
         where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, assunto: true, status: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.evento.findMany({
+      })),
+      consultaSegura("Evento", prisma.evento.findMany({
         where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, assunto: true, status: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.investigacao.findMany({
+      })),
+      consultaSegura("Investigacao", prisma.investigacao.findMany({
         where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, titulo: true, status: true, createdAt: true, unidade: true, ocorrenciaId: true },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.passagemTurno.findMany({
+      })),
+      consultaSegura("PassagemTurno", prisma.passagemTurno.findMany({
         where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, equipe: true, status: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.checklistInspecao.findMany({
+      })),
+      consultaSegura("ChecklistInspecao", prisma.checklistInspecao.findMany({
         where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, titulo: true, status: true, createdAt: true, unidade: true, local: true },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.analiseRisco.findMany({
+      })),
+      consultaSegura("AnaliseRisco", prisma.analiseRisco.findMany({
         where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, tipoRisco: true, nivelRisco: true, status: true, createdAt: true, unidade: true, local: true },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.relatorioCftv.findMany({
+      })),
+      consultaSegura("RelatorioCftv", prisma.relatorioCftv.findMany({
         where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, totalCameras: true, retencaoMedia: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
-      }),
-      prisma.assinaturaDocumento.findMany({
+      })),
+      consultaSegura("AssinaturaDocumento", prisma.assinaturaDocumento.findMany({
         where: { unidade: filtroUnidade, status: "VALIDA" },
         select: { modulo: true, registroId: true, token: true, usuarioNome: true, createdAt: true },
         orderBy: { createdAt: "desc" },
-      }),
+      })),
     ]);
 
     const mapaAssinaturas = assinaturaParaMapa(assinaturas);

@@ -4,6 +4,13 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.5] - 2026-06-03
+
+### Corrigido
+
+- Central de Documentos deixa de falhar por completo quando algum modulo documental ainda possui tabela pendente ou inconsistencia na base de producao.
+- Consultas da Central agora sao isoladas por modulo, permitindo listar Ocorrencias e demais documentos disponiveis mesmo se outro modulo retornar erro.
+
 ## [1.1.4] - 2026-06-03
 
 ### Corrigido
