@@ -178,7 +178,7 @@ export default function CentralDocumentos() {
       setDocumentos(lista);
       setResumo(dadosDocumentos.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
       setAnulacoes(anulacoesResponse.status === "fulfilled" ? anulacoesResponse.value.data || [] : []);
-      setSelecionado((atual) => lista.find((documento: DocumentoCentral) => documento.id === atual?.id) || lista[0] || null);
+      setSelecionado(null);
     } finally {
       setCarregando(false);
     }
