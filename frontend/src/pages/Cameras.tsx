@@ -6,6 +6,7 @@ import {
   Line,
   LineChart as RechartsLineChart,
   ReferenceArea,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -142,12 +143,15 @@ const indisponibilidadeInicial = {
 type TimelinePonto = {
   timestamp: number;
   data: string;
-  retencaoDias: number;
-  status: string;
+  retencaoDias?: number;
+  metaProjetada?: number;
+  falhaRetencao?: number;
+  status?: string;
   dataMaisAntiga?: string | null;
   dataMaisRecente?: string | null;
   responsavel?: string;
   observacao?: string | null;
+  tipo?: "checklist" | "falha";
 };
 
 type TimelineTooltipProps = {
@@ -334,25 +338,6 @@ export default function Cameras() {
     });
   }, [buscaCamera, cameras, statusFiltroCamera]);
   const todasFiltradasSelecionadas = camerasFiltradas.length > 0 && camerasFiltradas.every((camera) => camerasSelecionadas.includes(camera.id));
-  const pontosTimeline = useMemo<TimelinePonto[]>(() => {
-    return [...timelineChecklists]
-      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
-      .map((item) => {
-        const timestamp = new Date(item.createdAt).getTime();
-        const minutosRetencao = item.retencaoEstimadaMinutos ?? item.tempoGravacaoDisponivel * 1440;
-        return {
-          timestamp,
-          data: formatarDataHora(timestamp),
-          retencaoDias: Number((Math.max(0, minutosRetencao) / 1440).toFixed(2)),
-          status: item.statusAtual || "Nao informado",
-          dataMaisAntiga: item.dataInicialGravacao,
-          dataMaisRecente: item.dataMaisRecenteGravacao,
-          responsavel: item.responsavel?.apelido || item.responsavel?.nome,
-          observacao: item.observacoesOperacionais,
-        };
-      })
-      .filter((item) => Number.isFinite(item.timestamp) && Number.isFinite(item.retencaoDias));
-  }, [timelineChecklists]);
   const faixasIndisponibilidade = useMemo(() => {
     return timelineIndisponibilidades
       .map((evento) => {
@@ -366,18 +351,92 @@ export default function Cameras() {
       })
       .filter((evento) => Number.isFinite(evento.inicio) && Number.isFinite(evento.fim) && evento.fim >= evento.inicio);
   }, [timelineAgora, timelineIndisponibilidades]);
+  const pontosChecklistTimeline = useMemo<TimelinePonto[]>(() => {
+    const ordenados = [...timelineChecklists].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    const primeiraDataAntiga = ordenados
+      .map((item) => item.dataInicialGravacao ? new Date(item.dataInicialGravacao).getTime() : Number.POSITIVE_INFINITY)
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b)[0];
+
+    return ordenados
+      .map((item) => {
+        const timestamp = new Date(item.createdAt).getTime();
+        const minutosRetencao = item.retencaoEstimadaMinutos ?? item.tempoGravacaoDisponivel * 1440;
+        const dataReferencia = item.dataMaisRecenteGravacao ? new Date(item.dataMaisRecenteGravacao).getTime() : timestamp;
+        const metaProjetada = Number.isFinite(primeiraDataAntiga)
+          ? Math.min(181, Math.max(0, (dataReferencia - primeiraDataAntiga) / 86400000))
+          : Math.min(181, Math.max(0, minutosRetencao / 1440));
+
+        return {
+          timestamp,
+          data: formatarDataHora(timestamp),
+          retencaoDias: Number((Math.max(0, minutosRetencao) / 1440).toFixed(2)),
+          metaProjetada: Number(metaProjetada.toFixed(2)),
+          status: item.statusAtual || "Nao informado",
+          dataMaisAntiga: item.dataInicialGravacao,
+          dataMaisRecente: item.dataMaisRecenteGravacao,
+          responsavel: item.responsavel?.apelido || item.responsavel?.nome,
+          observacao: item.observacoesOperacionais,
+          tipo: "checklist" as const,
+        };
+      })
+      .filter((item) => Number.isFinite(item.timestamp) && Number.isFinite(item.retencaoDias));
+  }, [timelineChecklists]);
+  const pontosTimeline = useMemo<TimelinePonto[]>(() => {
+    const pontosFalha = faixasIndisponibilidade.flatMap((evento) => {
+      const pontoAnterior = [...pontosChecklistTimeline].reverse().find((ponto) => ponto.timestamp <= evento.inicio) || pontosChecklistTimeline[0];
+      const retencaoFalha = pontoAnterior?.retencaoDias ?? null;
+      if (retencaoFalha === null || retencaoFalha === undefined) return [];
+
+      return [
+        {
+          timestamp: evento.inicio,
+          data: formatarDataHora(evento.inicio),
+          falhaRetencao: retencaoFalha,
+          status: "Sem gravacao",
+          observacao: evento.motivo || evento.observacao,
+          tipo: "falha" as const,
+        },
+        {
+          timestamp: evento.fim,
+          data: formatarDataHora(evento.fim),
+          falhaRetencao: retencaoFalha,
+          status: "Sem gravacao",
+          observacao: evento.motivo || evento.observacao,
+          tipo: "falha" as const,
+        },
+      ];
+    });
+
+    return [...pontosChecklistTimeline, ...pontosFalha].sort((a, b) => a.timestamp - b.timestamp);
+  }, [faixasIndisponibilidade, pontosChecklistTimeline]);
+  const blocosDisponibilidade = useMemo(() => {
+    if (!pontosChecklistTimeline.length) return [];
+    const inicio = pontosChecklistTimeline[0].timestamp;
+    const fim = pontosChecklistTimeline[pontosChecklistTimeline.length - 1].timestamp;
+    const total = Math.max(fim - inicio, 1);
+    const blocos = 48;
+    return Array.from({ length: blocos }, (_, index) => {
+      const blocoInicio = inicio + (total / blocos) * index;
+      const blocoFim = inicio + (total / blocos) * (index + 1);
+      const falha = faixasIndisponibilidade.some((evento) => evento.inicio < blocoFim && evento.fim > blocoInicio);
+      return { index, falha };
+    });
+  }, [faixasIndisponibilidade, pontosChecklistTimeline]);
   const resumoTimeline = useMemo(() => {
-    const retencoes = pontosTimeline.map((ponto) => ponto.retencaoDias);
+    const retencoes = pontosChecklistTimeline.map((ponto) => ponto.retencaoDias).filter((valor): valor is number => typeof valor === "number");
     const atual = retencoes.length ? retencoes[retencoes.length - 1] : null;
     const menor = retencoes.length ? Math.min(...retencoes) : null;
+    const metaAtual = pontosChecklistTimeline.length ? pontosChecklistTimeline[pontosChecklistTimeline.length - 1].metaProjetada ?? null : null;
     const totalIndisponivel = timelineIndisponibilidades.reduce((total, item) => total + (item.duracaoIndisponivel || 0), 0);
     return {
       atual,
       menor,
+      metaAtual,
       falhas: timelineIndisponibilidades.length,
       indisponibilidade: totalIndisponivel,
     };
-  }, [pontosTimeline, timelineIndisponibilidades]);
+  }, [pontosChecklistTimeline, timelineIndisponibilidades]);
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({ ...atual, [nome]: valor }));
@@ -971,9 +1030,9 @@ export default function Cameras() {
                         type="button"
                         onClick={() => abrirTimelineRetencao(camera)}
                         title="Abrir linha do tempo de retencao e falhas"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100"
+                        className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-cyan-200 bg-cyan-50 text-cyan-700 transition hover:border-cyan-400 hover:bg-cyan-100"
                       >
-                        <Activity size={15} />
+                        <Activity size={12} />
                       </button>
                     </div>
                   </td>
@@ -1010,11 +1069,16 @@ export default function Cameras() {
                   <Activity size={16} /> Linha do tempo de retencao
                 </p>
                 <h2 className="mt-3 text-2xl font-black">
-                  Camera {cameraTimeline.numeroCamera}{cameraTimeline.nomeCamera ? ` - ${cameraTimeline.nomeCamera}` : ""}
+                  Retencao de Gravacao - Camera {cameraTimeline.numeroCamera}{cameraTimeline.nomeCamera ? ` - ${cameraTimeline.nomeCamera}` : ""}
                 </h2>
                 <p className="mt-1 text-sm text-slate-400">
                   {cameraTimeline.areaMonitorada} | {cameraTimeline.localInstalado} | Servidor {cameraTimeline.numeroServidor}
                 </p>
+                {pontosChecklistTimeline.length > 0 && (
+                  <p className="mt-2 text-sm text-slate-300">
+                    Periodo: {formatarDataHora(pontosChecklistTimeline[0].dataMaisAntiga || pontosChecklistTimeline[0].timestamp)} ate {formatarDataHora(pontosChecklistTimeline[pontosChecklistTimeline.length - 1].dataMaisRecente || pontosChecklistTimeline[pontosChecklistTimeline.length - 1].timestamp)}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
@@ -1027,10 +1091,14 @@ export default function Cameras() {
             </div>
 
             <div className="space-y-5 p-5 sm:p-6">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-                  <p className="text-xs text-cyan-200">Retencao atual</p>
+                  <p className="text-xs text-cyan-200">Retencao efetiva</p>
                   <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.atual === null ? "Sem dados" : `${resumoTimeline.atual.toLocaleString("pt-BR")} dias`}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                  <p className="text-xs text-emerald-200">Meta projetada</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.metaAtual === null ? "181 dias" : `${resumoTimeline.metaAtual.toLocaleString("pt-BR")} dias`}</p>
                 </div>
                 <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
                   <p className="text-xs text-amber-200">Menor retencao</p>
@@ -1049,14 +1117,15 @@ export default function Cameras() {
               <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-slate-100">Retencao real por checklist</h3>
+                    <h3 className="font-bold text-slate-100">Retencao efetiva x meta de 181 dias</h3>
                     <p className="text-sm text-slate-400">
-                      Use a barra inferior para aproximar por mes, dia, hora ou minuto. As faixas vermelhas indicam periodos de indisponibilidade.
+                      Linha principal = retencao efetiva. Linha verde = meta projetada. Trecho vermelho = falha de gravacao.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-cyan-500/15 px-3 py-1 font-bold text-cyan-200">Linha azul: retencao</span>
-                    <span className="rounded-full bg-red-500/15 px-3 py-1 font-bold text-red-200">Faixa vermelha: falha</span>
+                    <span className="rounded-full bg-cyan-500/15 px-3 py-1 font-bold text-cyan-200">Azul: retencao efetiva</span>
+                    <span className="rounded-full bg-emerald-500/15 px-3 py-1 font-bold text-emerald-200">Verde: meta projetada</span>
+                    <span className="rounded-full bg-red-500/15 px-3 py-1 font-bold text-red-200">Vermelho: sem gravacao</span>
                   </div>
                 </div>
 
@@ -1064,7 +1133,7 @@ export default function Cameras() {
                   <div className="flex h-96 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-slate-400">
                     Carregando linha do tempo...
                   </div>
-                ) : pontosTimeline.length === 0 ? (
+                ) : pontosChecklistTimeline.length === 0 ? (
                   <div className="flex h-96 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-center text-slate-400">
                     <Activity size={34} className="mb-3 text-slate-600" />
                     <p className="font-bold text-slate-200">Sem checklists para gerar grafico</p>
@@ -1089,8 +1158,10 @@ export default function Cameras() {
                           tickFormatter={(valor) => `${valor}d`}
                           width={54}
                           allowDecimals
+                          domain={[0, 200]}
                         />
                         <Tooltip content={<TooltipTimelineRetencao />} />
+                        <ReferenceLine y={181} stroke="#22c55e" strokeDasharray="6 6" strokeOpacity={0.55} label={{ value: "Meta 181 dias", fill: "#86efac", fontSize: 11, position: "insideTopRight" }} />
                         {faixasIndisponibilidade.map((evento) => (
                           <ReferenceArea
                             key={evento.id}
@@ -1104,11 +1175,31 @@ export default function Cameras() {
                         <Line
                           type="monotone"
                           dataKey="retencaoDias"
-                          name="Retencao"
-                          stroke="#38bdf8"
+                          name="Retencao efetiva"
+                          stroke="#0ea5e9"
                           strokeWidth={3}
-                          dot={{ r: 4, fill: "#0f172a", stroke: "#38bdf8", strokeWidth: 2 }}
-                          activeDot={{ r: 7, fill: "#38bdf8", stroke: "#e0f2fe", strokeWidth: 2 }}
+                          connectNulls
+                          dot={{ r: 4, fill: "#0f172a", stroke: "#0ea5e9", strokeWidth: 2 }}
+                          activeDot={{ r: 7, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="metaProjetada"
+                          name="Meta projetada"
+                          stroke="#22c55e"
+                          strokeWidth={2.5}
+                          connectNulls
+                          dot={{ r: 3, fill: "#22c55e", stroke: "#0f172a", strokeWidth: 1 }}
+                        />
+                        <Line
+                          type="linear"
+                          dataKey="falhaRetencao"
+                          name="Falha de gravacao"
+                          stroke="#ef4444"
+                          strokeWidth={3}
+                          strokeDasharray="8 6"
+                          connectNulls={false}
+                          dot={{ r: 4, fill: "#ef4444", stroke: "#fecaca", strokeWidth: 1 }}
                         />
                         <Brush
                           dataKey="timestamp"
@@ -1120,6 +1211,27 @@ export default function Cameras() {
                         />
                       </RechartsLineChart>
                     </ResponsiveContainer>
+                  </div>
+                )}
+
+                {pontosChecklistTimeline.length > 0 && (
+                  <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-slate-300">
+                      <span>{formatarDataHora(pontosChecklistTimeline[0].dataMaisAntiga || pontosChecklistTimeline[0].timestamp)}</span>
+                      <span>{formatarDataHora(pontosChecklistTimeline[pontosChecklistTimeline.length - 1].dataMaisRecente || pontosChecklistTimeline[pontosChecklistTimeline.length - 1].timestamp)}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {blocosDisponibilidade.map((bloco) => (
+                        <span
+                          key={bloco.index}
+                          title={bloco.falha ? "Periodo com falha de gravacao" : "Periodo com gravacao operacional"}
+                          className={`h-4 flex-1 rounded-sm ${bloco.falha ? "bg-red-500" : "bg-emerald-500"}`}
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-3 text-center text-xs text-slate-400">
+                      Retencao efetiva = data recente - data antiga - periodos de indisponibilidade registrados
+                    </p>
                   </div>
                 )}
               </div>
@@ -1310,13 +1422,24 @@ function TooltipTimelineRetencao({ active, payload }: TimelineTooltipProps) {
 
   return (
     <div className="min-w-64 rounded-2xl border border-slate-700 bg-slate-950/95 p-4 text-sm text-slate-100 shadow-2xl shadow-slate-950/40">
-      <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-300">Checklist CFTV</p>
-      <p className="mt-1 text-base font-black">{ponto.retencaoDias.toLocaleString("pt-BR")} dias de retencao</p>
+      <p className={`text-xs font-bold uppercase tracking-[0.18em] ${ponto.tipo === "falha" ? "text-red-300" : "text-cyan-300"}`}>
+        {ponto.tipo === "falha" ? "Falha de gravacao" : "Checklist CFTV"}
+      </p>
+      <p className="mt-1 text-base font-black">
+        {ponto.tipo === "falha"
+          ? `${ponto.falhaRetencao?.toLocaleString("pt-BR") || 0} dias no inicio da falha`
+          : `${ponto.retencaoDias?.toLocaleString("pt-BR") || 0} dias de retencao`}
+      </p>
       <div className="mt-3 space-y-1 text-xs text-slate-300">
         <p><span className="text-slate-500">Inspecao:</span> {ponto.data}</p>
-        <p><span className="text-slate-500">Status:</span> {ponto.status}</p>
-        <p><span className="text-slate-500">Mais antiga:</span> {formatarDataHora(ponto.dataMaisAntiga)}</p>
-        <p><span className="text-slate-500">Mais recente:</span> {formatarDataHora(ponto.dataMaisRecente)}</p>
+        {ponto.status && <p><span className="text-slate-500">Status:</span> {ponto.status}</p>}
+        {ponto.tipo !== "falha" && (
+          <>
+            <p><span className="text-slate-500">Meta projetada:</span> {ponto.metaProjetada?.toLocaleString("pt-BR") || 0} dias</p>
+            <p><span className="text-slate-500">Mais antiga:</span> {formatarDataHora(ponto.dataMaisAntiga)}</p>
+            <p><span className="text-slate-500">Mais recente:</span> {formatarDataHora(ponto.dataMaisRecente)}</p>
+          </>
+        )}
         {ponto.responsavel && <p><span className="text-slate-500">Responsavel:</span> {ponto.responsavel}</p>}
         {ponto.observacao && <p className="pt-1 text-slate-400">{ponto.observacao}</p>}
       </div>
