@@ -1,17 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Activity, AlertTriangle, Camera, FileText, Radio, ShieldCheck, Wifi, WifiOff, X } from "lucide-react";
-import {
-  Brush,
-  CartesianGrid,
-  Line,
-  LineChart as RechartsLineChart,
-  ReferenceArea,
-  ReferenceLine,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
@@ -140,23 +128,14 @@ const indisponibilidadeInicial = {
   observacao: "",
 };
 
-type TimelinePonto = {
-  timestamp: number;
-  data: string;
-  retencaoDias?: number;
-  metaProjetada?: number;
-  falhaRetencao?: number;
-  status?: string;
-  dataMaisAntiga?: string | null;
-  dataMaisRecente?: string | null;
-  responsavel?: string;
-  observacao?: string | null;
-  tipo?: "checklist" | "falha";
-};
-
-type TimelineTooltipProps = {
-  active?: boolean;
-  payload?: Array<{ payload?: TimelinePonto }>;
+type SegmentoIndisponibilidade = {
+  id: number;
+  inicio: number;
+  fim: number;
+  left: number;
+  width: number;
+  label: string;
+  motivo?: string;
 };
 
 const RETENCAO_MAXIMA_MS = 181 * 24 * 60 * 60 * 1000;
@@ -232,12 +211,6 @@ function formatarDataHora(valor?: string | number | null) {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-function formatarEixoTemporal(valor: number) {
-  const data = new Date(valor);
-  if (Number.isNaN(data.getTime())) return "";
-  return data.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
 }
 
 function calcularRetencaoChecklist(_camera: CameraItem | null, dados: typeof checklistInicial) {
@@ -338,105 +311,71 @@ export default function Cameras() {
     });
   }, [buscaCamera, cameras, statusFiltroCamera]);
   const todasFiltradasSelecionadas = camerasFiltradas.length > 0 && camerasFiltradas.every((camera) => camerasSelecionadas.includes(camera.id));
-  const faixasIndisponibilidade = useMemo(() => {
+  const checklistReferenciaTimeline = useMemo(() => {
+    return [...timelineChecklists]
+      .filter((item) => item.dataInicialGravacao)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+  }, [timelineChecklists]);
+  const periodoTimeline = useMemo(() => {
+    if (!checklistReferenciaTimeline?.dataInicialGravacao || !timelineAgora) return null;
+    const inicio = new Date(checklistReferenciaTimeline.dataInicialGravacao).getTime();
+    const fim = timelineAgora;
+    if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio) return null;
+
+    return { inicio, fim, totalMinutos: Math.round((fim - inicio) / 60000) };
+  }, [checklistReferenciaTimeline, timelineAgora]);
+  const segmentosIndisponibilidade = useMemo<SegmentoIndisponibilidade[]>(() => {
+    if (!periodoTimeline) return [];
+    const total = Math.max(periodoTimeline.fim - periodoTimeline.inicio, 1);
+
     return timelineIndisponibilidades
       .map((evento) => {
-        const inicio = new Date(evento.iniciadoEm).getTime();
-        const fim = evento.encerradoEm ? new Date(evento.encerradoEm).getTime() : timelineAgora;
+        const inicioOriginal = new Date(evento.iniciadoEm).getTime();
+        const fimOriginal = evento.encerradoEm ? new Date(evento.encerradoEm).getTime() : timelineAgora;
+        const inicio = Math.max(inicioOriginal, periodoTimeline.inicio);
+        const fim = Math.min(fimOriginal, periodoTimeline.fim);
+        const largura = ((fim - inicio) / total) * 100;
         return {
-          ...evento,
+          id: evento.id,
           inicio,
           fim,
+          left: ((inicio - periodoTimeline.inicio) / total) * 100,
+          width: largura,
+          label: `${formatarDataHora(inicio)} ate ${formatarDataHora(fim)}`,
+          motivo: evento.motivo || evento.observacao,
         };
       })
-      .filter((evento) => Number.isFinite(evento.inicio) && Number.isFinite(evento.fim) && evento.fim >= evento.inicio);
-  }, [timelineAgora, timelineIndisponibilidades]);
-  const pontosChecklistTimeline = useMemo<TimelinePonto[]>(() => {
-    const ordenados = [...timelineChecklists].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-    const primeiraDataAntiga = ordenados
-      .map((item) => item.dataInicialGravacao ? new Date(item.dataInicialGravacao).getTime() : Number.POSITIVE_INFINITY)
-      .filter(Number.isFinite)
-      .sort((a, b) => a - b)[0];
-
-    return ordenados
-      .map((item) => {
-        const timestamp = new Date(item.createdAt).getTime();
-        const minutosRetencao = item.retencaoEstimadaMinutos ?? item.tempoGravacaoDisponivel * 1440;
-        const dataReferencia = item.dataMaisRecenteGravacao ? new Date(item.dataMaisRecenteGravacao).getTime() : timestamp;
-        const metaProjetada = Number.isFinite(primeiraDataAntiga)
-          ? Math.min(181, Math.max(0, (dataReferencia - primeiraDataAntiga) / 86400000))
-          : Math.min(181, Math.max(0, minutosRetencao / 1440));
-
-        return {
-          timestamp,
-          data: formatarDataHora(timestamp),
-          retencaoDias: Number((Math.max(0, minutosRetencao) / 1440).toFixed(2)),
-          metaProjetada: Number(metaProjetada.toFixed(2)),
-          status: item.statusAtual || "Nao informado",
-          dataMaisAntiga: item.dataInicialGravacao,
-          dataMaisRecente: item.dataMaisRecenteGravacao,
-          responsavel: item.responsavel?.apelido || item.responsavel?.nome,
-          observacao: item.observacoesOperacionais,
-          tipo: "checklist" as const,
-        };
-      })
-      .filter((item) => Number.isFinite(item.timestamp) && Number.isFinite(item.retencaoDias));
-  }, [timelineChecklists]);
-  const pontosTimeline = useMemo<TimelinePonto[]>(() => {
-    const pontosFalha = faixasIndisponibilidade.flatMap((evento) => {
-      const pontoAnterior = [...pontosChecklistTimeline].reverse().find((ponto) => ponto.timestamp <= evento.inicio) || pontosChecklistTimeline[0];
-      const retencaoFalha = pontoAnterior?.retencaoDias ?? null;
-      if (retencaoFalha === null || retencaoFalha === undefined) return [];
-
-      return [
-        {
-          timestamp: evento.inicio,
-          data: formatarDataHora(evento.inicio),
-          falhaRetencao: retencaoFalha,
-          status: "Sem gravacao",
-          observacao: evento.motivo || evento.observacao,
-          tipo: "falha" as const,
-        },
-        {
-          timestamp: evento.fim,
-          data: formatarDataHora(evento.fim),
-          falhaRetencao: retencaoFalha,
-          status: "Sem gravacao",
-          observacao: evento.motivo || evento.observacao,
-          tipo: "falha" as const,
-        },
-      ];
-    });
-
-    return [...pontosChecklistTimeline, ...pontosFalha].sort((a, b) => a.timestamp - b.timestamp);
-  }, [faixasIndisponibilidade, pontosChecklistTimeline]);
+      .filter((evento) => Number.isFinite(evento.inicio) && Number.isFinite(evento.fim) && evento.fim > evento.inicio && evento.width > 0);
+  }, [periodoTimeline, timelineAgora, timelineIndisponibilidades]);
   const blocosDisponibilidade = useMemo(() => {
-    if (!pontosChecklistTimeline.length) return [];
-    const inicio = pontosChecklistTimeline[0].timestamp;
-    const fim = pontosChecklistTimeline[pontosChecklistTimeline.length - 1].timestamp;
-    const total = Math.max(fim - inicio, 1);
+    if (!periodoTimeline) return [];
     const blocos = 48;
+    const total = periodoTimeline.fim - periodoTimeline.inicio;
     return Array.from({ length: blocos }, (_, index) => {
-      const blocoInicio = inicio + (total / blocos) * index;
-      const blocoFim = inicio + (total / blocos) * (index + 1);
-      const falha = faixasIndisponibilidade.some((evento) => evento.inicio < blocoFim && evento.fim > blocoInicio);
+      const blocoInicio = periodoTimeline.inicio + (total / blocos) * index;
+      const blocoFim = periodoTimeline.inicio + (total / blocos) * (index + 1);
+      const falha = segmentosIndisponibilidade.some((evento) => evento.inicio < blocoFim && evento.fim > blocoInicio);
       return { index, falha };
     });
-  }, [faixasIndisponibilidade, pontosChecklistTimeline]);
+  }, [periodoTimeline, segmentosIndisponibilidade]);
   const resumoTimeline = useMemo(() => {
-    const retencoes = pontosChecklistTimeline.map((ponto) => ponto.retencaoDias).filter((valor): valor is number => typeof valor === "number");
-    const atual = retencoes.length ? retencoes[retencoes.length - 1] : null;
-    const menor = retencoes.length ? Math.min(...retencoes) : null;
-    const metaAtual = pontosChecklistTimeline.length ? pontosChecklistTimeline[pontosChecklistTimeline.length - 1].metaProjetada ?? null : null;
-    const totalIndisponivel = timelineIndisponibilidades.reduce((total, item) => total + (item.duracaoIndisponivel || 0), 0);
+    if (!periodoTimeline) {
+      return { cronologica: null, efetiva: null, falhas: 0, indisponibilidade: 0 };
+    }
+
+    const indisponibilidade = segmentosIndisponibilidade.reduce(
+      (total, item) => total + sobreposicaoMinutos(item.inicio, item.fim, periodoTimeline.inicio, periodoTimeline.fim),
+      0
+    );
+    const cronologica = Number((periodoTimeline.totalMinutos / 1440).toFixed(2));
+    const efetiva = Number((Math.max(0, periodoTimeline.totalMinutos - indisponibilidade) / 1440).toFixed(2));
     return {
-      atual,
-      menor,
-      metaAtual,
-      falhas: timelineIndisponibilidades.length,
-      indisponibilidade: totalIndisponivel,
+      cronologica,
+      efetiva,
+      falhas: segmentosIndisponibilidade.length,
+      indisponibilidade,
     };
-  }, [pontosChecklistTimeline, timelineIndisponibilidades]);
+  }, [periodoTimeline, segmentosIndisponibilidade]);
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({ ...atual, [nome]: valor }));
@@ -466,6 +405,12 @@ export default function Cameras() {
     }, 60000);
     return () => window.clearInterval(intervalo);
   }, [cameraChecklist]);
+
+  useEffect(() => {
+    if (!cameraTimeline) return;
+    const intervalo = window.setInterval(() => setTimelineAgora(new Date().getTime()), 60000);
+    return () => window.clearInterval(intervalo);
+  }, [cameraTimeline]);
 
   function novaCamera() {
     setCameraEditando(null);
@@ -1074,9 +1019,9 @@ export default function Cameras() {
                 <p className="mt-1 text-sm text-slate-400">
                   {cameraTimeline.areaMonitorada} | {cameraTimeline.localInstalado} | Servidor {cameraTimeline.numeroServidor}
                 </p>
-                {pontosChecklistTimeline.length > 0 && (
+                {periodoTimeline && (
                   <p className="mt-2 text-sm text-slate-300">
-                    Periodo: {formatarDataHora(pontosChecklistTimeline[0].dataMaisAntiga || pontosChecklistTimeline[0].timestamp)} ate {formatarDataHora(pontosChecklistTimeline[pontosChecklistTimeline.length - 1].dataMaisRecente || pontosChecklistTimeline[pontosChecklistTimeline.length - 1].timestamp)}
+                    Periodo: {formatarDataHora(periodoTimeline.inicio)} ate {formatarDataHora(periodoTimeline.fim)}
                   </p>
                 )}
               </div>
@@ -1092,40 +1037,40 @@ export default function Cameras() {
 
             <div className="space-y-5 p-5 sm:p-6">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-                <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4">
-                  <p className="text-xs text-cyan-200">Retencao efetiva</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.atual === null ? "Sem dados" : `${resumoTimeline.atual.toLocaleString("pt-BR")} dias`}</p>
+                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
+                  <p className="text-xs text-blue-200">Data mais antiga</p>
+                  <p className="mt-2 text-xl font-black text-white">{periodoTimeline ? formatarDataHora(periodoTimeline.inicio) : "Sem dados"}</p>
                 </div>
-                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
-                  <p className="text-xs text-emerald-200">Meta projetada</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.metaAtual === null ? "181 dias" : `${resumoTimeline.metaAtual.toLocaleString("pt-BR")} dias`}</p>
-                </div>
-                <div className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4">
-                  <p className="text-xs text-amber-200">Menor retencao</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.menor === null ? "Sem dados" : `${resumoTimeline.menor.toLocaleString("pt-BR")} dias`}</p>
-                </div>
-                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
-                  <p className="text-xs text-red-200">Falhas registradas</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.falhas}</p>
+                <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
+                  <p className="text-xs text-blue-200">Data atual</p>
+                  <p className="mt-2 text-xl font-black text-white">{periodoTimeline ? formatarDataHora(periodoTimeline.fim) : "Sem dados"}</p>
                 </div>
                 <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4">
-                  <p className="text-xs text-slate-400">Indisponibilidade acumulada</p>
-                  <p className="mt-2 text-2xl font-black text-white">{minutos(resumoTimeline.indisponibilidade)}</p>
+                  <p className="text-xs text-slate-400">Retencao cronologica</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.cronologica === null ? "Sem dados" : `${resumoTimeline.cronologica.toLocaleString("pt-BR")} dias`}</p>
+                </div>
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
+                  <p className="text-xs text-red-200">Periodos de falha</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.indisponibilidade ? minutos(resumoTimeline.indisponibilidade) : "0 min"}</p>
+                </div>
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                  <p className="text-xs text-emerald-200">Retencao efetiva</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.efetiva === null ? "Sem dados" : `${resumoTimeline.efetiva.toLocaleString("pt-BR")} dias`}</p>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-slate-100">Retencao efetiva x meta de 181 dias</h3>
+                    <h3 className="font-bold text-slate-100">Linha temporal da gravacao atual</h3>
                     <p className="text-sm text-slate-400">
-                      Linha principal = retencao efetiva. Linha verde = meta projetada. Trecho vermelho = falha de gravacao.
+                      Mostra a data mais antiga registrada no ultimo checklist ate a data atual. Trechos vermelhos indicam falhas dentro deste intervalo.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-cyan-500/15 px-3 py-1 font-bold text-cyan-200">Azul: retencao efetiva</span>
-                    <span className="rounded-full bg-emerald-500/15 px-3 py-1 font-bold text-emerald-200">Verde: meta projetada</span>
-                    <span className="rounded-full bg-red-500/15 px-3 py-1 font-bold text-red-200">Vermelho: sem gravacao</span>
+                    <span className="rounded-full bg-emerald-500/15 px-3 py-1 font-bold text-emerald-200">Verde: gravacao disponivel</span>
+                    <span className="rounded-full bg-red-500/15 px-3 py-1 font-bold text-red-200">Vermelho: falha de conexao</span>
+                    <span className="rounded-full bg-blue-500/15 px-3 py-1 font-bold text-blue-200">Atualiza em tempo real</span>
                   </div>
                 </div>
 
@@ -1133,94 +1078,45 @@ export default function Cameras() {
                   <div className="flex h-96 items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-slate-400">
                     Carregando linha do tempo...
                   </div>
-                ) : pontosChecklistTimeline.length === 0 ? (
+                ) : !periodoTimeline ? (
                   <div className="flex h-96 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-center text-slate-400">
                     <Activity size={34} className="mb-3 text-slate-600" />
-                    <p className="font-bold text-slate-200">Sem checklists para gerar grafico</p>
-                    <p className="mt-1 max-w-md text-sm">Registre ao menos um checklist CFTV nesta camera para acompanhar a evolucao da retencao.</p>
+                    <p className="font-bold text-slate-200">Sem data mais antiga para acompanhar</p>
+                    <p className="mt-1 max-w-md text-sm">Registre um checklist com a data mais antiga encontrada no Digifort para gerar a linha temporal.</p>
                   </div>
                 ) : (
-                  <div className="h-[430px] rounded-2xl border border-slate-800 bg-slate-950 p-3">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <RechartsLineChart data={pontosTimeline} margin={{ top: 14, right: 24, left: 0, bottom: 24 }}>
-                        <CartesianGrid stroke="#1e293b" strokeDasharray="4 4" />
-                        <XAxis
-                          dataKey="timestamp"
-                          type="number"
-                          domain={["dataMin", "dataMax"]}
-                          tickFormatter={formatarEixoTemporal}
-                          stroke="#94a3b8"
-                          tick={{ fontSize: 11 }}
-                        />
-                        <YAxis
-                          stroke="#94a3b8"
-                          tick={{ fontSize: 11 }}
-                          tickFormatter={(valor) => `${valor}d`}
-                          width={54}
-                          allowDecimals
-                          domain={[0, 200]}
-                        />
-                        <Tooltip content={<TooltipTimelineRetencao />} />
-                        <ReferenceLine y={181} stroke="#22c55e" strokeDasharray="6 6" strokeOpacity={0.55} label={{ value: "Meta 181 dias", fill: "#86efac", fontSize: 11, position: "insideTopRight" }} />
-                        {faixasIndisponibilidade.map((evento) => (
-                          <ReferenceArea
-                            key={evento.id}
-                            x1={evento.inicio}
-                            x2={evento.fim}
-                            strokeOpacity={0}
-                            fill="#ef4444"
-                            fillOpacity={0.16}
-                          />
-                        ))}
-                        <Line
-                          type="monotone"
-                          dataKey="retencaoDias"
-                          name="Retencao efetiva"
-                          stroke="#0ea5e9"
-                          strokeWidth={3}
-                          connectNulls
-                          dot={{ r: 4, fill: "#0f172a", stroke: "#0ea5e9", strokeWidth: 2 }}
-                          activeDot={{ r: 7, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="metaProjetada"
-                          name="Meta projetada"
-                          stroke="#22c55e"
-                          strokeWidth={2.5}
-                          connectNulls
-                          dot={{ r: 3, fill: "#22c55e", stroke: "#0f172a", strokeWidth: 1 }}
-                        />
-                        <Line
-                          type="linear"
-                          dataKey="falhaRetencao"
-                          name="Falha de gravacao"
-                          stroke="#ef4444"
-                          strokeWidth={3}
-                          strokeDasharray="8 6"
-                          connectNulls={false}
-                          dot={{ r: 4, fill: "#ef4444", stroke: "#fecaca", strokeWidth: 1 }}
-                        />
-                        <Brush
-                          dataKey="timestamp"
-                          height={34}
-                          stroke="#38bdf8"
-                          fill="#0f172a"
-                          travellerWidth={12}
-                          tickFormatter={formatarEixoTemporal}
-                        />
-                      </RechartsLineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-
-                {pontosChecklistTimeline.length > 0 && (
-                  <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-950 p-4">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-slate-300">
-                      <span>{formatarDataHora(pontosChecklistTimeline[0].dataMaisAntiga || pontosChecklistTimeline[0].timestamp)}</span>
-                      <span>{formatarDataHora(pontosChecklistTimeline[pontosChecklistTimeline.length - 1].dataMaisRecente || pontosChecklistTimeline[pontosChecklistTimeline.length - 1].timestamp)}</span>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-xs font-bold text-slate-300">
+                      <span>{formatarDataHora(periodoTimeline.inicio)}</span>
+                      <span>{formatarDataHora(periodoTimeline.fim)}</span>
                     </div>
-                    <div className="flex gap-1">
+
+                    <div className="relative h-24 rounded-2xl border border-slate-800 bg-slate-900 px-4 py-8">
+                      <div className="absolute left-4 right-4 top-1/2 h-2 -translate-y-1/2 rounded-full bg-emerald-500 shadow-[0_0_18px_rgba(34,197,94,.35)]" />
+                      {segmentosIndisponibilidade.map((segmento) => (
+                        <div
+                          key={segmento.id}
+                          title={`${segmento.motivo || "Falha de conexao"} | ${segmento.label}`}
+                          className="absolute top-1/2 h-3 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_18px_rgba(239,68,68,.55)]"
+                          style={{ left: `calc(1rem + ${segmento.left}%)`, width: `${Math.max(segmento.width, 1)}%`, maxWidth: "calc(100% - 2rem)" }}
+                        />
+                      ))}
+                      <div className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-emerald-400" />
+                      <div className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 rounded-full border-2 border-slate-950 bg-blue-400" />
+                    </div>
+
+                    {segmentosIndisponibilidade.length > 0 && (
+                      <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
+                        {segmentosIndisponibilidade.map((segmento) => (
+                          <div key={segmento.id} className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-100">
+                            <strong>{segmento.motivo || "Falha de conexao"}</strong>
+                            <p className="mt-1 text-red-200">{segmento.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="mt-5 flex gap-1">
                       {blocosDisponibilidade.map((bloco) => (
                         <span
                           key={bloco.index}
@@ -1230,7 +1126,7 @@ export default function Cameras() {
                       ))}
                     </div>
                     <p className="mt-3 text-center text-xs text-slate-400">
-                      Retencao efetiva = data recente - data antiga - periodos de indisponibilidade registrados
+                      Retencao efetiva = data atual - data mais antiga - periodos de indisponibilidade registrados dentro do intervalo.
                     </p>
                   </div>
                 )}
@@ -1416,33 +1312,8 @@ export default function Cameras() {
   );
 }
 
-function TooltipTimelineRetencao({ active, payload }: TimelineTooltipProps) {
-  const ponto = payload?.[0]?.payload;
-  if (!active || !ponto) return null;
-
-  return (
-    <div className="min-w-64 rounded-2xl border border-slate-700 bg-slate-950/95 p-4 text-sm text-slate-100 shadow-2xl shadow-slate-950/40">
-      <p className={`text-xs font-bold uppercase tracking-[0.18em] ${ponto.tipo === "falha" ? "text-red-300" : "text-cyan-300"}`}>
-        {ponto.tipo === "falha" ? "Falha de gravacao" : "Checklist CFTV"}
-      </p>
-      <p className="mt-1 text-base font-black">
-        {ponto.tipo === "falha"
-          ? `${ponto.falhaRetencao?.toLocaleString("pt-BR") || 0} dias no inicio da falha`
-          : `${ponto.retencaoDias?.toLocaleString("pt-BR") || 0} dias de retencao`}
-      </p>
-      <div className="mt-3 space-y-1 text-xs text-slate-300">
-        <p><span className="text-slate-500">Inspecao:</span> {ponto.data}</p>
-        {ponto.status && <p><span className="text-slate-500">Status:</span> {ponto.status}</p>}
-        {ponto.tipo !== "falha" && (
-          <>
-            <p><span className="text-slate-500">Meta projetada:</span> {ponto.metaProjetada?.toLocaleString("pt-BR") || 0} dias</p>
-            <p><span className="text-slate-500">Mais antiga:</span> {formatarDataHora(ponto.dataMaisAntiga)}</p>
-            <p><span className="text-slate-500">Mais recente:</span> {formatarDataHora(ponto.dataMaisRecente)}</p>
-          </>
-        )}
-        {ponto.responsavel && <p><span className="text-slate-500">Responsavel:</span> {ponto.responsavel}</p>}
-        {ponto.observacao && <p className="pt-1 text-slate-400">{ponto.observacao}</p>}
-      </div>
-    </div>
-  );
+function sobreposicaoMinutos(inicioA: number, fimA: number, inicioB: number, fimB: number) {
+  const inicio = Math.max(inicioA, inicioB);
+  const fim = Math.min(fimA, fimB);
+  return Math.max(0, Math.round((fim - inicio) / 60000));
 }
