@@ -9,6 +9,7 @@ export type AuthRequest = Request & {
   usuarioPerfil?: string;
   usuarioUnidade?: string | null;
   unidadeAtiva?: string;
+  unidadesPermitidas?: string[];
   sessaoId?: string;
 };
 
@@ -122,6 +123,7 @@ export async function autenticarUsuario(
       usuario.perfilAcesso === PERFIS.SUPER_ADMIN
         ? UNIDADES_SISTEMA
         : normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade);
+    req.unidadesPermitidas = unidadesPermitidas;
 
     if (unidadeSolicitada && !unidadesPermitidas.includes(unidadeSolicitada)) {
       return res.status(403).json({

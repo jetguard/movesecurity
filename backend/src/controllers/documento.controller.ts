@@ -39,6 +39,23 @@ function chaveAssinatura(modulo: string, registroId: number) {
   return `${modulo}:${registroId}`;
 }
 
+function unidadesConsulta(req: AuthRequest) {
+  const unidadeFiltro = typeof req.query.unidade === "string" ? req.query.unidade.trim() : "";
+  const unidadesPermitidas = req.unidadesPermitidas?.length ? req.unidadesPermitidas : [req.unidadeAtiva || "GJA-T1"];
+  const perfil = req.usuarioPerfil || "";
+  const podeVerMultiplas = ["SUPER_ADMIN", "ADMINISTRADOR"].includes(perfil);
+
+  if (unidadeFiltro && unidadesPermitidas.includes(unidadeFiltro)) {
+    return [unidadeFiltro];
+  }
+
+  if (podeVerMultiplas) {
+    return unidadesPermitidas;
+  }
+
+  return [req.unidadeAtiva || req.usuarioUnidade || unidadesPermitidas[0] || "GJA-T1"];
+}
+
 function assinaturaParaMapa(assinaturas: Array<{
   modulo: string;
   registroId: number;
@@ -73,7 +90,8 @@ function anexarAssinatura(
 
 export async function listarDocumentos(req: AuthRequest, res: Response) {
   try {
-    const unidade = req.unidadeAtiva || "GJA-T1";
+    const unidades = unidadesConsulta(req);
+    const filtroUnidade = { in: unidades };
     const moduloFiltro = typeof req.query.modulo === "string" ? req.query.modulo : "";
     const statusFiltro = typeof req.query.status === "string" ? req.query.status : "";
     const assinaturaFiltro = typeof req.query.assinatura === "string" ? req.query.assinatura : "";
@@ -91,42 +109,42 @@ export async function listarDocumentos(req: AuthRequest, res: Response) {
       assinaturas,
     ] = await Promise.all([
       prisma.ocorrencia.findMany({
-        where: { unidade },
+        where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, assunto: true, status: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.evento.findMany({
-        where: { unidade },
+        where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, assunto: true, status: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.investigacao.findMany({
-        where: { unidade },
+        where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, titulo: true, status: true, createdAt: true, unidade: true, ocorrenciaId: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.passagemTurno.findMany({
-        where: { unidade },
+        where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, equipe: true, status: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.checklistInspecao.findMany({
-        where: { unidade },
+        where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, titulo: true, status: true, createdAt: true, unidade: true, local: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.analiseRisco.findMany({
-        where: { unidade },
+        where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, tipoRisco: true, nivelRisco: true, status: true, createdAt: true, unidade: true, local: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.relatorioCftv.findMany({
-        where: { unidade },
+        where: { unidade: filtroUnidade },
         select: { id: true, codigo: true, totalCameras: true, retencaoMedia: true, createdAt: true, unidade: true },
         orderBy: { createdAt: "desc" },
       }),
       prisma.assinaturaDocumento.findMany({
-        where: { unidade, status: "VALIDA" },
+        where: { unidade: filtroUnidade, status: "VALIDA" },
         select: { modulo: true, registroId: true, token: true, usuarioNome: true, createdAt: true },
         orderBy: { createdAt: "desc" },
       }),

@@ -13,6 +13,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { api } from "../services/api";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
+import { unidadesPermitidasUsuario } from "../utils/permissoes";
 
 type DocumentoCentral = {
   id: string;
@@ -81,17 +82,20 @@ export default function CentralDocumentos() {
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
   const [modulo, setModulo] = useState("");
+  const [unidade, setUnidade] = useState("");
   const [assinatura, setAssinatura] = useState("");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
+  const unidades = useMemo(() => unidadesPermitidasUsuario(), []);
 
   const params = useMemo(() => ({
     busca,
     modulo,
+    unidade,
     assinatura,
     inicio,
     fim,
-  }), [assinatura, busca, fim, inicio, modulo]);
+  }), [assinatura, busca, fim, inicio, modulo, unidade]);
 
   async function carregarDocumentos() {
     setCarregando(true);
@@ -118,6 +122,7 @@ export default function CentralDocumentos() {
   function limparFiltros() {
     setBusca("");
     setModulo("");
+    setUnidade("");
     setAssinatura("");
     setInicio("");
     setFim("");
@@ -168,6 +173,11 @@ export default function CentralDocumentos() {
 
               <select value={modulo} onChange={(event) => setModulo(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                 {modulos.map((item) => <option key={item.valor} value={item.valor}>{item.label}</option>)}
+              </select>
+
+              <select value={unidade} onChange={(event) => setUnidade(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                <option value="">Todas as unidades permitidas</option>
+                {unidades.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
 
               <select value={assinatura} onChange={(event) => setAssinatura(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">

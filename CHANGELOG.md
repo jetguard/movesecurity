@@ -4,6 +4,14 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.3] - 2026-06-03
+
+### Corrigido
+
+- Central de Documentos passa a consultar corretamente documentos das unidades permitidas para Super Admin e Administrador.
+- Adicionado filtro de unidade na Central de Documentos para evitar tela vazia quando a unidade ativa difere da unidade dos registros.
+- Middleware de autenticação agora disponibiliza as unidades permitidas para consultas documentais multiambiente.
+
 ## [1.1.2] - 2026-06-03
 
 ### Adicionado
