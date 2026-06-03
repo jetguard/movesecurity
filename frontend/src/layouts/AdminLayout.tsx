@@ -313,11 +313,6 @@ export default function AdminLayout() {
             <span className={menuText}>Dashboard</span>
           </Link>
 
-          <Link to="/busca" className={item}>
-            <Search size={20} className="shrink-0" />
-            <span className={menuText}>Busca Global</span>
-          </Link>
-
           <button onClick={() => setRelatoriosOpen(!relatoriosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
             <div className="flex items-center gap-3">
               <FolderOpen size={20} className="shrink-0" />

@@ -1,6 +1,5 @@
 ﻿import { Router } from "express";
 import {
-  buscaGlobal,
   centralTarefas,
   historicoLegivel,
   listarEvidencias,
@@ -19,7 +18,6 @@ router.get("/pendencias", autenticarUsuario, autorizarPerfis(acessoRelatorios), 
 router.get("/notificacoes", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarNotificacoes);
 router.post("/notificacoes/lidas", autenticarUsuario, autorizarPerfis(acessoRelatorios), marcarTodasNotificacoesLidas);
 router.post("/notificacoes/:id/lida", autenticarUsuario, autorizarPerfis(acessoRelatorios), marcarNotificacaoLida);
-router.get("/busca", autenticarUsuario, autorizarPerfis(acessoRelatorios), buscaGlobal);
 router.get("/tarefas", autenticarUsuario, autorizarPerfis(acessoRelatorios), centralTarefas);
 router.get("/historico/:tipo/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), historicoLegivel);
 router.get("/timeline/:tipo/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), timelineRegistro);

@@ -26,7 +26,6 @@ const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
 const Pendencias = lazyWithReload(() => import("./pages/Pendencias"));
 const Notificacoes = lazyWithReload(() => import("./pages/Notificacoes"));
 const AlertasOperacionais = lazyWithReload(() => import("./pages/AlertasOperacionais"));
-const BuscaGlobal = lazyWithReload(() => import("./pages/BuscaGlobal"));
 const Timeline = lazyWithReload(() => import("./pages/Timeline"));
 const InteligenciaOperacional = lazyWithReload(() => import("./pages/InteligenciaOperacional"));
 const PlanosAcao = lazyWithReload(() => import("./pages/PlanosAcao"));
@@ -85,7 +84,6 @@ export default function App() {
             <Route path="pendencias" element={<Pendencias />} />
             <Route path="notificacoes" element={<Notificacoes />} />
             <Route path="alertas-operacionais" element={<AlertasOperacionais />} />
-            <Route path="busca" element={<BuscaGlobal />} />
             <Route path="timeline/:tipo/:id" element={<Timeline />} />
             <Route path="meus-dados" element={<MeusDados />} />
             <Route path="mencoes" element={<Mencoes />} />

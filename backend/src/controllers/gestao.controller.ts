@@ -4,10 +4,6 @@ import fs from "fs";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 
-function contem(valor: unknown, termo: string) {
-  return String(valor || "").toLowerCase().includes(termo.toLowerCase());
-}
-
 function diasAte(data?: Date | string | null) {
   if (!data) return null;
   const alvo = new Date(data).getTime();
@@ -362,34 +358,6 @@ export async function marcarTodasNotificacoesLidas(req: AuthRequest, res: Respon
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao marcar notificações como lidas" });
-  }
-}
-
-export async function buscaGlobal(req: AuthRequest, res: Response) {
-  try {
-    const termo = String(req.query.q || "").trim();
-    if (termo.length < 2) return res.json([]);
-
-    const [ocorrencias, eventos, investigacoes, riscos, estrategicas] = await Promise.all([
-      prisma.ocorrencia.findMany({ where: { unidade: req.unidadeAtiva }, take: 100 }),
-      prisma.evento.findMany({ where: { unidade: req.unidadeAtiva }, take: 100 }),
-      prisma.investigacao.findMany({ where: { unidade: req.unidadeAtiva }, take: 100 }),
-      prisma.analiseRisco.findMany({ where: { unidade: req.unidadeAtiva }, take: 100 }),
-      prisma.analiseEstrategica.findMany({ where: { unidade: req.unidadeAtiva }, take: 100 }),
-    ]);
-
-    const resultados = [
-      ...ocorrencias.map((item) => ({ tipo: "Ocorrencia", id: item.id, codigo: item.codigo, titulo: item.assunto, texto: `${item.local} ${item.natureza} ${item.subNatureza} ${item.relatoSeguranca}` })),
-      ...eventos.map((item) => ({ tipo: "Evento", id: item.id, codigo: item.codigo, titulo: item.assunto, texto: `${item.local} ${item.natureza} ${item.subNatureza} ${item.relatoSeguranca}` })),
-      ...investigacoes.map((item) => ({ tipo: "Investigacao", id: item.id, codigo: item.numeroOcorrencia, titulo: item.titulo, texto: `${item.local} ${item.natureza} ${item.descricaoInvestigacao} ${item.conclusaoFatos}` })),
-      ...riscos.map((item) => ({ tipo: "Analise de Risco", id: item.id, codigo: item.codigo, titulo: item.naturezaRisco, texto: `${item.local} ${item.setor} ${item.tipoRisco} ${item.descricaoRisco} ${item.planoAcao}` })),
-      ...estrategicas.map((item) => ({ tipo: "Analise Estrategica", id: item.id, codigo: item.codigo, titulo: item.titulo, texto: `${item.tipo} ${item.local} ${item.descricao} ${item.diagnostico} ${item.planoAcao}` })),
-    ].filter((item) => [item.tipo, item.codigo, item.titulo, item.texto].some((valor) => contem(valor, termo)));
-
-    return res.json(resultados.slice(0, 30));
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Erro na busca global" });
   }
 }
 
