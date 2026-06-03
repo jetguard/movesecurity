@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, Camera, FileText, Radio, ShieldCheck, Wifi, WifiOff, X } from "lucide-react";
+import { Activity, AlertTriangle, Camera, ClipboardCheck, FileText, History, Pencil, Radio, ShieldCheck, Trash2, Wifi, WifiOff, X } from "lucide-react";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
@@ -254,6 +254,30 @@ function CardSoc({ titulo, valor, subtitulo, icon: Icon, tom }: { titulo: string
   );
 }
 
+function BotaoAcaoCamera({
+  titulo,
+  onClick,
+  icon: Icon,
+  classe = "border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:text-blue-700",
+}: {
+  titulo: string;
+  onClick: () => void;
+  icon: typeof Camera;
+  classe?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={titulo}
+      aria-label={titulo}
+      className={`inline-flex h-8 w-8 items-center justify-center rounded-lg border text-xs transition ${classe}`}
+    >
+      <Icon size={15} />
+    </button>
+  );
+}
+
 function CampoChecklist({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="space-y-2 text-sm font-bold text-slate-700 dark:text-slate-200">
@@ -368,8 +392,8 @@ export default function Cameras() {
       (total, item) => total + sobreposicaoMinutos(item.inicio, item.fim, periodoTimeline.inicio, periodoTimeline.fim),
       0
     );
-    const cronologica = Number((periodoTimeline.totalMinutos / 1440).toFixed(2));
-    const efetiva = Number((Math.max(0, periodoTimeline.totalMinutos - indisponibilidade) / 1440).toFixed(2));
+    const cronologica = periodoTimeline.totalMinutos;
+    const efetiva = Math.max(0, periodoTimeline.totalMinutos - indisponibilidade);
     return {
       cronologica,
       efetiva,
@@ -928,7 +952,7 @@ export default function Cameras() {
           </div>
         </div>
         <div className="max-h-[640px] overflow-auto">
-          <table className="w-full min-w-[1040px] text-left text-sm">
+          <table className="w-full min-w-[980px] text-left text-sm">
             <thead className="sticky top-0 z-10 bg-slate-50 text-slate-500 shadow-sm">
               <tr>
                 <th className="p-3">
@@ -984,12 +1008,38 @@ export default function Cameras() {
                   </td>
                   <td className="p-3">{camera.totalFalhas}</td>
                   <td className="p-3">
-                    <div className="flex flex-wrap gap-2">
-                      {podeAnalisar() && <button onClick={() => editarCamera(camera)} className="rounded bg-slate-200 px-3 py-1">Editar</button>}
-                      {podeAnalisar() && <button onClick={() => removerCamera(camera)} className="rounded bg-amber-500 px-3 py-1 font-semibold text-slate-950">Remover/Inativar</button>}
-                      {podeSuperAdmin() && <button onClick={() => excluirCameraDefinitivo(camera)} className="rounded bg-red-700 px-3 py-1 text-white">Excluir definitivo</button>}
-                      <button onClick={() => abrirChecklist(camera)} className="rounded bg-blue-600 px-3 py-1 text-white">Checklist</button>
-                      <button onClick={() => abrirHistoricoIndisponibilidade(camera)} className="rounded bg-slate-900 px-3 py-1 text-white">Histórico</button>
+                    <div className="flex flex-nowrap items-center gap-1.5">
+                      {podeAnalisar() && (
+                        <BotaoAcaoCamera titulo="Editar camera" onClick={() => editarCamera(camera)} icon={Pencil} />
+                      )}
+                      {podeAnalisar() && (
+                        <BotaoAcaoCamera
+                          titulo="Remover/Inativar camera"
+                          onClick={() => removerCamera(camera)}
+                          icon={WifiOff}
+                          classe="border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-400 hover:bg-amber-100"
+                        />
+                      )}
+                      {podeSuperAdmin() && (
+                        <BotaoAcaoCamera
+                          titulo="Excluir definitivo"
+                          onClick={() => excluirCameraDefinitivo(camera)}
+                          icon={Trash2}
+                          classe="border-red-200 bg-red-50 text-red-700 hover:border-red-400 hover:bg-red-100"
+                        />
+                      )}
+                      <BotaoAcaoCamera
+                        titulo="Abrir checklist"
+                        onClick={() => abrirChecklist(camera)}
+                        icon={ClipboardCheck}
+                        classe="border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400 hover:bg-blue-100"
+                      />
+                      <BotaoAcaoCamera
+                        titulo="Historico de indisponibilidade"
+                        onClick={() => abrirHistoricoIndisponibilidade(camera)}
+                        icon={History}
+                        classe="border-slate-300 bg-slate-900 text-white hover:border-slate-500 hover:bg-slate-800"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -1048,7 +1098,7 @@ export default function Cameras() {
                 </div>
                 <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4">
                   <p className="text-xs text-slate-400">Retencao cronologica</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.cronologica === null ? "Sem dados" : `${resumoTimeline.cronologica.toLocaleString("pt-BR")} dias`}</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.cronologica === null ? "Sem dados" : formatarRetencao(resumoTimeline.cronologica)}</p>
                 </div>
                 <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
                   <p className="text-xs text-red-200">Periodos de falha</p>
@@ -1056,7 +1106,7 @@ export default function Cameras() {
                 </div>
                 <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
                   <p className="text-xs text-emerald-200">Retencao efetiva</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.efetiva === null ? "Sem dados" : `${resumoTimeline.efetiva.toLocaleString("pt-BR")} dias`}</p>
+                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.efetiva === null ? "Sem dados" : formatarRetencao(resumoTimeline.efetiva)}</p>
                 </div>
               </div>
 
