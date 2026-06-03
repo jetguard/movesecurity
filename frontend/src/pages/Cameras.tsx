@@ -929,10 +929,10 @@ export default function Cameras() {
             </select>
           </div>
         </div>
-        <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center">
+        <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center dark:border-blue-500/20 dark:bg-blue-500/10">
           <div>
-            <p className="text-sm font-bold text-blue-900">Relatório Técnico CFTV</p>
-            <p className="text-xs text-blue-700">
+            <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Relatório Técnico CFTV</p>
+            <p className="text-xs text-blue-700 dark:text-slate-200">
               Selecione câmeras filtradas ou específicas para emitir um PDF com status, retenção e histórico de conexão/desconexão.
             </p>
           </div>
