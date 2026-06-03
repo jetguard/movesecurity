@@ -4,6 +4,13 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.4] - 2026-06-03
+
+### Corrigido
+
+- Central de Documentos agora considera todas as unidades permitidas ao usuário, incluindo unidade ativa e unidade principal.
+- Relatórios existentes em unidades permitidas passam a aparecer na consulta documental mesmo quando o ambiente ativo não coincide exatamente com a unidade preferencial.
+
 ## [1.1.3] - 2026-06-03
 
 ### Corrigido

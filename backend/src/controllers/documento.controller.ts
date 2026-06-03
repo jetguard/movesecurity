@@ -41,19 +41,18 @@ function chaveAssinatura(modulo: string, registroId: number) {
 
 function unidadesConsulta(req: AuthRequest) {
   const unidadeFiltro = typeof req.query.unidade === "string" ? req.query.unidade.trim() : "";
-  const unidadesPermitidas = req.unidadesPermitidas?.length ? req.unidadesPermitidas : [req.unidadeAtiva || "GJA-T1"];
-  const perfil = req.usuarioPerfil || "";
-  const podeVerMultiplas = ["SUPER_ADMIN", "ADMINISTRADOR"].includes(perfil);
+  const unidadesBase = [
+    ...(req.unidadesPermitidas || []),
+    req.unidadeAtiva || "",
+    req.usuarioUnidade || "",
+  ].filter(Boolean);
+  const unidadesPermitidas = Array.from(new Set(unidadesBase.length ? unidadesBase : ["GJA-T1"]));
 
   if (unidadeFiltro && unidadesPermitidas.includes(unidadeFiltro)) {
     return [unidadeFiltro];
   }
 
-  if (podeVerMultiplas) {
-    return unidadesPermitidas;
-  }
-
-  return [req.unidadeAtiva || req.usuarioUnidade || unidadesPermitidas[0] || "GJA-T1"];
+  return unidadesPermitidas;
 }
 
 function assinaturaParaMapa(assinaturas: Array<{
