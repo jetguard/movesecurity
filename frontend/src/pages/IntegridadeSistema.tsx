@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Archive, Database, FileWarning, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, Archive, Database, Download, FileWarning, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import { SkeletonPage } from "../components/ui/Skeleton";
 import { podeSuperAdmin } from "../utils/permissoes";
@@ -33,6 +33,7 @@ export default function IntegridadeSistema() {
   const [dados, setDados] = useState<Integridade | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [processando, setProcessando] = useState(false);
+  const [gerandoBackup, setGerandoBackup] = useState(false);
   const superAdmin = podeSuperAdmin();
 
   async function carregar() {
@@ -80,6 +81,19 @@ export default function IntegridadeSistema() {
     }
   }
 
+  async function gerarBackupAgora() {
+    if (!confirm("Deseja gerar um backup local do banco de dados agora?")) return;
+
+    setGerandoBackup(true);
+    try {
+      const response = await api.post("/governanca/backup");
+      alert(response.data.mensagem || `Backup gerado: ${response.data.arquivo}`);
+      await carregar();
+    } finally {
+      setGerandoBackup(false);
+    }
+  }
+
   if (carregando) return <SkeletonPage />;
 
   if (!dados) {
@@ -106,14 +120,27 @@ export default function IntegridadeSistema() {
             Auditoria técnica de evidências, uploads, backups, sessões e políticas críticas do JetGuard.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={carregar}
-          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
-        >
-          <RefreshCw size={18} />
-          Atualizar
-        </button>
+        <div className="flex flex-wrap gap-3">
+          {superAdmin && (
+            <button
+              type="button"
+              disabled={gerandoBackup}
+              onClick={gerarBackupAgora}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Download size={18} />
+              {gerandoBackup ? "Gerando..." : "Gerar backup"}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={carregar}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 shadow-sm hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <RefreshCw size={18} />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-7">

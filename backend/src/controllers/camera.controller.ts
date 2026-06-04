@@ -1025,6 +1025,22 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
             mensagem: `Câmera ${camera.numeroCamera} offline acima de ${tempoMaximoOffline} minutos`,
             severidade: "Crítica",
           })),
+        ...menorRetencao
+          .filter((camera) => camera.diasRetencao < 150)
+          .slice(0, 5)
+          .map((camera) => ({
+            tipo: "Retencao critica",
+            mensagem: `Camera ${camera.numeroCamera} com apenas ${camera.diasRetencao} dia(s) de retencao real no Digifort`,
+            severidade: "Critica",
+          })),
+        ...menorRetencao
+          .filter((camera) => camera.diasRetencao >= 150 && camera.diasRetencao < 180)
+          .slice(0, 5)
+          .map((camera) => ({
+            tipo: "Retencao em atencao",
+            mensagem: `Camera ${camera.numeroCamera} abaixo da meta de 180 dias (${camera.diasRetencao} dia(s))`,
+            severidade: "Atencao",
+          })),
         ...camerasSemChecklist.map((camera) => ({
           tipo: "Checklist vencido",
           mensagem: `Câmera ${camera.numeroCamera} sem checklist nos últimos ${checklistCameraDias} dias`,

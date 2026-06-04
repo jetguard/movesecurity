@@ -222,6 +222,13 @@ export default function CentralDocumentos() {
     recusadas: anulacoes.filter((item) => item.status === "Recusado").length,
   }), [anulacoes]);
 
+  const filaExecutiva = useMemo(() => ({
+    assinaturaPendente: documentos.filter((item) => item.assinaturaStatus === "Pendente").length,
+    aguardandoDecisao: documentos.filter((item) => item.fluxoStatus === "Aguardando Revisao").length,
+    emAjuste: documentos.filter((item) => item.fluxoStatus === "Devolvido").length,
+    anulacaoPendente: anulacoes.filter((item) => item.status === "Pendente").length,
+  }), [anulacoes, documentos]);
+
   const anulacaoSelecionada = useMemo(() => {
     if (!selecionado) return null;
     return anulacoes.find((item) => item.modulo === selecionado.modulo && item.registroId === selecionado.registroId) || null;
@@ -418,6 +425,30 @@ export default function CentralDocumentos() {
                 <span><b className="block text-base">{resumoAnulacoes.anuladas}</b>Anuladas</span>
                 <span><b className="block text-base">{resumoAnulacoes.recusadas}</b>Recusadas</span>
               </div>
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-blue-200 bg-blue-50 p-4 shadow-sm dark:border-blue-500/20 dark:bg-blue-500/10">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-bold text-slate-900 dark:text-white">Fila executiva</h2>
+                <p className="text-xs text-slate-600 dark:text-slate-300">Pendências que exigem acompanhamento documental.</p>
+              </div>
+              <ShieldCheck className="text-blue-700 dark:text-blue-200" size={20} />
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <button type="button" onClick={() => setAssinatura("Pendente")} className="rounded-2xl bg-white p-3 text-left text-amber-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-amber-200">
+                <b className="block text-lg">{filaExecutiva.assinaturaPendente}</b>Assinatura pendente
+              </button>
+              <button type="button" onClick={() => setTratativa("Aguardando Revisao")} className="rounded-2xl bg-white p-3 text-left text-blue-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-blue-200">
+                <b className="block text-lg">{filaExecutiva.aguardandoDecisao}</b>Aguardando decisão
+              </button>
+              <button type="button" onClick={() => setTratativa("Devolvido")} className="rounded-2xl bg-white p-3 text-left text-red-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-red-200">
+                <b className="block text-lg">{filaExecutiva.emAjuste}</b>Em ajuste
+              </button>
+              <button type="button" onClick={() => setTratativa("")} className="rounded-2xl bg-white p-3 text-left text-orange-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-orange-200">
+                <b className="block text-lg">{filaExecutiva.anulacaoPendente}</b>Anulação pendente
+              </button>
             </div>
           </section>
 

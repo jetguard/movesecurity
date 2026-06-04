@@ -85,6 +85,13 @@ type QuadraResumo = {
   permanenciaCritica?: number;
 };
 
+type DocumentosResumo = {
+  total: number;
+  assinados: number;
+  pendentes: number;
+  comPdf: number;
+};
+
 type TooltipPayloadItem = {
   name?: string;
   value?: number | string;
@@ -382,6 +389,7 @@ export default function Dashboard() {
   const [investigacoes, setInvestigacoes] = useState<Investigacao[]>([]);
   const [camerasResumo, setCamerasResumo] = useState<CamerasResumo>({});
   const [quadraResumo, setQuadraResumo] = useState<QuadraResumo>({});
+  const [documentosResumo, setDocumentosResumo] = useState<DocumentosResumo>({ total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
   const [tarefasAbertas, setTarefasAbertas] = useState<PlanejamentoCard[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [periodo, setPeriodo] = useState("todos");
@@ -394,7 +402,7 @@ export default function Dashboard() {
 
   async function carregarDashboard() {
     setCarregando(true);
-    const [ocorrenciasResponse, eventosResponse, investigacoesResponse, camerasResponse, quadraResponse, planejamentoResponse] =
+    const [ocorrenciasResponse, eventosResponse, investigacoesResponse, camerasResponse, quadraResponse, planejamentoResponse, documentosResponse] =
       await Promise.all([
         api.get("/ocorrencias"),
         api.get("/eventos"),
@@ -402,6 +410,7 @@ export default function Dashboard() {
         api.get("/cameras/dashboard").catch(() => ({ data: {} })),
         api.get(`/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`).catch(() => ({ data: {} })),
         api.get("/planejamento").catch(() => ({ data: { colunas: [] } })),
+        api.get("/documentos").catch(() => ({ data: { resumo: { total: 0, assinados: 0, pendentes: 0, comPdf: 0 } } })),
       ]);
 
     setOcorrencias(ocorrenciasResponse.data);
@@ -409,6 +418,7 @@ export default function Dashboard() {
     setInvestigacoes(investigacoesResponse.data);
     setCamerasResumo(camerasResponse.data);
     setQuadraResumo(quadraResponse.data);
+    setDocumentosResumo(documentosResponse.data.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
     const cards = ((planejamentoResponse.data.colunas || []) as PlanejamentoColuna[]).flatMap((coluna) =>
       (coluna.cards || []).map((card: PlanejamentoCard) => ({ ...card, status: coluna.titulo }))
     );
@@ -709,12 +719,20 @@ export default function Dashboard() {
           </section>
         </>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-          <Indicador titulo="Prejuízo total" valor={formatarMoeda(totalPrejuizo)} subtitulo="Somatório das análises de ocorrência" destaque="text-red-600" />
-          <Indicador titulo="Valor recuperado" valor={formatarMoeda(totalRecuperado)} subtitulo="Somatório das análises de eventos" destaque="text-emerald-600" />
-          <Indicador titulo="Diferença financeira" valor={formatarMoeda(diferenca)} subtitulo="Prejuízo menos recuperação" destaque={diferenca > 0 ? "text-amber-600" : "text-emerald-600"} />
-          <Indicador titulo="Tendência" valor={variacao > 0 ? `+${variacao}` : variacao} subtitulo="Variação contra período anterior" destaque={variacao > 0 ? "text-blue-600" : "text-slate-700"} />
-        </div>
+        <>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+            <Indicador titulo="Prejuízo total" valor={formatarMoeda(totalPrejuizo)} subtitulo="Somatório das análises de ocorrência" destaque="text-red-600" />
+            <Indicador titulo="Valor recuperado" valor={formatarMoeda(totalRecuperado)} subtitulo="Somatório das análises de eventos" destaque="text-emerald-600" />
+            <Indicador titulo="Diferença financeira" valor={formatarMoeda(diferenca)} subtitulo="Prejuízo menos recuperação" destaque={diferenca > 0 ? "text-amber-600" : "text-emerald-600"} />
+            <Indicador titulo="Tendência" valor={variacao > 0 ? `+${variacao}` : variacao} subtitulo="Variação contra período anterior" destaque={variacao > 0 ? "text-blue-600" : "text-slate-700"} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+            <Indicador titulo="Documentos emitidos" valor={documentosResumo.total} subtitulo="Central documental consolidada" destaque="text-blue-600" />
+            <Indicador titulo="Assinados" valor={documentosResumo.assinados} subtitulo="Com validação eletrônica" destaque="text-emerald-600" />
+            <Indicador titulo="Pendentes" valor={documentosResumo.pendentes} subtitulo="Exigem assinatura ou revisão" destaque="text-amber-600" />
+            <Indicador titulo="Com PDF" valor={documentosResumo.comPdf} subtitulo="Disponíveis para consulta e download" destaque="text-slate-700" />
+          </div>
+        </>
       )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
