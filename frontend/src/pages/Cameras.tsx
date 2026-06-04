@@ -721,39 +721,42 @@ export default function Cameras() {
                   <h2 className="font-bold text-slate-100">Mapa operacional das áreas monitoradas</h2>
                   <span className="text-xs text-slate-500">Atualização dinâmica</span>
                 </div>
-                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div className="mt-4 grid max-h-[310px] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
                   {dashboard.mapaOperacional.map((item) => (
-                    <button key={item.id} onClick={() => editarCamera(cameras.find((c) => c.id === item.id)!)} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 ${item.status === "Conectada" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                    <button key={item.id} onClick={() => editarCamera(cameras.find((c) => c.id === item.id)!)} className={`rounded-xl border p-3 text-left transition hover:-translate-y-0.5 ${item.status === "Conectada" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
                       <div className="flex items-center justify-between">
-                        <strong>Câmera {item.numeroCamera}</strong>
-                        <span className={`h-3 w-3 rounded-full ${item.status === "Conectada" ? "bg-emerald-400 shadow-[0_0_18px_rgba(52,211,153,.75)]" : "bg-red-400 shadow-[0_0_18px_rgba(248,113,113,.75)]"}`} />
+                        <strong className="text-sm text-slate-100">Câmera {item.numeroCamera}</strong>
+                        <span className={`h-2.5 w-2.5 rounded-full ${item.status === "Conectada" ? "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,.7)]" : "bg-red-400 shadow-[0_0_14px_rgba(248,113,113,.7)]"}`} />
                       </div>
-                      <p className="mt-2 text-sm text-slate-300">{item.area}</p>
-                      <p className="text-xs text-slate-500">{item.local} | Servidor {item.servidor}</p>
-                      {item.offlineMinutos > 0 && <p className="mt-2 text-xs font-bold text-red-300">Offline há {minutos(item.offlineMinutos)}</p>}
+                      <p className="mt-1 truncate text-xs font-semibold text-slate-300">{item.area}</p>
+                      <p className="truncate text-[11px] text-slate-500">{item.local} | Servidor {item.servidor}</p>
+                      {item.offlineMinutos > 0 && <p className="mt-1 text-[11px] font-bold text-red-300">Offline há {minutos(item.offlineMinutos)}</p>}
                     </button>
                   ))}
                 </div>
               </div>
 
               <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <h2 className="flex items-center gap-2 font-bold text-slate-100"><AlertTriangle size={18} /> Alertas ativos</h2>
-                <div className="mt-4 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="flex items-center gap-2 font-bold text-slate-100"><AlertTriangle size={18} /> Alertas ativos</h2>
+                  <span className="rounded-full bg-slate-900 px-2 py-1 text-xs font-bold text-slate-300">{dashboard.alertas.length + (dashboard.alertasAutomaticos || []).length}</span>
+                </div>
+                <div className="mt-4 max-h-[330px] space-y-2 overflow-y-auto pr-1 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
                   {dashboard.alertas.length === 0 ? (
-                    <p className="rounded-xl bg-emerald-500/10 p-4 text-sm text-emerald-200">Nenhuma câmera desconectada neste momento.</p>
+                    <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-200">Nenhuma câmera desconectada neste momento.</p>
                   ) : (
                     dashboard.alertas.map((alerta) => (
-                      <div key={alerta.id} className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-                        <p className="font-bold text-red-200">{alerta.titulo}</p>
-                        <p className="text-sm text-slate-300">{alerta.mensagem}</p>
+                      <div key={alerta.id} className="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+                        <p className="text-sm font-bold text-red-200">{alerta.titulo}</p>
+                        <p className="text-xs text-slate-300">{alerta.mensagem}</p>
                         <p className="mt-1 text-xs text-red-300">Indisponível há {minutos(alerta.minutos)} {alerta.slaViolado ? "| SLA violado" : ""}</p>
                       </div>
                     ))
                   )}
                   {(dashboard.alertasAutomaticos || []).map((alerta, index) => (
-                    <div key={`${alerta.tipo}-${index}`} className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-                      <p className="font-bold text-amber-200">{alerta.tipo}</p>
-                      <p className="text-sm text-slate-300">{alerta.mensagem}</p>
+                    <div key={`${alerta.tipo}-${index}`} className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
+                      <p className="text-sm font-bold text-amber-200">{alerta.tipo}</p>
+                      <p className="text-xs text-slate-300">{alerta.mensagem}</p>
                       <p className="mt-1 text-xs text-amber-300">{alerta.severidade}</p>
                     </div>
                   ))}
