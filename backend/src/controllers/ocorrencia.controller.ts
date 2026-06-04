@@ -193,7 +193,7 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
       local,
       natureza,
       subNatureza,
-      status = "ABERTO",
+      status,
       dataOcorrencia,
       relatoSeguranca,
       acoesTomadas,
@@ -282,13 +282,13 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
         },
         data: {
           assunto,
-        local: localCadastro.nome,
+          local: localCadastro.nome,
           unidade: req.unidadeAtiva || ocorrenciaExiste.unidade,
           natureza,
           subNatureza,
           relatoSeguranca,
           acoesTomadas,
-          status,
+          status: status || ocorrenciaExiste.status,
           dataOcorrencia: new Date(dataOcorrencia),
 
           envolvidos: {
@@ -403,6 +403,36 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
       codigo: ocorrencia.codigo,
       unidade: ocorrencia.unidade,
     });
+
+    const [riscos, estrategicas] = await Promise.all([
+      prisma.analiseRisco.findMany({
+        where: {
+          unidade: ocorrencia.unidade,
+          OR: [
+            { ocorrenciaId: ocorrencia.id },
+            ...(ocorrencia.investigacao ? [{ investigacaoId: ocorrencia.investigacao.id }] : []),
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+        include: {
+          responsavel: { select: { nome: true } },
+        },
+      }),
+      prisma.analiseEstrategica.findMany({
+        where: {
+          unidade: ocorrencia.unidade,
+          OR: [
+            { ocorrenciaId: ocorrencia.id },
+            ...(ocorrencia.investigacao ? [{ investigacaoId: ocorrencia.investigacao.id }] : []),
+          ],
+        },
+        orderBy: { createdAt: "asc" },
+        include: {
+          responsavel: { select: { nome: true } },
+        },
+      }),
+    ]);
+
     const assinatura =
       (await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id)) ||
       (ocorrencia.analise ? await assinaturaValidaDocumento("AnaliseOcorrencia", ocorrencia.analise.id) : null) ||
@@ -426,6 +456,8 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         envolvidos: ocorrencia.envolvidos,
         investigacao: ocorrencia.investigacao,
         analise: ocorrencia.analise,
+        riscos,
+        estrategicas,
       },
       usuario,
       validacaoUrl,

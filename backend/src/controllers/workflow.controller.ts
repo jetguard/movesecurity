@@ -14,12 +14,32 @@ function normalizarModulo(modulo: string): ModuloWorkflow | null {
 
 async function buscarRegistro(modulo: ModuloWorkflow, id: number, unidade?: string) {
   if (modulo === "ocorrencia") {
-    return prisma.ocorrencia.findFirst({ where: { id, unidade } });
+    return prisma.ocorrencia.findFirst({
+      where: { id, unidade },
+      include: {
+        analise: true,
+        investigacao: true,
+      },
+    });
   }
   if (modulo === "evento") {
-    return prisma.evento.findFirst({ where: { id, unidade } });
+    return prisma.evento.findFirst({
+      where: { id, unidade },
+      include: {
+        analise: true,
+      },
+    });
   }
-  return prisma.investigacao.findFirst({ where: { id, unidade } });
+  return prisma.investigacao.findFirst({
+    where: { id, unidade },
+    include: {
+      ocorrencia: {
+        include: {
+          analise: true,
+        },
+      },
+    },
+  });
 }
 
 async function atualizarRegistro(modulo: ModuloWorkflow, id: number, data: Record<string, unknown>) {
@@ -50,6 +70,67 @@ function resumoRegistro(modulo: string, registro: any) {
 function codigoWorkflow(registro: unknown) {
   const dados = registro as { codigo?: string | null; numeroOcorrencia?: string | null; id?: number };
   return dados.codigo || dados.numeroOcorrencia || String(dados.id || "");
+}
+
+function criarErroFluxo(message: string, status = 400) {
+  const erro = new Error(message);
+  (erro as Error & { status?: number }).status = status;
+  return erro;
+}
+
+function moduloAssinatura(modulo: ModuloWorkflow) {
+  return modulo === "ocorrencia" ? "Ocorrencia" : modulo === "evento" ? "Evento" : "Investigacao";
+}
+
+function validarAprovacaoDocumento(modulo: ModuloWorkflow, registro: any) {
+  if (registro.status === "Anulado") {
+    throw criarErroFluxo("Documento anulado não pode ser aprovado.");
+  }
+
+  if (modulo === "ocorrencia") {
+    if (!registro.analise) {
+      throw criarErroFluxo("Inicie e conclua a análise da ocorrência antes da aprovação final.");
+    }
+    if (registro.analise.status !== "Concluído") {
+      throw criarErroFluxo("A análise da ocorrência precisa estar concluída antes da aprovação final.");
+    }
+    if (registro.investigacao && registro.investigacao.status !== "Concluído") {
+      throw criarErroFluxo("A investigação vinculada precisa estar concluída antes da aprovação final.");
+    }
+    return;
+  }
+
+  if (modulo === "evento") {
+    if (!registro.analise) {
+      throw criarErroFluxo("Inicie e conclua a análise do evento antes da aprovação final.");
+    }
+    if (registro.analise.status !== "Concluído") {
+      throw criarErroFluxo("A análise do evento precisa estar concluída antes da aprovação final.");
+    }
+    return;
+  }
+
+  if (registro.status !== "Concluído") {
+    throw criarErroFluxo("A investigação precisa estar concluída antes da aprovação final.");
+  }
+  if (registro.ocorrencia?.analise && registro.ocorrencia.analise.status !== "Concluído") {
+    throw criarErroFluxo("A análise da ocorrência vinculada precisa estar concluída antes da aprovação final.");
+  }
+}
+
+function validarEnvioParaRevisao(modulo: ModuloWorkflow, registro: any) {
+  if (["Aprovado", "Anulado"].includes(String(registro.fluxoStatus || registro.status))) {
+    throw criarErroFluxo("Este documento não pode ser enviado para revisão neste status.");
+  }
+
+  if (modulo === "ocorrencia" || modulo === "evento") {
+    validarAprovacaoDocumento(modulo, registro);
+    return;
+  }
+
+  if (registro.status !== "Concluído") {
+    throw criarErroFluxo("Conclua a investigação antes de enviar para revisão.");
+  }
 }
 
 export async function listarWorkflow(req: AuthRequest, res: Response) {
@@ -89,9 +170,11 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
     let acaoLog = "Atualizacao de workflow";
 
     if (acao === "enviar") {
+      validarEnvioParaRevisao(modulo, anterior);
+
       await assinarDocumento({
         req,
-        modulo: modulo === "ocorrencia" ? "Ocorrencia" : modulo === "evento" ? "Evento" : "Investigacao",
+        modulo: moduloAssinatura(modulo),
         registroId: id,
         codigoRegistro: codigoWorkflow(anterior),
         unidade: anterior.unidade,
@@ -107,9 +190,11 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
       dados.revisadoEm = agora;
       acaoLog = "Registro colocado em revisao";
     } else if (acao === "aprovar") {
+      validarAprovacaoDocumento(modulo, anterior);
+
       await assinarDocumento({
         req,
-        modulo: modulo === "ocorrencia" ? "Ocorrencia" : modulo === "evento" ? "Evento" : "Investigacao",
+        modulo: moduloAssinatura(modulo),
         registroId: id,
         codigoRegistro: codigoWorkflow(anterior),
         unidade: anterior.unidade,
@@ -117,6 +202,7 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
         dados: anterior,
       });
       dados.fluxoStatus = "Aprovado";
+      dados.status = "Concluído";
       dados.aprovadoPorId = req.usuarioId;
       dados.aprovadoEm = agora;
       dados.motivoDevolucao = null;
@@ -135,11 +221,12 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
       }
 
       dados.fluxoStatus = "Devolvido";
+      dados.status = "Reaberto";
       dados.aprovadoPorId = null;
       dados.aprovadoEm = null;
       dados.motivoDevolucao = `Reaberto pelo Super Admin: ${req.body.motivo}`;
       await invalidarAssinaturasDocumento({
-        modulo: modulo === "ocorrencia" ? "Ocorrencia" : modulo === "evento" ? "Evento" : "Investigacao",
+        modulo: moduloAssinatura(modulo),
         registroId: id,
         motivo: `Registro reaberto: ${req.body.motivo}`,
       });

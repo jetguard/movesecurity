@@ -27,7 +27,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
       local,
       natureza,
       subNatureza,
-      status = "ABERTO",
+      status = "Aberto",
       dataEvento,
       relatoSeguranca,
       acoesTomadas,
@@ -91,6 +91,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
         relatoSeguranca,
         acoesTomadas,
         status,
+        fluxoStatus: "Em Elaboracao",
         dataEvento: new Date(dataEvento),
 
         envolvidos: {
@@ -198,7 +199,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       local,
       natureza,
       subNatureza,
-      status = "ABERTO",
+      status,
       dataEvento,
       relatoSeguranca,
       acoesTomadas,
@@ -291,7 +292,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
           subNatureza,
           relatoSeguranca,
           acoesTomadas,
-          status,
+          status: status || eventoExiste.status,
           dataEvento: new Date(dataEvento),
 
           envolvidos: {

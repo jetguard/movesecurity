@@ -8,6 +8,12 @@ function normalizarBrl(valor: unknown) {
   return String(valor || "0,00").trim() || "0,00";
 }
 
+function statusRelatorioAposAnalise(concluindo: boolean, investigacao?: { status?: string | null } | null) {
+  if (!concluindo) return "Em Análise";
+  if (investigacao && investigacao.status !== "Concluído") return "Em Investigação";
+  return "Aguardando Aprovação";
+}
+
 export async function iniciarAnaliseOcorrencia(req: AuthRequest, res: Response) {
   try {
     const { ocorrenciaId } = req.params;
@@ -77,7 +83,11 @@ export async function atualizarAnaliseOcorrencia(req: AuthRequest, res: Response
         },
       },
       include: {
-        ocorrencia: true,
+        ocorrencia: {
+          include: {
+            investigacao: true,
+          },
+        },
       },
     });
 
@@ -110,7 +120,10 @@ export async function atualizarAnaliseOcorrencia(req: AuthRequest, res: Response
           id: analiseAtual.ocorrenciaId,
         },
         data: {
-          status: concluindo ? "Concluído" : "Em Análise",
+          status: statusRelatorioAposAnalise(concluindo, anterior.ocorrencia.investigacao),
+          fluxoStatus: concluindo && (!anterior.ocorrencia.investigacao || anterior.ocorrencia.investigacao.status === "Concluído")
+            ? "Aguardando Revisao"
+            : anterior.ocorrencia.fluxoStatus,
         },
       });
 
@@ -249,7 +262,8 @@ export async function atualizarAnaliseEvento(req: AuthRequest, res: Response) {
           id: analiseAtual.eventoId,
         },
         data: {
-          status: concluindo ? "Concluído" : "Em Análise",
+          status: concluindo ? "Aguardando Aprovação" : "Em Análise",
+          fluxoStatus: concluindo ? "Aguardando Revisao" : anterior.evento.fluxoStatus,
         },
       });
 

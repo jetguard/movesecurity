@@ -2,6 +2,7 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { assinarDocumento, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
 
 function formatarCodigo(numero: number, ano: number) {
   return `${String(numero).padStart(4, "0")}/${ano}`;
@@ -29,6 +30,13 @@ async function proximaNumeracaoInvestigacao(unidade: string) {
     ano,
     codigo: formatarCodigo(numero, ano),
   };
+}
+
+function statusOcorrenciaAposInvestigacao(statusInvestigacao: string, analise?: { status?: string | null } | null) {
+  if (statusInvestigacao !== "Concluído") return "Em Investigação";
+  if (analise?.status === "Concluído") return "Aguardando Aprovação";
+  if (analise) return "Em Análise";
+  return "Aberto";
 }
 
 export async function listarInvestigacoes(req: AuthRequest, res: Response) {
@@ -88,19 +96,37 @@ export async function converterOcorrenciaParaInvestigacao(
 
     if (investigacaoExistente) {
       if (investigacaoExistente.codigo) {
+        if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+          await prisma.ocorrencia.update({
+            where: { id: ocorrencia.id },
+            data: { status: statusOcorrenciaAposInvestigacao(investigacaoExistente.status) },
+          });
+        }
+
         return res.status(200).json(investigacaoExistente);
       }
 
       const numeracao = await proximaNumeracaoInvestigacao(ocorrencia.unidade);
-      const investigacaoAtualizada = await prisma.investigacao.update({
-        where: {
-          id: investigacaoExistente.id,
-        },
-        data: numeracao,
-        include: {
-          ocorrencia: true,
-          responsavel: true,
-        },
+      const investigacaoAtualizada = await prisma.$transaction(async (tx) => {
+        const atualizada = await tx.investigacao.update({
+          where: {
+            id: investigacaoExistente.id,
+          },
+          data: numeracao,
+          include: {
+            ocorrencia: true,
+            responsavel: true,
+          },
+        });
+
+        if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+          await tx.ocorrencia.update({
+            where: { id: ocorrencia.id },
+            data: { status: statusOcorrenciaAposInvestigacao(atualizada.status) },
+          });
+        }
+
+        return atualizada;
       });
 
       return res.status(200).json(investigacaoAtualizada);
@@ -108,26 +134,35 @@ export async function converterOcorrenciaParaInvestigacao(
 
     const numeracao = await proximaNumeracaoInvestigacao(ocorrencia.unidade);
 
-    const investigacao = await prisma.investigacao.create({
-      data: {
-        ...numeracao,
-        ocorrenciaId: ocorrencia.id,
-        titulo: ocorrencia.assunto,
-        descricao: ocorrencia.relatoSeguranca || ocorrencia.assunto,
-        numeroOcorrencia: ocorrencia.codigo,
-        assunto: ocorrencia.assunto,
-        local: ocorrencia.local,
-        unidade: ocorrencia.unidade,
-        natureza: ocorrencia.natureza,
-        subNatureza: ocorrencia.subNatureza,
-        dataOcorrencia: ocorrencia.dataOcorrencia,
-        relatoSeguranca: ocorrencia.relatoSeguranca,
-        responsavelId: req.usuarioId,
-      },
-      include: {
-        ocorrencia: true,
-        responsavel: true,
-      },
+    const investigacao = await prisma.$transaction(async (tx) => {
+      const criada = await tx.investigacao.create({
+        data: {
+          ...numeracao,
+          ocorrenciaId: ocorrencia.id,
+          titulo: ocorrencia.assunto,
+          descricao: ocorrencia.relatoSeguranca || ocorrencia.assunto,
+          numeroOcorrencia: ocorrencia.codigo,
+          assunto: ocorrencia.assunto,
+          local: ocorrencia.local,
+          unidade: ocorrencia.unidade,
+          natureza: ocorrencia.natureza,
+          subNatureza: ocorrencia.subNatureza,
+          dataOcorrencia: ocorrencia.dataOcorrencia,
+          relatoSeguranca: ocorrencia.relatoSeguranca,
+          responsavelId: req.usuarioId,
+        },
+        include: {
+          ocorrencia: true,
+          responsavel: true,
+        },
+      });
+
+      await tx.ocorrencia.update({
+        where: { id: ocorrencia.id },
+        data: { status: "Em Investigação" },
+      });
+
+      return criada;
     });
 
     await registrarLog({
@@ -156,6 +191,13 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
         id: Number(id),
         unidade: req.unidadeAtiva,
       },
+      include: {
+        ocorrencia: {
+          include: {
+            analise: true,
+          },
+        },
+      },
     });
 
     if (!anterior) {
@@ -179,20 +221,39 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
       });
     }
 
-    const investigacao = await prisma.investigacao.update({
-      where: {
-        id: Number(id),
-      },
-      data: {
-        descricaoInvestigacao: req.body.descricaoInvestigacao,
-        conclusaoFatos: req.body.conclusaoFatos,
-        local: localCadastro.nome,
-        status: req.body.status || anterior.status,
-      },
-      include: {
-        ocorrencia: true,
-        responsavel: true,
-      },
+    const novoStatus = req.body.status || anterior.status;
+    const concluindo = novoStatus === "Concluído";
+    if (concluindo && anterior.status !== "Concluído") await exigirSenhaAssinatura(req);
+
+    const investigacao = await prisma.$transaction(async (tx) => {
+      const atualizada = await tx.investigacao.update({
+        where: {
+          id: Number(id),
+        },
+        data: {
+          descricaoInvestigacao: req.body.descricaoInvestigacao,
+          conclusaoFatos: req.body.conclusaoFatos,
+          local: localCadastro.nome,
+          status: novoStatus,
+          fluxoStatus: concluindo ? "Aguardando Revisao" : anterior.fluxoStatus,
+        },
+        include: {
+          ocorrencia: true,
+          responsavel: true,
+        },
+      });
+
+      await tx.ocorrencia.update({
+        where: { id: atualizada.ocorrenciaId },
+        data: {
+          status: statusOcorrenciaAposInvestigacao(novoStatus, anterior.ocorrencia.analise),
+          fluxoStatus: concluindo && anterior.ocorrencia.analise?.status === "Concluído"
+            ? "Aguardando Revisao"
+            : anterior.ocorrencia.fluxoStatus,
+        },
+      });
+
+      return atualizada;
     });
 
     await registrarLog({
@@ -203,6 +264,18 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
       dadosAnteriores: anterior,
       dadosNovos: investigacao,
     });
+
+    if (concluindo && anterior.status !== "Concluído") {
+      await assinarDocumento({
+        req,
+        modulo: "Investigacao",
+        registroId: investigacao.id,
+        codigoRegistro: investigacao.codigo || investigacao.numeroOcorrencia,
+        unidade: investigacao.unidade,
+        acao: "Conclusão da investigação",
+        dados: investigacao,
+      });
+    }
 
     return res.json(investigacao);
   } catch (error) {

@@ -143,6 +143,11 @@ function formatarData(valor?: string | null) {
   return new Date(valor).toLocaleString("pt-BR");
 }
 
+function confirmarTextoAnulacao(mensagem: string) {
+  const resposta = window.prompt(`${mensagem}\n\nDigite CONFIRMAR para prosseguir.`);
+  return resposta?.trim().toUpperCase() === "CONFIRMAR";
+}
+
 export default function CentralDocumentos() {
   const [documentos, setDocumentos] = useState<DocumentoCentral[]>([]);
   const [anulacoes, setAnulacoes] = useState<SolicitacaoAnulacao[]>([]);
@@ -307,9 +312,18 @@ export default function CentralDocumentos() {
 
   async function registrarAcordoAnulacao(status: string) {
     if (!anulacaoSelecionada) return;
+    if (status === "Aprovado" && !confirmarTextoAnulacao("Você está aprovando o acordo para anulação deste documento.")) {
+      alert('Ação cancelada. É necessário digitar "CONFIRMAR".');
+      return;
+    }
+
     setProcessandoAnulacao(true);
     try {
-      await api.put(`/anulacoes/${anulacaoSelecionada.id}/acordo`, { status, observacao: observacaoAcordo });
+      await api.put(`/anulacoes/${anulacaoSelecionada.id}/acordo`, {
+        status,
+        observacao: observacaoAcordo,
+        confirmacaoAnulacao: status === "Aprovado" ? "CONFIRMAR" : undefined,
+      });
       setObservacaoAcordo("");
       await carregarDocumentos();
       alert("Acordo de anulação registrado com sucesso.");
@@ -320,9 +334,18 @@ export default function CentralDocumentos() {
 
   async function decidirAnulacao(decisao: string) {
     if (!anulacaoSelecionada) return;
+    if (decisao === "Aprovado" && !confirmarTextoAnulacao("Você está prestes a anular definitivamente este documento.")) {
+      alert('Ação cancelada. É necessário digitar "CONFIRMAR".');
+      return;
+    }
+
     setProcessandoAnulacao(true);
     try {
-      await api.put(`/anulacoes/${anulacaoSelecionada.id}/decisao`, { decisao, justificativa: justificativaAnulacao });
+      await api.put(`/anulacoes/${anulacaoSelecionada.id}/decisao`, {
+        decisao,
+        justificativa: justificativaAnulacao,
+        confirmacaoAnulacao: decisao === "Aprovado" ? "CONFIRMAR" : undefined,
+      });
       setJustificativaAnulacao("");
       await carregarDocumentos();
       alert("Decisão de anulação registrada com sucesso.");

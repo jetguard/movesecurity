@@ -117,6 +117,7 @@ export default function Ocorrencias() {
   const [tipoMencao, setTipoMencao] = useState("Acompanhar");
   const [observacaoMencao, setObservacaoMencao] = useState("");
   const [motivoAnulacao, setMotivoAnulacao] = useState("");
+  const [confirmacaoAnulacao, setConfirmacaoAnulacao] = useState("");
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
@@ -246,14 +247,21 @@ export default function Ocorrencias() {
       return;
     }
 
+    if (confirmacaoAnulacao.trim().toUpperCase() !== "CONFIRMAR") {
+      alert('Digite "CONFIRMAR" para enviar a solicitação de anulação.');
+      return;
+    }
+
     await api.post("/anulacoes", {
       modulo: "Ocorrencia",
       registroId: ocorrenciaAnulacao.id,
       motivo: motivoAnulacao,
+      confirmacaoAnulacao,
     });
 
     setOcorrenciaAnulacao(null);
     setMotivoAnulacao("");
+    setConfirmacaoAnulacao("");
     carregarOcorrencias();
     alert("Solicitação de anulação enviada aos analistas e administradores.");
   }
@@ -1247,11 +1255,20 @@ export default function Ocorrencias() {
               <div className="rounded-lg bg-orange-50 p-3 text-sm text-orange-800">
                 A anulação será enviada para ciência e acordo dos analistas. O relatório não será excluído.
               </div>
+              <label className="space-y-1">
+                <span className="text-xs font-bold uppercase text-orange-700">Digite CONFIRMAR para prosseguir</span>
+                <input
+                  className="w-full rounded-lg border border-orange-200 p-3 text-sm font-semibold uppercase outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+                  placeholder="CONFIRMAR"
+                  value={confirmacaoAnulacao}
+                  onChange={(e) => setConfirmacaoAnulacao(e.target.value)}
+                />
+              </label>
               <div className="flex gap-3">
                 <button onClick={solicitarAnulacao} className="rounded bg-orange-600 px-4 py-2 text-white">
                   Enviar solicitação
                 </button>
-                <button onClick={() => setOcorrenciaAnulacao(null)} className="rounded bg-slate-200 px-4 py-2">
+                <button onClick={() => { setOcorrenciaAnulacao(null); setConfirmacaoAnulacao(""); }} className="rounded bg-slate-200 px-4 py-2">
                   Cancelar
                 </button>
               </div>

@@ -30,6 +30,10 @@ function podeDecidir(perfil?: string) {
   return perfil === PERFIS.SUPER_ADMIN || perfil === PERFIS.ADMINISTRADOR;
 }
 
+function confirmacaoAnulacaoValida(valor: unknown) {
+  return String(valor || "").trim().toUpperCase() === "CONFIRMAR";
+}
+
 export async function listarSolicitacoesAnulacao(req: AuthRequest, res: Response) {
   try {
     const solicitacoes = await prisma.solicitacaoAnulacaoRelatorio.findMany({
@@ -62,10 +66,14 @@ export async function listarSolicitacoesAnulacao(req: AuthRequest, res: Response
 
 export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response) {
   try {
-    const { modulo, registroId, motivo } = req.body;
+    const { modulo, registroId, motivo, confirmacaoAnulacao } = req.body;
 
     if (!moduloValido(modulo) || !registroId || !motivo?.trim()) {
       return res.status(400).json({ error: "Informe relatório e motivo da anulação." });
+    }
+
+    if (!confirmacaoAnulacaoValida(confirmacaoAnulacao)) {
+      return res.status(400).json({ error: 'Digite "CONFIRMAR" para prosseguir com a anulação.' });
     }
 
     const registro = await buscarRegistro(modulo, Number(registroId), req.unidadeAtiva || "GJA-T1");
@@ -156,10 +164,14 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
 export async function registrarAcordoAnulacao(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { status, observacao } = req.body;
+    const { status, observacao, confirmacaoAnulacao } = req.body;
 
     if (![STATUS_APROVADO, STATUS_RECUSADO].includes(status)) {
       return res.status(400).json({ error: "Status de acordo inválido." });
+    }
+
+    if (status === STATUS_APROVADO && !confirmacaoAnulacaoValida(confirmacaoAnulacao)) {
+      return res.status(400).json({ error: 'Digite "CONFIRMAR" para aprovar a anulação.' });
     }
 
     const acordo = await prisma.acordoAnulacaoRelatorio.findFirst({
@@ -210,10 +222,14 @@ export async function decidirAnulacao(req: AuthRequest, res: Response) {
     }
 
     const { id } = req.params;
-    const { decisao, justificativa } = req.body;
+    const { decisao, justificativa, confirmacaoAnulacao } = req.body;
 
     if (![STATUS_APROVADO, STATUS_RECUSADO].includes(decisao)) {
       return res.status(400).json({ error: "Decisão inválida." });
+    }
+
+    if (decisao === STATUS_APROVADO && !confirmacaoAnulacaoValida(confirmacaoAnulacao)) {
+      return res.status(400).json({ error: 'Digite "CONFIRMAR" para anular definitivamente o relatório.' });
     }
 
     const solicitacao = await prisma.solicitacaoAnulacaoRelatorio.findFirst({

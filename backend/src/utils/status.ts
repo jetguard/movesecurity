@@ -6,6 +6,7 @@
 };
 
 export const STATUS_WORKFLOW = {
+  EM_ELABORACAO: "Em Elaboracao",
   AGUARDANDO_REVISAO: "Aguardando Revisao",
   EM_REVISAO: "Em Revisao",
   APROVADO: "Aprovado",

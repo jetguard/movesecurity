@@ -49,6 +49,40 @@ type RelatorioPdf = {
     responsavel?: { nome: string } | null;
     concluidoPor?: { nome: string } | null;
   } | null;
+  riscos?: {
+    codigo: string;
+    dataHora: Date;
+    status: string;
+    setor: string;
+    local: string;
+    tipoRisco: string;
+    naturezaRisco: string;
+    probabilidade: string;
+    severidade: string;
+    nivelRisco: string;
+    descricaoRisco: string;
+    possivelImpacto: string;
+    medidasPreventivas: string;
+    planoAcao: string;
+    prazo: Date;
+    responsavel?: { nome: string } | null;
+    responsavelAcaoNome?: string | null;
+  }[];
+  estrategicas?: {
+    codigo: string;
+    tipo: string;
+    titulo: string;
+    status: string;
+    dataHora: Date;
+    descricao: string;
+    diagnostico?: string | null;
+    impacto?: string | null;
+    recomendacoes?: string | null;
+    planoAcao?: string | null;
+    responsavelAcao?: string | null;
+    prazo?: Date | null;
+    responsavel?: { nome: string } | null;
+  }[];
 };
 
 type UsuarioAssinatura = {
@@ -742,6 +776,90 @@ function escreverAnalise(
   escreverBlocoTexto(doc, "Conclusão da análise", valor(relatorio.analise.conclusaoAnalise), relatorio, usuario, qrCode, token);
 }
 
+function escreverAnalisesRisco(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  if (!relatorio.riscos?.length) return;
+
+  relatorio.riscos.forEach((risco) => {
+    novaPagina(doc, relatorio, usuario, qrCode, token);
+    escreverTituloSecao(doc, `Análise de risco ${risco.codigo}`);
+
+    const y = doc.y;
+    const colunaLargura = 230;
+    const colunaDireitaX = page.left + 270;
+
+    escreverCampo(doc, "Responsável", valor(risco.responsavel?.nome), page.left, y, colunaLargura);
+    escreverCampo(doc, "Data/hora", formatarData(risco.dataHora), colunaDireitaX, y, colunaLargura);
+    escreverCampo(doc, "Status", risco.status, page.left, y + 42, colunaLargura);
+    escreverCampo(doc, "Nível do risco", risco.nivelRisco, colunaDireitaX, y + 42, colunaLargura);
+    escreverCampo(doc, "Tipo / Natureza", `${risco.tipoRisco} | ${risco.naturezaRisco}`, page.left, y + 84, colunaLargura);
+    escreverCampo(doc, "Probabilidade / Severidade", `${risco.probabilidade} | ${risco.severidade}`, colunaDireitaX, y + 84, colunaLargura);
+    escreverCampo(doc, "Setor", risco.setor, page.left, y + 126, colunaLargura);
+    escreverCampo(doc, "Local", risco.local, colunaDireitaX, y + 126, colunaLargura);
+
+    doc.y = y + 170;
+    escreverBlocoTexto(doc, "Descrição do risco", risco.descricaoRisco, relatorio, usuario, qrCode, token);
+    escreverBlocoTexto(doc, "Possível impacto", risco.possivelImpacto, relatorio, usuario, qrCode, token);
+    escreverBlocoTexto(doc, "Medidas preventivas", risco.medidasPreventivas, relatorio, usuario, qrCode, token);
+    escreverBlocoTexto(
+      doc,
+      "Plano de ação",
+      `${risco.planoAcao}\nResponsável: ${valor(risco.responsavelAcaoNome)}\nPrazo: ${formatarData(risco.prazo)}`,
+      relatorio,
+      usuario,
+      qrCode,
+      token
+    );
+  });
+}
+
+function escreverAnalisesEstrategicas(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  if (!relatorio.estrategicas?.length) return;
+
+  relatorio.estrategicas.forEach((analise) => {
+    novaPagina(doc, relatorio, usuario, qrCode, token);
+    escreverTituloSecao(doc, `Análise estratégica ${analise.codigo}`);
+
+    const y = doc.y;
+    const colunaLargura = 230;
+    const colunaDireitaX = page.left + 270;
+
+    escreverCampo(doc, "Título", analise.titulo, page.left, y, contentWidth);
+    escreverCampo(doc, "Tipo", analise.tipo, page.left, y + 42, colunaLargura);
+    escreverCampo(doc, "Status", analise.status, colunaDireitaX, y + 42, colunaLargura);
+    escreverCampo(doc, "Responsável", valor(analise.responsavel?.nome), page.left, y + 84, colunaLargura);
+    escreverCampo(doc, "Data/hora", formatarData(analise.dataHora), colunaDireitaX, y + 84, colunaLargura);
+
+    doc.y = y + 128;
+    escreverBlocoTexto(doc, "Descrição", analise.descricao, relatorio, usuario, qrCode, token);
+    escreverBlocoTexto(doc, "Diagnóstico", valor(analise.diagnostico), relatorio, usuario, qrCode, token);
+    escreverBlocoTexto(doc, "Impacto", valor(analise.impacto), relatorio, usuario, qrCode, token);
+    escreverBlocoTexto(doc, "Recomendações", valor(analise.recomendacoes), relatorio, usuario, qrCode, token);
+    escreverBlocoTexto(
+      doc,
+      "Plano de ação",
+      `${valor(analise.planoAcao)}\nResponsável: ${valor(analise.responsavelAcao)}\nPrazo: ${
+        analise.prazo ? formatarData(analise.prazo) : "Não informado"
+      }`,
+      relatorio,
+      usuario,
+      qrCode,
+      token
+    );
+  });
+}
+
 function escreverRelato(
   doc: PDFKit.PDFDocument,
   relatorio: RelatorioPdf,
@@ -808,6 +926,8 @@ export async function gerarRelatorioPdf(
   escreverAcoesTomadas(doc, relatorio, usuario, qrCode, token);
   escreverAnalise(doc, relatorio, usuario, qrCode, token);
   escreverInvestigacao(doc, relatorio, usuario, qrCode, token);
+  escreverAnalisesRisco(doc, relatorio, usuario, qrCode, token);
+  escreverAnalisesEstrategicas(doc, relatorio, usuario, qrCode, token);
 
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i += 1) {
