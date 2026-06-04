@@ -109,6 +109,14 @@ const filtrosTratativa = [
   { valor: "sem-tratativa", label: "Sem tratativa" },
 ];
 
+const filtrosAcaoPendente = [
+  { valor: "", label: "Todas as acoes" },
+  { valor: "assinatura-pendente", label: "Assinatura pendente" },
+  { valor: "aguardando-decisao", label: "Aguardando decisao" },
+  { valor: "em-ajuste", label: "Em ajuste" },
+  { valor: "anulacao-pendente", label: "Anulacao pendente" },
+  { valor: "sem-tratativa", label: "Sem tratativa" },
+];
 function statusAssinaturaClasse(status: DocumentoCentral["assinaturaStatus"]) {
   return status === "Assinado"
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200"
@@ -146,6 +154,7 @@ export default function CentralDocumentos() {
   const [unidade, setUnidade] = useState("");
   const [assinatura, setAssinatura] = useState("");
   const [tratativa, setTratativa] = useState("");
+  const [acaoPendente, setAcaoPendente] = useState("");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
   const [motivoDevolucao, setMotivoDevolucao] = useState("Ajustes solicitados pela revisão documental.");
@@ -199,15 +208,40 @@ export default function CentralDocumentos() {
     setUnidade("");
     setAssinatura("");
     setTratativa("");
+    setAcaoPendente("");
     setInicio("");
     setFim("");
   }
 
   const documentosTratados = useMemo(() => {
-    if (!tratativa) return documentos;
-    if (tratativa === "sem-tratativa") return documentos.filter((documento) => !documento.fluxoStatus);
-    return documentos.filter((documento) => documento.fluxoStatus === tratativa);
-  }, [documentos, tratativa]);
+    let lista = documentos;
+
+    if (tratativa === "sem-tratativa") {
+      lista = lista.filter((documento) => !documento.fluxoStatus);
+    } else if (tratativa) {
+      lista = lista.filter((documento) => documento.fluxoStatus === tratativa);
+    }
+
+    if (acaoPendente === "assinatura-pendente") {
+      return lista.filter((documento) => documento.assinaturaStatus === "Pendente");
+    }
+    if (acaoPendente === "aguardando-decisao") {
+      return lista.filter((documento) => documento.fluxoStatus === "Aguardando Revisao");
+    }
+    if (acaoPendente === "em-ajuste") {
+      return lista.filter((documento) => documento.fluxoStatus === "Devolvido");
+    }
+    if (acaoPendente === "sem-tratativa") {
+      return lista.filter((documento) => !documento.fluxoStatus);
+    }
+    if (acaoPendente === "anulacao-pendente") {
+      return lista.filter((documento) =>
+        anulacoes.some((item) => item.modulo === documento.modulo && item.registroId === documento.registroId && item.status === "Pendente")
+      );
+    }
+
+    return lista;
+  }, [acaoPendente, anulacoes, documentos, tratativa]);
 
   const resumoTratativas = useMemo(() => ({
     aguardando: documentos.filter((item) => item.fluxoStatus === "Aguardando Revisao").length,
@@ -332,7 +366,7 @@ export default function CentralDocumentos() {
           </span>
         </div>
 
-        <form onSubmit={aplicarFiltros} className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1.4fr)_180px_210px_180px_150px_150px_auto_auto] lg:items-end">
+        <form onSubmit={aplicarFiltros} className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_170px_190px_170px_190px_145px_145px_auto_auto] xl:items-end">
           <label className="relative block">
             <Search className="pointer-events-none absolute left-3 top-3.5 text-slate-400" size={16} />
             <input
@@ -356,6 +390,10 @@ export default function CentralDocumentos() {
             <option value="">Todas as assinaturas</option>
             <option value="Assinado">Assinados</option>
             <option value="Pendente">Pendentes</option>
+          </select>
+
+          <select value={acaoPendente} onChange={(event) => setAcaoPendente(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+            {filtrosAcaoPendente.map((item) => <option key={item.valor} value={item.valor}>{item.label}</option>)}
           </select>
 
           <label className="space-y-1">
@@ -388,6 +426,25 @@ export default function CentralDocumentos() {
             </div>
           </div>
         ))}
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <button type="button" onClick={() => setAcaoPendente("assinatura-pendente")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "assinatura-pendente" ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
+          <p className="text-xl font-black">{filaExecutiva.assinaturaPendente}</p>
+          <p className="text-xs font-semibold">Assinaturas pendentes</p>
+        </button>
+        <button type="button" onClick={() => setAcaoPendente("aguardando-decisao")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "aguardando-decisao" ? "border-blue-400 bg-blue-50 text-blue-800 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
+          <p className="text-xl font-black">{filaExecutiva.aguardandoDecisao}</p>
+          <p className="text-xs font-semibold">Aguardando decisao</p>
+        </button>
+        <button type="button" onClick={() => setAcaoPendente("em-ajuste")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "em-ajuste" ? "border-red-400 bg-red-50 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
+          <p className="text-xl font-black">{filaExecutiva.emAjuste}</p>
+          <p className="text-xs font-semibold">Documentos em ajuste</p>
+        </button>
+        <button type="button" onClick={() => setAcaoPendente("anulacao-pendente")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "anulacao-pendente" ? "border-orange-400 bg-orange-50 text-orange-800 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
+          <p className="text-xl font-black">{filaExecutiva.anulacaoPendente}</p>
+          <p className="text-xs font-semibold">Anulacoes pendentes</p>
+        </button>
       </section>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
