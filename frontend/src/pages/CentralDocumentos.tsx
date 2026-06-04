@@ -557,30 +557,6 @@ export default function CentralDocumentos() {
             </div>
           </section>
 
-          <section className="rounded-3xl border border-blue-200 bg-blue-50 p-4 shadow-sm dark:border-blue-500/20 dark:bg-blue-500/10">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="font-bold text-slate-900 dark:text-white">Fila executiva</h2>
-                <p className="text-xs text-slate-600 dark:text-slate-300">Pendências que exigem acompanhamento documental.</p>
-              </div>
-              <ShieldCheck className="text-blue-700 dark:text-blue-200" size={20} />
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button type="button" onClick={() => setAssinatura("Pendente")} className="rounded-2xl bg-white p-3 text-left text-amber-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-amber-200">
-                <b className="block text-lg">{filaExecutiva.assinaturaPendente}</b>Assinatura pendente
-              </button>
-              <button type="button" onClick={() => setTratativa("Aguardando Revisao")} className="rounded-2xl bg-white p-3 text-left text-blue-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-blue-200">
-                <b className="block text-lg">{filaExecutiva.aguardandoDecisao}</b>Aguardando decisão
-              </button>
-              <button type="button" onClick={() => setTratativa("Devolvido")} className="rounded-2xl bg-white p-3 text-left text-red-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-red-200">
-                <b className="block text-lg">{filaExecutiva.emAjuste}</b>Em ajuste
-              </button>
-              <button type="button" onClick={() => setTratativa("")} className="rounded-2xl bg-white p-3 text-left text-orange-700 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-950 dark:text-orange-200">
-                <b className="block text-lg">{filaExecutiva.anulacaoPendente}</b>Anulação pendente
-              </button>
-            </div>
-          </section>
-
           <section className="order-first overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="border-b border-slate-100 p-4 dark:border-slate-800">
               <h2 className="font-bold text-slate-900 dark:text-white">Documentos encontrados</h2>
@@ -911,3 +887,4 @@ export default function CentralDocumentos() {
     </div>
   );
 }
+
