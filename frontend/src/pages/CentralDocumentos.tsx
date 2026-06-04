@@ -318,9 +318,81 @@ export default function CentralDocumentos() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-        <aside className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-          <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 font-bold text-slate-900 dark:text-white">
+              <Filter className="text-blue-600 dark:text-blue-300" size={18} />
+              Filtros
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Refine a consulta documental sem afastar a lista de documentos.</p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+            {documentosTratados.length} encontrados
+          </span>
+        </div>
+
+        <form onSubmit={aplicarFiltros} className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(220px,1.4fr)_180px_210px_180px_150px_150px_auto_auto] lg:items-end">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-3.5 text-slate-400" size={16} />
+            <input
+              value={busca}
+              onChange={(event) => setBusca(event.target.value)}
+              placeholder="Protocolo, título ou responsável"
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
+          </label>
+
+          <select value={modulo} onChange={(event) => setModulo(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+            {modulos.map((item) => <option key={item.valor} value={item.valor}>{item.label}</option>)}
+          </select>
+
+          <select value={unidade} onChange={(event) => setUnidade(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+            <option value="">Todas as unidades permitidas</option>
+            {unidades.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+
+          <select value={assinatura} onChange={(event) => setAssinatura(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+            <option value="">Todas as assinaturas</option>
+            <option value="Assinado">Assinados</option>
+            <option value="Pendente">Pendentes</option>
+          </select>
+
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Data inicial</span>
+            <input type="date" value={inicio} onChange={(event) => setInicio(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+          </label>
+          <label className="space-y-1">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Data final</span>
+            <input type="date" value={fim} onChange={(event) => setFim(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+          </label>
+
+          <button type="button" onClick={limparFiltros} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300">
+            Limpar
+          </button>
+          <button type="submit" className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500">
+            Aplicar
+          </button>
+        </form>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {cardsResumo.map(({ label, chave, Icon, cor, fundo }) => (
+          <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${fundo} ${cor}`}>
+              <Icon size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
+              <p className="text-xl font-bold leading-tight text-slate-900 dark:text-white">{resumo[chave]}</p>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
+        <aside className="flex flex-col gap-4 xl:sticky xl:top-24 xl:self-start">
+          <section className="hidden">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h2 className="font-bold text-slate-900 dark:text-white">Filtros</h2>
@@ -377,7 +449,7 @@ export default function CentralDocumentos() {
             </form>
           </section>
 
-          <section className="grid grid-cols-2 gap-3">
+          <section className="hidden">
             {cardsResumo.map(({ label, chave, Icon, cor, fundo }) => (
               <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${fundo} ${cor}`}>
@@ -452,7 +524,7 @@ export default function CentralDocumentos() {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <section className="order-first overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="border-b border-slate-100 p-4 dark:border-slate-800">
               <h2 className="font-bold text-slate-900 dark:text-white">Documentos encontrados</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">Clique em um documento para abrir a prévia.</p>
@@ -463,7 +535,7 @@ export default function CentralDocumentos() {
                 <SkeletonDashboard />
               </div>
             ) : (
-              <div className="max-h-[520px] space-y-2 overflow-y-auto p-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
+              <div className="max-h-[640px] space-y-2 overflow-y-auto p-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
                 {documentosTratados.map((documento) => {
                   const ativo = selecionado?.id === documento.id;
                   const anulacaoDocumento = anulacoes.find((item) => item.modulo === documento.modulo && item.registroId === documento.registroId);
