@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
+import { registrarLog } from "../services/auditoria.service";
 import { criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
 
 type DocumentoCentral = {
@@ -95,6 +96,107 @@ async function consultaSegura<T>(nome: string, consulta: Promise<T[]>): Promise<
   } catch (error) {
     console.error(`Erro ao consultar documentos do modulo ${nome}`, error);
     return [];
+  }
+}
+
+function moduloPermitidoExclusao(modulo: string) {
+  return ["Ocorrencia", "Evento", "Investigacao", "PassagemTurno", "ChecklistInspecao", "RelatorioCftv", "AnaliseRisco"].includes(modulo);
+}
+
+async function limparReferenciasDocumento(tx: typeof prisma, modulo: string, registroId: number) {
+  await tx.assinaturaDocumento.deleteMany({ where: { modulo, registroId } });
+  await tx.solicitacaoAnulacaoRelatorio.deleteMany({ where: { modulo, registroId } });
+  await tx.mencao.deleteMany({ where: { modulo, registroId } });
+  await tx.comentarioInterno.deleteMany({ where: { modulo, registroId } });
+}
+
+async function excluirRegistroDocumento(tx: typeof prisma, modulo: string, registroId: number, unidade: string) {
+  if (modulo === "Ocorrencia") {
+    await tx.analiseEstrategica.updateMany({ where: { ocorrenciaId: registroId, unidade }, data: { ocorrenciaId: null } });
+    await tx.ocorrencia.delete({ where: { id: registroId } });
+    return;
+  }
+
+  if (modulo === "Evento") {
+    await tx.analiseEstrategica.updateMany({ where: { eventoId: registroId, unidade }, data: { eventoId: null } });
+    await tx.evento.delete({ where: { id: registroId } });
+    return;
+  }
+
+  if (modulo === "Investigacao") {
+    await tx.analiseEstrategica.updateMany({ where: { investigacaoId: registroId, unidade }, data: { investigacaoId: null } });
+    await tx.investigacao.delete({ where: { id: registroId } });
+    return;
+  }
+
+  if (modulo === "PassagemTurno") {
+    await tx.passagemTurno.delete({ where: { id: registroId } });
+    return;
+  }
+
+  if (modulo === "ChecklistInspecao") {
+    await tx.checklistInspecao.delete({ where: { id: registroId } });
+    return;
+  }
+
+  if (modulo === "RelatorioCftv") {
+    await tx.relatorioCftv.delete({ where: { id: registroId } });
+    return;
+  }
+
+  if (modulo === "AnaliseRisco") {
+    await tx.analiseEstrategica.updateMany({ where: { analiseRiscoId: registroId, unidade }, data: { analiseRiscoId: null } });
+    await tx.analiseRisco.delete({ where: { id: registroId } });
+  }
+}
+
+async function buscarDocumentoExclusao(modulo: string, registroId: number, unidade: string) {
+  if (modulo === "Ocorrencia") return prisma.ocorrencia.findFirst({ where: { id: registroId, unidade } });
+  if (modulo === "Evento") return prisma.evento.findFirst({ where: { id: registroId, unidade } });
+  if (modulo === "Investigacao") return prisma.investigacao.findFirst({ where: { id: registroId, unidade } });
+  if (modulo === "PassagemTurno") return prisma.passagemTurno.findFirst({ where: { id: registroId, unidade } });
+  if (modulo === "ChecklistInspecao") return prisma.checklistInspecao.findFirst({ where: { id: registroId, unidade } });
+  if (modulo === "RelatorioCftv") return prisma.relatorioCftv.findFirst({ where: { id: registroId, unidade } });
+  if (modulo === "AnaliseRisco") return prisma.analiseRisco.findFirst({ where: { id: registroId, unidade } });
+  return null;
+}
+
+export async function excluirDocumentoCentral(req: AuthRequest, res: Response) {
+  try {
+    if (req.usuarioPerfil !== "SUPER_ADMIN") {
+      return res.status(403).json({ error: "Somente Super Admin pode excluir relatórios definitivamente." });
+    }
+
+    const modulo = String(req.params.modulo || "");
+    const registroId = Number(req.params.id);
+    const unidade = req.unidadeAtiva || "";
+
+    if (!moduloPermitidoExclusao(modulo) || !Number.isFinite(registroId)) {
+      return res.status(400).json({ error: "Documento inválido para exclusão." });
+    }
+
+    const documento = await buscarDocumentoExclusao(modulo, registroId, unidade);
+    if (!documento) {
+      return res.status(404).json({ error: "Documento não encontrado nesta unidade." });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await limparReferenciasDocumento(tx as typeof prisma, modulo, registroId);
+      await excluirRegistroDocumento(tx as typeof prisma, modulo, registroId, unidade);
+    });
+
+    await registrarLog({
+      req,
+      acao: `Exclusão definitiva de documento ${modulo}`,
+      tipoRegistro: modulo,
+      registroId,
+      dadosAnteriores: documento,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir documento definitivamente" });
   }
 }
 

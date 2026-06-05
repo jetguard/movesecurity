@@ -18,6 +18,7 @@ import {
   RotateCcw,
   Search,
   ShieldCheck,
+  Trash2,
   UserCheck,
   XCircle,
 } from "lucide-react";
@@ -219,6 +220,7 @@ export default function CentralDocumentos() {
   const [justificativaAnulacao, setJustificativaAnulacao] = useState("");
   const [processandoTratativa, setProcessandoTratativa] = useState(false);
   const [processandoAnulacao, setProcessandoAnulacao] = useState(false);
+  const [excluindoDocumento, setExcluindoDocumento] = useState(false);
   const unidades = useMemo(() => unidadesPermitidasUsuario(), []);
   const usuario = usuarioAtual();
 
@@ -502,6 +504,24 @@ export default function CentralDocumentos() {
       alert("Decisão de anulação registrada com sucesso.");
     } finally {
       setProcessandoAnulacao(false);
+    }
+  }
+
+  async function excluirDocumento(documento: DocumentoCentral) {
+    if (!podeSuperAdmin()) return;
+    const confirmar = window.prompt(
+      `Exclusão definitiva do documento ${documento.protocolo}.\n\nEsta ação remove o relatório e vínculos de assinatura, anulação, menções e comentários.\n\nDigite EXCLUIR para confirmar.`
+    );
+    if (confirmar !== "EXCLUIR") return;
+
+    setExcluindoDocumento(true);
+    try {
+      await api.delete(`/documentos/${documento.modulo}/${documento.registroId}`);
+      setSelecionado(null);
+      await carregarDocumentos();
+      alert("Documento excluído definitivamente com sucesso.");
+    } finally {
+      setExcluindoDocumento(false);
     }
   }
   return (
@@ -847,6 +867,18 @@ export default function CentralDocumentos() {
                         <ExternalLink size={16} />
                         Validar
                       </a>
+                    )}
+                    {podeSuperAdmin() && (
+                      <button
+                        type="button"
+                        disabled={excluindoDocumento}
+                        onClick={() => excluirDocumento(selecionado)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
+                        title="Excluir definitivamente este relatório"
+                      >
+                        <Trash2 size={16} />
+                        {excluindoDocumento ? "Excluindo..." : "Excluir"}
+                      </button>
                     )}
                   </div>
                 </div>
