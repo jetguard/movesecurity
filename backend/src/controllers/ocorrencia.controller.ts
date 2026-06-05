@@ -4,6 +4,7 @@ import { AuthRequest } from "../middlewares/auth";
 import { criarUrlPublicaPdf, gerarRelatorioPdf } from "../services/relatorioPdf.service";
 import { assinaturaValidaDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
 import { registrarLog } from "../services/auditoria.service";
+import { emitirRealtime } from "../services/realtime.service";
 import { estaAprovado } from "../utils/status";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
@@ -115,6 +116,19 @@ export async function criarOcorrencia(req: AuthRequest, res: Response) {
       tipoRegistro: "Ocorrencia",
       registroId: ocorrencia.id,
       dadosNovos: ocorrencia,
+    });
+
+    const autor = req.usuarioId
+      ? await prisma.usuario.findUnique({ where: { id: req.usuarioId }, select: { nome: true, apelido: true } })
+      : null;
+    emitirRealtime({
+      tipo: "ocorrencia.criada",
+      titulo: `Nova ocorrência ${ocorrencia.codigo}`,
+      mensagem: `${autor?.apelido || autor?.nome || "Usuário"} registrou ${ocorrencia.assunto}`,
+      severidade: "media",
+      unidade: ocorrencia.unidade,
+      link: "/ocorrencias",
+      payload: { id: ocorrencia.id, codigo: ocorrencia.codigo },
     });
 
     return res.status(201).json(ocorrencia);

@@ -4,6 +4,7 @@ import { AuthRequest } from "../middlewares/auth";
 import { criarUrlPublicaPdf, gerarRelatorioPdf } from "../services/relatorioPdf.service";
 import { assinaturaValidaDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
 import { registrarLog } from "../services/auditoria.service";
+import { emitirRealtime } from "../services/realtime.service";
 import { estaAprovado } from "../utils/status";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
@@ -122,6 +123,19 @@ export async function criarEvento(req: AuthRequest, res: Response) {
       tipoRegistro: "Evento",
       registroId: evento.id,
       dadosNovos: evento,
+    });
+
+    const autor = req.usuarioId
+      ? await prisma.usuario.findUnique({ where: { id: req.usuarioId }, select: { nome: true, apelido: true } })
+      : null;
+    emitirRealtime({
+      tipo: "evento.criado",
+      titulo: `Novo evento ${evento.codigo}`,
+      mensagem: `${autor?.apelido || autor?.nome || "Usuário"} registrou ${evento.assunto}`,
+      severidade: "media",
+      unidade: evento.unidade,
+      link: "/eventos",
+      payload: { id: evento.id, codigo: evento.codigo },
     });
 
     return res.status(201).json(evento);

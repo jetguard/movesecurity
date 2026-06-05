@@ -241,6 +241,7 @@ async function registrarMudancaStatus(params: {
       mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
       severidade: "alta",
       unidade: params.unidade,
+      link: "/cameras",
       payload: { cameraId: camera.id, numeroCamera: camera.numeroCamera },
     });
     return;
@@ -299,6 +300,7 @@ async function registrarMudancaStatus(params: {
       mensagem: `${camera.areaMonitorada} | offline por ${duracao} minuto(s)`,
       severidade: "media",
       unidade: params.unidade,
+      link: "/cameras",
       payload: { cameraId: camera.id, numeroCamera: camera.numeroCamera, duracao },
     });
   }

@@ -7,6 +7,7 @@ type EventoRealtime = {
   mensagem: string;
   severidade?: "baixa" | "media" | "alta";
   unidade?: string;
+  link?: string;
   payload?: unknown;
 };
 

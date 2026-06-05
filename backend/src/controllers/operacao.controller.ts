@@ -9,6 +9,7 @@ import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { jwtSecret } from "../config/security";
 import { registrarLog } from "../services/auditoria.service";
 import { assinarDocumento, assinaturaValidaDocumento, criarUrlValidacaoAssinatura, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
+import { emitirRealtime } from "../services/realtime.service";
 
 function inicioDia(data = new Date()) {
   const inicio = new Date(data);
@@ -498,6 +499,15 @@ export async function criarPassagemTurno(req: AuthRequest, res: Response) {
       include: { responsavel: true, postos: true },
     });
     await registrarLog({ req, acao: `Abertura da passagem de turno ${passagem.codigo}`, tipoRegistro: "PassagemTurno", registroId: passagem.id, dadosNovos: passagem });
+    emitirRealtime({
+      tipo: "ccos.aberto",
+      titulo: `Relatório CCOS ${passagem.codigo} aberto`,
+      mensagem: `${usuario.apelido || usuario.nome} abriu o relatório da ${passagem.equipe}`,
+      severidade: "media",
+      unidade: passagem.unidade,
+      link: "/operacoes-soc",
+      payload: { id: passagem.id, codigo: passagem.codigo },
+    });
     return res.status(201).json(serializarPassagem(passagem));
   } catch (error) {
     console.error(error);
@@ -567,6 +577,15 @@ export async function finalizarPassagemTurno(req: AuthRequest, res: Response) {
       dados: passagem,
     });
     await registrarLog({ req, acao: `Finalização da passagem de turno ${passagem.codigo}`, tipoRegistro: "PassagemTurno", registroId: passagem.id, dadosAnteriores: anterior, dadosNovos: passagem });
+    emitirRealtime({
+      tipo: "ccos.enviado",
+      titulo: `Relatório CCOS ${passagem.codigo} enviado`,
+      mensagem: `${usuario?.apelido || usuario?.nome || "Usuário"} consolidou o relatório da ${passagem.equipe}`,
+      severidade: "alta",
+      unidade: passagem.unidade,
+      link: "/operacoes-soc",
+      payload: { id: passagem.id, codigo: passagem.codigo },
+    });
     return res.json(serializarPassagem(passagem));
   } catch (error) {
     console.error(error);

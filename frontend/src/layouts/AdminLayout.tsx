@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Activity,
   Bell,
+  BellRing,
   AtSign,
   BrainCircuit,
   FileText,
@@ -57,6 +58,7 @@ export default function AdminLayout() {
   const [sistemaOpen, setSistemaOpen] = useState(false);
   const [segundosSessao, setSegundosSessao] = useState(0);
   const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
+  const [toasts, setToasts] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string; link?: string }>>([]);
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
   const [passagensAbertas, setPassagensAbertas] = useState(0);
   const [sistemaBloqueado, setSistemaBloqueado] = useState(() => localStorage.getItem("sistemaBloqueado") === "true");
@@ -171,22 +173,35 @@ export default function AdminLayout() {
       try {
         const data = JSON.parse(event.data);
         if (data.tipo === "conectado") return;
+        if (data.unidade && data.unidade !== unidadeAtiva) return;
+        const id = `${data.tipo}-${data.createdAt || Date.now()}`;
+        const novaNotificacao = {
+          id,
+          titulo: data.titulo,
+          mensagem: data.mensagem,
+          severidade: data.severidade || "media",
+          link: data.link,
+        };
         setNotificacoes((atuais) => [
           {
-            id: `${data.tipo}-${data.createdAt}`,
-            titulo: data.titulo,
-            mensagem: data.mensagem,
-            severidade: data.severidade || "media",
+            id,
+            titulo: novaNotificacao.titulo,
+            mensagem: novaNotificacao.mensagem,
+            severidade: novaNotificacao.severidade,
           },
           ...atuais,
         ].slice(0, 50));
+        setToasts((atuais) => [novaNotificacao, ...atuais.filter((item) => item.id !== id)].slice(0, 3));
+        window.setTimeout(() => {
+          setToasts((atuais) => atuais.filter((item) => item.id !== id));
+        }, data.severidade === "alta" ? 9500 : 7000);
       } catch {
         // Mensagens inválidas do socket são ignoradas para não interromper a sessão.
       }
     };
 
     return () => socket.close();
-  }, []);
+  }, [unidadeAtiva]);
 
   async function logout() {
     try {
@@ -229,6 +244,16 @@ export default function AdminLayout() {
     setPinDesbloqueio("");
     setErroDesbloqueio("");
     setSistemaBloqueado(true);
+  }
+
+  function fecharToast(id: string) {
+    setToasts((atuais) => atuais.filter((item) => item.id !== id));
+  }
+
+  function classeToast(severidade: string) {
+    if (severidade === "alta") return "border-red-400/40 bg-red-950/95 text-red-50 shadow-red-950/30";
+    if (severidade === "baixa") return "border-emerald-400/30 bg-emerald-950/95 text-emerald-50 shadow-emerald-950/30";
+    return "border-blue-400/35 bg-slate-950/95 text-white shadow-blue-950/30";
   }
 
   async function desbloquearSistema(event: FormEvent<HTMLFormElement>) {
@@ -698,6 +723,62 @@ export default function AdminLayout() {
           <Outlet />
         </div>
       </main>
+
+      {toasts.length > 0 && (
+        <div className="pointer-events-none fixed bottom-4 right-4 z-[70] flex w-[calc(100vw-2rem)] max-w-sm flex-col gap-3 sm:bottom-5 sm:right-5">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`pointer-events-auto overflow-hidden rounded-2xl border p-4 shadow-2xl backdrop-blur-xl animate-in slide-in-from-right-5 fade-in duration-200 ${classeToast(toast.severidade)}`}
+            >
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15">
+                  <BellRing size={19} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="line-clamp-1 font-black">{toast.titulo}</p>
+                    <button
+                      type="button"
+                      onClick={() => fecharToast(toast.id)}
+                      className="rounded-full p-1 text-white/70 transition hover:bg-white/10 hover:text-white"
+                      aria-label="Fechar notificação"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                  <p className="mt-1 line-clamp-2 text-sm text-white/78">{toast.mensagem}</p>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white/80">
+                      Tempo real
+                    </span>
+                    {toast.link ? (
+                      <Link
+                        to={toast.link}
+                        onClick={() => fecharToast(toast.id)}
+                        className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-950 transition hover:bg-blue-50"
+                      >
+                        Abrir
+                      </Link>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => fecharToast(toast.id)}
+                        className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-slate-950 transition hover:bg-blue-50"
+                      >
+                        Ok
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-white/10">
+                <div className="h-full w-2/3 animate-pulse rounded-full bg-white/60" />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {sistemaBloqueado && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md">
