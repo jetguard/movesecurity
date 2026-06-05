@@ -311,7 +311,7 @@ export default function Investigacao() {
                   <button
                     type="button"
                     onClick={() => abrirEdicao(item)}
-                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 hover:text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20 dark:hover:text-blue-100"
                     title="Editar investigação"
                   >
                     <Edit3 size={17} />

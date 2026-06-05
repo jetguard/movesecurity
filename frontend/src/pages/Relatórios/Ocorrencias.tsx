@@ -1079,7 +1079,7 @@ export default function Ocorrencias() {
                   <button
                     type="button"
                     onClick={() => setOcorrenciaMencao(ocorrencia)}
-                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200"
+                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20 dark:hover:text-indigo-100"
                     title="Mencionar usuário"
                   >
                     <AtSign size={17} />
@@ -1089,7 +1089,7 @@ export default function Ocorrencias() {
                   <button
                     type="button"
                     onClick={() => editarOcorrencia(ocorrencia)}
-                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 hover:text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20 dark:hover:text-blue-100"
                     title="Editar relatório"
                   >
                     <Edit3 size={17} />
@@ -1099,7 +1099,7 @@ export default function Ocorrencias() {
                   <button
                     type="button"
                     onClick={() => abrirPdfOcorrencia(ocorrencia.id)}
-                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200"
+                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 hover:text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20 dark:hover:text-red-100"
                     title="Abrir PDF"
                   >
                     <FileText size={17} />
@@ -1110,7 +1110,7 @@ export default function Ocorrencias() {
                     <button
                       type="button"
                       onClick={() => setOcorrenciaAnulacao(ocorrencia)}
-                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 transition hover:bg-orange-100 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-200"
+                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/20 dark:hover:text-orange-100"
                       title="Solicitar anulação"
                     >
                       <Ban size={17} />
