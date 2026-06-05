@@ -83,6 +83,13 @@ type RelatorioPdf = {
     prazo?: Date | null;
     responsavel?: { nome: string } | null;
   }[];
+  assinaturaAprovacao?: {
+    usuarioNome: string;
+    perfilAcesso?: string | null;
+    acao: string;
+    token: string;
+    createdAt: Date;
+  } | null;
 };
 
 type UsuarioAssinatura = {
@@ -887,6 +894,72 @@ function escreverAcoesTomadas(
   escreverTextoPaginado(doc, valor(relatorio.acoesTomadas), relatorio, usuario, qrCode, token);
 }
 
+function escreverAssinaturaAprovacao(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  if (!relatorio.assinaturaAprovacao) return;
+
+  garantirEspaco(doc, 130, relatorio, usuario, qrCode, token);
+  escreverTituloSecao(doc, "Assinatura oficial de aprovação");
+
+  const y = doc.y + 4;
+  doc
+    .roundedRect(page.left, y, contentWidth, 92, 12)
+    .fillColor("#f8fbff")
+    .fill()
+    .roundedRect(page.left, y, contentWidth, 92, 12)
+    .lineWidth(0.8)
+    .strokeColor("#bfdbfe")
+    .stroke();
+
+  doc
+    .roundedRect(page.left, y, 7, 92, 12)
+    .fillColor("#0b74ff")
+    .fill();
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(10.5)
+    .fillColor("#0f172a")
+    .text("Documento aprovado e assinado eletronicamente", page.left + 20, y + 15, { width: contentWidth - 40 });
+
+  doc
+    .font("Helvetica")
+    .fontSize(8.6)
+    .fillColor("#334155")
+    .text(
+      textoPdf(`Assinado por ${relatorio.assinaturaAprovacao.usuarioNome} em ${formatarData(relatorio.assinaturaAprovacao.createdAt)}`),
+      page.left + 20,
+      y + 35,
+      { width: contentWidth - 40 }
+    );
+
+  doc
+    .font("Helvetica")
+    .fontSize(8)
+    .fillColor("#64748b")
+    .text(
+      textoPdf(`Ação: ${relatorio.assinaturaAprovacao.acao} | Perfil: ${relatorio.assinaturaAprovacao.perfilAcesso || "Não informado"}`),
+      page.left + 20,
+      y + 53,
+      { width: contentWidth - 40 }
+    );
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(7.4)
+    .fillColor("#0b74ff")
+    .text(textoPdf(`Token de validação: ${relatorio.assinaturaAprovacao.token}`), page.left + 20, y + 72, {
+      width: contentWidth - 40,
+    });
+
+  doc.y = y + 106;
+}
+
 export async function gerarRelatorioPdf(
   res: Response,
   relatorio: RelatorioPdf,
@@ -928,6 +1001,7 @@ export async function gerarRelatorioPdf(
   escreverInvestigacao(doc, relatorio, usuario, qrCode, token);
   escreverAnalisesRisco(doc, relatorio, usuario, qrCode, token);
   escreverAnalisesEstrategicas(doc, relatorio, usuario, qrCode, token);
+  escreverAssinaturaAprovacao(doc, relatorio, usuario, qrCode, token);
 
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i += 1) {

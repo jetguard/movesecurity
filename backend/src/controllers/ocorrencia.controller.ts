@@ -447,8 +447,9 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
       }),
     ]);
 
+    const assinaturaAprovacao = await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id);
     const assinatura =
-      (await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id)) ||
+      assinaturaAprovacao ||
       (ocorrencia.analise ? await assinaturaValidaDocumento("AnaliseOcorrencia", ocorrencia.analise.id) : null) ||
       (ocorrencia.investigacao ? await assinaturaValidaDocumento("Investigacao", ocorrencia.investigacao.id) : null);
     const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
@@ -472,6 +473,7 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         analise: ocorrencia.analise,
         riscos,
         estrategicas,
+        assinaturaAprovacao,
       },
       usuario,
       validacaoUrl,

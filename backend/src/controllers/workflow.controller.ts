@@ -86,6 +86,12 @@ function validarAprovacaoDocumento(modulo: ModuloWorkflow, registro: any) {
   if (registro.status === "Anulado") {
     throw criarErroFluxo("Documento anulado não pode ser aprovado.");
   }
+  if (registro.fluxoStatus === "Em Revisao") {
+    throw criarErroFluxo("Conclua a revisão documental antes de aprovar o documento.");
+  }
+  if (registro.fluxoStatus === "Aprovado") {
+    throw criarErroFluxo("Documento já aprovado.");
+  }
 
   if (modulo === "ocorrencia") {
     if (!registro.analise) {
@@ -155,10 +161,19 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
     let acaoLog = "Atualizacao de workflow";
 
     if (acao === "revisar") {
+      if (anterior.fluxoStatus === "Aprovado") {
+        throw criarErroFluxo("Documento aprovado não pode iniciar nova revisão. Reabra o documento antes.", 403);
+      }
       dados.fluxoStatus = "Em Revisao";
       dados.revisadoPorId = req.usuarioId;
       dados.revisadoEm = agora;
       acaoLog = "Registro colocado em revisao";
+    } else if (acao === "concluir_revisao") {
+      if (anterior.fluxoStatus !== "Em Revisao") {
+        throw criarErroFluxo("Somente documentos em revisão podem ter revisão concluída.");
+      }
+      dados.fluxoStatus = "Aguardando Revisao";
+      acaoLog = "Revisao documental concluida";
     } else if (acao === "aprovar") {
       validarAprovacaoDocumento(modulo, anterior);
 

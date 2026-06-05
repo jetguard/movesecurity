@@ -152,6 +152,14 @@ function estaConcluido(valor?: string | null) {
   return ["concluido", "concluida", "aprovado", "finalizado", "emitido", "anulado"].includes(status);
 }
 
+function estaAprovado(documento: DocumentoCentral) {
+  return documento.fluxoStatus === "Aprovado";
+}
+
+function estaEmRevisao(documento: DocumentoCentral) {
+  return documento.fluxoStatus === "Em Revisao";
+}
+
 function documentoAguardandoAnalise(documento: DocumentoCentral) {
   const moduloRelatorio = documento.modulo === "Ocorrencia" || documento.modulo === "Evento";
   if (!moduloRelatorio) return false;
@@ -862,10 +870,10 @@ export default function CentralDocumentos() {
                         </a>
                       </>
                     )}
-                    {selecionado.validacaoUrl && (
-                      <a href={selecionado.validacaoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-200 dark:hover:bg-emerald-500/10">
+                    {selecionado.validacaoUrl && selecionado.assinaturaStatus === "Assinado" && (
+                      <a href={selecionado.validacaoUrl} target="_blank" rel="noreferrer" title="Abre a página pública de validação da assinatura eletrônica" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-200 dark:hover:bg-emerald-500/10">
                         <ExternalLink size={16} />
-                        Validar
+                        Validar assinatura
                       </a>
                     )}
                     {podeSuperAdmin() && (
@@ -964,15 +972,26 @@ export default function CentralDocumentos() {
                           </>
                         )}
                         <div className="flex flex-wrap gap-2">
-                          <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "revisar")} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
-                            <UserCheck size={15} /> Iniciar revisão
-                          </button>
-                          <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "aprovar")} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
-                            <CheckCircle2 size={15} /> Aprovar
-                          </button>
-                          <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "devolver")} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
-                            <XCircle size={15} /> Devolver
-                          </button>
+                          {!estaAprovado(selecionado) && !estaEmRevisao(selecionado) && (
+                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "revisar")} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                              <UserCheck size={15} /> Iniciar revisão
+                            </button>
+                          )}
+                          {!estaAprovado(selecionado) && estaEmRevisao(selecionado) && (
+                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "concluir_revisao")} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                              <ClipboardCheck size={15} /> Concluir revisão
+                            </button>
+                          )}
+                          {!estaAprovado(selecionado) && !estaEmRevisao(selecionado) && (
+                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "aprovar")} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                              <CheckCircle2 size={15} /> Aprovar
+                            </button>
+                          )}
+                          {!estaAprovado(selecionado) && (
+                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "devolver")} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                              <XCircle size={15} /> Devolver
+                            </button>
+                          )}
                           {podeSuperAdmin() && (
                             <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "reabrir")} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-slate-700">
                               <RotateCcw size={15} /> Reabrir

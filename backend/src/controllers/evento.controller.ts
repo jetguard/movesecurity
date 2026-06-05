@@ -411,8 +411,9 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
       codigo: evento.codigo,
       unidade: evento.unidade,
     });
+    const assinaturaAprovacao = await assinaturaValidaDocumento("Evento", evento.id);
     const assinatura =
-      (await assinaturaValidaDocumento("Evento", evento.id)) ||
+      assinaturaAprovacao ||
       (evento.analise ? await assinaturaValidaDocumento("AnaliseEvento", evento.analise.id) : null);
     const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
 
@@ -432,6 +433,7 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         acoesTomadas: evento.acoesTomadas,
         envolvidos: evento.envolvidos,
         analise: evento.analise,
+        assinaturaAprovacao,
       },
       usuario,
       validacaoUrl,

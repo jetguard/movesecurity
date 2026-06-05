@@ -66,8 +66,9 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         codigo: ocorrencia.codigo,
         unidade: ocorrencia.unidade,
       });
+      const assinaturaAprovacao = await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Ocorrencia", registroId: ocorrencia.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } });
       const assinatura =
-        (await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Ocorrencia", registroId: ocorrencia.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } })) ||
+        assinaturaAprovacao ||
         (ocorrencia.analise ? await prisma.assinaturaDocumento.findFirst({ where: { modulo: "AnaliseOcorrencia", registroId: ocorrencia.analise.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } }) : null) ||
         (ocorrencia.investigacao ? await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Investigacao", registroId: ocorrencia.investigacao.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } }) : null);
       const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
@@ -88,6 +89,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
           envolvidos: ocorrencia.envolvidos,
           investigacao: ocorrencia.investigacao,
           analise: ocorrencia.analise,
+          assinaturaAprovacao,
         },
         usuarioConsultaPublica,
         validacaoUrl,
@@ -126,8 +128,9 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
       codigo: evento.codigo,
       unidade: evento.unidade,
     });
+    const assinaturaAprovacao = await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Evento", registroId: evento.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } });
     const assinatura =
-      (await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Evento", registroId: evento.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } })) ||
+      assinaturaAprovacao ||
       (evento.analise ? await prisma.assinaturaDocumento.findFirst({ where: { modulo: "AnaliseEvento", registroId: evento.analise.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } }) : null);
     const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
 
@@ -146,6 +149,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         acoesTomadas: evento.acoesTomadas,
         envolvidos: evento.envolvidos,
         analise: evento.analise,
+        assinaturaAprovacao,
       },
       usuarioConsultaPublica,
       validacaoUrl,
