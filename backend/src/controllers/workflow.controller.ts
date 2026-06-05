@@ -118,21 +118,6 @@ function validarAprovacaoDocumento(modulo: ModuloWorkflow, registro: any) {
   }
 }
 
-function validarEnvioParaRevisao(modulo: ModuloWorkflow, registro: any) {
-  if (["Aprovado", "Anulado"].includes(String(registro.fluxoStatus || registro.status))) {
-    throw criarErroFluxo("Este documento não pode ser enviado para revisão neste status.");
-  }
-
-  if (modulo === "ocorrencia" || modulo === "evento") {
-    validarAprovacaoDocumento(modulo, registro);
-    return;
-  }
-
-  if (registro.status !== "Concluído") {
-    throw criarErroFluxo("Conclua a investigação antes de enviar para revisão.");
-  }
-}
-
 export async function listarWorkflow(req: AuthRequest, res: Response) {
   try {
     const [ocorrencias, eventos, investigacoes] = await Promise.all([
@@ -169,22 +154,7 @@ export async function atualizarWorkflow(req: AuthRequest, res: Response) {
     const dados: Record<string, unknown> = {};
     let acaoLog = "Atualizacao de workflow";
 
-    if (acao === "enviar") {
-      validarEnvioParaRevisao(modulo, anterior);
-
-      await assinarDocumento({
-        req,
-        modulo: moduloAssinatura(modulo),
-        registroId: id,
-        codigoRegistro: codigoWorkflow(anterior),
-        unidade: anterior.unidade,
-        acao: "Envio para revisão",
-        dados: anterior,
-      });
-      dados.fluxoStatus = "Aguardando Revisao";
-      dados.motivoDevolucao = null;
-      acaoLog = "Enviado para revisao";
-    } else if (acao === "revisar") {
+    if (acao === "revisar") {
       dados.fluxoStatus = "Em Revisao";
       dados.revisadoPorId = req.usuarioId;
       dados.revisadoEm = agora;

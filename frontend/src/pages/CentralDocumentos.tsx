@@ -13,7 +13,6 @@ import {
   RefreshCcw,
   RotateCcw,
   Search,
-  Send,
   ShieldCheck,
   UserCheck,
   XCircle,
@@ -289,7 +288,7 @@ export default function CentralDocumentos() {
       motivo: acao === "reabrir" ? motivoReabertura : motivoDevolucao,
     };
 
-    if (["enviar", "aprovar"].includes(acao)) {
+    if (acao === "aprovar") {
       const pinOperacional = await solicitarPinOperacional("Informe seu PIN para assinar eletronicamente esta tratativa.");
       if (!pinOperacional) return;
       payload.pinOperacional = pinOperacional;
@@ -755,9 +754,6 @@ export default function CentralDocumentos() {
                           </>
                         )}
                         <div className="flex flex-wrap gap-2">
-                          <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "enviar")} className="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
-                            <Send size={15} /> Enviar para revisão
-                          </button>
                           <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "revisar")} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
                             <UserCheck size={15} /> Iniciar revisão
                           </button>
