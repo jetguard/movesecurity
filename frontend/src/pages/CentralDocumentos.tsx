@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
+  Activity,
   CalendarDays,
+  Camera,
   CheckCircle2,
+  ClipboardCheck,
   Clock,
   Download,
   ExternalLink,
   FileSearch,
+  FileWarning,
   Filter,
   History,
   Maximize2,
@@ -75,6 +79,18 @@ type SolicitacaoAnulacao = {
   acordos: AcordoAnulacao[];
 };
 
+type PendenciaOperacional = {
+  id: string;
+  modulo: string;
+  codigo: string;
+  titulo: string;
+  status: string;
+  responsavel?: string;
+  prazo?: string | null;
+  dias?: number | null;
+  prioridade?: string;
+};
+
 const modulos = [
   { valor: "", label: "Todos os documentos" },
   { valor: "Ocorrencia", label: "Ocorrências" },
@@ -110,12 +126,52 @@ const filtrosTratativa = [
 
 const filtrosAcaoPendente = [
   { valor: "", label: "Todas as acoes" },
+  { valor: "analise-pendente", label: "Aguardando analise" },
+  { valor: "aprovacao-pendente", label: "Aguardando aprovacao" },
+  { valor: "investigacao-aberta", label: "Investigacao aberta" },
   { valor: "assinatura-pendente", label: "Assinatura pendente" },
   { valor: "aguardando-decisao", label: "Aguardando decisao" },
   { valor: "em-ajuste", label: "Em ajuste" },
   { valor: "anulacao-pendente", label: "Anulacao pendente" },
+  { valor: "ccos-aberto", label: "CCOS aberto" },
+  { valor: "checklist-aberto", label: "CIP aberto" },
+  { valor: "risco-pendente", label: "Risco pendente" },
   { valor: "sem-tratativa", label: "Sem tratativa" },
 ];
+
+function statusNormalizado(valor?: string | null) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function estaConcluido(valor?: string | null) {
+  const status = statusNormalizado(valor);
+  return ["concluido", "concluida", "aprovado", "finalizado", "emitido", "anulado"].includes(status);
+}
+
+function documentoAguardandoAnalise(documento: DocumentoCentral) {
+  const moduloRelatorio = documento.modulo === "Ocorrencia" || documento.modulo === "Evento";
+  if (!moduloRelatorio) return false;
+  const status = statusNormalizado(documento.status);
+  return !documento.fluxoStatus && ["aberto", "registrado", "em analise"].includes(status);
+}
+
+function estiloPendencia(tom: string, ativo: boolean) {
+  const base = "group rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-lg";
+  const estilos: Record<string, string> = {
+    amber: ativo ? "border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/15 dark:text-amber-100" : "border-amber-200/70 bg-white text-slate-800 dark:border-amber-500/20 dark:bg-slate-900 dark:text-slate-100",
+    blue: ativo ? "border-blue-400 bg-blue-50 text-blue-900 dark:border-blue-400/50 dark:bg-blue-500/15 dark:text-blue-100" : "border-blue-200/70 bg-white text-slate-800 dark:border-blue-500/20 dark:bg-slate-900 dark:text-slate-100",
+    violet: ativo ? "border-violet-400 bg-violet-50 text-violet-900 dark:border-violet-400/50 dark:bg-violet-500/15 dark:text-violet-100" : "border-violet-200/70 bg-white text-slate-800 dark:border-violet-500/20 dark:bg-slate-900 dark:text-slate-100",
+    orange: ativo ? "border-orange-400 bg-orange-50 text-orange-900 dark:border-orange-400/50 dark:bg-orange-500/15 dark:text-orange-100" : "border-orange-200/70 bg-white text-slate-800 dark:border-orange-500/20 dark:bg-slate-900 dark:text-slate-100",
+    emerald: ativo ? "border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-500/15 dark:text-emerald-100" : "border-emerald-200/70 bg-white text-slate-800 dark:border-emerald-500/20 dark:bg-slate-900 dark:text-slate-100",
+    red: ativo ? "border-red-400 bg-red-50 text-red-900 dark:border-red-400/50 dark:bg-red-500/15 dark:text-red-100" : "border-red-200/70 bg-white text-slate-800 dark:border-red-500/20 dark:bg-slate-900 dark:text-slate-100",
+    rose: ativo ? "border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-400/50 dark:bg-rose-500/15 dark:text-rose-100" : "border-rose-200/70 bg-white text-slate-800 dark:border-rose-500/20 dark:bg-slate-900 dark:text-slate-100",
+    slate: ativo ? "border-slate-400 bg-slate-100 text-slate-900 dark:border-slate-500 dark:bg-slate-800 dark:text-white" : "border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100",
+  };
+  return `${base} ${estilos[tom] || estilos.slate}`;
+}
 function statusAssinaturaClasse(status: DocumentoCentral["assinaturaStatus"]) {
   return status === "Assinado"
     ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200"
@@ -145,6 +201,7 @@ function formatarData(valor?: string | null) {
 export default function CentralDocumentos() {
   const [documentos, setDocumentos] = useState<DocumentoCentral[]>([]);
   const [anulacoes, setAnulacoes] = useState<SolicitacaoAnulacao[]>([]);
+  const [pendencias, setPendencias] = useState<PendenciaOperacional[]>([]);
   const [selecionado, setSelecionado] = useState<DocumentoCentral | null>(null);
   const [resumo, setResumo] = useState<Resumo>({ total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
   const [carregando, setCarregando] = useState(true);
@@ -177,15 +234,17 @@ export default function CentralDocumentos() {
   const carregarDocumentos = useCallback(async () => {
     setCarregando(true);
     try {
-      const [documentosResponse, anulacoesResponse] = await Promise.allSettled([
+      const [documentosResponse, anulacoesResponse, pendenciasResponse] = await Promise.allSettled([
         api.get("/documentos", { params }),
         api.get("/anulacoes"),
+        api.get("/gestao/pendencias"),
       ]);
       const dadosDocumentos = documentosResponse.status === "fulfilled" ? documentosResponse.value.data : {};
       const lista = dadosDocumentos.documentos || [];
       setDocumentos(lista);
       setResumo(dadosDocumentos.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
       setAnulacoes(anulacoesResponse.status === "fulfilled" ? anulacoesResponse.value.data || [] : []);
+      setPendencias(pendenciasResponse.status === "fulfilled" ? pendenciasResponse.value.data || [] : []);
       setSelecionado(null);
     } finally {
       setCarregando(false);
@@ -224,6 +283,15 @@ export default function CentralDocumentos() {
     if (acaoPendente === "assinatura-pendente") {
       return lista.filter((documento) => documento.assinaturaStatus === "Pendente");
     }
+    if (acaoPendente === "analise-pendente") {
+      return lista.filter(documentoAguardandoAnalise);
+    }
+    if (acaoPendente === "aprovacao-pendente") {
+      return lista.filter((documento) => documento.fluxoStatus === "Aguardando Revisao" || statusNormalizado(documento.status).includes("aguardando aprovacao"));
+    }
+    if (acaoPendente === "investigacao-aberta") {
+      return lista.filter((documento) => documento.modulo === "Investigacao" && !estaConcluido(documento.status));
+    }
     if (acaoPendente === "aguardando-decisao") {
       return lista.filter((documento) => documento.fluxoStatus === "Aguardando Revisao");
     }
@@ -237,6 +305,21 @@ export default function CentralDocumentos() {
       return lista.filter((documento) =>
         anulacoes.some((item) => item.modulo === documento.modulo && item.registroId === documento.registroId && item.status === "Pendente")
       );
+    }
+    if (acaoPendente === "ccos-aberto") {
+      return lista.filter((documento) => documento.modulo === "PassagemTurno" && !estaConcluido(documento.status));
+    }
+    if (acaoPendente === "checklist-aberto") {
+      return lista.filter((documento) => documento.modulo === "ChecklistInspecao" && !estaConcluido(documento.status));
+    }
+    if (acaoPendente === "risco-pendente") {
+      return lista.filter((documento) => documento.modulo === "AnaliseRisco" && !estaConcluido(documento.status));
+    }
+    if (acaoPendente === "cftv-critico") {
+      return lista.filter((documento) => documento.modulo === "RelatorioCftv");
+    }
+    if (acaoPendente === "tarefas-atrasadas") {
+      return lista.filter((documento) => ["Devolvido", "Aguardando Revisao"].includes(String(documento.fluxoStatus || "")));
     }
 
     return lista;
@@ -255,12 +338,86 @@ export default function CentralDocumentos() {
     recusadas: anulacoes.filter((item) => item.status === "Recusado").length,
   }), [anulacoes]);
 
-  const filaExecutiva = useMemo(() => ({
-    assinaturaPendente: documentos.filter((item) => item.assinaturaStatus === "Pendente").length,
-    aguardandoDecisao: documentos.filter((item) => item.fluxoStatus === "Aguardando Revisao").length,
-    emAjuste: documentos.filter((item) => item.fluxoStatus === "Devolvido").length,
-    anulacaoPendente: anulacoes.filter((item) => item.status === "Pendente").length,
-  }), [anulacoes, documentos]);
+  const painelPendencias = useMemo(() => {
+    const pendenciasRisco = pendencias.filter((item) => statusNormalizado(item.modulo).includes("risco") && !estaConcluido(item.status)).length;
+    const tarefasAtrasadas = pendencias.filter((item) => (item.dias ?? 1) < 0).length;
+    const cftvCritico = pendencias.filter((item) => statusNormalizado(item.modulo).includes("camera") || statusNormalizado(item.modulo).includes("cftv")).length;
+
+    return [
+      {
+        id: "analise-pendente",
+        titulo: "Aguardando analise",
+        valor: documentos.filter(documentoAguardandoAnalise).length,
+        detalhe: "Ocorrencias e eventos sem tratativa",
+        Icon: FileWarning,
+        tom: "amber",
+      },
+      {
+        id: "aprovacao-pendente",
+        titulo: "Aguardando aprovacao",
+        valor: documentos.filter((item) => item.fluxoStatus === "Aguardando Revisao" || statusNormalizado(item.status).includes("aguardando aprovacao")).length,
+        detalhe: "Analise concluida e decisao pendente",
+        Icon: ShieldCheck,
+        tom: "blue",
+      },
+      {
+        id: "investigacao-aberta",
+        titulo: "Investigacoes abertas",
+        valor: documentos.filter((item) => item.modulo === "Investigacao" && !estaConcluido(item.status)).length,
+        detalhe: "RI vinculadas em acompanhamento",
+        Icon: Search,
+        tom: "violet",
+      },
+      {
+        id: "anulacao-pendente",
+        titulo: "Anulacoes",
+        valor: anulacoes.filter((item) => item.status === "Pendente").length,
+        detalhe: "Acordo ou decisao administrativa",
+        Icon: AlertTriangle,
+        tom: "orange",
+      },
+      {
+        id: "ccos-aberto",
+        titulo: "CCOS aberto",
+        valor: documentos.filter((item) => item.modulo === "PassagemTurno" && !estaConcluido(item.status)).length,
+        detalhe: "Passagem operacional em andamento",
+        Icon: ClipboardCheck,
+        tom: "emerald",
+      },
+      {
+        id: "checklist-aberto",
+        titulo: "CIP aberto",
+        valor: documentos.filter((item) => item.modulo === "ChecklistInspecao" && !estaConcluido(item.status)).length,
+        detalhe: "Inspecoes preventivas pendentes",
+        Icon: CheckCircle2,
+        tom: "slate",
+      },
+      {
+        id: "cftv-critico",
+        titulo: "CFTV critico",
+        valor: cftvCritico,
+        detalhe: "Cameras ou checklists tecnicos",
+        Icon: Camera,
+        tom: "red",
+      },
+      {
+        id: "risco-pendente",
+        titulo: "Riscos ativos",
+        valor: pendenciasRisco || documentos.filter((item) => item.modulo === "AnaliseRisco" && !estaConcluido(item.status)).length,
+        detalhe: "Planos e riscos em aberto",
+        Icon: Activity,
+        tom: "rose",
+      },
+      {
+        id: "tarefas-atrasadas",
+        titulo: "Prazos vencidos",
+        valor: tarefasAtrasadas,
+        detalhe: "Pendencias operacionais fora do prazo",
+        Icon: Clock,
+        tom: "red",
+      },
+    ];
+  }, [anulacoes, documentos, pendencias]);
 
   const anulacaoSelecionada = useMemo(() => {
     if (!selecionado) return null;
@@ -444,23 +601,44 @@ export default function CentralDocumentos() {
         ))}
       </section>
 
-      <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
-        <button type="button" onClick={() => setAcaoPendente("assinatura-pendente")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "assinatura-pendente" ? "border-amber-400 bg-amber-50 text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
-          <p className="text-xl font-black">{filaExecutiva.assinaturaPendente}</p>
-          <p className="text-xs font-semibold">Assinaturas pendentes</p>
-        </button>
-        <button type="button" onClick={() => setAcaoPendente("aguardando-decisao")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "aguardando-decisao" ? "border-blue-400 bg-blue-50 text-blue-800 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
-          <p className="text-xl font-black">{filaExecutiva.aguardandoDecisao}</p>
-          <p className="text-xs font-semibold">Aguardando decisao</p>
-        </button>
-        <button type="button" onClick={() => setAcaoPendente("em-ajuste")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "em-ajuste" ? "border-red-400 bg-red-50 text-red-800 dark:border-red-500/40 dark:bg-red-500/10 dark:text-red-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
-          <p className="text-xl font-black">{filaExecutiva.emAjuste}</p>
-          <p className="text-xs font-semibold">Documentos em ajuste</p>
-        </button>
-        <button type="button" onClick={() => setAcaoPendente("anulacao-pendente")} className={`rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 ${acaoPendente === "anulacao-pendente" ? "border-orange-400 bg-orange-50 text-orange-800 dark:border-orange-500/40 dark:bg-orange-500/10 dark:text-orange-100" : "border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"}`}>
-          <p className="text-xl font-black">{filaExecutiva.anulacaoPendente}</p>
-          <p className="text-xs font-semibold">Anulacoes pendentes</p>
-        </button>
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
+          <div>
+            <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white">
+              <Activity size={17} className="text-blue-600 dark:text-blue-300" />
+              Pendências inteligentes
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Ações que precisam de leitura, decisão, assinatura ou acompanhamento.</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAcaoPendente("")}
+            className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300"
+          >
+            Ver todos
+          </button>
+        </div>
+        <div className="grid grid-cols-1 gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+          {painelPendencias.map(({ id, titulo, valor, detalhe, Icon, tom }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setAcaoPendente(id)}
+              className={estiloPendencia(tom, acaoPendente === id)}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-2xl font-black leading-none">{valor}</p>
+                  <p className="mt-1 truncate text-xs font-black uppercase tracking-wide">{titulo}</p>
+                </div>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-950/5 text-slate-700 transition group-hover:scale-105 dark:bg-white/10 dark:text-white">
+                  <Icon size={16} />
+                </span>
+              </div>
+              <p className="mt-2 line-clamp-1 text-[11px] text-slate-500 dark:text-slate-400">{detalhe}</p>
+            </button>
+          ))}
+        </div>
       </section>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[390px_minmax(0,1fr)]">
