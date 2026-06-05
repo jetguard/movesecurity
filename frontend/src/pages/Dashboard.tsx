@@ -258,6 +258,7 @@ function StatusCards({
   }));
   const dadosVisuais = total > 0 ? dadosRosca : [{ nome: "Sem dados", valor: 1 }];
   const sombraId = `shadow-${idGrafico(titulo)}`;
+  const brilhoId = `glow-${idGrafico(titulo)}`;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900/80">
@@ -268,25 +269,40 @@ function StatusCards({
         </span>
       </div>
 
-      <div className="mt-5 grid grid-cols-1 items-center gap-4 sm:grid-cols-[150px_1fr]">
-        <div className="relative h-36 w-36">
+      <div className="mt-5 grid grid-cols-1 items-center gap-4 sm:grid-cols-[138px_1fr]">
+        <div className="relative h-32 w-32">
+          <div className="absolute inset-3 rounded-full bg-slate-100/70 shadow-inner dark:bg-slate-950/70" />
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
                 <filter id={sombraId} x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#0f172a" floodOpacity="0.18" />
+                  <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#0f172a" floodOpacity="0.16" />
+                </filter>
+                <filter id={brilhoId} x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#60a5fa" floodOpacity="0.22" />
                 </filter>
               </defs>
+              <Pie
+                data={[{ nome: "Base", valor: 1 }]}
+                dataKey="valor"
+                nameKey="nome"
+                innerRadius={52}
+                outerRadius={62}
+                strokeWidth={0}
+                isAnimationActive={false}
+              >
+                <Cell fill={total > 0 ? "rgba(148, 163, 184, 0.16)" : "#e2e8f0"} />
+              </Pie>
               <Pie
                 data={dadosVisuais}
                 dataKey="valor"
                 nameKey="nome"
-                innerRadius={47}
-                outerRadius={68}
-                paddingAngle={total > 0 ? 3 : 0}
-                cornerRadius={10}
+                innerRadius={53}
+                outerRadius={62}
+                paddingAngle={total > 0 ? 5 : 0}
+                cornerRadius={12}
                 strokeWidth={0}
-                filter={`url(#${sombraId})`}
+                filter={total > 0 ? `url(#${brilhoId})` : `url(#${sombraId})`}
               >
                 {dadosVisuais.map((item) => (
                   <Cell key={item.nome} fill={total > 0 ? coresStatus[item.nome] : "#e2e8f0"} />
@@ -296,19 +312,19 @@ function StatusCards({
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <strong className="text-2xl text-slate-900 dark:text-white">{total}</strong>
-            <span className="text-xs text-slate-500 dark:text-slate-400">total</span>
+            <strong className="text-xl text-slate-900 dark:text-white">{total}</strong>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">total</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 self-center">
+        <div className="grid grid-cols-3 gap-2 self-center">
           {statusPadrao.map((item) => (
-            <div key={item} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-950/50">
+            <div key={item} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/45">
               <div className="flex items-center gap-2">
-                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: coresStatus[item] }} />
+                <span className="h-2 w-2 rounded-full shadow-sm" style={{ backgroundColor: coresStatus[item] }} />
                 <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-300">{item}</p>
               </div>
-              <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white">{status[item] || 0}</p>
+              <p className="mt-1.5 text-lg font-bold text-slate-900 dark:text-white">{status[item] || 0}</p>
             </div>
           ))}
         </div>
