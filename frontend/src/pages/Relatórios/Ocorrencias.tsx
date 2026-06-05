@@ -6,6 +6,7 @@ import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../../components/ui/PdfLightbox";
 import { solicitarPinOperacional } from "../../utils/pinPrompt";
+import { AtSign, Ban, Edit3, FileText, MapPin, Tags, Users } from "lucide-react";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -1049,60 +1050,71 @@ export default function Ocorrencias() {
           Nenhuma ocorrência cadastrada.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {ocorrencias.map((ocorrencia) => (
-            <div key={ocorrencia.id} className="bg-white rounded-xl shadow p-5">
-              <div className="listing-card-header flex items-center justify-between gap-4 md:flex-row">
-                <div className="min-w-0">
-                  <h2 className="text-xl font-bold">{ocorrencia.codigo}</h2>
-                  <p className="text-gray-600 mt-1">{ocorrencia.assunto}</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Local: {ocorrencia.local}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Natureza: {ocorrencia.natureza} / {ocorrencia.subNatureza}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Envolvidos: {ocorrencia.envolvidos.length}
-                  </p>
+            <div key={ocorrencia.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex flex-col gap-4 border-l-4 border-blue-600 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{ocorrencia.codigo}</h2>
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                      {ocorrencia.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">{ocorrencia.assunto}</p>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                      <MapPin size={13} /> {ocorrencia.local}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                      <Tags size={13} /> {ocorrencia.natureza} / {ocorrencia.subNatureza}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
+                      <Users size={13} /> {ocorrencia.envolvidos.length} envolvido(s)
+                    </span>
+                  </div>
                 </div>
 
-                <div className="listing-actions flex items-center gap-2 md:w-auto md:flex-nowrap">
-                  <span className="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full text-sm">
-                    {ocorrencia.status}
-                  </span>
-
+                <div className="grid grid-cols-4 gap-2 sm:flex sm:items-center">
                   <button
                     type="button"
                     onClick={() => setOcorrenciaMencao(ocorrencia)}
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-lg text-sm"
+                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200"
+                    title="Mencionar usuário"
                   >
-                    Mencionar
+                    <AtSign size={17} />
+                    <span>Mencionar</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => editarOcorrencia(ocorrencia)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-lg text-sm"
+                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200"
+                    title="Editar relatório"
                   >
-                    Editar
+                    <Edit3 size={17} />
+                    <span>Editar</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => abrirPdfOcorrencia(ocorrencia.id)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm"
+                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200"
+                    title="Abrir PDF"
                   >
-                    Ver PDF
+                    <FileText size={17} />
+                    <span>PDF</span>
                   </button>
 
                   {ocorrencia.status !== "Anulado" && (
                     <button
                       type="button"
                       onClick={() => setOcorrenciaAnulacao(ocorrencia)}
-                      className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded-lg text-sm"
+                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 transition hover:bg-orange-100 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-200"
+                      title="Solicitar anulação"
                     >
-                      Solicitar Anulação
+                      <Ban size={17} />
+                      <span>Anular</span>
                     </button>
                   )}
                 </div>
