@@ -143,11 +143,6 @@ function formatarData(valor?: string | null) {
   return new Date(valor).toLocaleString("pt-BR");
 }
 
-function confirmarTextoAnulacao(mensagem: string) {
-  const resposta = window.prompt(`${mensagem}\n\nDigite CONFIRMAR para prosseguir.`);
-  return resposta?.trim().toUpperCase() === "CONFIRMAR";
-}
-
 export default function CentralDocumentos() {
   const [documentos, setDocumentos] = useState<DocumentoCentral[]>([]);
   const [anulacoes, setAnulacoes] = useState<SolicitacaoAnulacao[]>([]);
@@ -312,17 +307,17 @@ export default function CentralDocumentos() {
 
   async function registrarAcordoAnulacao(status: string) {
     if (!anulacaoSelecionada) return;
-    if (status === "Aprovado" && !confirmarTextoAnulacao("Você está aprovando o acordo para anulação deste documento.")) {
-      alert('Ação cancelada. É necessário digitar "CONFIRMAR".');
-      return;
-    }
+    const pinOperacional = status === "Aprovado"
+      ? await solicitarPinOperacional("Informe seu PIN para aprovar o acordo de anulação deste documento.")
+      : null;
+    if (status === "Aprovado" && !pinOperacional) return;
 
     setProcessandoAnulacao(true);
     try {
       await api.put(`/anulacoes/${anulacaoSelecionada.id}/acordo`, {
         status,
         observacao: observacaoAcordo,
-        confirmacaoAnulacao: status === "Aprovado" ? "CONFIRMAR" : undefined,
+        pinOperacional: pinOperacional || undefined,
       });
       setObservacaoAcordo("");
       await carregarDocumentos();
@@ -334,17 +329,17 @@ export default function CentralDocumentos() {
 
   async function decidirAnulacao(decisao: string) {
     if (!anulacaoSelecionada) return;
-    if (decisao === "Aprovado" && !confirmarTextoAnulacao("Você está prestes a anular definitivamente este documento.")) {
-      alert('Ação cancelada. É necessário digitar "CONFIRMAR".');
-      return;
-    }
+    const pinOperacional = decisao === "Aprovado"
+      ? await solicitarPinOperacional("Informe seu PIN para anular definitivamente este documento.")
+      : null;
+    if (decisao === "Aprovado" && !pinOperacional) return;
 
     setProcessandoAnulacao(true);
     try {
       await api.put(`/anulacoes/${anulacaoSelecionada.id}/decisao`, {
         decisao,
         justificativa: justificativaAnulacao,
-        confirmacaoAnulacao: decisao === "Aprovado" ? "CONFIRMAR" : undefined,
+        pinOperacional: pinOperacional || undefined,
       });
       setJustificativaAnulacao("");
       await carregarDocumentos();
@@ -353,7 +348,6 @@ export default function CentralDocumentos() {
       setProcessandoAnulacao(false);
     }
   }
-
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">

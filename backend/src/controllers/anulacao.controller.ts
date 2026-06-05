@@ -2,6 +2,7 @@ import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { validarPinOperacional } from "../services/pinOperacional.service";
 
 const STATUS_PENDENTE = "Pendente";
 const STATUS_APROVADO = "Aprovado";
@@ -30,8 +31,8 @@ function podeDecidir(perfil?: string) {
   return perfil === PERFIS.SUPER_ADMIN || perfil === PERFIS.ADMINISTRADOR;
 }
 
-function confirmacaoAnulacaoValida(valor: unknown) {
-  return String(valor || "").trim().toUpperCase() === "CONFIRMAR";
+async function validarPinAnulacao(req: AuthRequest) {
+  await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
 }
 
 export async function listarSolicitacoesAnulacao(req: AuthRequest, res: Response) {
@@ -66,15 +67,13 @@ export async function listarSolicitacoesAnulacao(req: AuthRequest, res: Response
 
 export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response) {
   try {
-    const { modulo, registroId, motivo, confirmacaoAnulacao } = req.body;
+    const { modulo, registroId, motivo } = req.body;
 
     if (!moduloValido(modulo) || !registroId || !motivo?.trim()) {
       return res.status(400).json({ error: "Informe relatório e motivo da anulação." });
     }
 
-    if (!confirmacaoAnulacaoValida(confirmacaoAnulacao)) {
-      return res.status(400).json({ error: 'Digite "CONFIRMAR" para prosseguir com a anulação.' });
-    }
+    await validarPinAnulacao(req);
 
     const registro = await buscarRegistro(modulo, Number(registroId), req.unidadeAtiva || "GJA-T1");
     if (!registro) return res.status(404).json({ error: "Relatório não encontrado." });
@@ -157,6 +156,8 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
     return res.status(201).json(solicitacao);
   } catch (error) {
     console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao solicitar anulação" });
   }
 }
@@ -164,15 +165,13 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
 export async function registrarAcordoAnulacao(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const { status, observacao, confirmacaoAnulacao } = req.body;
+    const { status, observacao } = req.body;
 
     if (![STATUS_APROVADO, STATUS_RECUSADO].includes(status)) {
       return res.status(400).json({ error: "Status de acordo inválido." });
     }
 
-    if (status === STATUS_APROVADO && !confirmacaoAnulacaoValida(confirmacaoAnulacao)) {
-      return res.status(400).json({ error: 'Digite "CONFIRMAR" para aprovar a anulação.' });
-    }
+    if (status === STATUS_APROVADO) await validarPinAnulacao(req);
 
     const acordo = await prisma.acordoAnulacaoRelatorio.findFirst({
       where: {
@@ -211,6 +210,8 @@ export async function registrarAcordoAnulacao(req: AuthRequest, res: Response) {
     return res.json(atualizado);
   } catch (error) {
     console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao registrar acordo" });
   }
 }
@@ -222,15 +223,13 @@ export async function decidirAnulacao(req: AuthRequest, res: Response) {
     }
 
     const { id } = req.params;
-    const { decisao, justificativa, confirmacaoAnulacao } = req.body;
+    const { decisao, justificativa } = req.body;
 
     if (![STATUS_APROVADO, STATUS_RECUSADO].includes(decisao)) {
       return res.status(400).json({ error: "Decisão inválida." });
     }
 
-    if (decisao === STATUS_APROVADO && !confirmacaoAnulacaoValida(confirmacaoAnulacao)) {
-      return res.status(400).json({ error: 'Digite "CONFIRMAR" para anular definitivamente o relatório.' });
-    }
+    if (decisao === STATUS_APROVADO) await validarPinAnulacao(req);
 
     const solicitacao = await prisma.solicitacaoAnulacaoRelatorio.findFirst({
       where: { id: Number(id), unidade: req.unidadeAtiva },
@@ -298,6 +297,8 @@ export async function decidirAnulacao(req: AuthRequest, res: Response) {
     return res.json(resultado);
   } catch (error) {
     console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao decidir anulação" });
   }
 }
