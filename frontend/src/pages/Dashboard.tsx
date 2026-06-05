@@ -4,7 +4,6 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Legend,
   Line,
   LineChart,
   Pie,
@@ -104,6 +103,9 @@ const coresStatus: Record<string, string> = {
   "Em Análise": "#f59e0b",
   Concluído: "#10b981",
 };
+const eixoGrafico = "#94a3b8";
+const gridGrafico = "rgba(148, 163, 184, 0.18)";
+const cursorGrafico = "rgba(59, 130, 246, 0.08)";
 
 function normalizarStatus(status: string) {
   if (!status) return "Aberto";
@@ -125,6 +127,15 @@ function formatarMoeda(valor: number) {
     style: "currency",
     currency: "BRL",
   }).format(valor);
+}
+
+function idGrafico(texto: string) {
+  return texto
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .toLowerCase();
 }
 
 function mesAno(data: string) {
@@ -193,14 +204,16 @@ function TooltipGrafico({
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-xl border border-slate-700/60 bg-slate-950/90 px-3 py-2 text-xs text-slate-100 shadow-xl backdrop-blur">
-      {label && <p className="mb-1 font-semibold text-slate-300">{label}</p>}
+    <div className="rounded-2xl border border-blue-400/20 bg-slate-950/95 px-3.5 py-3 text-xs text-slate-100 shadow-2xl shadow-blue-950/20 backdrop-blur">
+      {label && <p className="mb-2 font-semibold text-blue-100">{label}</p>}
       <div className="space-y-1">
         {payload.map((item) => (
-          <p key={item.name} className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
-            <span>{item.name}:</span>
-            <strong>{item.value}</strong>
+          <p key={item.name} className="flex items-center justify-between gap-5">
+            <span className="flex items-center gap-2 text-slate-300">
+              <span className="h-2 w-2 rounded-full shadow-sm" style={{ backgroundColor: item.color }} />
+              {item.name}
+            </span>
+            <strong className="text-white">{item.value}</strong>
           </p>
         ))}
       </div>
@@ -244,50 +257,58 @@ function StatusCards({
     valor: status[nome] || 0,
   }));
   const dadosVisuais = total > 0 ? dadosRosca : [{ nome: "Sem dados", valor: 1 }];
+  const sombraId = `shadow-${idGrafico(titulo)}`;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900/80">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-slate-800">{titulo}</h2>
-        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
+        <h2 className="font-bold text-slate-800 dark:text-slate-100">{titulo}</h2>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700 dark:bg-slate-950 dark:text-slate-100">
           {total}
         </span>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 items-start gap-4 sm:grid-cols-[150px_1fr]">
-        <div className="relative h-32 w-36">
+      <div className="mt-5 grid grid-cols-1 items-center gap-4 sm:grid-cols-[150px_1fr]">
+        <div className="relative h-36 w-36">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
+              <defs>
+                <filter id={sombraId} x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#0f172a" floodOpacity="0.18" />
+                </filter>
+              </defs>
               <Pie
                 data={dadosVisuais}
                 dataKey="valor"
                 nameKey="nome"
-                innerRadius={44}
-                outerRadius={64}
+                innerRadius={47}
+                outerRadius={68}
                 paddingAngle={total > 0 ? 3 : 0}
-                stroke="none"
+                cornerRadius={10}
+                strokeWidth={0}
+                filter={`url(#${sombraId})`}
               >
                 {dadosVisuais.map((item) => (
                   <Cell key={item.nome} fill={total > 0 ? coresStatus[item.nome] : "#e2e8f0"} />
                 ))}
               </Pie>
-              <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(148, 163, 184, 0.12)" }} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
+              <Tooltip content={<TooltipGrafico />} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <strong className="text-2xl text-slate-900">{total}</strong>
-            <span className="text-xs text-slate-500">total</span>
+            <strong className="text-2xl text-slate-900 dark:text-white">{total}</strong>
+            <span className="text-xs text-slate-500 dark:text-slate-400">total</span>
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 self-start pt-2">
+        <div className="grid grid-cols-3 gap-3 self-center">
           {statusPadrao.map((item) => (
-            <div key={item} className="min-w-0">
+            <div key={item} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/80 p-3 dark:border-slate-800 dark:bg-slate-950/50">
               <div className="flex items-center gap-2">
                 <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: coresStatus[item] }} />
-                <p className="truncate text-xs font-medium text-slate-500">{item}</p>
+                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-300">{item}</p>
               </div>
-              <p className="mt-2 text-xl font-bold text-slate-900">{status[item] || 0}</p>
+              <p className="mt-2 text-xl font-bold text-slate-900 dark:text-white">{status[item] || 0}</p>
             </div>
           ))}
         </div>
@@ -306,22 +327,34 @@ function BarraHorizontal({
   cor: string;
 }) {
   const dadosGrafico = dados.map(([nome, valor]) => ({ nome, valor }));
+  const gradientId = `bar-${idGrafico(titulo)}`;
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="font-bold text-slate-800">{titulo}</h2>
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="font-bold text-slate-800 dark:text-slate-100">{titulo}</h2>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+          Top {dados.length}
+        </span>
+      </div>
 
       <div className="mt-5 h-72">
         {dados.length === 0 ? (
-          <p className="text-sm text-slate-500">Sem dados no filtro atual.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Sem dados no filtro atual.</p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dadosGrafico} layout="vertical" margin={{ top: 8, right: 18, left: 16, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-              <XAxis type="number" allowDecimals={false} />
-              <YAxis dataKey="nome" type="category" width={118} tick={{ fontSize: 12 }} />
-              <Tooltip content={<TooltipGrafico />} cursor={{ fill: "rgba(148, 163, 184, 0.12)" }} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
-              <Bar dataKey="valor" name="Quantidade" radius={[0, 8, 8, 0]} fill={cor} />
+            <BarChart data={dadosGrafico} layout="vertical" margin={{ top: 8, right: 18, left: 8, bottom: 8 }}>
+              <defs>
+                <linearGradient id={gradientId} x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stopColor={cor} stopOpacity={0.68} />
+                  <stop offset="100%" stopColor={cor} stopOpacity={1} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridGrafico} />
+              <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
+              <YAxis dataKey="nome" type="category" width={122} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
+              <Tooltip content={<TooltipGrafico />} cursor={{ fill: cursorGrafico }} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
+              <Bar dataKey="valor" name="Quantidade" radius={[0, 10, 10, 0]} fill={`url(#${gradientId})`} barSize={18} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -336,44 +369,57 @@ function GraficoTemporal({
   dados: { mes: string; ocorrencias: number; eventos: number }[];
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:col-span-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-bold text-slate-800">Comparativo temporal</h2>
+        <h2 className="font-bold text-slate-800 dark:text-slate-100">Comparativo temporal</h2>
+        <div className="flex items-center gap-3 text-xs font-semibold text-slate-500 dark:text-slate-300">
+          <span className="flex items-center gap-2"><span className="h-2 w-5 rounded-full bg-red-500" />Ocorrências</span>
+          <span className="flex items-center gap-2"><span className="h-2 w-5 rounded-full bg-sky-500" />Eventos</span>
+        </div>
       </div>
 
       <div className="mt-6 h-72">
         {dados.length === 0 ? (
-          <p className="self-start text-sm text-slate-500">Sem dados no filtro atual.</p>
+          <p className="self-start text-sm text-slate-500 dark:text-slate-400">Sem dados no filtro atual.</p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={dados} margin={{ top: 12, right: 24, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.22)" />
-              <XAxis dataKey="mes" tick={{ fontSize: 12 }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+              <defs>
+                <linearGradient id="linhaOcorrencias" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stopColor="#fb7185" />
+                  <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+                <linearGradient id="linhaEventos" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stopColor="#38bdf8" />
+                  <stop offset="100%" stopColor="#2563eb" />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={gridGrafico} />
+              <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
+              <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
               <Tooltip
                 content={<TooltipGrafico />}
-                cursor={{ stroke: "rgba(148, 163, 184, 0.35)", strokeWidth: 1 }}
+                cursor={{ stroke: "rgba(59, 130, 246, 0.30)", strokeWidth: 1 }}
                 wrapperStyle={{ pointerEvents: "none", outline: "none" }}
                 position={{ y: 8 }}
               />
-              <Legend />
               <Line
                 type="monotone"
                 dataKey="ocorrencias"
                 name="Ocorrências"
-                stroke="#ef4444"
-                strokeWidth={2}
+                stroke="url(#linhaOcorrencias)"
+                strokeWidth={3}
                 dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: "#ef4444", stroke: "#fee2e2", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#ef4444", stroke: "#fee2e2", strokeWidth: 2 }}
               />
               <Line
                 type="monotone"
                 dataKey="eventos"
                 name="Eventos"
-                stroke="#0ea5e9"
-                strokeWidth={2}
+                stroke="url(#linhaEventos)"
+                strokeWidth={3}
                 dot={{ r: 3, fill: "#0ea5e9", strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
+                activeDot={{ r: 6, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
