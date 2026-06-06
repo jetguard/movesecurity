@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { CheckCircle2, Copy, ExternalLink, FileText, Link2, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Copy, ExternalLink, FileText, Link2, Loader2, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { api } from "../services/api";
+import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type EnvolvidoCampo = {
   id: number;
@@ -65,6 +66,7 @@ export default function RelatosCampo() {
   const [linkGerado, setLinkGerado] = useState("");
   const [relatoSelecionado, setRelatoSelecionado] = useState<RelatoCampo | null>(null);
   const [convertendo, setConvertendo] = useState(false);
+  const [excluindoId, setExcluindoId] = useState<number | null>(null);
   const [form, setForm] = useState({
     tipo: "Ocorrencia",
     assunto: "",
@@ -113,6 +115,31 @@ export default function RelatosCampo() {
   async function copiarLink(link: string) {
     await navigator.clipboard?.writeText(link);
     alert("Link copiado para a área de transferência.");
+  }
+
+  async function excluirLink(relato: RelatoCampo) {
+    if (relato.status !== "Link Gerado" || relato.enviadoEm || relato.expirado) {
+      alert("Somente links ativos e ainda não preenchidos podem ser excluídos.");
+      return;
+    }
+
+    const confirmar = window.confirm("Deseja realmente excluir este link de coleta? O acesso será encerrado imediatamente.");
+    if (!confirmar) return;
+
+    const pinOperacional = await solicitarPinOperacional("Confirme seu PIN operacional para excluir este link de coleta.");
+    if (!pinOperacional) return;
+
+    setExcluindoId(relato.id);
+    try {
+      await api.delete(`/relatos-campo/${relato.id}`, { data: { pinOperacional } });
+      alert("Link excluído com sucesso.");
+      await carregar();
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      alert(apiError.response?.data?.error || "Não foi possível excluir o link.");
+    } finally {
+      setExcluindoId(null);
+    }
   }
 
   function abrirConversao(relato: RelatoCampo) {
@@ -207,7 +234,7 @@ export default function RelatosCampo() {
           <div className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">Nenhum relato de campo gerado ainda.</div>
         ) : (
           relatos.map((relato) => (
-            <article key={relato.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <article key={relato.id} className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900/95 dark:hover:border-blue-500/30">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -237,6 +264,16 @@ export default function RelatosCampo() {
                     <Copy size={14} />
                     Copiar link
                   </button>
+                  {relato.status === "Link Gerado" && !relato.expirado && (
+                    <button
+                      onClick={() => excluirLink(relato)}
+                      disabled={excluindoId === relato.id}
+                      className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
+                    >
+                      {excluindoId === relato.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                      Excluir link
+                    </button>
+                  )}
                   {relato.status === "Enviado" && (
                     <button onClick={() => abrirConversao(relato)} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-500">
                       <FileText size={14} />

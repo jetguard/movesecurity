@@ -4,6 +4,7 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { ErroTranscricaoAudio, transcreverAudioBuffer } from "../services/audioTranscricao.service";
+import { validarPinOperacional } from "../services/pinOperacional.service";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
 function urlBase(req: AuthRequest) {
@@ -105,6 +106,53 @@ export async function listarRelatosCampo(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar relatos de campo." });
+  }
+}
+
+export async function excluirLinkRelatoCampo(req: AuthRequest, res: Response) {
+  try {
+    const relato = await prisma.relatoCampo.findFirst({
+      where: {
+        id: Number(req.params.id),
+        unidade: req.unidadeAtiva,
+      },
+      include: {
+        geradoPor: { select: { nome: true, apelido: true } },
+      },
+    });
+
+    if (!relato) return res.status(404).json({ error: "Link de coleta não encontrado." });
+    if (relato.geradoPorId !== req.usuarioId) {
+      return res.status(403).json({ error: "Somente o usuário que criou o link pode excluir este link de coleta." });
+    }
+    if (relato.status !== "Link Gerado" || relato.enviadoEm || relato.finalizadoEm) {
+      return res.status(400).json({ error: "Este link já possui envio ou conversão e não pode ser excluído." });
+    }
+
+    await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
+
+    await prisma.relatoCampo.delete({ where: { id: relato.id } });
+
+    await registrarLog({
+      req,
+      acao: `Exclusão de link de coleta de dados ${relato.id}`,
+      tipoRegistro: "RelatoCampo",
+      registroId: relato.id,
+      dadosAnteriores: {
+        id: relato.id,
+        unidade: relato.unidade,
+        expiraEm: relato.expiraEm,
+        geradoPor: relato.geradoPor?.apelido || relato.geradoPor?.nome,
+      },
+    });
+
+    return res.status(204).send();
+  } catch (error: any) {
+    const status = error?.status || 500;
+    if (status !== 500) return res.status(status).json({ error: error.message || "PIN operacional inválido." });
+
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir link de coleta." });
   }
 }
 

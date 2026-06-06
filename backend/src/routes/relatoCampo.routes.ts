@@ -5,6 +5,7 @@ import {
   buscarRelatoCampoPublico,
   converterRelatoCampo,
   enviarRelatoCampoPublico,
+  excluirLinkRelatoCampo,
   gerarLinkRelatoCampo,
   listarRelatosCampo,
   transcreverAudioRelatoCampoPublico,
@@ -59,6 +60,7 @@ const uploadMemoria = multer({
 
 router.get("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarRelatosCampo);
 router.post("/links", autenticarUsuario, autorizarPerfis(acessoRelatorios), gerarLinkRelatoCampo);
+router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), excluirLinkRelatoCampo);
 router.post("/:id/converter", autenticarUsuario, autorizarPerfis(acessoRelatorios), converterRelatoCampo);
 
 router.get("/coleta/:token", buscarRelatoCampoPublico);
