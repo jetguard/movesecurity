@@ -24,6 +24,32 @@ type LocalColeta = {
   areaSensivel: boolean;
 };
 
+type ChecklistColeta = {
+  fotosLocal: boolean;
+  relatoPrincipal: boolean;
+  testemunha: boolean;
+  veiculoEnvolvido: boolean;
+  danoMaterial: boolean;
+  horarioAproximado: boolean;
+  localExato: boolean;
+  audioGravado: boolean;
+  acionouCcos: boolean;
+  cameraCftv: boolean;
+};
+
+const checklistInicial: ChecklistColeta = {
+  fotosLocal: false,
+  relatoPrincipal: false,
+  testemunha: false,
+  veiculoEnvolvido: false,
+  danoMaterial: false,
+  horarioAproximado: false,
+  localExato: false,
+  audioGravado: false,
+  acionouCcos: false,
+  cameraCftv: false,
+};
+
 const envolvidoVazio: EnvolvidoColeta = {
   tipoEnvolvimento: "Envolvido",
   nome: "",
@@ -61,6 +87,7 @@ export default function ColetaDados() {
     dataOcorrido: "",
     observacoes: "",
   });
+  const [checklistColeta, setChecklistColeta] = useState<ChecklistColeta>(checklistInicial);
   const [envolvidos, setEnvolvidos] = useState<EnvolvidoColeta[]>([{ ...envolvidoVazio }]);
   const draftKey = useMemo(() => `jetguard-coleta-dados-${token || "sem-token"}`, [token]);
 
@@ -96,10 +123,12 @@ export default function ColetaDados() {
       try {
         const dados = JSON.parse(salvo) as {
           form?: typeof form;
+          checklistColeta?: ChecklistColeta;
           envolvidos?: Array<Omit<EnvolvidoColeta, "audio">>;
           salvoEm?: string;
         };
         if (dados.form) setForm((atual) => ({ ...atual, ...dados.form }));
+        if (dados.checklistColeta) setChecklistColeta((atual) => ({ ...atual, ...dados.checklistColeta }));
         if (Array.isArray(dados.envolvidos) && dados.envolvidos.length > 0) {
           setEnvolvidos(dados.envolvidos.map((envolvido) => ({ ...envolvido, audio: null })));
         }
@@ -120,6 +149,7 @@ export default function ColetaDados() {
         draftKey,
         JSON.stringify({
           form,
+          checklistColeta,
           envolvidos: envolvidos.map(({ audio, ...envolvido }) => envolvido),
           salvoEm,
         })
@@ -128,7 +158,7 @@ export default function ColetaDados() {
     }, 350);
 
     return () => window.clearTimeout(timeout);
-  }, [draftKey, envolvidos, form, rascunhoCarregado, status]);
+  }, [checklistColeta, draftKey, envolvidos, form, rascunhoCarregado, status]);
 
   useEffect(() => {
     return () => {
@@ -138,6 +168,17 @@ export default function ColetaDados() {
 
   function atualizarEnvolvido(index: number, campo: keyof EnvolvidoColeta, valor: string | boolean | File | null) {
     setEnvolvidos((atuais) => atuais.map((item, i) => i === index ? { ...item, [campo]: valor } : item));
+  }
+
+  function mascararPlaca(valor: string) {
+    return valor
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "")
+      .slice(0, 7);
+  }
+
+  function atualizarChecklist(campo: keyof ChecklistColeta, valor: boolean) {
+    setChecklistColeta((atual) => ({ ...atual, [campo]: valor }));
   }
 
   function adicionarEnvolvido() {
@@ -237,6 +278,7 @@ export default function ColetaDados() {
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([chave, valor]) => formData.append(chave, valor));
+      formData.append("checklistColeta", JSON.stringify(checklistColeta));
       formData.append("envolvidos", JSON.stringify(envolvidos.map(({ audio, ...envolvido }) => envolvido)));
       evidencias.forEach((arquivo) => formData.append("anexos", arquivo));
       envolvidos.forEach((envolvido, index) => {
@@ -358,6 +400,37 @@ export default function ColetaDados() {
           </section>
 
           <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-black">Checklist inteligente de coleta</h2>
+              <p className="mt-1 text-sm text-slate-300">Marque os itens confirmados em campo para evitar falta de informações na elaboração do relatório.</p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {[
+                ["fotosLocal", "Fotos do local foram anexadas?"],
+                ["relatoPrincipal", "Relato do envolvido principal foi coletado?"],
+                ["testemunha", "Existe testemunha?"],
+                ["veiculoEnvolvido", "Existe veículo envolvido?"],
+                ["danoMaterial", "Existe dano material visível?"],
+                ["horarioAproximado", "Foi informado horário aproximado?"],
+                ["localExato", "Foi informado local exato?"],
+                ["audioGravado", "Existe áudio gravado?"],
+                ["acionouCcos", "Foi necessário acionar CCOS?"],
+                ["cameraCftv", "Há câmera CFTV próxima?"],
+              ].map(([campo, rotulo]) => (
+                <label key={campo} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-100 transition hover:border-blue-400/50 hover:bg-slate-900">
+                  <input
+                    type="checkbox"
+                    checked={checklistColeta[campo as keyof ChecklistColeta]}
+                    onChange={(e) => atualizarChecklist(campo as keyof ChecklistColeta, e.target.checked)}
+                    className="h-4 w-4 accent-blue-500"
+                  />
+                  {rotulo}
+                </label>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-lg font-black">Partes envolvidas</h2>
               <button type="button" onClick={adicionarEnvolvido} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-black transition hover:bg-blue-500">
@@ -401,7 +474,7 @@ export default function ColetaDados() {
                     </label>
                     {envolvido.possuiVeiculo && (
                       <>
-                        <input value={envolvido.placa} onChange={(e) => atualizarEnvolvido(index, "placa", e.target.value.toUpperCase())} placeholder="Placa" className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase" />
+                        <input value={envolvido.placa} onChange={(e) => atualizarEnvolvido(index, "placa", mascararPlaca(e.target.value))} placeholder="Placa AAA1234 ou AAA1B34" maxLength={7} className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase" />
                         <input value={envolvido.reboque} onChange={(e) => atualizarEnvolvido(index, "reboque", e.target.value.toUpperCase())} placeholder="Reboque" className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase" />
                       </>
                     )}

@@ -255,6 +255,7 @@ model RelatoCampo {
   responsavelColeta   String?
   dataOcorrido        DateTime?
   observacoes         String?
+  checklistColeta     String?
   expiraEm            DateTime
   enviadoEm           DateTime?
   finalizadoEm        DateTime?

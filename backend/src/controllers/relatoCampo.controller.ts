@@ -34,6 +34,25 @@ async function validarLocalAtivo(local: string, unidade?: string) {
   });
 }
 
+function textoChecklistColeta(valor?: string | null) {
+  const checklist = parseJson<Record<string, boolean>>(valor, {});
+  const rotulos: Record<string, string> = {
+    fotosLocal: "Fotos do local anexadas",
+    relatoPrincipal: "Relato do envolvido principal coletado",
+    testemunha: "Existe testemunha",
+    veiculoEnvolvido: "Existe veículo envolvido",
+    danoMaterial: "Existe dano material visível",
+    horarioAproximado: "Horário aproximado informado",
+    localExato: "Local exato informado",
+    audioGravado: "Existe áudio gravado",
+    acionouCcos: "CCOS acionado",
+    cameraCftv: "Há câmera CFTV próxima",
+  };
+
+  const linhas = Object.entries(rotulos).map(([chave, rotulo]) => `- ${rotulo}: ${checklist[chave] ? "Sim" : "Não"}`);
+  return linhas.length ? `\n\nChecklist de coleta:\n${linhas.join("\n")}` : "";
+}
+
 async function proximoCodigoOcorrencia(unidade: string) {
   const ano = new Date().getFullYear();
   const ultima = await prisma.ocorrencia.findFirst({
@@ -250,6 +269,7 @@ export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) 
         responsavelColeta: String(req.body.responsavelColeta || ""),
         dataOcorrido: new Date(String(req.body.dataOcorrido)),
         observacoes: String(req.body.observacoes || ""),
+        checklistColeta: String(req.body.checklistColeta || "{}"),
         status: "Enviado",
         enviadoEm: new Date(),
         finalizadoEm: new Date(),
@@ -351,7 +371,7 @@ export async function converterRelatoCampo(req: AuthRequest, res: Response) {
     const assunto = String(req.body.assunto || relato.titulo || "");
     const natureza = String(req.body.natureza || "");
     const subNatureza = String(req.body.subNatureza || "");
-    const relatoSeguranca = String(req.body.relatoSeguranca || relato.observacoes || "");
+    const relatoSeguranca = `${String(req.body.relatoSeguranca || relato.observacoes || "")}${textoChecklistColeta(relato.checklistColeta)}`;
     const localInformado = String(req.body.local || relato.local || "");
 
     if (!["Ocorrencia", "Evento"].includes(tipo)) {

@@ -29,6 +29,7 @@ type RelatoCampo = {
   unidade: string;
   responsavelColeta?: string;
   observacoes?: string;
+  checklistColeta?: string;
   dataOcorrido?: string;
   expiraEm: string;
   enviadoEm?: string;
