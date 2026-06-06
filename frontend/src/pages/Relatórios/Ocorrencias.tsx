@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../../services/api";
 import LexicalEditor from "../../components/editor/LexicalEditor";
 import { podeAnalisar } from "../../utils/permissoes";
@@ -6,7 +6,7 @@ import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../../components/ui/PdfLightbox";
 import { solicitarPinOperacional } from "../../utils/pinPrompt";
-import { AtSign, Ban, Edit3, FileText, MapPin, Tags, Users } from "lucide-react";
+import { AtSign, Ban, Edit3, FileText, FileUp, Loader2, MapPin, Sparkles, Tags, Users, X } from "lucide-react";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -87,6 +87,34 @@ type LocalCadastro = {
   areaSensivel: boolean;
 };
 
+type AreaRecorte = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
+type AssistenteRelato = {
+  aberto: boolean;
+  envolvidoIndex: number | null;
+  arquivo: File | null;
+  previewUrl: string;
+  sugestao: string;
+  aviso: string;
+  erro: string;
+  carregando: boolean;
+  recorte: AreaRecorte | null;
+};
+
+type ApiErro = {
+  response?: {
+    data?: {
+      error?: string;
+      detalhe?: string;
+    };
+  };
+};
+
 const envolvidoVazio: Envolvido = {
   tipoEnvolvimento: "Condutor",
   nome: "",
@@ -118,6 +146,19 @@ export default function Ocorrencias() {
   const [tipoMencao, setTipoMencao] = useState("Acompanhar");
   const [observacaoMencao, setObservacaoMencao] = useState("");
   const [motivoAnulacao, setMotivoAnulacao] = useState("");
+  const [assistenteRelato, setAssistenteRelato] = useState<AssistenteRelato>({
+    aberto: false,
+    envolvidoIndex: null,
+    arquivo: null,
+    previewUrl: "",
+    sugestao: "",
+    aviso: "",
+    erro: "",
+    carregando: false,
+    recorte: null,
+  });
+  const imagemRelatoRef = useRef<HTMLImageElement | null>(null);
+  const inicioRecorteRef = useRef<{ x: number; y: number } | null>(null);
   const [pinAnulacao, setPinAnulacao] = useState("");
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
@@ -326,6 +367,233 @@ export default function Ocorrencias() {
     };
 
     setEnvolvidos(lista);
+  }
+
+  function limparAssistenteRelato() {
+    if (assistenteRelato.previewUrl) {
+      URL.revokeObjectURL(assistenteRelato.previewUrl);
+    }
+
+    setAssistenteRelato({
+      aberto: false,
+      envolvidoIndex: null,
+      arquivo: null,
+      previewUrl: "",
+      sugestao: "",
+      aviso: "",
+      erro: "",
+      carregando: false,
+      recorte: null,
+    });
+  }
+
+  function abrirAssistenteRelato(index: number) {
+    if (assistenteRelato.previewUrl) {
+      URL.revokeObjectURL(assistenteRelato.previewUrl);
+    }
+
+    setAssistenteRelato({
+      aberto: true,
+      envolvidoIndex: index,
+      arquivo: null,
+      previewUrl: "",
+      sugestao: "",
+      aviso: "",
+      erro: "",
+      carregando: false,
+      recorte: null,
+    });
+  }
+
+  function selecionarArquivoRelato(arquivo?: File | null) {
+    if (assistenteRelato.previewUrl) {
+      URL.revokeObjectURL(assistenteRelato.previewUrl);
+    }
+
+    if (!arquivo) {
+      setAssistenteRelato((atual) => ({
+        ...atual,
+        arquivo: null,
+        previewUrl: "",
+        sugestao: "",
+        aviso: "",
+        erro: "",
+        recorte: null,
+      }));
+      return;
+    }
+
+    setAssistenteRelato((atual) => ({
+      ...atual,
+      arquivo,
+      previewUrl: URL.createObjectURL(arquivo),
+      sugestao: "",
+      aviso: "",
+      erro: "",
+      recorte: null,
+    }));
+  }
+
+  function obterPontoImagem(evento: React.PointerEvent<HTMLElement>) {
+    const imagem = imagemRelatoRef.current;
+    if (!imagem) return null;
+
+    const rect = imagem.getBoundingClientRect();
+    return {
+      x: Math.max(0, Math.min(evento.clientX - rect.left, rect.width)),
+      y: Math.max(0, Math.min(evento.clientY - rect.top, rect.height)),
+    };
+  }
+
+  function iniciarRecorteRelato(evento: React.PointerEvent<HTMLDivElement>) {
+    if (!assistenteRelato.arquivo?.type.startsWith("image/")) return;
+    const ponto = obterPontoImagem(evento);
+    if (!ponto) return;
+
+    evento.currentTarget.setPointerCapture(evento.pointerId);
+    inicioRecorteRef.current = ponto;
+    setAssistenteRelato((atual) => ({
+      ...atual,
+      recorte: { x: ponto.x, y: ponto.y, width: 0, height: 0 },
+      erro: "",
+    }));
+  }
+
+  function moverRecorteRelato(evento: React.PointerEvent<HTMLDivElement>) {
+    if (!inicioRecorteRef.current) return;
+    const ponto = obterPontoImagem(evento);
+    if (!ponto) return;
+
+    const inicio = inicioRecorteRef.current;
+    setAssistenteRelato((atual) => ({
+      ...atual,
+      recorte: {
+        x: Math.min(inicio.x, ponto.x),
+        y: Math.min(inicio.y, ponto.y),
+        width: Math.abs(ponto.x - inicio.x),
+        height: Math.abs(ponto.y - inicio.y),
+      },
+    }));
+  }
+
+  function finalizarRecorteRelato(evento: React.PointerEvent<HTMLDivElement>) {
+    if (inicioRecorteRef.current) {
+      evento.currentTarget.releasePointerCapture(evento.pointerId);
+    }
+    inicioRecorteRef.current = null;
+
+    setAssistenteRelato((atual) => {
+      if (!atual.recorte || atual.recorte.width < 12 || atual.recorte.height < 12) {
+        return { ...atual, recorte: null };
+      }
+      return atual;
+    });
+  }
+
+  async function criarArquivoRecortadoRelato() {
+    const arquivo = assistenteRelato.arquivo;
+    const imagem = imagemRelatoRef.current;
+    const recorte = assistenteRelato.recorte;
+
+    if (!arquivo || !imagem || !recorte || !arquivo.type.startsWith("image/")) {
+      return arquivo;
+    }
+
+    if (recorte.width < 20 || recorte.height < 20) {
+      return arquivo;
+    }
+
+    const escalaX = imagem.naturalWidth / imagem.getBoundingClientRect().width;
+    const escalaY = imagem.naturalHeight / imagem.getBoundingClientRect().height;
+    const origemX = Math.max(0, Math.round(recorte.x * escalaX));
+    const origemY = Math.max(0, Math.round(recorte.y * escalaY));
+    const largura = Math.min(imagem.naturalWidth - origemX, Math.round(recorte.width * escalaX));
+    const altura = Math.min(imagem.naturalHeight - origemY, Math.round(recorte.height * escalaY));
+
+    if (largura <= 0 || altura <= 0) {
+      return arquivo;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = largura;
+    canvas.height = altura;
+    const contexto = canvas.getContext("2d");
+    if (!contexto) return arquivo;
+
+    contexto.drawImage(imagem, origemX, origemY, largura, altura, 0, 0, largura, altura);
+
+    return new Promise<File>((resolve) => {
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) {
+            resolve(arquivo);
+            return;
+          }
+
+          const extensao = arquivo.type === "image/png" ? "png" : arquivo.type === "image/webp" ? "webp" : "jpg";
+          resolve(new File([blob], `recorte-relato.${extensao}`, { type: arquivo.type }));
+        },
+        arquivo.type,
+        0.95
+      );
+    });
+  }
+
+  async function lerRelatoAssistente() {
+    if (!assistenteRelato.arquivo) {
+      setAssistenteRelato((atual) => ({
+        ...atual,
+        erro: "Anexe uma foto ou PDF escaneado do relato manuscrito.",
+      }));
+      return;
+    }
+
+    const arquivoParaLeitura = await criarArquivoRecortadoRelato();
+    if (!arquivoParaLeitura) return;
+
+    const formData = new FormData();
+    formData.append("documento", arquivoParaLeitura);
+
+    setAssistenteRelato((atual) => ({
+      ...atual,
+      carregando: true,
+      erro: "",
+      sugestao: "",
+      aviso: "",
+    }));
+
+    try {
+      const response = await api.post("/inteligencia/relato-ocr", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      setAssistenteRelato((atual) => ({
+        ...atual,
+        carregando: false,
+        sugestao: response.data?.relatoSugerido || "",
+        aviso: response.data?.aviso || "",
+      }));
+    } catch (error) {
+      const erro = error as ApiErro;
+      setAssistenteRelato((atual) => ({
+        ...atual,
+        carregando: false,
+        aviso: "",
+        erro:
+          erro.response?.data?.detalhe ||
+          erro.response?.data?.error ||
+          "Não foi possível realizar a leitura inteligente do documento.",
+      }));
+    }
+  }
+
+  function aplicarRelatoAssistente() {
+    if (assistenteRelato.envolvidoIndex === null || !assistenteRelato.sugestao.trim()) {
+      return;
+    }
+
+    atualizarEnvolvido(assistenteRelato.envolvidoIndex, "relato", assistenteRelato.sugestao.trim());
+    limparAssistenteRelato();
   }
 
   function selecionarAnexos(e: React.ChangeEvent<HTMLInputElement>) {
@@ -840,15 +1108,30 @@ export default function Ocorrencias() {
                       </div>
                     )}
 
-                    <textarea
-                      className="w-full border rounded-lg p-3 min-h-[120px]"
-                      placeholder="Relato deste envolvido"
-                      value={envolvido.relato}
-                      onChange={(e) =>
-                        atualizarEnvolvido(index, "relato", e.target.value)
-                      }
-                      required
-                    />
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                          Relato do envolvido
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => abrirAssistenteRelato(index)}
+                          className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                        >
+                          <Sparkles size={14} />
+                          Carregar prévia por OCR
+                        </button>
+                      </div>
+                      <textarea
+                        className="w-full border rounded-lg p-3 min-h-[120px]"
+                        placeholder="Relato deste envolvido"
+                        value={envolvido.relato}
+                        onChange={(e) =>
+                          atualizarEnvolvido(index, "relato", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1121,6 +1404,193 @@ export default function Ocorrencias() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {assistenteRelato.aberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-hidden rounded-3xl border border-blue-500/20 bg-white shadow-2xl dark:bg-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+                    Assistente de relato
+                  </p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                    Ler documento manuscrito ou escaneado
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    A sugestão deve ser revisada antes de ser aplicada no relatório.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={limparAssistenteRelato}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                title="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="grid max-h-[calc(92vh-104px)] grid-cols-1 overflow-auto lg:grid-cols-[0.95fr_1.05fr]">
+              <div className="space-y-4 border-b border-slate-200 p-5 dark:border-slate-800 lg:border-b-0 lg:border-r">
+                <label className="group flex min-h-[150px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-5 text-center transition hover:border-blue-400 hover:bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/15">
+                  <FileUp className="mb-3 text-blue-600 dark:text-blue-300" size={34} />
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">
+                    Clique para anexar a foto ou PDF do relato
+                  </span>
+                  <span className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Formatos permitidos: JPG, PNG, WEBP ou PDF.
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    className="hidden"
+                    onChange={(e) => selecionarArquivoRelato(e.target.files?.[0])}
+                  />
+                </label>
+
+                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-800 dark:bg-slate-900">
+                  {!assistenteRelato.previewUrl && (
+                    <div className="flex h-[360px] items-center justify-center p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                      A prévia do documento aparecerá aqui.
+                    </div>
+                  )}
+
+                  {assistenteRelato.previewUrl && assistenteRelato.arquivo?.type === "application/pdf" && (
+                    <iframe
+                      src={assistenteRelato.previewUrl}
+                      title="Prévia do PDF anexado"
+                      className="h-[420px] w-full bg-white"
+                    />
+                  )}
+
+                  {assistenteRelato.previewUrl && assistenteRelato.arquivo?.type !== "application/pdf" && (
+                    <div className="space-y-3 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                        <span>
+                          Arraste sobre a imagem para selecionar somente a área do relato. Sem recorte, a leitura usa a imagem inteira.
+                        </span>
+                        {assistenteRelato.recorte && (
+                          <button
+                            type="button"
+                            onClick={() => setAssistenteRelato((atual) => ({ ...atual, recorte: null }))}
+                            className="rounded-full border border-slate-200 px-3 py-1 font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
+                          >
+                            Limpar recorte
+                          </button>
+                        )}
+                      </div>
+                      <div
+                        className="relative mx-auto inline-block max-w-full touch-none select-none overflow-hidden rounded-xl bg-slate-950/5 dark:bg-slate-950"
+                        onPointerDown={iniciarRecorteRelato}
+                        onPointerMove={moverRecorteRelato}
+                        onPointerUp={finalizarRecorteRelato}
+                        onPointerCancel={finalizarRecorteRelato}
+                      >
+                        <img
+                          ref={imagemRelatoRef}
+                          src={assistenteRelato.previewUrl}
+                          alt="Prévia do relato anexado"
+                          className="max-h-[420px] max-w-full object-contain"
+                          draggable={false}
+                        />
+                        {assistenteRelato.recorte && (
+                          <div
+                            className="pointer-events-none absolute border-2 border-blue-400 bg-blue-500/15 shadow-[0_0_0_9999px_rgba(2,6,23,0.45)]"
+                            style={{
+                              left: assistenteRelato.recorte.x,
+                              top: assistenteRelato.recorte.y,
+                              width: assistenteRelato.recorte.width,
+                              height: assistenteRelato.recorte.height,
+                            }}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-4 p-5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                  <h3 className="font-bold text-slate-900 dark:text-white">Como funciona</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                    O JetGuard envia o arquivo para leitura inteligente, extrai o texto possível e organiza uma
+                    sugestão profissional para o campo Relato do Envolvido. Trechos ilegíveis serão sinalizados.
+                  </p>
+                </div>
+
+                {assistenteRelato.erro && (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                    {assistenteRelato.erro}
+                  </div>
+                )}
+
+                {assistenteRelato.aviso && (
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-medium text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-100">
+                    {assistenteRelato.aviso}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={lerRelatoAssistente}
+                  disabled={assistenteRelato.carregando || !assistenteRelato.arquivo}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {assistenteRelato.carregando ? (
+                    <>
+                      <Loader2 className="animate-spin" size={18} />
+                      Lendo documento...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={18} />
+                      Gerar sugestão de relato
+                    </>
+                  )}
+                </button>
+
+                <div>
+                  <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    Sugestão gerada
+                  </label>
+                  <textarea
+                    className="mt-2 min-h-[260px] w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm leading-relaxed text-slate-800 outline-none transition focus:border-blue-400 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+                    placeholder="Após a leitura, a sugestão aparecerá aqui para revisão."
+                    value={assistenteRelato.sugestao}
+                    onChange={(e) =>
+                      setAssistenteRelato((atual) => ({ ...atual, sugestao: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={limparAssistenteRelato}
+                    className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={aplicarRelatoAssistente}
+                    disabled={!assistenteRelato.sugestao.trim()}
+                    className="rounded-2xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Aplicar ao relato
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

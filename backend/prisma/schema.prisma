@@ -844,6 +844,9 @@ model ConfiguracaoSistema {
   corsPermitido       String?
   logoUrl             String?
   rodapePdf           String?
+  ocrProvider         String?  @default("openai")
+  openaiApiKey        String?
+  openaiOcrModel      String?  @default("gpt-4.1-mini")
   updatedAt           DateTime @updatedAt
   createdAt           DateTime @default(now())
 }
