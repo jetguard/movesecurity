@@ -71,6 +71,7 @@ export default function ColetaDados() {
   const [online, setOnline] = useState(navigator.onLine);
   const [rascunhoCarregado, setRascunhoCarregado] = useState(false);
   const [rascunhoSalvoEm, setRascunhoSalvoEm] = useState<string | null>(null);
+  const [etapa, setEtapa] = useState<1 | 2>(1);
   const [unidade, setUnidade] = useState("");
   const [locais, setLocais] = useState<LocalColeta[]>([]);
   const [evidencias, setEvidencias] = useState<File[]>([]);
@@ -179,6 +180,29 @@ export default function ColetaDados() {
 
   function atualizarChecklist(campo: keyof ChecklistColeta, valor: boolean) {
     setChecklistColeta((atual) => ({ ...atual, [campo]: valor }));
+  }
+
+  function avancarParaChecklist() {
+    if (!form.titulo.trim() || !form.responsavelColeta.trim() || !form.local.trim() || !form.dataOcorrido.trim()) {
+      setErro("Preencha os dados principais do acontecimento antes de avançar para o checklist.");
+      return;
+    }
+
+    const envolvidoIncompleto = envolvidos.some((envolvido) => !envolvido.nome.trim() || !envolvido.relato.trim());
+    if (envolvidoIncompleto) {
+      setErro("Informe o nome e o relato de todos os envolvidos antes de avançar para o checklist.");
+      return;
+    }
+
+    setErro("");
+    setEtapa(2);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function voltarParaDados() {
+    setErro("");
+    setEtapa(1);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function adicionarEnvolvido() {
@@ -353,6 +377,16 @@ export default function ColetaDados() {
               {rascunhoSalvoEm ? `Salvo automaticamente em ${new Date(rascunhoSalvoEm).toLocaleString("pt-BR")}` : "Salvamento automático ativo"}
             </span>
           </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className={`rounded-2xl border px-4 py-3 ${etapa === 1 ? "border-blue-300 bg-blue-500/15" : "border-white/10 bg-white/5"}`}>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Etapa 1</p>
+              <p className="mt-1 text-sm font-black">Dados, envolvidos e evidencias</p>
+            </div>
+            <div className={`rounded-2xl border px-4 py-3 ${etapa === 2 ? "border-blue-300 bg-blue-500/15" : "border-white/10 bg-white/5"}`}>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Etapa 2</p>
+              <p className="mt-1 text-sm font-black">Checklist inteligente e envio</p>
+            </div>
+          </div>
         </header>
 
         <div className="mb-5 rounded-3xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm font-semibold text-amber-50">
@@ -360,6 +394,8 @@ export default function ColetaDados() {
         </div>
 
         <form onSubmit={enviar} className="space-y-5">
+          {etapa === 1 && (
+          <>
           <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
             <h2 className="mb-4 text-lg font-black">Dados do acontecimento</h2>
             <div className="grid gap-4 md:grid-cols-2">
@@ -397,37 +433,6 @@ export default function ColetaDados() {
               </label>
             </div>
             <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações gerais da coleta" className="mt-4 min-h-24 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
-          </section>
-
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div className="mb-4">
-              <h2 className="text-lg font-black">Checklist inteligente de coleta</h2>
-              <p className="mt-1 text-sm text-slate-300">Marque os itens confirmados em campo para evitar falta de informações na elaboração do relatório.</p>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {[
-                ["fotosLocal", "Fotos do local foram anexadas?"],
-                ["relatoPrincipal", "Relato do envolvido principal foi coletado?"],
-                ["testemunha", "Existe testemunha?"],
-                ["veiculoEnvolvido", "Existe veículo envolvido?"],
-                ["danoMaterial", "Existe dano material visível?"],
-                ["horarioAproximado", "Foi informado horário aproximado?"],
-                ["localExato", "Foi informado local exato?"],
-                ["audioGravado", "Existe áudio gravado?"],
-                ["acionouCcos", "Foi necessário acionar CCOS?"],
-                ["cameraCftv", "Há câmera CFTV próxima?"],
-              ].map(([campo, rotulo]) => (
-                <label key={campo} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-100 transition hover:border-blue-400/50 hover:bg-slate-900">
-                  <input
-                    type="checkbox"
-                    checked={checklistColeta[campo as keyof ChecklistColeta]}
-                    onChange={(e) => atualizarChecklist(campo as keyof ChecklistColeta, e.target.checked)}
-                    className="h-4 w-4 accent-blue-500"
-                  />
-                  {rotulo}
-                </label>
-              ))}
-            </div>
           </section>
 
           <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -540,12 +545,78 @@ export default function ColetaDados() {
             )}
           </section>
 
+          </>
+          )}
+
+          {etapa === 2 && (
+            <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+              <div className="mb-4">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">Etapa final</p>
+                <h2 className="mt-1 text-xl font-black">Checklist inteligente de coleta</h2>
+                <p className="mt-1 text-sm text-slate-300">
+                  Revise os pontos essenciais antes do envio. Depois que a coleta for enviada, o link sera finalizado e nao podera ser reutilizado.
+                </p>
+              </div>
+
+              <div className="mb-5 grid gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm md:grid-cols-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-400">Titulo</p>
+                  <p className="mt-1 font-bold">{form.titulo || "Nao informado"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-400">Local</p>
+                  <p className="mt-1 font-bold">{form.local || "Nao informado"}</p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-400">Envolvidos</p>
+                  <p className="mt-1 font-bold">{envolvidos.length}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                {[
+                  ["fotosLocal", "Fotos do local foram anexadas?"],
+                  ["relatoPrincipal", "Relato do envolvido principal foi coletado?"],
+                  ["testemunha", "Existe testemunha?"],
+                  ["veiculoEnvolvido", "Existe veiculo envolvido?"],
+                  ["danoMaterial", "Existe dano material visivel?"],
+                  ["horarioAproximado", "Foi informado horario aproximado?"],
+                  ["localExato", "Foi informado local exato?"],
+                  ["audioGravado", "Existe audio gravado?"],
+                  ["acionouCcos", "Foi necessario acionar CCOS?"],
+                  ["cameraCftv", "Ha camera CFTV proxima?"],
+                ].map(([campo, rotulo]) => (
+                  <label key={campo} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-100 transition hover:border-blue-400/50 hover:bg-slate-900">
+                    <input
+                      type="checkbox"
+                      checked={checklistColeta[campo as keyof ChecklistColeta]}
+                      onChange={(e) => atualizarChecklist(campo as keyof ChecklistColeta, e.target.checked)}
+                      className="h-4 w-4 accent-blue-500"
+                    />
+                    {rotulo}
+                  </label>
+                ))}
+              </div>
+            </section>
+          )}
+
           {erro && <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">{erro}</p>}
 
-          <button disabled={enviando} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-2xl shadow-blue-950/30 transition hover:bg-blue-500 disabled:bg-slate-600">
-            {enviando ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-            Enviar coleta de dados
-          </button>
+          {etapa === 1 ? (
+            <button type="button" onClick={avancarParaChecklist} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-2xl shadow-blue-950/30 transition hover:bg-blue-500">
+              Continuar para checklist inteligente
+            </button>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
+              <button type="button" onClick={voltarParaDados} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base font-black text-white transition hover:bg-white/10">
+                Voltar e revisar dados
+              </button>
+              <button disabled={enviando} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-2xl shadow-blue-950/30 transition hover:bg-blue-500 disabled:bg-slate-600">
+                {enviando ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+                Enviar coleta de dados
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
