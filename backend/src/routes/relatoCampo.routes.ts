@@ -2,10 +2,12 @@ import { Router } from "express";
 import fs from "fs";
 import multer from "multer";
 import {
+  baixarAnexoRelatoCampo,
   buscarRelatoCampoPublico,
   converterRelatoCampo,
   enviarRelatoCampoPublico,
   excluirLinkRelatoCampo,
+  gerarPdfRelatoCampo,
   gerarLinkRelatoCampo,
   listarRelatosCampo,
   transcreverAudioRelatoCampoPublico,
@@ -60,6 +62,8 @@ const uploadMemoria = multer({
 
 router.get("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarRelatosCampo);
 router.post("/links", autenticarUsuario, autorizarPerfis(acessoRelatorios), gerarLinkRelatoCampo);
+router.get("/:id/pdf", autenticarUsuario, autorizarPerfis(acessoRelatorios), gerarPdfRelatoCampo);
+router.get("/:id/anexos/:anexoId", autenticarUsuario, autorizarPerfis(acessoRelatorios), baixarAnexoRelatoCampo);
 router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), excluirLinkRelatoCampo);
 router.post("/:id/converter", autenticarUsuario, autorizarPerfis(acessoRelatorios), converterRelatoCampo);
 

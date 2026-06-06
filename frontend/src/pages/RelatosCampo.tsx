@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { CheckCircle2, Copy, ExternalLink, FileText, Link2, Loader2, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { CheckCircle2, Copy, Download, ExternalLink, FileImage, FileText, Link2, Loader2, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
 
@@ -37,7 +38,7 @@ type RelatoCampo = {
   convertidoCodigo?: string;
   expirado?: boolean;
   envolvidos: EnvolvidoCampo[];
-  anexos: Array<{ id: number; nomeOriginal: string; tipo: string }>;
+  anexos: Array<{ id: number; nomeOriginal: string; tipo: string; caminho?: string }>;
   geradoPor?: { nome: string; apelido?: string };
 };
 
@@ -66,6 +67,8 @@ export default function RelatosCampo() {
   const [gerando, setGerando] = useState(false);
   const [linkGerado, setLinkGerado] = useState("");
   const [relatoSelecionado, setRelatoSelecionado] = useState<RelatoCampo | null>(null);
+  const [anexosSelecionados, setAnexosSelecionados] = useState<RelatoCampo | null>(null);
+  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [convertendo, setConvertendo] = useState(false);
   const [excluindoId, setExcluindoId] = useState<number | null>(null);
   const [form, setForm] = useState({
@@ -119,7 +122,7 @@ export default function RelatosCampo() {
   }
 
   async function excluirLink(relato: RelatoCampo) {
-    if (relato.status !== "Link Gerado" || relato.enviadoEm || relato.expirado) {
+    if (relato.status !== "Link Gerado" || relato.enviadoEm) {
       alert("Somente links ativos e ainda não preenchidos podem ser excluídos.");
       return;
     }
@@ -141,6 +144,23 @@ export default function RelatosCampo() {
     } finally {
       setExcluindoId(null);
     }
+  }
+
+  function abrirPdfRelato(relato: RelatoCampo) {
+    const codigo = `RC${String(relato.id).padStart(4, "0")}`;
+    setPdfLightbox({
+      url: `/api/relatos-campo/${relato.id}/pdf`,
+      titulo: `Relato de Campo ${codigo}`,
+      nomeArquivo: `relato-campo-${codigo}.pdf`,
+    });
+  }
+
+  function urlAnexo(relatoId: number, anexoId: number) {
+    return `/api/relatos-campo/${relatoId}/anexos/${anexoId}`;
+  }
+
+  function ehImagem(tipo: string) {
+    return String(tipo || "").startsWith("image/");
   }
 
   function abrirConversao(relato: RelatoCampo) {
@@ -255,6 +275,11 @@ export default function RelatosCampo() {
                   <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
                     {relato.envolvidos.length} envolvido(s), {relato.anexos.length} evidência(s)
                   </p>
+                  {relato.convertidoCodigo && (
+                    <p className="mt-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+                      Relatório aberto a partir desta coleta: {relato.convertidoTipo} {relato.convertidoCodigo}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <a href={relato.link} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
@@ -265,7 +290,17 @@ export default function RelatosCampo() {
                     <Copy size={14} />
                     Copiar link
                   </button>
-                  {relato.status === "Link Gerado" && !relato.expirado && (
+                  <button onClick={() => abrirPdfRelato(relato)} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                    <FileText size={14} />
+                    PDF
+                  </button>
+                  {relato.anexos.length > 0 && (
+                    <button onClick={() => setAnexosSelecionados(relato)} className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20">
+                      <FileImage size={14} />
+                      Evidências
+                    </button>
+                  )}
+                  {relato.status === "Link Gerado" && (
                     <button
                       onClick={() => excluirLink(relato)}
                       disabled={excluindoId === relato.id}
@@ -287,6 +322,45 @@ export default function RelatosCampo() {
           ))
         )}
       </div>
+
+      {anexosSelecionados && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-500">Evidências</p>
+                <h2 className="text-2xl font-black text-slate-900 dark:text-white">{anexosSelecionados.titulo || `Relato RC${String(anexosSelecionados.id).padStart(4, "0")}`}</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{anexosSelecionados.anexos.length} arquivo(s) anexado(s) na coleta de campo.</p>
+              </div>
+              <button type="button" onClick={() => setAnexosSelecionados(null)} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-black dark:bg-slate-800 dark:text-white">X</button>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {anexosSelecionados.anexos.map((anexo) => (
+                <div key={anexo.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900">
+                  {ehImagem(anexo.tipo) ? (
+                    <a href={urlAnexo(anexosSelecionados.id, anexo.id)} target="_blank" rel="noreferrer">
+                      <img src={urlAnexo(anexosSelecionados.id, anexo.id)} alt={anexo.nomeOriginal} className="h-52 w-full object-cover" />
+                    </a>
+                  ) : (
+                    <div className="flex h-52 items-center justify-center bg-slate-100 text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                      <FileText size={42} />
+                    </div>
+                  )}
+                  <div className="space-y-3 p-4">
+                    <p className="line-clamp-2 text-sm font-black text-slate-900 dark:text-white">{anexo.nomeOriginal}</p>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400">{anexo.tipo}</p>
+                    <a href={urlAnexo(anexosSelecionados.id, anexo.id)} target="_blank" rel="noreferrer" className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-500">
+                      <Download size={14} />
+                      Abrir arquivo
+                    </a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {relatoSelecionado && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
@@ -340,6 +414,15 @@ export default function RelatosCampo() {
             </button>
           </form>
         </div>
+      )}
+
+      {pdfLightbox && (
+        <PdfLightbox
+          url={pdfLightbox.url}
+          titulo={pdfLightbox.titulo}
+          nomeArquivo={pdfLightbox.nomeArquivo}
+          onClose={() => setPdfLightbox(null)}
+        />
       )}
     </div>
   );

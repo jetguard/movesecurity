@@ -1,9 +1,12 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
 import { Response } from "express";
+import PDFDocument from "pdfkit";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { ErroTranscricaoAudio, transcreverAudioBuffer } from "../services/audioTranscricao.service";
+import { desenharCabecalhoPadrao, desenharRodapeAssinaturaPadrao, pdfTheme } from "../services/documentoPdfBase.service";
 import { validarPinOperacional } from "../services/pinOperacional.service";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
@@ -51,6 +54,54 @@ function textoChecklistColeta(valor?: string | null) {
 
   const linhas = Object.entries(rotulos).map(([chave, rotulo]) => `- ${rotulo}: ${checklist[chave] ? "Sim" : "Não"}`);
   return linhas.length ? `\n\nChecklist de coleta:\n${linhas.join("\n")}` : "";
+}
+
+function formatarData(valor?: Date | string | null) {
+  if (!valor) return "NÃ£o informado";
+  return new Date(valor).toLocaleString("pt-BR");
+}
+
+function valorChecklistColeta(valor?: string | null) {
+  const checklist = parseJson<Record<string, boolean>>(valor, {});
+  return [
+    ["Fotos do local anexadas", checklist.fotosLocal],
+    ["Relato principal coletado", checklist.relatoPrincipal],
+    ["Existe testemunha", checklist.testemunha],
+    ["Existe veÃ­culo envolvido", checklist.veiculoEnvolvido],
+    ["Dano material visÃ­vel", checklist.danoMaterial],
+    ["HorÃ¡rio aproximado informado", checklist.horarioAproximado],
+    ["Local exato informado", checklist.localExato],
+    ["Ãudio gravado", checklist.audioGravado],
+    ["CCOS acionado", checklist.acionouCcos],
+    ["CÃ¢mera CFTV prÃ³xima", checklist.cameraCftv],
+  ];
+}
+
+function garantirEspaco(doc: PDFKit.PDFDocument, altura = 80) {
+  if (doc.y + altura > doc.page.height - 132) {
+    doc.addPage();
+    desenharCabecalhoPadrao(doc, {
+      titulo: "Relato de campo",
+      subtitulo: "Coleta de dados patrimonial",
+      codigo: "ContinuaÃ§Ã£o",
+      unidade: "",
+    });
+  }
+}
+
+function secaoPdf(doc: PDFKit.PDFDocument, titulo: string) {
+  garantirEspaco(doc, 44);
+  doc.moveDown(0.4);
+  doc.fillColor(pdfTheme.primary).fontSize(13).text(titulo, 42, doc.y, { width: 511 });
+  doc.moveTo(42, doc.y + 6).lineTo(553, doc.y + 6).strokeColor(pdfTheme.line).lineWidth(0.8).stroke();
+  doc.moveDown(1.1);
+}
+
+function linhaInfo(doc: PDFKit.PDFDocument, label: string, valor?: string | null, x = 42, y?: number, width = 240) {
+  const atualY = y ?? doc.y;
+  doc.roundedRect(x, atualY, width, 42, 8).fill("#f8fafc").strokeColor("#dbe4f0").stroke();
+  doc.fillColor("#64748b").fontSize(7).text(label.toUpperCase(), x + 10, atualY + 8, { width: width - 20, lineBreak: false });
+  doc.fillColor("#0f172a").fontSize(9).text(valor || "NÃ£o informado", x + 10, atualY + 22, { width: width - 20, lineBreak: false, ellipsis: true });
 }
 
 async function proximoCodigoOcorrencia(unidade: string) {
@@ -172,6 +223,132 @@ export async function excluirLinkRelatoCampo(req: AuthRequest, res: Response) {
 
     console.error(error);
     return res.status(500).json({ error: "Erro ao excluir link de coleta." });
+  }
+}
+
+export async function baixarAnexoRelatoCampo(req: AuthRequest, res: Response) {
+  try {
+    const anexo = await prisma.anexoRelatoCampo.findFirst({
+      where: {
+        id: Number(req.params.anexoId),
+        relatoCampo: { unidade: req.unidadeAtiva },
+      },
+    });
+
+    if (!anexo) return res.status(404).json({ error: "Anexo nao encontrado." });
+    if (!fs.existsSync(anexo.caminho)) return res.status(404).json({ error: "Arquivo nao encontrado no servidor." });
+
+    res.setHeader("Content-Type", anexo.tipo || "application/octet-stream");
+    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(anexo.nomeOriginal)}"`);
+    return fs.createReadStream(anexo.caminho).pipe(res);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao abrir anexo do relato." });
+  }
+}
+
+export async function gerarPdfRelatoCampo(req: AuthRequest, res: Response) {
+  try {
+    const relato = await prisma.relatoCampo.findFirst({
+      where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
+      include: {
+        geradoPor: { select: { nome: true, apelido: true } },
+        envolvidos: true,
+        anexos: true,
+      },
+    });
+
+    if (!relato) return res.status(404).json({ error: "Relato de campo nao encontrado." });
+
+    const doc = new PDFDocument({ size: "A4", margin: 42, bufferPages: true });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename=relato-campo-RC${String(relato.id).padStart(4, "0")}.pdf`);
+    doc.pipe(res);
+
+    desenharCabecalhoPadrao(doc, {
+      titulo: "Relato de campo",
+      subtitulo: relato.titulo || "Coleta de dados patrimonial",
+      codigo: `RC${String(relato.id).padStart(4, "0")}`,
+      unidade: relato.unidade,
+    });
+
+    secaoPdf(doc, "Dados da coleta");
+    const y1 = doc.y;
+    linhaInfo(doc, "Status", relato.status, 42, y1, 120);
+    linhaInfo(doc, "Unidade", relato.unidade, 174, y1, 110);
+    linhaInfo(doc, "Local", relato.local, 296, y1, 257);
+    doc.y = y1 + 54;
+    const y2 = doc.y;
+    linhaInfo(doc, "Responsavel pela coleta", relato.responsavelColeta || relato.geradoPor?.apelido || relato.geradoPor?.nome, 42, y2, 240);
+    linhaInfo(doc, "Data do ocorrido", formatarData(relato.dataOcorrido), 294, y2, 259);
+    doc.y = y2 + 58;
+
+    if (relato.convertidoCodigo) {
+      doc.roundedRect(42, doc.y, 511, 42, 8).fill("#ecfdf5").strokeColor("#a7f3d0").stroke();
+      doc.fillColor("#047857").fontSize(9).text(`Convertido para ${relato.convertidoTipo} ${relato.convertidoCodigo}`, 56, doc.y + 14, { width: 480 });
+      doc.y += 56;
+    }
+
+    if (relato.observacoes) {
+      secaoPdf(doc, "Observacoes gerais");
+      doc.fillColor("#0f172a").fontSize(10).text(relato.observacoes, 42, doc.y, { width: 511, align: "justify" });
+      doc.moveDown(1);
+    }
+
+    secaoPdf(doc, "Partes envolvidas");
+    relato.envolvidos.forEach((envolvido, index) => {
+      garantirEspaco(doc, 110);
+      doc.roundedRect(42, doc.y, 511, 28, 8).fill("#0f172a");
+      doc.fillColor("#ffffff").fontSize(9).text(`${index + 1}. ${envolvido.nome} - ${envolvido.tipoEnvolvimento}`, 54, doc.y + 9, { width: 480 });
+      doc.y += 38;
+      doc.fillColor("#475569").fontSize(8).text(
+        `Documento: ${envolvido.tipoDocumento} ${envolvido.documento || "N/I"} | Empresa: ${envolvido.empresa || "N/I"} | Veiculo: ${envolvido.possuiVeiculo ? `${envolvido.placa || "N/I"} ${envolvido.reboque ? `/ ${envolvido.reboque}` : ""}` : "Nao"}`,
+        42,
+        doc.y,
+        { width: 511 }
+      );
+      doc.moveDown(0.5);
+      doc.fillColor("#0f172a").fontSize(10).text(envolvido.relato || "Sem relato informado.", 42, doc.y, { width: 511, align: "justify" });
+      if (envolvido.audioNome) {
+        doc.moveDown(0.4);
+        doc.fillColor("#2563eb").fontSize(8).text(`Audio anexado: ${envolvido.audioNome}`, 42, doc.y, { width: 511 });
+      }
+      doc.moveDown(1);
+    });
+
+    secaoPdf(doc, "Checklist inteligente");
+    valorChecklistColeta(relato.checklistColeta).forEach(([label, valor]) => {
+      garantirEspaco(doc, 22);
+      doc.fillColor(valor ? "#047857" : "#b45309").fontSize(9).text(`${valor ? "Sim" : "Nao"} - ${label}`, 54, doc.y, { width: 480 });
+      doc.moveDown(0.4);
+    });
+
+    secaoPdf(doc, "Evidencias anexadas");
+    if (relato.anexos.length === 0) {
+      doc.fillColor("#64748b").fontSize(9).text("Nenhuma evidencia anexada.", 42, doc.y, { width: 511 });
+    } else {
+      relato.anexos.forEach((anexo) => {
+        garantirEspaco(doc, 22);
+        doc.fillColor("#0f172a").fontSize(9).text(`- ${anexo.nomeOriginal} (${anexo.tipo})`, 54, doc.y, { width: 480 });
+        doc.moveDown(0.35);
+      });
+    }
+
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i += 1) {
+      doc.switchToPage(i);
+      desenharRodapeAssinaturaPadrao(doc, {
+        assinatura: null,
+        qrCode: null,
+        pagina: i + 1,
+        totalPaginas: range.count,
+      });
+    }
+
+    doc.end();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao gerar PDF do relato de campo." });
   }
 }
 
