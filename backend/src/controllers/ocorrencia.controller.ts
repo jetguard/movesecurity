@@ -158,7 +158,14 @@ export async function listarOcorrencias(req: AuthRequest, res: Response) {
       },
     });
 
-    return res.json(ocorrencias);
+    const ocorrenciasComAssinatura = await Promise.all(
+      ocorrencias.map(async (ocorrencia) => ({
+        ...ocorrencia,
+        assinaturaAprovacaoValida: Boolean(await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id)),
+      }))
+    );
+
+    return res.json(ocorrenciasComAssinatura);
   } catch (error) {
     console.error(error);
 
@@ -266,9 +273,12 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
       });
     }
 
-    if (estaAprovado(ocorrenciaExiste) && req.usuarioPerfil !== "SUPER_ADMIN") {
+    const assinaturaAprovacao = estaAprovado(ocorrenciaExiste)
+      ? await assinaturaValidaDocumento("Ocorrencia", ocorrenciaExiste.id)
+      : null;
+    if (estaAprovado(ocorrenciaExiste) && assinaturaAprovacao) {
       return res.status(403).json({
-        error: "Ocorrência aprovada não pode ser editada. Solicite reabertura ao Super Admin.",
+        error: "Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.",
       });
     }
 

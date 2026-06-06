@@ -28,6 +28,8 @@ type Evento = {
   natureza: string;
   subNatureza: string;
   status: string;
+  fluxoStatus?: string;
+  assinaturaAprovacaoValida?: boolean;
   dataEvento: string;
   relatoSeguranca?: string;
   acoesTomadas?: string;
@@ -375,7 +377,32 @@ export default function Eventos() {
     return localDate.toISOString().slice(0, 16);
   }
 
+  function documentoBloqueadoParaEdicao(evento?: Evento | null) {
+    if (!evento) return false;
+    return Boolean(
+      evento.assinaturaAprovacaoValida &&
+      (evento.fluxoStatus === "Aprovado" || evento.status === "Concluido" || evento.status === "Concluído")
+    );
+  }
+
+  function mensagemDocumentoBloqueado() {
+    alert("Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.");
+  }
+
+  function desbloquearEdicaoEvento() {
+    if (documentoBloqueadoParaEdicao(eventoEditando)) {
+      mensagemDocumentoBloqueado();
+      return;
+    }
+    setPermitirEdicao(true);
+  }
+
   function editarEvento(evento: Evento) {
+    if (documentoBloqueadoParaEdicao(evento)) {
+      mensagemDocumentoBloqueado();
+      return;
+    }
+
     setEventoEditando(evento);
     setAssunto(evento.assunto);
     setLocal(evento.local);
@@ -526,7 +553,7 @@ export default function Eventos() {
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => setPermitirEdicao(true)}
+                  onClick={desbloquearEdicaoEvento}
                   className="bg-slate-900 text-white px-4 py-2 rounded-lg"
                 >
                   Editar Dados

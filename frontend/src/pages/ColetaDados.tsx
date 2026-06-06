@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useParams } from "react-router-dom";
 import { AlertTriangle, CheckCircle2, FileUp, Loader2, Plus, Trash2 } from "lucide-react";
@@ -15,6 +15,13 @@ type EnvolvidoColeta = {
   reboque: string;
   relato: string;
   audio?: File | null;
+};
+
+type LocalColeta = {
+  id: number;
+  nome: string;
+  tipo: string;
+  areaSensivel: boolean;
 };
 
 const envolvidoVazio: EnvolvidoColeta = {
@@ -35,7 +42,11 @@ export default function ColetaDados() {
   const [status, setStatus] = useState<"carregando" | "valido" | "erro" | "enviado">("carregando");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const [online, setOnline] = useState(navigator.onLine);
+  const [rascunhoCarregado, setRascunhoCarregado] = useState(false);
+  const [rascunhoSalvoEm, setRascunhoSalvoEm] = useState<string | null>(null);
   const [unidade, setUnidade] = useState("");
+  const [locais, setLocais] = useState<LocalColeta[]>([]);
   const [evidencias, setEvidencias] = useState<File[]>([]);
   const [form, setForm] = useState({
     titulo: "",
@@ -46,11 +57,13 @@ export default function ColetaDados() {
     observacoes: "",
   });
   const [envolvidos, setEnvolvidos] = useState<EnvolvidoColeta[]>([{ ...envolvidoVazio }]);
+  const draftKey = useMemo(() => `jetguard-coleta-dados-${token || "sem-token"}`, [token]);
 
   useEffect(() => {
     axios.get(`/api/public/relatos-campo/coleta/${token}`)
       .then((response) => {
         setUnidade(response.data.unidade || "");
+        setLocais(Array.isArray(response.data.locais) ? response.data.locais : []);
         setStatus("valido");
       })
       .catch((error) => {
@@ -58,6 +71,59 @@ export default function ColetaDados() {
         setStatus("erro");
       });
   }, [token]);
+
+  useEffect(() => {
+    function atualizarOnline() {
+      setOnline(navigator.onLine);
+    }
+
+    window.addEventListener("online", atualizarOnline);
+    window.addEventListener("offline", atualizarOnline);
+    return () => {
+      window.removeEventListener("online", atualizarOnline);
+      window.removeEventListener("offline", atualizarOnline);
+    };
+  }, []);
+
+  useEffect(() => {
+    const salvo = localStorage.getItem(draftKey);
+    if (salvo) {
+      try {
+        const dados = JSON.parse(salvo) as {
+          form?: typeof form;
+          envolvidos?: Array<Omit<EnvolvidoColeta, "audio">>;
+          salvoEm?: string;
+        };
+        if (dados.form) setForm((atual) => ({ ...atual, ...dados.form }));
+        if (Array.isArray(dados.envolvidos) && dados.envolvidos.length > 0) {
+          setEnvolvidos(dados.envolvidos.map((envolvido) => ({ ...envolvido, audio: null })));
+        }
+        setRascunhoSalvoEm(dados.salvoEm || null);
+      } catch {
+        // Rascunho corrompido é ignorado para não impedir a coleta.
+      }
+    }
+    setRascunhoCarregado(true);
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!rascunhoCarregado || status === "enviado") return;
+
+    const timeout = window.setTimeout(() => {
+      const salvoEm = new Date().toISOString();
+      localStorage.setItem(
+        draftKey,
+        JSON.stringify({
+          form,
+          envolvidos: envolvidos.map(({ audio, ...envolvido }) => envolvido),
+          salvoEm,
+        })
+      );
+      setRascunhoSalvoEm(salvoEm);
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [draftKey, envolvidos, form, rascunhoCarregado, status]);
 
   function atualizarEnvolvido(index: number, campo: keyof EnvolvidoColeta, valor: string | boolean | File | null) {
     setEnvolvidos((atuais) => atuais.map((item, i) => i === index ? { ...item, [campo]: valor } : item));
@@ -73,6 +139,16 @@ export default function ColetaDados() {
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!online) {
+      setErro("Você está offline. Os dados foram preservados neste aparelho. Conecte-se à internet para enviar.");
+      return;
+    }
+
+    const confirmar = window.confirm(
+      "Deseja realmente enviar os dados coletados?\n\nApós o envio, esta ação não poderá ser refeita por este link. Caso falte alguma informação, entre em contato imediatamente com Centro de Controle Operacional de Segurança - CCOS."
+    );
+    if (!confirmar) return;
+
     setEnviando(true);
     setErro("");
 
@@ -88,6 +164,7 @@ export default function ColetaDados() {
       await axios.post(`/api/public/relatos-campo/coleta/${token}`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      localStorage.removeItem(draftKey);
       setStatus("enviado");
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { error?: string } } };
@@ -132,6 +209,8 @@ export default function ColetaDados() {
     );
   }
 
+  const localSelecionado = locais.find((local) => local.nome === form.local);
+
   return (
     <div className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6">
       <div className="mx-auto max-w-5xl">
@@ -142,7 +221,19 @@ export default function ColetaDados() {
             Preencha as informações coletadas em campo. Este link é temporário e será encerrado automaticamente após o envio.
           </p>
           <span className="mt-4 inline-flex rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black text-blue-100">Unidade: {unidade}</span>
+          <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
+            <span className={`rounded-full px-3 py-1 ${online ? "bg-emerald-500/15 text-emerald-100" : "bg-red-500/15 text-red-100"}`}>
+              {online ? "Online" : "Offline - rascunho preservado"}
+            </span>
+            <span className="rounded-full bg-white/10 px-3 py-1 text-slate-200">
+              {rascunhoSalvoEm ? `Salvo automaticamente em ${new Date(rascunhoSalvoEm).toLocaleString("pt-BR")}` : "Salvamento automático ativo"}
+            </span>
+          </div>
         </header>
+
+        <div className="mb-5 rounded-3xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm font-semibold text-amber-50">
+          Os campos digitados são salvos automaticamente neste aparelho, inclusive se a conexão cair ou a bateria acabar. Se a página for reaberta, confira os dados e reanexe arquivos/áudios se necessário antes de enviar.
+        </div>
 
         <form onSubmit={enviar} className="space-y-5">
           <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
@@ -151,7 +242,31 @@ export default function ColetaDados() {
               <input required value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Título do acontecimento" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
               <input required value={form.responsavelColeta} onChange={(e) => setForm({ ...form, responsavelColeta: e.target.value })} placeholder="Nome do responsável pela coleta" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
               <input value={form.setor} onChange={(e) => setForm({ ...form, setor: e.target.value })} placeholder="Setor" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
-              <input required value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value.toUpperCase() })} placeholder="Local do ocorrido" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 uppercase outline-none focus:border-blue-400" />
+              <label className="space-y-2">
+                <select
+                  required
+                  value={form.local}
+                  onChange={(e) => setForm({ ...form, local: e.target.value })}
+                  className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+                >
+                  <option value="">Selecione o local do ocorrido</option>
+                  {locais.map((local) => (
+                    <option key={local.id} value={local.nome}>
+                      {local.nome} - {local.tipo}{local.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                    </option>
+                  ))}
+                </select>
+                {locais.length === 0 && (
+                  <span className="block text-xs font-semibold text-amber-200">
+                    Nenhum local ativo cadastrado para esta unidade. Acione o CCOS para regularizar o cadastro.
+                  </span>
+                )}
+                {localSelecionado?.areaSensivel && (
+                  <span className="inline-flex rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-100">
+                    Área sensível
+                  </span>
+                )}
+              </label>
               <label className="md:col-span-2">
                 <span className="mb-2 block text-sm font-bold text-slate-300">Data e hora do ocorrido</span>
                 <input required type="datetime-local" value={form.dataOcorrido} onChange={(e) => setForm({ ...form, dataOcorrido: e.target.value })} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />

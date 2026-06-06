@@ -35,6 +35,8 @@ type Ocorrencia = {
   anexos?: Anexo[];
   analise?: AnaliseOcorrencia | null;
   investigacao?: InvestigacaoVinculada | null;
+  fluxoStatus?: string;
+  assinaturaAprovacaoValida?: boolean;
 };
 
 type UsuarioMencao = {
@@ -794,7 +796,32 @@ export default function Ocorrencias() {
     return `${String(investigacao.id).padStart(4, "0")}/${ano}`;
   }
 
+  function documentoBloqueadoParaEdicao(ocorrencia?: Ocorrencia | null) {
+    if (!ocorrencia) return false;
+    return Boolean(
+      ocorrencia.assinaturaAprovacaoValida &&
+      (ocorrencia.fluxoStatus === "Aprovado" || ocorrencia.status === "Concluido" || ocorrencia.status === "Concluído")
+    );
+  }
+
+  function mensagemDocumentoBloqueado() {
+    alert("Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.");
+  }
+
+  function desbloquearEdicaoOcorrencia() {
+    if (documentoBloqueadoParaEdicao(ocorrenciaEditando)) {
+      mensagemDocumentoBloqueado();
+      return;
+    }
+    setPermitirEdicao(true);
+  }
+
   function editarOcorrencia(ocorrencia: Ocorrencia) {
+    if (documentoBloqueadoParaEdicao(ocorrencia)) {
+      mensagemDocumentoBloqueado();
+      return;
+    }
+
     setOcorrenciaEditando(ocorrencia);
     setAssunto(ocorrencia.assunto);
     setLocal(ocorrencia.local);
@@ -974,7 +1001,7 @@ export default function Ocorrencias() {
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
-                  onClick={() => setPermitirEdicao(true)}
+                  onClick={desbloquearEdicaoOcorrencia}
                   className="bg-slate-900 text-white px-4 py-2 rounded-lg"
                 >
                   Editar Dados
@@ -1282,6 +1309,23 @@ export default function Ocorrencias() {
                             <Mic size={13} />
                             Gravar áudio
                           </button>
+                        )}
+                        {assistenteAudioRelato.gravando && assistenteAudioRelato.envolvidoIndex === index && (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-50 px-3 py-2 text-[11px] font-black text-emerald-700 shadow-sm dark:border-emerald-400/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+                            <span className="sr-only">Captação de áudio ativa</span>
+                            {[10, 16, 22, 14, 19].map((altura, ondaIndex) => (
+                              <span
+                                key={ondaIndex}
+                                className="w-1 rounded-full bg-emerald-500 motion-safe:animate-pulse dark:bg-emerald-300"
+                                style={{
+                                  height: `${altura}px`,
+                                  animationDelay: `${ondaIndex * 120}ms`,
+                                  animationDuration: "720ms",
+                                }}
+                              />
+                            ))}
+                            <span className="ml-1 hidden sm:inline">captando</span>
+                          </span>
                         )}
                         <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
                           <Upload size={13} />

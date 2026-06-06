@@ -164,7 +164,14 @@ export async function listarEventos(req: AuthRequest, res: Response) {
       },
     });
 
-    return res.json(eventos);
+    const eventosComAssinatura = await Promise.all(
+      eventos.map(async (evento) => ({
+        ...evento,
+        assinaturaAprovacaoValida: Boolean(await assinaturaValidaDocumento("Evento", evento.id)),
+      }))
+    );
+
+    return res.json(eventosComAssinatura);
   } catch (error) {
     console.error(error);
 
@@ -270,9 +277,12 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       });
     }
 
-    if (estaAprovado(eventoExiste) && req.usuarioPerfil !== "SUPER_ADMIN") {
+    const assinaturaAprovacao = estaAprovado(eventoExiste)
+      ? await assinaturaValidaDocumento("Evento", eventoExiste.id)
+      : null;
+    if (estaAprovado(eventoExiste) && assinaturaAprovacao) {
       return res.status(403).json({
-        error: "Evento aprovado não pode ser editado. Solicite reabertura ao Super Admin.",
+        error: "Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.",
       });
     }
 

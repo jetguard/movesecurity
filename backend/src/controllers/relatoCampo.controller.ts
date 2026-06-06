@@ -130,7 +130,21 @@ export async function buscarRelatoCampoPublico(req: AuthRequest, res: Response) 
       return res.status(410).json({ error: "Este link de coleta expirou." });
     }
 
-    return res.json(relato);
+    const locais = await prisma.localTerminal.findMany({
+      where: {
+        unidade: relato.unidade,
+        status: "Ativo",
+      },
+      orderBy: [{ areaSensivel: "desc" }, { nome: "asc" }],
+      select: {
+        id: true,
+        nome: true,
+        tipo: true,
+        areaSensivel: true,
+      },
+    });
+
+    return res.json({ ...relato, locais });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao validar link de coleta." });
@@ -169,6 +183,11 @@ export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) 
       return res.status(400).json({ error: "Preencha título, local, data do ocorrido e pelo menos um envolvido." });
     }
 
+    const localCadastro = await validarLocalAtivo(String(req.body.local), relato.unidade);
+    if (!localCadastro) {
+      return res.status(400).json({ error: "Selecione um local ativo cadastrado para esta unidade." });
+    }
+
     const arquivos = (req.files as Express.Multer.File[]) || [];
     const anexos = arquivos.filter((arquivo) => !arquivo.fieldname.startsWith("audio_"));
     const audios = arquivos.filter((arquivo) => arquivo.fieldname.startsWith("audio_"));
@@ -178,7 +197,7 @@ export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) 
       data: {
         titulo: String(req.body.titulo),
         setor: String(req.body.setor || ""),
-        local: String(req.body.local),
+        local: localCadastro.nome,
         responsavelColeta: String(req.body.responsavelColeta || ""),
         dataOcorrido: new Date(String(req.body.dataOcorrido)),
         observacoes: String(req.body.observacoes || ""),
