@@ -47,6 +47,7 @@ const AtualizacoesSistema = lazyWithReload(() => import("./pages/AtualizacoesSis
 const IntegridadeSistema = lazyWithReload(() => import("./pages/IntegridadeSistema"));
 const SugestoesMelhoria = lazyWithReload(() => import("./pages/SugestoesMelhoria"));
 const Sessoes = lazyWithReload(() => import("./pages/Sessoes"));
+const APIsOpenAI = lazyWithReload(() => import("./pages/APIsOpenAI"));
 
 function CarregandoPagina() {
   return <SkeletonPage />;
@@ -181,6 +182,14 @@ export default function App() {
               element={
                 <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
                   <Configuracoes />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="apis/openai"
+              element={
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                  <APIsOpenAI />
                 </ProtectedRoute>
               }
             />

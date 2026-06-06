@@ -36,6 +36,7 @@ import {
   PackageSearch,
   Lightbulb,
   Lock,
+  KeyRound,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -55,6 +56,7 @@ export default function AdminLayout() {
   const [operacaoOpen, setOperacaoOpen] = useState(true);
   const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
   const [administracaoOpen, setAdministracaoOpen] = useState(false);
+  const [apisOpen, setApisOpen] = useState(false);
   const [sistemaOpen, setSistemaOpen] = useState(false);
   const [segundosSessao, setSegundosSessao] = useState(0);
   const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
@@ -515,6 +517,27 @@ export default function AdminLayout() {
 
           {(podeAdministrar() || podeVerLogs() || podeVerNaturezas()) && (
             <>
+              {podeAdministrar() && (
+                <>
+                  <button onClick={() => setApisOpen(!apisOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
+                    <div className="flex items-center gap-3">
+                      <KeyRound size={20} className="shrink-0" />
+                      <span className={menuText}>API's</span>
+                    </div>
+                    <span className={menuToggle}>{apisOpen ? "-" : "+"}</span>
+                  </button>
+
+                  {apisOpen && (
+                    <div className={submenuClass}>
+                      <Link to="/apis/openai" className={subItem}>
+                        <BrainCircuit size={16} />
+                        OpenAI
+                      </Link>
+                    </div>
+                  )}
+                </>
+              )}
+
               <button onClick={() => setSistemaOpen(!sistemaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
                 <div className="flex items-center gap-3">
                   <Server size={20} className="shrink-0" />

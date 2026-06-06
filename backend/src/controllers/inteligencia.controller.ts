@@ -1,4 +1,9 @@
-﻿import { Response } from "express";
+import { Response } from "express";
+import { spawn } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
@@ -91,6 +96,34 @@ function mimeRelatoPermitido(mime?: string) {
   return ["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(String(mime || ""));
 }
 
+function mimeAudioPermitido(mime?: string) {
+  return [
+    "audio/webm",
+    "audio/ogg",
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/mp4",
+    "audio/wav",
+    "audio/x-wav",
+    "audio/aac",
+  ].includes(String(mime || "").split(";")[0]);
+}
+
+function extensaoAudio(mime?: string) {
+  const tipo = String(mime || "").split(";")[0];
+  const mapa: Record<string, string> = {
+    "audio/webm": "webm",
+    "audio/ogg": "ogg",
+    "audio/mpeg": "mp3",
+    "audio/mp3": "mp3",
+    "audio/mp4": "m4a",
+    "audio/wav": "wav",
+    "audio/x-wav": "wav",
+    "audio/aac": "aac",
+  };
+  return mapa[tipo] || "webm";
+}
+
 function limparSugestaoRelato(texto: string) {
   return texto
     .replace(/^```(?:json)?/i, "")
@@ -135,6 +168,42 @@ function mensagemAmigavelOpenAi(status: number, detalhe: string) {
   }
 
   return "Não foi possível realizar a leitura inteligente do documento pela OpenAI. Confira a configuração da IA e tente novamente.";
+}
+
+function executarWhisperCpp(arquivoEntrada: string, saidaBase: string) {
+  const comando = process.env.WHISPER_CPP_COMMAND;
+  const modelo = process.env.WHISPER_CPP_MODEL;
+
+  if (!comando || !modelo) {
+    return Promise.reject(new Error("WHISPER_NAO_CONFIGURADO"));
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    const processo = spawn(
+      comando,
+      ["-m", modelo, "-f", arquivoEntrada, "-l", "pt", "-nt", "-otxt", "-of", saidaBase],
+      { windowsHide: true }
+    );
+    let stdout = "";
+    let stderr = "";
+
+    processo.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
+    processo.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    processo.on("error", reject);
+    processo.on("close", async (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr || `whisper.cpp finalizado com codigo ${code}`));
+        return;
+      }
+
+      const textoArquivo = await fs.readFile(`${saidaBase}.txt`, "utf8").catch(() => "");
+      resolve((textoArquivo || stdout).trim());
+    });
+  });
 }
 
 async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
@@ -208,6 +277,11 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
 
   const data = (await response.json()) as {
     output_text?: string;
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      total_tokens?: number;
+    };
     output?: Array<{
       content?: Array<{ text?: string; type?: string }>;
     }>;
@@ -228,6 +302,12 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
     status: 200,
     relatoSugerido: limparSugestaoRelato(texto),
     aviso: "Sugestão gerada por IA com OpenAI. Revise o conteúdo antes de aplicar ao relato.",
+    modelo,
+    tokens: {
+      entrada: data.usage?.input_tokens || 0,
+      saida: data.usage?.output_tokens || 0,
+      total: data.usage?.total_tokens || 0,
+    },
   };
 }
 
@@ -246,7 +326,13 @@ export async function sugerirRelatoPorOcr(req: AuthRequest, res: Response) {
 
     let resultado:
       | { status: number; error: string; detalhe?: string }
-      | { status: number; relatoSugerido: string; aviso: string };
+      | {
+          status: number;
+          relatoSugerido: string;
+          aviso: string;
+          modelo?: string;
+          tokens?: { entrada: number; saida: number; total: number };
+        };
 
     if (provedor !== "openai") {
       return res.status(400).json({
@@ -268,6 +354,9 @@ export async function sugerirRelatoPorOcr(req: AuthRequest, res: Response) {
         nomeArquivo: arquivo.originalname,
         tipo: arquivo.mimetype,
         tamanho: arquivo.size,
+        provedor: "openai",
+        modelo: resultado.modelo,
+        tokens: resultado.tokens,
       },
     });
 
@@ -281,3 +370,58 @@ export async function sugerirRelatoPorOcr(req: AuthRequest, res: Response) {
   }
 }
 
+export async function transcreverRelatoAudio(req: AuthRequest, res: Response) {
+  const arquivo = req.file;
+  const id = randomUUID();
+  const caminhoEntrada = path.join(os.tmpdir(), `jetguard-audio-${id}.${extensaoAudio(arquivo?.mimetype)}`);
+  const saidaBase = path.join(os.tmpdir(), `jetguard-transcricao-${id}`);
+
+  try {
+    if (!arquivo) {
+      return res.status(400).json({ error: "Anexe ou grave um áudio para transcrição." });
+    }
+
+    if (!mimeAudioPermitido(arquivo.mimetype)) {
+      return res.status(400).json({ error: "Formato de áudio não permitido. Envie WEBM, OGG, MP3, M4A ou WAV." });
+    }
+
+    await fs.writeFile(caminhoEntrada, arquivo.buffer);
+    const transcricao = await executarWhisperCpp(caminhoEntrada, saidaBase);
+
+    if (!transcricao) {
+      return res.status(422).json({ error: "Não foi possível identificar uma fala legível neste áudio." });
+    }
+
+    await registrarLog({
+      req,
+      acao: "Transcrição de áudio para relato do envolvido",
+      tipoRegistro: "InteligenciaRelatoAudio",
+      dadosNovos: {
+        nomeArquivo: arquivo.originalname,
+        tipo: arquivo.mimetype,
+        tamanho: arquivo.size,
+        provedor: "whisper.cpp",
+      },
+    });
+
+    return res.json({
+      transcricao,
+      aviso: "Transcrição local gerada com whisper.cpp. Revise o texto antes de usar no relatório.",
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "WHISPER_NAO_CONFIGURADO") {
+      return res.status(503).json({
+        error: "Transcrição local ainda não configurada.",
+        detalhe: "Configure WHISPER_CPP_COMMAND e WHISPER_CPP_MODEL no .env do backend.",
+      });
+    }
+
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao transcrever áudio do relato." });
+  } finally {
+    await Promise.all([
+      fs.unlink(caminhoEntrada).catch(() => undefined),
+      fs.unlink(`${saidaBase}.txt`).catch(() => undefined),
+    ]);
+  }
+}

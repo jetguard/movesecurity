@@ -1,6 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
-import { obterInteligencia, sugerirRelatoPorOcr } from "../controllers/inteligencia.controller";
+import { obterInteligencia, sugerirRelatoPorOcr, transcreverRelatoAudio } from "../controllers/inteligencia.controller";
 import { acessoAnalise, acessoRelatorios, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
@@ -18,6 +18,13 @@ router.post(
   autorizarPerfis(acessoRelatorios),
   upload.single("documento"),
   sugerirRelatoPorOcr
+);
+router.post(
+  "/relato-audio",
+  autenticarUsuario,
+  autorizarPerfis(acessoRelatorios),
+  upload.single("audio"),
+  transcreverRelatoAudio
 );
 
 export default router;

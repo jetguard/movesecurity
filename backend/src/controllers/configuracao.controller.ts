@@ -22,6 +22,63 @@ function mascararConfiguracao(configuracao: Awaited<ReturnType<typeof obterOuCri
   };
 }
 
+function apiKeyOpenAi(configuracao: Awaited<ReturnType<typeof obterOuCriarConfiguracao>>) {
+  return configuracao.openaiApiKey || process.env.OPENAI_API_KEY || "";
+}
+
+function parseJsonSeguro(valor?: string | null) {
+  if (!valor) return {};
+  try {
+    return JSON.parse(valor) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+async function validarChaveOpenAi(apiKey: string) {
+  if (!apiKey) {
+    return {
+      status: "nao_configurada",
+      chaveValida: false,
+      mensagem: "Nenhuma chave OpenAI configurada para o OCR.",
+    };
+  }
+
+  try {
+    const response = await fetch("https://api.openai.com/v1/models", {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (response.ok) {
+      return {
+        status: "valida",
+        chaveValida: true,
+        mensagem: "Chave OpenAI válida e pronta para uso no OCR inteligente.",
+      };
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      return {
+        status: "invalida",
+        chaveValida: false,
+        mensagem: "Chave OpenAI não autorizada. Revise a chave cadastrada.",
+      };
+    }
+
+    return {
+      status: "erro_validacao",
+      chaveValida: false,
+      mensagem: "Não foi possível validar a chave agora. Tente novamente em instantes.",
+    };
+  } catch {
+    return {
+      status: "indisponivel",
+      chaveValida: false,
+      mensagem: "Validação indisponível no momento. Confira a conexão do servidor.",
+    };
+  }
+}
+
 export async function buscarConfiguracao(req: AuthRequest, res: Response) {
   try {
     const configuracao = await obterOuCriarConfiguracao();
@@ -29,6 +86,85 @@ export async function buscarConfiguracao(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao buscar configuracoes" });
+  }
+}
+
+export async function buscarConfiguracaoOpenAi(req: AuthRequest, res: Response) {
+  try {
+    const configuracao = await obterOuCriarConfiguracao();
+    const apiKey = apiKeyOpenAi(configuracao);
+    const validacao = await validarChaveOpenAi(apiKey);
+
+    return res.json({
+      ocrProvider: configuracao.ocrProvider || "openai",
+      openaiOcrModel: configuracao.openaiOcrModel || process.env.OPENAI_OCR_MODEL || "gpt-4.1-mini",
+      openaiApiKeyConfigurada: Boolean(apiKey),
+      openaiApiKey: apiKey ? chaveMascarada : "",
+      origemChave: configuracao.openaiApiKey ? "Banco de dados" : process.env.OPENAI_API_KEY ? ".env do servidor" : "Nao configurada",
+      somenteLeitura: req.usuarioPerfil !== "SUPER_ADMIN",
+      validacao,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao buscar configuracao da OpenAI" });
+  }
+}
+
+export async function rankingUsoOpenAi(req: AuthRequest, res: Response) {
+  try {
+    const logs = await prisma.logAuditoria.findMany({
+      where: { tipoRegistro: "InteligenciaRelato" },
+      orderBy: { createdAt: "desc" },
+      take: 2000,
+    });
+
+    const mapa = new Map<number | string, {
+      usuarioId: number | null;
+      usuarioNome: string;
+      requisicoes: number;
+      tokensEntrada: number;
+      tokensSaida: number;
+      tokensTotal: number;
+      ultimoUso: Date;
+    }>();
+
+    for (const log of logs) {
+      const dados = parseJsonSeguro(log.dadosNovos);
+      const tokens = (dados.tokens || {}) as Record<string, unknown>;
+      const chave = log.usuarioId || `nome:${log.usuarioNome}`;
+      const atual = mapa.get(chave) || {
+        usuarioId: log.usuarioId,
+        usuarioNome: log.usuarioNome,
+        requisicoes: 0,
+        tokensEntrada: 0,
+        tokensSaida: 0,
+        tokensTotal: 0,
+        ultimoUso: log.createdAt,
+      };
+
+      atual.requisicoes += 1;
+      atual.tokensEntrada += Number(tokens.entrada || 0);
+      atual.tokensSaida += Number(tokens.saida || 0);
+      atual.tokensTotal += Number(tokens.total || 0);
+      if (log.createdAt > atual.ultimoUso) atual.ultimoUso = log.createdAt;
+      mapa.set(chave, atual);
+    }
+
+    const ranking = Array.from(mapa.values())
+      .sort((a, b) => b.tokensTotal - a.tokensTotal || b.requisicoes - a.requisicoes)
+      .slice(0, 20);
+
+    return res.json({
+      ranking,
+      resumo: {
+        usuarios: ranking.length,
+        requisicoes: ranking.reduce((total, item) => total + item.requisicoes, 0),
+        tokensTotal: ranking.reduce((total, item) => total + item.tokensTotal, 0),
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao buscar consumo de OCR" });
   }
 }
 

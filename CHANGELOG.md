@@ -4,6 +4,21 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.8] - 2026-06-06
+
+### Adicionado
+
+- Menu API's com tela OpenAI para gestao administrativa da integracao de OCR.
+- Administradores podem visualizar configuracoes OpenAI em modo bloqueado, com chave sempre oculta.
+- Super Admin pode configurar provedor, modelo e chave da OpenAI pela interface.
+- Ranking de consumo de tokens por usuario nas leituras OCR de relatos.
+- Transcricao local de audio para relato do envolvido usando whisper.cpp, com gravacao ou upload de audio.
+
+### Melhorado
+
+- Leitura OCR com OpenAI passa a registrar modelo, provedor e tokens consumidos nos logs.
+- Formulario de ocorrencia permite aplicar a transcricao diretamente ao campo Relato do Envolvido.
+
 ## [1.1.7] - 2026-06-03
 
 ### Melhorado

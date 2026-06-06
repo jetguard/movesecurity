@@ -6,7 +6,7 @@ import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../../components/ui/PdfLightbox";
 import { solicitarPinOperacional } from "../../utils/pinPrompt";
-import { AtSign, Ban, Edit3, FileText, FileUp, Loader2, MapPin, Sparkles, Tags, Users, X } from "lucide-react";
+import { AtSign, Ban, Edit3, FileText, FileUp, Loader2, MapPin, Mic, Sparkles, Square, Tags, Upload, Users, X } from "lucide-react";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -106,6 +106,14 @@ type AssistenteRelato = {
   recorte: AreaRecorte | null;
 };
 
+type AssistenteAudioRelato = {
+  envolvidoIndex: number | null;
+  gravando: boolean;
+  transcrevendo: boolean;
+  erro: string;
+  aviso: string;
+};
+
 type ApiErro = {
   response?: {
     data?: {
@@ -157,8 +165,18 @@ export default function Ocorrencias() {
     carregando: false,
     recorte: null,
   });
+  const [assistenteAudioRelato, setAssistenteAudioRelato] = useState<AssistenteAudioRelato>({
+    envolvidoIndex: null,
+    gravando: false,
+    transcrevendo: false,
+    erro: "",
+    aviso: "",
+  });
   const imagemRelatoRef = useRef<HTMLImageElement | null>(null);
   const inicioRecorteRef = useRef<{ x: number; y: number } | null>(null);
+  const mediaRecorderRelatoRef = useRef<MediaRecorder | null>(null);
+  const streamRelatoRef = useRef<MediaStream | null>(null);
+  const audioChunksRelatoRef = useRef<Blob[]>([]);
   const [pinAnulacao, setPinAnulacao] = useState("");
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
@@ -596,6 +614,119 @@ export default function Ocorrencias() {
     limparAssistenteRelato();
   }
 
+  async function transcreverAudioRelato(arquivo: Blob, envolvidoIndex: number) {
+    const formData = new FormData();
+    formData.append("audio", arquivo, `relato-envolvido-${envolvidoIndex + 1}.webm`);
+
+    setAssistenteAudioRelato((atual) => ({
+      ...atual,
+      envolvidoIndex,
+      gravando: false,
+      transcrevendo: true,
+      erro: "",
+      aviso: "",
+    }));
+
+    try {
+      const response = await api.post("/inteligencia/relato-audio", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const transcricao = String(response.data?.transcricao || "").trim();
+
+      if (transcricao) {
+        const relatoAtual = envolvidos[envolvidoIndex]?.relato?.trim();
+        atualizarEnvolvido(
+          envolvidoIndex,
+          "relato",
+          relatoAtual ? `${relatoAtual}\n\n${transcricao}` : transcricao
+        );
+      }
+
+      setAssistenteAudioRelato((atual) => ({
+        ...atual,
+        transcrevendo: false,
+        aviso: response.data?.aviso || "Transcrição aplicada ao relato. Revise o texto antes de salvar.",
+      }));
+    } catch (error) {
+      const erro = error as ApiErro;
+      setAssistenteAudioRelato((atual) => ({
+        ...atual,
+        transcrevendo: false,
+        erro:
+          erro.response?.data?.detalhe ||
+          erro.response?.data?.error ||
+          "Não foi possível transcrever o áudio.",
+      }));
+    }
+  }
+
+  async function iniciarGravacaoRelato(envolvidoIndex: number) {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setAssistenteAudioRelato({
+        envolvidoIndex,
+        gravando: false,
+        transcrevendo: false,
+        aviso: "",
+        erro: "Seu navegador não permitiu gravação de áudio.",
+      });
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      streamRelatoRef.current = stream;
+      mediaRecorderRelatoRef.current = recorder;
+      audioChunksRelatoRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRelatoRef.current.push(event.data);
+        }
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunksRelatoRef.current, { type: recorder.mimeType || "audio/webm" });
+        streamRelatoRef.current?.getTracks().forEach((track) => track.stop());
+        streamRelatoRef.current = null;
+        mediaRecorderRelatoRef.current = null;
+        audioChunksRelatoRef.current = [];
+        if (blob.size > 0) {
+          transcreverAudioRelato(blob, envolvidoIndex);
+        }
+      };
+
+      recorder.start();
+      setAssistenteAudioRelato({
+        envolvidoIndex,
+        gravando: true,
+        transcrevendo: false,
+        erro: "",
+        aviso: "Gravando relato em áudio. Clique em parar para transcrever.",
+      });
+    } catch {
+      setAssistenteAudioRelato({
+        envolvidoIndex,
+        gravando: false,
+        transcrevendo: false,
+        aviso: "",
+        erro: "Não foi possível acessar o microfone. Verifique a permissão do navegador.",
+      });
+    }
+  }
+
+  function pararGravacaoRelato() {
+    if (mediaRecorderRelatoRef.current?.state === "recording") {
+      mediaRecorderRelatoRef.current.stop();
+    }
+  }
+
+  function anexarAudioRelato(event: React.ChangeEvent<HTMLInputElement>, envolvidoIndex: number) {
+    const arquivo = event.target.files?.[0];
+    event.target.value = "";
+    if (!arquivo) return;
+    transcreverAudioRelato(arquivo, envolvidoIndex);
+  }
+
   function selecionarAnexos(e: React.ChangeEvent<HTMLInputElement>) {
     if (!e.target.files) return;
 
@@ -794,6 +925,15 @@ export default function Ocorrencias() {
     carregarNaturezas();
     carregarLocais();
     carregarUsuariosMencao();
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRelatoRef.current?.state === "recording") {
+        mediaRecorderRelatoRef.current.stop();
+      }
+      streamRelatoRef.current?.getTracks().forEach((track) => track.stop());
+    };
   }, []);
 
   return (
@@ -1122,6 +1262,55 @@ export default function Ocorrencias() {
                           Carregar prévia por OCR
                         </button>
                       </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {assistenteAudioRelato.gravando && assistenteAudioRelato.envolvidoIndex === index ? (
+                          <button
+                            type="button"
+                            onClick={pararGravacaoRelato}
+                            className="inline-flex items-center gap-2 rounded-full border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
+                          >
+                            <Square size={13} />
+                            Parar e transcrever
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={assistenteAudioRelato.gravando || assistenteAudioRelato.transcrevendo}
+                            onClick={() => iniciarGravacaoRelato(index)}
+                            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+                          >
+                            <Mic size={13} />
+                            Gravar áudio
+                          </button>
+                        )}
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                          <Upload size={13} />
+                          Anexar áudio
+                          <input
+                            type="file"
+                            accept="audio/webm,audio/ogg,audio/mpeg,audio/mp3,audio/mp4,audio/wav,audio/aac"
+                            className="hidden"
+                            disabled={assistenteAudioRelato.gravando || assistenteAudioRelato.transcrevendo}
+                            onChange={(event) => anexarAudioRelato(event, index)}
+                          />
+                        </label>
+                        {assistenteAudioRelato.transcrevendo && assistenteAudioRelato.envolvidoIndex === index && (
+                          <span className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-300">
+                            <Loader2 size={13} className="animate-spin" />
+                            Transcrevendo áudio...
+                          </span>
+                        )}
+                      </div>
+                      {assistenteAudioRelato.envolvidoIndex === index && assistenteAudioRelato.aviso && (
+                        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+                          {assistenteAudioRelato.aviso}
+                        </p>
+                      )}
+                      {assistenteAudioRelato.envolvidoIndex === index && assistenteAudioRelato.erro && (
+                        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">
+                          {assistenteAudioRelato.erro}
+                        </p>
+                      )}
                       <textarea
                         className="w-full border rounded-lg p-3 min-h-[120px]"
                         placeholder="Relato deste envolvido"
