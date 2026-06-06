@@ -371,6 +371,10 @@ export default function AdminLayout() {
                 <Activity size={16} />
                 Relatório CCOS
               </Link>
+              <Link to="/relatos-campo" className={subItem}>
+                <FileText size={16} />
+                Relatos de Campo
+              </Link>
             </div>
           )}
 

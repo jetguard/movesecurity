@@ -67,6 +67,7 @@ model Usuario {
   assinaturasDocumentos        AssinaturaDocumento[]
   rascunhosFormulario          RascunhoFormulario[]
   relatoriosCftvEmitidos       RelatorioCftv[]                @relation("RelatorioCftvResponsavel")
+  relatosCampoGerados          RelatoCampo[]
 }
 
 model SessaoUsuario {
@@ -241,6 +242,70 @@ model AnexoEvento {
   createdAt    DateTime @default(now())
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+}
+
+model RelatoCampo {
+  id                  Int       @id @default(autoincrement())
+  token               String    @unique
+  status              String    @default("Link Gerado")
+  titulo              String?
+  setor               String?
+  local               String?
+  unidade             String    @default("GJA-T1")
+  responsavelColeta   String?
+  dataOcorrido        DateTime?
+  observacoes         String?
+  expiraEm            DateTime
+  enviadoEm           DateTime?
+  finalizadoEm        DateTime?
+  convertidoTipo      String?
+  convertidoRegistroId Int?
+  convertidoCodigo    String?
+  geradoPorId         Int?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  geradoPor  Usuario?              @relation(fields: [geradoPorId], references: [id])
+  envolvidos EnvolvidoRelatoCampo[]
+  anexos     AnexoRelatoCampo[]
+
+  @@index([status, unidade])
+  @@index([token, expiraEm])
+}
+
+model EnvolvidoRelatoCampo {
+  id            Int @id @default(autoincrement())
+  relatoCampoId Int
+
+  tipoEnvolvimento String
+  nome             String
+  tipoDocumento    String
+  documento        String?
+  empresa          String?
+  possuiVeiculo    Boolean @default(false)
+  placa            String?
+  reboque          String?
+  relato           String
+  audioCaminho     String?
+  audioNome        String?
+  audioTipo        String?
+  createdAt        DateTime @default(now())
+
+  relatoCampo RelatoCampo @relation(fields: [relatoCampoId], references: [id], onDelete: Cascade)
+}
+
+model AnexoRelatoCampo {
+  id            Int      @id @default(autoincrement())
+  relatoCampoId Int
+  nomeOriginal  String
+  nomeArquivo   String
+  caminho       String
+  tipo          String
+  categoria     String   @default("Evidencia")
+  hashArquivo   String?
+  createdAt     DateTime @default(now())
+
+  relatoCampo RelatoCampo @relation(fields: [relatoCampoId], references: [id], onDelete: Cascade)
 }
 
 model Investigacao {

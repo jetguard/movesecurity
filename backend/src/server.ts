@@ -36,6 +36,7 @@ import sugestaoMelhoriaRoutes from "./routes/sugestaoMelhoria.routes";
 import sessaoRoutes from "./routes/sessao.routes";
 import rascunhoRoutes from "./routes/rascunho.routes";
 import documentoRoutes from "./routes/documento.routes";
+import relatoCampoRoutes from "./routes/relatoCampo.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -153,6 +154,8 @@ app.use("/api/sugestoes-melhoria", sugestaoMelhoriaRoutes);
 app.use("/api/sessoes", sessaoRoutes);
 app.use("/api/rascunhos", rascunhoRoutes);
 app.use("/api/documentos", documentoRoutes);
+app.use("/api/relatos-campo", relatoCampoRoutes);
+app.use("/api/public/relatos-campo", relatoCampoRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);

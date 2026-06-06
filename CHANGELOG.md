@@ -4,6 +4,17 @@ Todas as alterações relevantes do JetGuard serão documentadas neste arquivo.
 
 O formato segue uma adaptação do padrão Keep a Changelog e o projeto passa a ser versionado a partir da versão `1.0.0`.
 
+## [1.1.9] - 2026-06-06
+
+### Adicionado
+
+- Modulo Relatos de Campo dentro do menu Relatorios.
+- Geracao de link publico temporario para Coleta de Dados para Relatorio Patrimonial.
+- Link de coleta com expiracao em 6 horas e encerramento automatico apos envio.
+- Formulario publico responsivo para coletar dados do acontecimento, local, setor, responsavel, envolvidos, relatos, audios e evidencias.
+- Listagem interna de relatos enviados, com cards operacionais e status Link Gerado, Enviado, Expirado e Convertido.
+- Conversao de Relato de Campo em Relatorio de Ocorrencia ou Relatorio de Evento, reaproveitando envolvidos e evidencias coletadas.
+
 ## [1.1.8] - 2026-06-06
 
 ### Adicionado

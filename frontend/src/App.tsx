@@ -15,6 +15,7 @@ const CentralDocumentos = lazyWithReload(() => import("./pages/CentralDocumentos
 const Naturezas = lazyWithReload(() => import("./pages/Cadastros/Naturezas"));
 const Locais = lazyWithReload(() => import("./pages/Cadastros/Locais"));
 const Login = lazyWithReload(() => import("./pages/Login"));
+const ColetaDados = lazyWithReload(() => import("./pages/ColetaDados"));
 const AlterarSenhaPrimeiroAcesso = lazyWithReload(() => import("./pages/AlterarSenhaPrimeiroAcesso"));
 const Perfil = lazyWithReload(() => import("./pages/Perfil"));
 const MeusDados = lazyWithReload(() => import("./pages/MeusDados"));
@@ -42,6 +43,7 @@ const Governanca = lazyWithReload(() => import("./pages/Governanca"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazyWithReload(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazyWithReload(() => import("./pages/OperacaoSOC"));
+const RelatosCampo = lazyWithReload(() => import("./pages/RelatosCampo"));
 const MapaOperacional = lazyWithReload(() => import("./pages/MapaOperacional"));
 const AtualizacoesSistema = lazyWithReload(() => import("./pages/AtualizacoesSistema"));
 const IntegridadeSistema = lazyWithReload(() => import("./pages/IntegridadeSistema"));
@@ -59,6 +61,7 @@ export default function App() {
       <Suspense fallback={<CarregandoPagina />}>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/coleta-dados/:token" element={<ColetaDados />} />
           <Route
             path="/alterar-senha"
             element={
@@ -93,6 +96,7 @@ export default function App() {
             <Route path="anulacoes" element={<Navigate to="/documentos" replace />} />
             <Route path="cameras" element={<Cameras />} />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
+            <Route path="relatos-campo" element={<RelatosCampo />} />
             <Route path="mapa-operacional" element={<MapaOperacional />} />
             <Route path="planejamento" element={<Planejamento />} />
             <Route path="quadra-seguranca" element={<QuadraSeguranca />} />
