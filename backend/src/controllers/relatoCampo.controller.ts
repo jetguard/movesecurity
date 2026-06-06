@@ -3,6 +3,7 @@ import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { ErroTranscricaoAudio, transcreverAudioBuffer } from "../services/audioTranscricao.service";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
 function urlBase(req: AuthRequest) {
@@ -245,6 +246,45 @@ export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) 
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao enviar relato de campo." });
+  }
+}
+
+export async function transcreverAudioRelatoCampoPublico(req: AuthRequest, res: Response) {
+  try {
+    const token = String(req.params.token || "");
+    const relato = await prisma.relatoCampo.findUnique({
+      where: { token },
+      select: {
+        status: true,
+        expiraEm: true,
+        enviadoEm: true,
+        finalizadoEm: true,
+      },
+    });
+
+    if (!relato) return res.status(404).json({ error: "Link de coleta não encontrado." });
+    if (relato.enviadoEm || relato.finalizadoEm || relato.status !== "Link Gerado") {
+      return res.status(410).json({ error: "Este link de coleta já foi finalizado." });
+    }
+    if (relato.expiraEm < new Date()) {
+      return res.status(410).json({ error: "Este link de coleta expirou." });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Grave ou anexe um áudio para transcrição." });
+    }
+
+    const transcricao = await transcreverAudioBuffer(req.file);
+    return res.json({
+      transcricao,
+      aviso: "Transcrição gerada automaticamente. Revise o texto antes de enviar a coleta.",
+    });
+  } catch (error) {
+    if (error instanceof ErroTranscricaoAudio) {
+      return res.status(error.status).json({ error: error.message, detalhe: error.detalhe });
+    }
+
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao transcrever áudio do relato." });
   }
 }
 

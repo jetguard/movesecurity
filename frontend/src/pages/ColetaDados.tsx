@@ -49,6 +49,7 @@ export default function ColetaDados() {
   const [locais, setLocais] = useState<LocalColeta[]>([]);
   const [evidencias, setEvidencias] = useState<File[]>([]);
   const [gravandoIndex, setGravandoIndex] = useState<number | null>(null);
+  const [transcrevendoIndex, setTranscrevendoIndex] = useState<number | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioStreamRef = useRef<MediaStream | null>(null);
@@ -162,7 +163,9 @@ export default function ColetaDados() {
         const mime = recorder.mimeType || "audio/webm";
         const blob = new Blob(audioChunksRef.current, { type: mime });
         const extensao = mime.includes("ogg") ? "ogg" : mime.includes("wav") ? "wav" : "webm";
-        atualizarEnvolvido(index, "audio", new File([blob], `relato-campo-envolvido-${index + 1}.${extensao}`, { type: mime }));
+        const arquivo = new File([blob], `relato-campo-envolvido-${index + 1}.${extensao}`, { type: mime });
+        atualizarEnvolvido(index, "audio", arquivo);
+        transcreverAudio(index, arquivo);
         audioChunksRef.current = [];
         audioStreamRef.current?.getTracks().forEach((track) => track.stop());
         audioStreamRef.current = null;
@@ -180,6 +183,39 @@ export default function ColetaDados() {
   function pararGravacao() {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       mediaRecorderRef.current.stop();
+    }
+  }
+
+  async function transcreverAudio(index: number, arquivo: File) {
+    if (!online) {
+      setErro("Áudio gravado e anexado. Conecte-se à internet para transcrever automaticamente.");
+      return;
+    }
+
+    setTranscrevendoIndex(index);
+    setErro("");
+    try {
+      const formData = new FormData();
+      formData.append("audio", arquivo);
+      const response = await axios.post(`/api/public/relatos-campo/coleta/${token}/audio`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      const transcricao = String(response.data?.transcricao || "").trim();
+      if (transcricao) {
+        setEnvolvidos((atuais) => atuais.map((envolvido, envolvidoIndex) => {
+          if (envolvidoIndex !== index) return envolvido;
+          const relatoAtual = envolvido.relato.trim();
+          return {
+            ...envolvido,
+            relato: relatoAtual ? `${relatoAtual}\n\n${transcricao}` : transcricao,
+          };
+        }));
+      }
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string; detalhe?: string } } };
+      setErro(apiError.response?.data?.error || "Áudio anexado, mas não foi possível transcrever automaticamente.");
+    } finally {
+      setTranscrevendoIndex(null);
     }
   }
 
@@ -403,6 +439,12 @@ export default function ColetaDados() {
                     {envolvido.audio && (
                       <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-slate-200">
                         {envolvido.audio.name}
+                      </span>
+                    )}
+                    {transcrevendoIndex === index && (
+                      <span className="inline-flex items-center gap-2 rounded-full bg-blue-500/15 px-3 py-2 text-xs font-black text-blue-100">
+                        <Loader2 size={13} className="animate-spin" />
+                        Transcrevendo áudio...
                       </span>
                     )}
                   </div>
