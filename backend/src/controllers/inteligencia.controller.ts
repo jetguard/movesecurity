@@ -87,6 +87,20 @@ export async function obterInteligencia(req: AuthRequest, res: Response) {
       insights,
     });
   } catch (error) {
+    if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
+      return res.status(503).json({
+        error: "ConversÃ£o de Ã¡udio indisponÃ­vel no servidor.",
+        detalhe: "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
+      });
+    }
+
+    if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
+      return res.status(503).json({
+        error: "ConversÃ£o de Ã¡udio indisponÃ­vel no servidor.",
+        detalhe: "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
+      });
+    }
+
     console.error(error);
     return res.status(500).json({ error: "Erro ao gerar inteligencia operacional" });
   }
@@ -122,6 +136,11 @@ function extensaoAudio(mime?: string) {
     "audio/aac": "aac",
   };
   return mapa[tipo] || "webm";
+}
+
+function audioEhWav(mime?: string) {
+  const tipo = String(mime || "").split(";")[0];
+  return ["audio/wav", "audio/x-wav"].includes(tipo);
 }
 
 function limparSugestaoRelato(texto: string) {
@@ -202,6 +221,33 @@ function executarWhisperCpp(arquivoEntrada: string, saidaBase: string) {
 
       const textoArquivo = await fs.readFile(`${saidaBase}.txt`, "utf8").catch(() => "");
       resolve((textoArquivo || stdout).trim());
+    });
+  });
+}
+
+function converterAudioParaWav(arquivoEntrada: string, arquivoSaida: string) {
+  const comando = process.env.FFMPEG_COMMAND || "ffmpeg";
+
+  return new Promise<void>((resolve, reject) => {
+    const processo = spawn(
+      comando,
+      ["-y", "-i", arquivoEntrada, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", arquivoSaida],
+      { windowsHide: true }
+    );
+    let stderr = "";
+
+    processo.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
+    processo.on("error", (error) => {
+      reject(new Error(`FFMPEG_ERRO:${error.message}`));
+    });
+    processo.on("close", (code) => {
+      if (code !== 0) {
+        reject(new Error(`FFMPEG_ERRO:${stderr || `ffmpeg finalizado com codigo ${code}`}`));
+        return;
+      }
+      resolve();
     });
   });
 }
@@ -374,6 +420,7 @@ export async function transcreverRelatoAudio(req: AuthRequest, res: Response) {
   const arquivo = req.file;
   const id = randomUUID();
   const caminhoEntrada = path.join(os.tmpdir(), `jetguard-audio-${id}.${extensaoAudio(arquivo?.mimetype)}`);
+  const caminhoWav = path.join(os.tmpdir(), `jetguard-audio-${id}.wav`);
   const saidaBase = path.join(os.tmpdir(), `jetguard-transcricao-${id}`);
 
   try {
@@ -386,7 +433,12 @@ export async function transcreverRelatoAudio(req: AuthRequest, res: Response) {
     }
 
     await fs.writeFile(caminhoEntrada, arquivo.buffer);
-    const transcricao = await executarWhisperCpp(caminhoEntrada, saidaBase);
+    const arquivoTranscricao = audioEhWav(arquivo.mimetype) ? caminhoEntrada : caminhoWav;
+    if (!audioEhWav(arquivo.mimetype)) {
+      await converterAudioParaWav(caminhoEntrada, caminhoWav);
+    }
+
+    const transcricao = await executarWhisperCpp(arquivoTranscricao, saidaBase);
 
     if (!transcricao) {
       return res.status(422).json({ error: "Não foi possível identificar uma fala legível neste áudio." });
@@ -416,11 +468,19 @@ export async function transcreverRelatoAudio(req: AuthRequest, res: Response) {
       });
     }
 
+    if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
+      return res.status(503).json({
+        error: "Conversao de audio indisponivel no servidor.",
+        detalhe: "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
+      });
+    }
+
     console.error(error);
     return res.status(500).json({ error: "Erro ao transcrever áudio do relato." });
   } finally {
     await Promise.all([
       fs.unlink(caminhoEntrada).catch(() => undefined),
+      fs.unlink(caminhoWav).catch(() => undefined),
       fs.unlink(`${saidaBase}.txt`).catch(() => undefined),
     ]);
   }

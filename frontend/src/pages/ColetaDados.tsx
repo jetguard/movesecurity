@@ -1,8 +1,8 @@
 import axios from "axios";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useParams } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, FileUp, Loader2, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, FileUp, Loader2, Mic, Plus, Square, Trash2 } from "lucide-react";
 
 type EnvolvidoColeta = {
   tipoEnvolvimento: string;
@@ -48,6 +48,10 @@ export default function ColetaDados() {
   const [unidade, setUnidade] = useState("");
   const [locais, setLocais] = useState<LocalColeta[]>([]);
   const [evidencias, setEvidencias] = useState<File[]>([]);
+  const [gravandoIndex, setGravandoIndex] = useState<number | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioStreamRef = useRef<MediaStream | null>(null);
   const [form, setForm] = useState({
     titulo: "",
     responsavelColeta: "",
@@ -125,6 +129,12 @@ export default function ColetaDados() {
     return () => window.clearTimeout(timeout);
   }, [draftKey, envolvidos, form, rascunhoCarregado, status]);
 
+  useEffect(() => {
+    return () => {
+      audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+    };
+  }, []);
+
   function atualizarEnvolvido(index: number, campo: keyof EnvolvidoColeta, valor: string | boolean | File | null) {
     setEnvolvidos((atuais) => atuais.map((item, i) => i === index ? { ...item, [campo]: valor } : item));
   }
@@ -135,6 +145,42 @@ export default function ColetaDados() {
 
   function removerEnvolvido(index: number) {
     setEnvolvidos((atuais) => atuais.length === 1 ? atuais : atuais.filter((_, i) => i !== index));
+  }
+
+  async function iniciarGravacao(index: number) {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioStreamRef.current = stream;
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        const mime = recorder.mimeType || "audio/webm";
+        const blob = new Blob(audioChunksRef.current, { type: mime });
+        const extensao = mime.includes("ogg") ? "ogg" : mime.includes("wav") ? "wav" : "webm";
+        atualizarEnvolvido(index, "audio", new File([blob], `relato-campo-envolvido-${index + 1}.${extensao}`, { type: mime }));
+        audioChunksRef.current = [];
+        audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+        audioStreamRef.current = null;
+        mediaRecorderRef.current = null;
+        setGravandoIndex(null);
+      };
+
+      recorder.start();
+      setGravandoIndex(index);
+    } catch {
+      setErro("Não foi possível acessar o microfone. Verifique a permissão do navegador e tente novamente.");
+    }
+  }
+
+  function pararGravacao() {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+    }
   }
 
   async function enviar(event: FormEvent<HTMLFormElement>) {
@@ -325,11 +371,41 @@ export default function ColetaDados() {
                     )}
                   </div>
                   <textarea required value={envolvido.relato} onChange={(e) => atualizarEnvolvido(index, "relato", e.target.value)} placeholder="Relato do envolvido" className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3" />
-                  <label className="mt-3 flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-blue-400/40 bg-blue-500/10 px-4 py-4 text-center text-sm font-bold text-blue-100 transition hover:bg-blue-500/15">
-                    <FileUp size={20} />
-                    {envolvido.audio ? envolvido.audio.name : "Anexar áudio do relato, se houver"}
-                    <input type="file" accept="audio/*" className="hidden" onChange={(e) => atualizarEnvolvido(index, "audio", e.target.files?.[0] || null)} />
-                  </label>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {gravandoIndex === index ? (
+                      <button type="button" onClick={pararGravacao} className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-500/15 px-4 py-3 text-sm font-black text-red-100 transition hover:bg-red-500/25">
+                        <Square size={16} />
+                        Parar gravação
+                      </button>
+                    ) : (
+                      <button type="button" disabled={gravandoIndex !== null} onClick={() => iniciarGravacao(index)} className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-500/15 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-60">
+                        <Mic size={16} />
+                        Gravar áudio
+                      </button>
+                    )}
+                    {gravandoIndex === index && (
+                      <span className="inline-flex items-center gap-1 rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-3 py-3 text-xs font-black text-emerald-100">
+                        {[10, 16, 22, 14, 19].map((altura, ondaIndex) => (
+                          <span
+                            key={ondaIndex}
+                            className="w-1 rounded-full bg-emerald-300 motion-safe:animate-pulse"
+                            style={{ height: `${altura}px`, animationDelay: `${ondaIndex * 120}ms`, animationDuration: "720ms" }}
+                          />
+                        ))}
+                        <span className="ml-1 hidden sm:inline">captando</span>
+                      </span>
+                    )}
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-100 transition hover:bg-blue-500/15">
+                      <FileUp size={18} />
+                      Anexar áudio
+                      <input type="file" accept="audio/*" className="hidden" onChange={(e) => atualizarEnvolvido(index, "audio", e.target.files?.[0] || null)} />
+                    </label>
+                    {envolvido.audio && (
+                      <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-slate-200">
+                        {envolvido.audio.name}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

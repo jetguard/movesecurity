@@ -110,6 +110,11 @@ export default function RelatosCampo() {
     }
   }
 
+  async function copiarLink(link: string) {
+    await navigator.clipboard?.writeText(link);
+    alert("Link copiado para a área de transferência.");
+  }
+
   function abrirConversao(relato: RelatoCampo) {
     setRelatoSelecionado(relato);
     setForm({
@@ -228,6 +233,10 @@ export default function RelatosCampo() {
                     <ExternalLink size={14} />
                     Link
                   </a>
+                  <button onClick={() => copiarLink(relato.link)} className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20">
+                    <Copy size={14} />
+                    Copiar link
+                  </button>
                   {relato.status === "Enviado" && (
                     <button onClick={() => abrirConversao(relato)} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-xs font-black text-white transition hover:bg-blue-500">
                       <FileText size={14} />
