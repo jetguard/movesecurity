@@ -444,12 +444,12 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
         scannerEntrada: req.body.scannerEntrada === undefined ? anterior.scannerEntrada : bool(req.body.scannerEntrada),
         scannerSaida: req.body.scannerSaida === undefined ? anterior.scannerSaida : bool(req.body.scannerSaida),
         estufadoTerminal: req.body.estufadoTerminal === undefined ? anterior.estufadoTerminal : bool(req.body.estufadoTerminal),
-        numeroLacre: texto(req.body.numeroLacre),
-        armador: texto(req.body.armador),
+        numeroLacre: req.body.numeroLacre === undefined ? anterior.numeroLacre : texto(req.body.numeroLacre),
+        armador: req.body.armador === undefined ? anterior.armador : texto(req.body.armador),
         prioridade: texto(req.body.prioridade) || anterior.prioridade,
         statusOperacional: status,
-        observacoes: texto(req.body.observacoes),
-        observacoesSaida: texto(req.body.observacoesSaida),
+        observacoes: req.body.observacoes === undefined ? anterior.observacoes : texto(req.body.observacoes),
+        observacoesSaida: req.body.observacoesSaida === undefined ? anterior.observacoesSaida : texto(req.body.observacoesSaida),
         atualizadoPorId: req.usuarioId,
         anexos: {
           create: arquivos.map((arquivo) => ({

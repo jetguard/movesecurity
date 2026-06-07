@@ -141,11 +141,56 @@ function slotsContainer(container: ContainerQuadra) {
   return [posicao.posicao];
 }
 
+function calcularPosicoesDisponiveis(containers: ContainerQuadra[], dimensaoValor: string, posicaoAtual?: string | null) {
+  const dimensao = dimensaoMapa(dimensaoValor || "20 pés");
+  const candidatosQuadra = dimensao === "40" ? ["A09", "A11"] : ["A06", "A07"];
+  const slotsOcupados = new Set<string>();
+  const pilhasPorDimensao = new Map<string, string>();
+
+  containers.forEach((container) => {
+    slotsContainer(container).forEach((slot) => slotsOcupados.add(slot));
+    const posicao = interpretarPosicao(container.posicionamento);
+    if (!posicao) return;
+    const dimensaoContainer = dimensaoMapa(container.dimensao);
+    const quadras = dimensaoContainer === "40" && posicoes40[posicao.quadra]
+      ? [posicoes40[posicao.quadra], posicao.quadra]
+      : [posicao.quadra];
+    quadras.forEach((quadra) => pilhasPorDimensao.set(`${quadra}-${posicao.pilha}`, dimensaoContainer));
+  });
+
+  const atual = normalizarPosicao(posicaoAtual);
+  const sugestoes: string[] = [];
+  candidatosQuadra.forEach((quadra) => {
+    pilhasMapa.forEach((pilha) => {
+      alturasMapa.slice().reverse().forEach((altura) => {
+        const posicao = slotChave(quadra, pilha, altura);
+        const slots = dimensao === "40" && posicoes40[quadra]
+          ? [slotChave(posicoes40[quadra], pilha, altura), posicao]
+          : [posicao];
+        const pilhas = dimensao === "40" && posicoes40[quadra]
+          ? [`${posicoes40[quadra]}-${pilha}`, `${quadra}-${pilha}`]
+          : [`${quadra}-${pilha}`];
+        const temSlotOcupado = slots.some((slot) => slotsOcupados.has(slot));
+        const misturaDimensao = pilhas.some((pilhaChave) => {
+          const dimensaoExistente = pilhasPorDimensao.get(pilhaChave);
+          return dimensaoExistente && dimensaoExistente !== dimensao;
+        });
+
+        if ((!temSlotOcupado && !misturaDimensao) || posicao === atual) sugestoes.push(posicao);
+      });
+    });
+  });
+
+  return Array.from(new Set(sugestoes)).slice(0, 100);
+}
+
 export default function QuadraSeguranca() {
   const [containers, setContainers] = useState<ContainerQuadra[]>([]);
   const [form, setForm] = useState({ ...inicial });
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [editando, setEditando] = useState<ContainerQuadra | null>(null);
+  const [reposicionando, setReposicionando] = useState<ContainerQuadra | null>(null);
+  const [novaPosicao, setNovaPosicao] = useState("");
   const [dossie, setDossie] = useState<ContainerQuadra | null>(null);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
@@ -217,48 +262,15 @@ export default function QuadraSeguranca() {
   const posicoesSugeridas = useMemo(() => {
     if (form.statusOperacional === "Previsão para chegada") return [];
 
-    const dimensao = dimensaoMapa(form.dimensao || "20 pés");
-    const candidatosQuadra = dimensao === "40" ? ["A09", "A11"] : ["A06", "A07"];
     const containersBase = containersNoPatio.filter((container) => container.id !== editando?.id);
-    const slotsOcupados = new Set<string>();
-    const pilhasPorDimensao = new Map<string, string>();
-
-    containersBase.forEach((container) => {
-      slotsContainer(container).forEach((slot) => slotsOcupados.add(slot));
-      const posicao = interpretarPosicao(container.posicionamento);
-      if (!posicao) return;
-      const dimensaoContainer = dimensaoMapa(container.dimensao);
-      const quadras = dimensaoContainer === "40" && posicoes40[posicao.quadra]
-        ? [posicoes40[posicao.quadra], posicao.quadra]
-        : [posicao.quadra];
-      quadras.forEach((quadra) => pilhasPorDimensao.set(`${quadra}-${posicao.pilha}`, dimensaoContainer));
-    });
-
-    const posicaoAtual = normalizarPosicao(editando?.posicionamento);
-    const sugestoes: string[] = [];
-    candidatosQuadra.forEach((quadra) => {
-      pilhasMapa.forEach((pilha) => {
-        alturasMapa.slice().reverse().forEach((altura) => {
-          const posicao = slotChave(quadra, pilha, altura);
-          const slots = dimensao === "40" && posicoes40[quadra]
-            ? [slotChave(posicoes40[quadra], pilha, altura), posicao]
-            : [posicao];
-          const pilhas = dimensao === "40" && posicoes40[quadra]
-            ? [`${posicoes40[quadra]}-${pilha}`, `${quadra}-${pilha}`]
-            : [`${quadra}-${pilha}`];
-          const temSlotOcupado = slots.some((slot) => slotsOcupados.has(slot));
-          const misturaDimensao = pilhas.some((pilhaChave) => {
-            const dimensaoExistente = pilhasPorDimensao.get(pilhaChave);
-            return dimensaoExistente && dimensaoExistente !== dimensao;
-          });
-
-          if ((!temSlotOcupado && !misturaDimensao) || posicao === posicaoAtual) sugestoes.push(posicao);
-        });
-      });
-    });
-
-    return Array.from(new Set(sugestoes)).slice(0, 80);
+    return calcularPosicoesDisponiveis(containersBase, form.dimensao, editando?.posicionamento);
   }, [containersNoPatio, editando?.id, editando?.posicionamento, form.dimensao, form.statusOperacional]);
+
+  const posicoesReposicionamento = useMemo(() => {
+    if (!reposicionando) return [];
+    const containersBase = containersNoPatio.filter((container) => container.id !== reposicionando.id);
+    return calcularPosicoesDisponiveis(containersBase, reposicionando.dimensao, reposicionando.posicionamento);
+  }, [containersNoPatio, reposicionando]);
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({
@@ -321,6 +333,30 @@ export default function QuadraSeguranca() {
     }
 
     novo();
+    await carregar();
+  }
+
+  function abrirReposicionamento(item: ContainerQuadra) {
+    setReposicionando(item);
+    setNovaPosicao(normalizarPosicao(item.posicionamento));
+  }
+
+  async function salvarReposicionamento(event: FormEvent) {
+    event.preventDefault();
+    if (!reposicionando) return;
+
+    const posicao = normalizarPosicao(novaPosicao);
+    if (!posicao) {
+      alert("Selecione uma posição disponível para reposicionar o contêiner.");
+      return;
+    }
+
+    await api.put(`/quadra-seguranca/${reposicionando.id}`, {
+      posicionamento: posicao,
+      statusOperacional: reposicionando.statusOperacional,
+    });
+    setReposicionando(null);
+    setNovaPosicao("");
     await carregar();
   }
 
@@ -630,6 +666,9 @@ export default function QuadraSeguranca() {
                   <td className="p-3">{item.tempoTerminal}</td>
                   <td className="p-3">
                     <div className="flex gap-2">
+                      {item.statusOperacional !== "Liberado" && item.statusOperacional !== "Previsão para chegada" && (
+                        <button onClick={() => abrirReposicionamento(item)} className="rounded bg-emerald-600 p-2 text-white" title="Reposicionar contêiner"><MapPinned size={16} /></button>
+                      )}
                       <button onClick={() => editar(item)} className="rounded bg-blue-600 p-2 text-white" title="Editar"><Pencil size={16} /></button>
                       <button onClick={() => abrirDossie(item)} className="rounded bg-slate-700 p-2 text-white" title="Ver dossiê"><Eye size={16} /></button>
                       {podeExcluir && usuario?.perfilAcesso !== "OPERADOR" && (
@@ -647,6 +686,80 @@ export default function QuadraSeguranca() {
           )}
         </div>
       </div>
+
+      {reposicionando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4">
+          <form onSubmit={salvarReposicionamento} className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+            <div className="border-b border-slate-200 p-5 dark:border-slate-800">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-emerald-600 p-3 text-white">
+                  <MapPinned size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black">Reposicionar contêiner</h2>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    {reposicionando.numeroContainer} • {reposicionando.dimensao} • posição atual {reposicionando.posicionamento || "não informada"}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <label className="space-y-2 text-sm font-bold text-slate-700 dark:text-slate-200">
+                Nova posição disponível
+                <input
+                  className="w-full rounded-xl border border-slate-200 bg-white p-3 uppercase dark:border-slate-700 dark:bg-slate-950"
+                  value={novaPosicao}
+                  onChange={(event) => setNovaPosicao(normalizarPosicao(event.target.value))}
+                  list="posicoes-reposicionamento"
+                  maxLength={6}
+                  placeholder="Selecione ou digite. Ex: A09051"
+                  required
+                />
+                <datalist id="posicoes-reposicionamento">
+                  {posicoesReposicionamento.map((posicao) => <option key={posicao} value={posicao} />)}
+                </datalist>
+              </label>
+
+              <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/70">
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Sugestões rápidas</p>
+                <div className="mt-3 flex max-h-36 flex-wrap gap-2 overflow-y-auto pr-1">
+                  {posicoesReposicionamento.slice(0, 30).map((posicao) => (
+                    <button
+                      key={posicao}
+                      type="button"
+                      onClick={() => setNovaPosicao(posicao)}
+                      className={`rounded-full border px-3 py-1.5 text-xs font-black transition hover:border-emerald-400 hover:bg-emerald-50 hover:text-emerald-700 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-100 ${
+                        novaPosicao === posicao
+                          ? "border-emerald-500 bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-100"
+                          : "border-slate-200 bg-white text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                      }`}
+                    >
+                      {posicao}
+                    </button>
+                  ))}
+                  {posicoesReposicionamento.length === 0 && (
+                    <span className="text-sm text-slate-500">Nenhuma posição disponível para esta dimensão.</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+                O sistema respeita a regra de 20/40 pés e bloqueia posições ocupadas ou pilhas incompatíveis.
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 p-5 dark:border-slate-800">
+              <button type="button" onClick={() => setReposicionando(null)} className="rounded-xl bg-slate-100 px-4 py-2 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+                Cancelar
+              </button>
+              <button className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700">
+                Confirmar posição
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {dossie && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/80 p-4">
