@@ -5,6 +5,10 @@ import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
+const QUADRAS_20 = ["A06", "A07"];
+const QUADRAS_40_OFICIAIS = ["A09", "A11"];
+const POSICOES_40: Record<string, string> = { A09: "A08", A11: "A10" };
+
 const STATUS_ARMAZENADOS = ["Dentro do terminal", "Pendente de verificação", "Bloqueado"];
 const STATUS_SAIDA = ["Liberado"];
 const STATUS_VALIDOS = ["Previsão para chegada", "No terminal", "Liberado"];
@@ -24,6 +28,112 @@ function numeroContainer(valor: unknown) {
 function statusOperacional(valor: unknown) {
   const status = texto(valor);
   return STATUS_VALIDOS.includes(status) ? status : "Previsão para chegada";
+}
+
+function normalizarPosicionamento(valor: unknown) {
+  return texto(valor).toLocaleUpperCase("pt-BR").replace(/[^A-Z0-9]/g, "");
+}
+
+function dimensaoOperacional(valor: unknown) {
+  const dimensao = texto(valor).toLocaleUpperCase("pt-BR");
+  return dimensao.includes("40") ? "40" : "20";
+}
+
+function interpretarPosicao(posicionamento?: string | null) {
+  const posicao = normalizarPosicionamento(posicionamento);
+  const match = /^A(0[6-9]|1[01])([0-9]{2})([1-5])$/.exec(posicao);
+  if (!match) return null;
+  return {
+    posicao,
+    quadra: `A${match[1]}`,
+    pilha: match[2],
+    altura: match[3],
+  };
+}
+
+function slotsOcupados(posicionamento: string | null | undefined, dimensao: string) {
+  const posicao = interpretarPosicao(posicionamento);
+  if (!posicao) return [];
+
+  if (dimensaoOperacional(dimensao) === "40") {
+    const quadraAnterior = POSICOES_40[posicao.quadra];
+    return quadraAnterior
+      ? [`${quadraAnterior}${posicao.pilha}${posicao.altura}`, `${posicao.quadra}${posicao.pilha}${posicao.altura}`]
+      : [posicao.posicao];
+  }
+
+  return [posicao.posicao];
+}
+
+function pilhasOcupadas(posicionamento: string | null | undefined, dimensao: string) {
+  const posicao = interpretarPosicao(posicionamento);
+  if (!posicao) return [];
+
+  if (dimensaoOperacional(dimensao) === "40") {
+    const quadraAnterior = POSICOES_40[posicao.quadra];
+    return quadraAnterior ? [`${quadraAnterior}-${posicao.pilha}`, `${posicao.quadra}-${posicao.pilha}`] : [`${posicao.quadra}-${posicao.pilha}`];
+  }
+
+  return [`${posicao.quadra}-${posicao.pilha}`];
+}
+
+async function validarPosicionamentoOperacional(params: {
+  idIgnorar?: number;
+  unidade?: string;
+  posicionamento?: string | null;
+  dimensao: string;
+  statusOperacional: string;
+}) {
+  const posicao = interpretarPosicao(params.posicionamento);
+  if (!posicao || params.statusOperacional === "Liberado") return;
+
+  const dimensao = dimensaoOperacional(params.dimensao);
+  if (dimensao === "20" && !QUADRAS_20.includes(posicao.quadra)) {
+    const erro = new Error("Conteiner de 20 pes deve ser posicionado somente nas quadras A06 ou A07.");
+    (erro as any).status = 400;
+    throw erro;
+  }
+
+  if (dimensao === "40" && !QUADRAS_40_OFICIAIS.includes(posicao.quadra)) {
+    const erro = new Error("Conteiner de 40 pes deve usar a posicao oficial da segunda quadra ocupada: A09 ou A11.");
+    (erro as any).status = 400;
+    throw erro;
+  }
+
+  const containers = await prisma.quadraSegurancaContainer.findMany({
+    where: {
+      unidade: params.unidade,
+      statusOperacional: { not: "Liberado" },
+      ...(params.idIgnorar ? { id: { not: params.idIgnorar } } : {}),
+    },
+    select: {
+      id: true,
+      numeroContainer: true,
+      posicionamento: true,
+      dimensao: true,
+    },
+  });
+
+  const novosSlots = new Set(slotsOcupados(posicao.posicao, params.dimensao));
+  const novasPilhas = new Set(pilhasOcupadas(posicao.posicao, params.dimensao));
+
+  for (const existente of containers) {
+    const slotsExistentes = slotsOcupados(existente.posicionamento, existente.dimensao);
+    if (slotsExistentes.some((slot) => novosSlots.has(slot))) {
+      const erro = new Error(`Posicao ocupada pelo conteiner ${existente.numeroContainer}.`);
+      (erro as any).status = 400;
+      throw erro;
+    }
+
+    const dimensaoExistente = dimensaoOperacional(existente.dimensao);
+    const pilhasExistentes = pilhasOcupadas(existente.posicionamento, existente.dimensao);
+    const misturaDimensao = dimensaoExistente !== dimensao && pilhasExistentes.some((pilha) => novasPilhas.has(pilha));
+    if (misturaDimensao) {
+      const erro = new Error(`Regra de empilhamento violada: nao e permitido misturar conteiner de 20 pes com 40 pes na mesma pilha. Conflito com ${existente.numeroContainer}.`);
+      (erro as any).status = 400;
+      throw erro;
+    }
+  }
 }
 
 function categoriaArquivos(valor: unknown) {
@@ -222,13 +332,22 @@ export async function criarContainer(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "Preencha os dados principais do contêiner." });
     }
 
+    const status = statusOperacional(req.body.statusOperacional);
+    const posicionamento = status === "Previsão para chegada" ? "" : normalizarPosicionamento(req.body.posicionamento);
+    await validarPosicionamentoOperacional({
+      unidade: req.unidadeAtiva || "GJA-T1",
+      posicionamento,
+      dimensao: texto(req.body.dimensao),
+      statusOperacional: status,
+    });
+
     const container = await prisma.quadraSegurancaContainer.create({
       data: {
         numeroContainer: numero,
         unidade: req.unidadeAtiva || "GJA-T1",
         dataHoraEntrada: new Date(req.body.dataHoraEntrada),
         dataHoraSaida: req.body.dataHoraSaida ? new Date(req.body.dataHoraSaida) : undefined,
-        posicionamento: texto(req.body.posicionamento).toLocaleUpperCase("pt-BR"),
+        posicionamento,
         tipoContainer: texto(req.body.tipoContainer),
         dimensao: texto(req.body.dimensao),
         destino: texto(req.body.destino),
@@ -237,7 +356,7 @@ export async function criarContainer(req: AuthRequest, res: Response) {
         numeroLacre: texto(req.body.numeroLacre),
         armador: texto(req.body.armador),
         prioridade: texto(req.body.prioridade) || "Baixa",
-        statusOperacional: statusOperacional(req.body.statusOperacional),
+        statusOperacional: status,
         observacoes: texto(req.body.observacoes),
         criadoPorId: req.usuarioId,
         atualizadoPorId: req.usuarioId,
@@ -274,6 +393,9 @@ export async function criarContainer(req: AuthRequest, res: Response) {
 
     return res.status(201).json(serializarContainer(container));
   } catch (error: any) {
+    if (error?.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
     if (error?.code === "P2002") {
       return res.status(400).json({ error: "Este contêiner já está cadastrado nesta unidade." });
     }
@@ -298,15 +420,26 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Contêiner não encontrado" });
     }
 
+    const status = statusOperacional(req.body.statusOperacional || anterior.statusOperacional);
+    const dimensaoAtualizada = texto(req.body.dimensao) || anterior.dimensao;
+    const posicionamento = status === "Previsão para chegada" ? "" : normalizarPosicionamento(req.body.posicionamento ?? anterior.posicionamento);
+    await validarPosicionamentoOperacional({
+      idIgnorar: anterior.id,
+      unidade: req.unidadeAtiva,
+      posicionamento,
+      dimensao: dimensaoAtualizada,
+      statusOperacional: status,
+    });
+
     const container = await prisma.quadraSegurancaContainer.update({
       where: { id: anterior.id },
       data: {
         numeroContainer: numeroContainer(req.body.numeroContainer || anterior.numeroContainer),
         dataHoraEntrada: req.body.dataHoraEntrada ? new Date(req.body.dataHoraEntrada) : anterior.dataHoraEntrada,
         dataHoraSaida: req.body.dataHoraSaida ? new Date(req.body.dataHoraSaida) : anterior.dataHoraSaida,
-        posicionamento: texto(req.body.posicionamento).toLocaleUpperCase("pt-BR"),
+        posicionamento,
         tipoContainer: texto(req.body.tipoContainer) || anterior.tipoContainer,
-        dimensao: texto(req.body.dimensao) || anterior.dimensao,
+        dimensao: dimensaoAtualizada,
         destino: texto(req.body.destino) || anterior.destino,
         scannerEntrada: req.body.scannerEntrada === undefined ? anterior.scannerEntrada : bool(req.body.scannerEntrada),
         scannerSaida: req.body.scannerSaida === undefined ? anterior.scannerSaida : bool(req.body.scannerSaida),
@@ -314,7 +447,7 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
         numeroLacre: texto(req.body.numeroLacre),
         armador: texto(req.body.armador),
         prioridade: texto(req.body.prioridade) || anterior.prioridade,
-        statusOperacional: statusOperacional(req.body.statusOperacional || anterior.statusOperacional),
+        statusOperacional: status,
         observacoes: texto(req.body.observacoes),
         observacoesSaida: texto(req.body.observacoesSaida),
         atualizadoPorId: req.usuarioId,
@@ -353,6 +486,9 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
 
     return res.json(serializarContainer(container));
   } catch (error: any) {
+    if (error?.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
     if (error?.code === "P2002") {
       return res.status(400).json({ error: "Este contêiner já está cadastrado nesta unidade." });
     }
