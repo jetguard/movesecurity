@@ -198,6 +198,7 @@ export default function QuadraSeguranca() {
   const [filtroDimensao, setFiltroDimensao] = useState("");
   const [filtroDestino, setFiltroDestino] = useState("");
   const [pilhaMapa, setPilhaMapa] = useState("05");
+  const [pilhaManual, setPilhaManual] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const podeExcluir = podeAdministrar() || podeAnalisar();
@@ -258,7 +259,48 @@ export default function QuadraSeguranca() {
     return mapa;
   }, [containersNoPatio]);
 
+  const ocupacaoPorPilha = useMemo(() => {
+    const mapa = new Map<string, number>();
+    containersNoPatio.forEach((container) => {
+      const posicao = interpretarPosicao(container.posicionamento);
+      if (!posicao) return;
+      mapa.set(posicao.pilha, (mapa.get(posicao.pilha) || 0) + 1);
+    });
+    return mapa;
+  }, [containersNoPatio]);
+
+  const referenciasMapa = useMemo(() => {
+    const mapa = new Map<string, ContainerQuadra[]>();
+    containersNoPatio.forEach((container) => {
+      const posicao = interpretarPosicao(container.posicionamento);
+      if (!posicao || posicao.pilha === pilhaMapa) return;
+
+      slotsContainer(container).forEach((slot) => {
+        const slotInterpretado = interpretarPosicao(slot);
+        if (!slotInterpretado) return;
+        const chave = slotChave(slotInterpretado.quadra, pilhaMapa, slotInterpretado.altura);
+        const lista = mapa.get(chave) || [];
+        lista.push(container);
+        mapa.set(chave, lista);
+      });
+    });
+    return mapa;
+  }, [containersNoPatio, pilhaMapa]);
+
+  useEffect(() => {
+    if (pilhaManual || containersNoPatio.length === 0 || ocupacaoPorPilha.has(pilhaMapa)) return;
+    const primeiraPilhaComConteudo = pilhasMapa.slice().reverse().find((pilha) => ocupacaoPorPilha.has(pilha));
+    if (primeiraPilhaComConteudo) setPilhaMapa(primeiraPilhaComConteudo);
+  }, [containersNoPatio.length, ocupacaoPorPilha, pilhaManual, pilhaMapa]);
+
   const posicaoDestacada = containerDestacado ? new Set(slotsContainer(containerDestacado)) : new Set<string>();
+
+  useEffect(() => {
+    const posicao = interpretarPosicao(containerDestacado?.posicionamento);
+    if (!posicao || posicao.pilha === pilhaMapa) return;
+    setPilhaMapa(posicao.pilha);
+  }, [containerDestacado, pilhaMapa]);
+
   const posicoesSugeridas = useMemo(() => {
     if (form.statusOperacional === "Previsão para chegada") return [];
 
@@ -539,8 +581,15 @@ export default function QuadraSeguranca() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">20 pes: A06 e A07</span>
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">40 pes: A08/A09 e A10/A11</span>
-            <select value={pilhaMapa} onChange={(e) => setPilhaMapa(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold dark:border-slate-700 dark:bg-slate-950">
-              {pilhasMapa.map((pilha) => <option key={pilha} value={pilha}>Pilha {pilha}</option>)}
+            <select
+              value={pilhaMapa}
+              onChange={(e) => {
+                setPilhaManual(true);
+                setPilhaMapa(e.target.value);
+              }}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold dark:border-slate-700 dark:bg-slate-950"
+            >
+              {pilhasMapa.map((pilha) => <option key={pilha} value={pilha}>Pilha {pilha}{ocupacaoPorPilha.has(pilha) ? ` (${ocupacaoPorPilha.get(pilha)})` : ""}</option>)}
             </select>
           </div>
         </div>
@@ -563,35 +612,62 @@ export default function QuadraSeguranca() {
                   {quadrasMapa.map((quadra) => {
                     const posicaoCodigo = slotChave(quadra, pilhaMapa, altura);
                     const ocupante = ocupacaoMapa.get(posicaoCodigo);
+                    const referencia = !ocupante ? referenciasMapa.get(posicaoCodigo)?.[0] : null;
                     const posicaoOcupante = interpretarPosicao(ocupante?.posicionamento);
+                    const posicaoReferencia = interpretarPosicao(referencia?.posicionamento);
                     const eh40 = ocupante && dimensaoMapa(ocupante.dimensao) === "40";
+                    const referenciaEh40 = referencia && dimensaoMapa(referencia.dimensao) === "40";
                     const quadraInicial40 = eh40 && posicaoOcupante ? posicoes40[posicaoOcupante.quadra] : null;
+                    const quadraInicialReferencia40 = referenciaEh40 && posicaoReferencia ? posicoes40[posicaoReferencia.quadra] : null;
                     if (eh40 && posicaoOcupante?.quadra === quadra && quadraInicial40) return null;
+                    if (!ocupante && referenciaEh40 && posicaoReferencia?.quadra === quadra && quadraInicialReferencia40) return null;
 
-                    const colSpan = eh40 && quadraInicial40 === quadra ? 2 : 1;
+                    const colSpan = eh40 && quadraInicial40 === quadra ? 2 : referenciaEh40 && quadraInicialReferencia40 === quadra ? 2 : 1;
                     const destaque = ocupante ? slotsContainer(ocupante).some((slot) => posicaoDestacada.has(slot)) : false;
                     const baseOcupado = eh40
                       ? "border-emerald-300 bg-emerald-500/15 text-emerald-800 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-100"
                       : "border-blue-300 bg-blue-500/15 text-blue-800 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100";
+                    const baseReferencia = referenciaEh40
+                      ? "border-emerald-200 bg-emerald-500/5 text-emerald-700 opacity-55 hover:opacity-90 dark:border-emerald-400/20 dark:bg-emerald-500/5 dark:text-emerald-100"
+                      : "border-blue-200 bg-blue-500/5 text-blue-700 opacity-55 hover:opacity-90 dark:border-blue-400/20 dark:bg-blue-500/5 dark:text-blue-100";
 
                     return (
                       <button
                         key={posicaoCodigo}
                         type="button"
-                        onClick={() => ocupante ? abrirDossie(ocupante) : (setForm((atual) => ({ ...atual, posicionamento: posicaoCodigo })), setFormularioAberto(true))}
+                        onClick={() => {
+                          if (ocupante) {
+                            abrirDossie(ocupante);
+                            return;
+                          }
+                          if (referencia && posicaoReferencia) {
+                            setPilhaManual(true);
+                            setPilhaMapa(posicaoReferencia.pilha);
+                            return;
+                          }
+                          setForm((atual) => ({ ...atual, posicionamento: posicaoCodigo }));
+                          setFormularioAberto(true);
+                        }}
                         style={{ gridColumn: `span ${colSpan}` }}
                         className={`min-h-[74px] rounded-2xl border p-2 text-left transition hover:-translate-y-0.5 hover:shadow-lg ${
                           ocupante
                             ? baseOcupado
+                            : referencia
+                              ? baseReferencia
                             : "border-slate-200 bg-slate-50 text-slate-400 hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-600"
                         } ${destaque ? "ring-4 ring-amber-300 ring-offset-2 ring-offset-white dark:ring-amber-400 dark:ring-offset-slate-900" : ""}`}
-                        title={ocupante ? `${ocupante.numeroContainer} - ${ocupante.posicionamento}` : posicaoCodigo}
+                        title={ocupante ? `${ocupante.numeroContainer} - ${ocupante.posicionamento}` : referencia ? `Ir para pilha ${posicaoReferencia?.pilha} - ${referencia.numeroContainer}` : posicaoCodigo}
                       >
-                        <span className="block text-[10px] font-black uppercase tracking-wide opacity-70">{ocupante?.posicionamento || posicaoCodigo}</span>
+                        <span className="block text-[10px] font-black uppercase tracking-wide opacity-70">{ocupante?.posicionamento || referencia?.posicionamento || posicaoCodigo}</span>
                         {ocupante ? (
                           <>
                             <span className="mt-1 block truncate text-sm font-black">{ocupante.numeroContainer}</span>
                             <span className="mt-1 inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-950/60 dark:text-slate-100">{ocupante.dimensao}</span>
+                          </>
+                        ) : referencia ? (
+                          <>
+                            <span className="mt-1 block truncate text-sm font-black">{referencia.numeroContainer}</span>
+                            <span className="mt-1 inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-950/60 dark:text-slate-100">Pilha {posicaoReferencia?.pilha}</span>
                           </>
                         ) : (
                           <span className="mt-3 block text-xs font-bold">Livre</span>
