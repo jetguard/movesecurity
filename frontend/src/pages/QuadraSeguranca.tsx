@@ -198,6 +198,7 @@ export default function QuadraSeguranca() {
   const [filtroDimensao, setFiltroDimensao] = useState("");
   const [filtroDestino, setFiltroDestino] = useState("");
   const [pilhaMapa, setPilhaMapa] = useState("05");
+  const [quadraMapa, setQuadraMapa] = useState<string | null>(null);
   const [pilhaManual, setPilhaManual] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [formularioAberto, setFormularioAberto] = useState(false);
@@ -286,6 +287,22 @@ export default function QuadraSeguranca() {
     return mapa;
   }, [containersNoPatio]);
 
+  const ocupacaoPorQuadra = useMemo(() => {
+    const mapa = new Map<string, number>();
+    containersNoPatio.forEach((container) => {
+      const quadrasOcupadas = new Set<string>();
+      slotsContainer(container).forEach((slot) => {
+        const posicao = interpretarPosicao(slot);
+        if (posicao) quadrasOcupadas.add(posicao.quadra);
+      });
+
+      quadrasOcupadas.forEach((quadra) => {
+        mapa.set(quadra, (mapa.get(quadra) || 0) + 1);
+      });
+    });
+    return mapa;
+  }, [containersNoPatio]);
+
   const referenciasMapa = useMemo(() => {
     const mapa = new Map<string, ContainerQuadra[]>();
     containersNoPatio.forEach((container) => {
@@ -303,6 +320,10 @@ export default function QuadraSeguranca() {
     });
     return mapa;
   }, [containersNoPatio, pilhaMapa]);
+
+  useEffect(() => {
+    if (quadraMapa && !ocupacaoPorQuadra.has(quadraMapa)) setQuadraMapa(null);
+  }, [ocupacaoPorQuadra, quadraMapa]);
 
   useEffect(() => {
     if (pilhaManual || containersNoPatio.length === 0 || ocupacaoPorPilha.has(pilhaMapa)) return;
@@ -330,6 +351,12 @@ export default function QuadraSeguranca() {
 
         const destaque = containerDestacado?.id === container.id;
         const pilhaAtiva = posicao.pilha === pilhaMapa;
+        const quadrasOcupadas = Array.from(new Set(
+          slotsContainer(container)
+            .map((slot) => interpretarPosicao(slot)?.quadra)
+            .filter(Boolean) as string[]
+        ));
+        const quadraAtiva = !quadraMapa || quadrasOcupadas.includes(quadraMapa);
 
         return {
           container,
@@ -337,6 +364,8 @@ export default function QuadraSeguranca() {
           eh40,
           destaque,
           pilhaAtiva,
+          quadrasOcupadas,
+          quadraAtiva,
           left: 62 + quadraIndice * slotLargura,
           top: 76 + pilhaIndice * slotAltura,
           width: eh40 ? 206 : 94,
@@ -353,6 +382,8 @@ export default function QuadraSeguranca() {
         eh40: boolean;
         destaque: boolean;
         pilhaAtiva: boolean;
+        quadrasOcupadas: string[];
+        quadraAtiva: boolean;
         left: number;
         top: number;
         width: number;
@@ -361,7 +392,7 @@ export default function QuadraSeguranca() {
         z: number;
         zIndex: number;
       }>;
-  }, [containerDestacado, containersNoPatio, pilhaMapa]);
+  }, [containerDestacado, containersNoPatio, pilhaMapa, quadraMapa]);
 
   useEffect(() => {
     const posicao = interpretarPosicao(containerDestacado?.posicionamento);
@@ -725,6 +756,52 @@ export default function QuadraSeguranca() {
             </div>
 
             <div
+              className="absolute left-5 top-32 z-20 w-44 rounded-2xl border border-slate-700/70 bg-slate-950/70 p-3 backdrop-blur"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Quadras ocupadas</p>
+                {quadraMapa && (
+                  <button
+                    type="button"
+                    onClick={() => setQuadraMapa(null)}
+                    className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] font-black text-slate-300 transition hover:border-blue-400 hover:text-white"
+                  >
+                    Todas
+                  </button>
+                )}
+              </div>
+              <div className="grid gap-2">
+                {quadrasMapa.filter((quadra) => ocupacaoPorQuadra.has(quadra)).map((quadra) => {
+                  const total = ocupacaoPorQuadra.get(quadra) || 0;
+                  const ativo = quadraMapa === quadra;
+
+                  return (
+                    <button
+                      key={quadra}
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => setQuadraMapa((atual) => atual === quadra ? null : quadra)}
+                      className={`flex items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-black transition ${
+                        ativo
+                          ? "border-blue-300 bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                          : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-blue-400 hover:text-white"
+                      }`}
+                    >
+                      <span>{quadra}</span>
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] ${ativo ? "bg-white/20 text-white" : "bg-blue-500/10 text-blue-200"}`}>
+                        {total}
+                      </span>
+                    </button>
+                  );
+                })}
+                {quadrasMapa.every((quadra) => !ocupacaoPorQuadra.has(quadra)) && (
+                  <p className="text-xs text-slate-400">Nenhuma quadra ocupada.</p>
+                )}
+              </div>
+            </div>
+
+            <div
               className="absolute right-5 top-5 z-30 w-72 rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4 text-white shadow-2xl shadow-black/30 backdrop-blur"
               onPointerDown={(event) => event.stopPropagation()}
             >
@@ -839,13 +916,13 @@ export default function QuadraSeguranca() {
                   </div>
                 ))}
 
-                {containersMapa3D.map(({ container, posicao, eh40, destaque, pilhaAtiva, left, top, width, height, depth, z, zIndex }) => {
+                {containersMapa3D.map(({ container, posicao, eh40, destaque, pilhaAtiva, quadraAtiva, left, top, width, height, depth, z, zIndex }) => {
                   const cor = destaque
                     ? "from-amber-300 via-yellow-400 to-orange-500"
                     : eh40
                       ? "from-emerald-400 via-teal-500 to-cyan-700"
                       : "from-blue-400 via-blue-600 to-indigo-800";
-                  const opacidade = destaque ? 1 : pilhaAtiva ? 0.96 : 0.28;
+                  const opacidade = destaque ? 1 : quadraAtiva && pilhaAtiva ? 0.96 : quadraAtiva ? 0.48 : 0.12;
 
                   return (
                     <button
@@ -860,6 +937,8 @@ export default function QuadraSeguranca() {
                       className={`group absolute rounded-xl border text-left transition duration-200 hover:scale-[1.03] ${
                         destaque
                           ? "border-amber-200 shadow-[0_0_34px_rgba(251,191,36,0.75)]"
+                          : quadraMapa && quadraAtiva
+                            ? "border-blue-200/70 shadow-[0_0_24px_rgba(96,165,250,0.28)]"
                           : "border-white/20 shadow-[0_16px_35px_rgba(0,0,0,0.35)]"
                       }`}
                       style={{
