@@ -338,7 +338,7 @@ export default function QuadraSeguranca() {
           destaque,
           pilhaAtiva,
           left: 62 + quadraIndice * slotLargura,
-          top: 76 + (pilhasMapa.length - 1 - pilhaIndice) * slotAltura,
+          top: 76 + pilhaIndice * slotAltura,
           width: eh40 ? 206 : 94,
           height: 48,
           depth: 24,
@@ -830,7 +830,7 @@ export default function QuadraSeguranca() {
                         ? "border-amber-300 bg-amber-400/25 text-amber-50"
                         : "border-slate-600 bg-slate-950/50 text-slate-400"
                     }`}
-                    style={{ left: 6, top: 91 + (pilhasMapa.length - 1 - pilhaIndex) * 74, transform: "translateZ(8px)" }}
+                    style={{ left: 6, top: 91 + pilhaIndex * 74, transform: "translateZ(8px)" }}
                   >
                     P{pilha}
                   </div>
