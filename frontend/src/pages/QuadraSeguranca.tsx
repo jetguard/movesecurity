@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import type { FormEvent, PointerEvent } from "react";
 import { ChevronDown, Download, Eye, FileText, MapPinned, PackageSearch, Pencil, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
@@ -201,6 +201,8 @@ export default function QuadraSeguranca() {
   const [pilhaManual, setPilhaManual] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [formularioAberto, setFormularioAberto] = useState(false);
+  const [anguloMapa, setAnguloMapa] = useState({ x: 60, z: -36 });
+  const [arrastoMapa, setArrastoMapa] = useState<{ x: number; y: number; anguloX: number; anguloZ: number } | null>(null);
   const podeExcluir = podeAdministrar() || podeAnalisar();
   const usuario = usuarioAtual();
 
@@ -294,6 +296,57 @@ export default function QuadraSeguranca() {
   }, [containersNoPatio.length, ocupacaoPorPilha, pilhaManual, pilhaMapa]);
 
   const posicaoDestacada = containerDestacado ? new Set(slotsContainer(containerDestacado)) : new Set<string>();
+
+  const containersMapa3D = useMemo(() => {
+    const slotLargura = 112;
+    const slotAltura = 74;
+
+    return containersNoPatio
+      .map((container) => {
+        const posicao = interpretarPosicao(container.posicionamento);
+        if (!posicao) return null;
+
+        const eh40 = dimensaoMapa(container.dimensao) === "40";
+        const quadraBase = eh40 && posicoes40[posicao.quadra] ? posicoes40[posicao.quadra] : posicao.quadra;
+        const quadraIndice = quadrasMapa.indexOf(quadraBase);
+        const pilhaIndice = pilhasMapa.indexOf(posicao.pilha);
+        const alturaIndice = Number(posicao.altura) - 1;
+        if (quadraIndice < 0 || pilhaIndice < 0 || alturaIndice < 0) return null;
+
+        const destaque = containerDestacado?.id === container.id;
+        const pilhaAtiva = posicao.pilha === pilhaMapa;
+
+        return {
+          container,
+          posicao,
+          eh40,
+          destaque,
+          pilhaAtiva,
+          left: 62 + quadraIndice * slotLargura,
+          top: 76 + (pilhasMapa.length - 1 - pilhaIndice) * slotAltura,
+          width: eh40 ? 206 : 94,
+          height: 48,
+          depth: 24,
+          z: alturaIndice * 28,
+          zIndex: 60 + pilhaIndice * 12 + alturaIndice + (destaque ? 220 : pilhaAtiva ? 80 : 0),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => (a!.zIndex - b!.zIndex)) as Array<{
+        container: ContainerQuadra;
+        posicao: NonNullable<ReturnType<typeof interpretarPosicao>>;
+        eh40: boolean;
+        destaque: boolean;
+        pilhaAtiva: boolean;
+        left: number;
+        top: number;
+        width: number;
+        height: number;
+        depth: number;
+        z: number;
+        zIndex: number;
+      }>;
+  }, [containerDestacado, containersNoPatio, pilhaMapa]);
 
   useEffect(() => {
     const posicao = interpretarPosicao(containerDestacado?.posicionamento);
@@ -418,6 +471,35 @@ export default function QuadraSeguranca() {
     if (!confirm(`Deseja excluir o contêiner ${item.numeroContainer}?`)) return;
     await api.delete(`/quadra-seguranca/${item.id}`);
     await carregar();
+  }
+
+  function limitarAngulo(valor: number, minimo: number, maximo: number) {
+    return Math.min(maximo, Math.max(minimo, valor));
+  }
+
+  function iniciarArrastoMapa(event: PointerEvent<HTMLDivElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setArrastoMapa({
+      x: event.clientX,
+      y: event.clientY,
+      anguloX: anguloMapa.x,
+      anguloZ: anguloMapa.z,
+    });
+  }
+
+  function moverArrastoMapa(event: PointerEvent<HTMLDivElement>) {
+    if (!arrastoMapa) return;
+    const deltaX = event.clientX - arrastoMapa.x;
+    const deltaY = event.clientY - arrastoMapa.y;
+    setAnguloMapa({
+      x: limitarAngulo(arrastoMapa.anguloX - deltaY * 0.18, 38, 74),
+      z: limitarAngulo(arrastoMapa.anguloZ + deltaX * 0.18, -78, 28),
+    });
+  }
+
+  function encerrarArrastoMapa(event: PointerEvent<HTMLDivElement>) {
+    if (arrastoMapa) event.currentTarget.releasePointerCapture(event.pointerId);
+    setArrastoMapa(null);
   }
 
   return (
@@ -565,36 +647,261 @@ export default function QuadraSeguranca() {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex flex-col gap-4 border-b border-slate-200 p-5 dark:border-slate-800 lg:flex-row lg:items-center lg:justify-between">
+      <section className="overflow-hidden rounded-3xl border border-blue-400/10 bg-slate-950 shadow-2xl shadow-blue-950/20">
+        <div className="flex flex-col gap-4 border-b border-slate-800 p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-3">
-            <div className="rounded-2xl bg-blue-600 p-3 text-white shadow-lg shadow-blue-950/20">
+            <div className="rounded-2xl bg-blue-600 p-3 text-white shadow-lg shadow-blue-500/20">
               <MapPinned size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-black">Mapa 2D de posicionamento</h2>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                Visao frontal por pilha. Contêineres de 40 pes ocupam duas quadras e usam a segunda posicao como referencia oficial.
+              <h2 className="text-xl font-black text-white">Mapa 3D de posicionamento</h2>
+              <p className="mt-1 text-sm text-slate-300">
+                Visao operacional por quadra, pilha e altura. Contêineres de 40 pes ocupam dois vãos e mantêm a posição oficial na segunda quadra.
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">20 pes: A06 e A07</span>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">40 pes: A08/A09 e A10/A11</span>
+            <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-100">20 pes: A06 e A07</span>
+            <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-100">40 pes: A08/A09 e A10/A11</span>
             <select
               value={pilhaMapa}
               onChange={(e) => {
                 setPilhaManual(true);
                 setPilhaMapa(e.target.value);
               }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-bold dark:border-slate-700 dark:bg-slate-950"
+              className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-bold text-white"
             >
               {pilhasMapa.map((pilha) => <option key={pilha} value={pilha}>Pilha {pilha}{ocupacaoPorPilha.has(pilha) ? ` (${ocupacaoPorPilha.get(pilha)})` : ""}</option>)}
             </select>
           </div>
         </div>
 
-        <div className="overflow-x-auto p-5">
+        <div className="grid gap-5 p-5 xl:grid-cols-[1fr_280px]">
+          <div
+            className={`relative min-h-[560px] overflow-hidden rounded-3xl border border-blue-400/10 bg-[radial-gradient(circle_at_50%_25%,rgba(37,99,235,0.25),transparent_32%),linear-gradient(145deg,#020617,#071426_48%,#020617)] ${arrastoMapa ? "cursor-grabbing" : "cursor-grab"}`}
+            onPointerDown={iniciarArrastoMapa}
+            onPointerMove={moverArrastoMapa}
+            onPointerUp={encerrarArrastoMapa}
+            onPointerCancel={encerrarArrastoMapa}
+            onPointerLeave={(event) => {
+              if (arrastoMapa) encerrarArrastoMapa(event);
+            }}
+          >
+            <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:34px_34px]" />
+            <div className="absolute left-5 top-5 z-20 rounded-2xl border border-slate-700/70 bg-slate-950/70 px-4 py-3 backdrop-blur">
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Visao operacional</p>
+              <p className="mt-1 text-sm text-slate-300">Pilha ativa <span className="font-black text-white">{pilhaMapa}</span> | {containersMapa3D.length} contÃªineres no pÃ¡tio</p>
+            </div>
+
+            <div
+              className="absolute right-5 top-5 z-30 w-72 rounded-2xl border border-slate-700/70 bg-slate-950/80 p-4 text-white shadow-2xl shadow-black/30 backdrop-blur"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Angulo 3D</p>
+                <button
+                  type="button"
+                  onClick={() => setAnguloMapa({ x: 60, z: -36 })}
+                  className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-black text-slate-300 transition hover:border-blue-400 hover:text-white"
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="mt-4 grid grid-cols-4 gap-2">
+                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, z: limitarAngulo(atual.z - 12, -78, 28) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Esq.</button>
+                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, z: limitarAngulo(atual.z + 12, -78, 28) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Dir.</button>
+                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x - 8, 38, 74) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Baixo</button>
+                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x + 8, 38, 74) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Topo</button>
+              </div>
+              <label className="mt-4 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                Inclinação
+                <input
+                  type="range"
+                  min={38}
+                  max={74}
+                  value={anguloMapa.x}
+                  onChange={(event) => setAnguloMapa((atual) => ({ ...atual, x: Number(event.target.value) }))}
+                  className="mt-2 w-full accent-blue-500"
+                />
+              </label>
+              <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                Giro lateral
+                <input
+                  type="range"
+                  min={-78}
+                  max={28}
+                  value={anguloMapa.z}
+                  onChange={(event) => setAnguloMapa((atual) => ({ ...atual, z: Number(event.target.value) }))}
+                  className="mt-2 w-full accent-blue-500"
+                />
+              </label>
+              <p className="mt-3 text-[11px] text-slate-400">Arraste o mapa para girar livremente.</p>
+            </div>
+
+            <div className="absolute inset-x-4 bottom-4 z-20 flex flex-wrap justify-center gap-2">
+              {pilhasMapa.map((pilha) => (
+                <button
+                  key={pilha}
+                  type="button"
+                  onClick={() => {
+                    setPilhaManual(true);
+                    setPilhaMapa(pilha);
+                  }}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${
+                    pilhaMapa === pilha
+                      ? "border-blue-300 bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                      : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-blue-400 hover:text-white"
+                  }`}
+                >
+                  Pilha {pilha}{ocupacaoPorPilha.has(pilha) ? ` - ${ocupacaoPorPilha.get(pilha)}` : ""}
+                </button>
+              ))}
+            </div>
+
+            <div className="absolute left-1/2 top-[52%] h-[470px] w-[790px] max-w-none" style={{ perspective: "1200px", transform: "translate(-50%, -50%)" }}>
+              <div
+                className="relative h-full w-full"
+                style={{ transform: `rotateX(${anguloMapa.x}deg) rotateZ(${anguloMapa.z}deg)`, transformStyle: "preserve-3d" }}
+              >
+                <div className="absolute left-8 top-12 h-[390px] w-[720px] rounded-[34px] border border-blue-300/20 bg-slate-900/80 shadow-[0_0_70px_rgba(37,99,235,0.24)]" />
+                <div className="absolute left-8 top-12 h-[390px] w-[720px] rounded-[34px] bg-[linear-gradient(90deg,rgba(96,165,250,0.22)_1px,transparent_1px),linear-gradient(rgba(96,165,250,0.18)_1px,transparent_1px)] bg-[size:112px_74px]" />
+
+                {quadrasMapa.map((quadra, quadraIndex) => (
+                  <div
+                    key={quadra}
+                    className="absolute rounded-xl border border-blue-300/20 bg-blue-500/10 px-3 py-1 text-center text-[11px] font-black text-blue-100 shadow-lg"
+                    style={{ left: 62 + quadraIndex * 112, top: 28, width: 94, transform: "translateZ(2px)" }}
+                  >
+                    {quadra}
+                  </div>
+                ))}
+
+                {pilhasMapa.map((pilha, pilhaIndex) => (
+                  <div
+                    key={pilha}
+                    className={`absolute rounded-full border px-3 py-1 text-[10px] font-black ${
+                      pilha === pilhaMapa
+                        ? "border-amber-300 bg-amber-400/25 text-amber-50"
+                        : "border-slate-600 bg-slate-950/50 text-slate-400"
+                    }`}
+                    style={{ left: 6, top: 91 + (pilhasMapa.length - 1 - pilhaIndex) * 74, transform: "translateZ(8px)" }}
+                  >
+                    P{pilha}
+                  </div>
+                ))}
+
+                {containersMapa3D.map(({ container, posicao, eh40, destaque, pilhaAtiva, left, top, width, height, depth, z, zIndex }) => {
+                  const cor = destaque
+                    ? "from-amber-300 via-yellow-400 to-orange-500"
+                    : eh40
+                      ? "from-emerald-400 via-teal-500 to-cyan-700"
+                      : "from-blue-400 via-blue-600 to-indigo-800";
+                  const opacidade = destaque ? 1 : pilhaAtiva ? 0.96 : 0.28;
+
+                  return (
+                    <button
+                      key={container.id}
+                      type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
+                      onClick={() => {
+                        setPilhaManual(true);
+                        setPilhaMapa(posicao.pilha);
+                        abrirDossie(container);
+                      }}
+                      className={`group absolute rounded-xl border text-left transition duration-200 hover:scale-[1.03] ${
+                        destaque
+                          ? "border-amber-200 shadow-[0_0_34px_rgba(251,191,36,0.75)]"
+                          : "border-white/20 shadow-[0_16px_35px_rgba(0,0,0,0.35)]"
+                      }`}
+                      style={{
+                        left,
+                        top,
+                        width,
+                        height,
+                        opacity: opacidade,
+                        zIndex,
+                        transform: `translateZ(${z}px)`,
+                        transformStyle: "preserve-3d",
+                      }}
+                      title={`${container.numeroContainer} - ${container.posicionamento}`}
+                    >
+                      <span className={`absolute inset-0 rounded-xl bg-gradient-to-br ${cor}`} />
+                      <span className="absolute inset-0 rounded-xl bg-[linear-gradient(90deg,rgba(255,255,255,0.18)_1px,transparent_1px)] bg-[size:16px_100%]" />
+                      <span
+                        className={`absolute left-0 top-full rounded-b-xl bg-gradient-to-r ${cor} brightness-75`}
+                        style={{
+                          width,
+                          height: depth,
+                          transform: "rotateX(-90deg)",
+                          transformOrigin: "top",
+                        }}
+                      />
+                      <span
+                        className={`absolute left-full top-0 rounded-r-xl bg-gradient-to-b ${cor} brightness-75`}
+                        style={{
+                          width: depth,
+                          height,
+                          transform: "rotateY(90deg)",
+                          transformOrigin: "left",
+                        }}
+                      />
+                      <span className="relative z-10 flex h-full flex-col justify-center px-3">
+                        <span className="truncate text-[11px] font-black text-white drop-shadow">{container.numeroContainer}</span>
+                        <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-white/80">
+                          <span>{container.posicionamento}</span>
+                          <span>{container.dimensao}</span>
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <aside className="space-y-3">
+            <div className="rounded-3xl border border-slate-700 bg-slate-950/80 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Legenda</p>
+              <div className="mt-4 space-y-3 text-sm text-slate-300">
+                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full bg-blue-500" /> 20 pes</div>
+                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full bg-emerald-500" /> 40 pes / 40 HC</div>
+                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full bg-amber-400" /> Container pesquisado</div>
+                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full border border-white/40 bg-slate-500/30" /> Outras pilhas</div>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-slate-700 bg-slate-950/80 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Ocupacao por pilha</p>
+              <div className="mt-4 space-y-3">
+                {pilhasMapa.map((pilha) => {
+                  const total = ocupacaoPorPilha.get(pilha) || 0;
+                  const percentual = Math.min(100, Math.round((total / Math.max(1, containersNoPatio.length)) * 100));
+                  return (
+                    <button
+                      key={pilha}
+                      type="button"
+                      onClick={() => {
+                        setPilhaManual(true);
+                        setPilhaMapa(pilha);
+                      }}
+                      className="w-full text-left"
+                    >
+                      <div className="mb-1 flex items-center justify-between text-xs font-bold text-slate-300">
+                        <span>Pilha {pilha}</span>
+                        <span>{total}</span>
+                      </div>
+                      <div className="h-2 rounded-full bg-slate-800">
+                        <div className={`h-2 rounded-full ${pilha === pilhaMapa ? "bg-blue-400" : "bg-slate-500"}`} style={{ width: `${percentual}%` }} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <div className="hidden">
           <div className="min-w-[760px]">
             <div className="grid grid-cols-[56px_repeat(6,minmax(92px,1fr))] gap-2">
               <div />
@@ -682,7 +989,7 @@ export default function QuadraSeguranca() {
         </div>
 
         {containerDestacado && (
-          <div className="border-t border-amber-200 bg-amber-50 px-5 py-3 text-sm font-bold text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+          <div className="border-t border-amber-400/20 bg-amber-500/10 px-5 py-3 text-sm font-bold text-amber-100">
             Destaque da busca: {containerDestacado.numeroContainer} em {containerDestacado.posicionamento} ({containerDestacado.dimensao})
           </div>
         )}
