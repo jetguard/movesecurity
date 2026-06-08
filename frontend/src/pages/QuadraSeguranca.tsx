@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import { ChevronDown, Download, Eye, FileText, MapPinned, PackageSearch, Pencil, Trash2 } from "lucide-react";
 import { api } from "../services/api";
@@ -203,6 +203,8 @@ export default function QuadraSeguranca() {
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [anguloMapa, setAnguloMapa] = useState({ x: 60, z: -36 });
   const [arrastoMapa, setArrastoMapa] = useState<{ x: number; y: number; anguloX: number; anguloZ: number } | null>(null);
+  const [giroAutomaticoMapa, setGiroAutomaticoMapa] = useState(true);
+  const retomadaGiroMapa = useRef<number | null>(null);
   const podeExcluir = podeAdministrar() || podeAnalisar();
   const usuario = usuarioAtual();
 
@@ -215,6 +217,19 @@ export default function QuadraSeguranca() {
 
   useEffect(() => {
     carregar().catch(() => setCarregando(false));
+  }, []);
+
+  useEffect(() => {
+    if (!giroAutomaticoMapa || arrastoMapa) return;
+    const intervalo = window.setInterval(() => {
+      setAnguloMapa((atual) => ({ ...atual, z: normalizarGiro(atual.z + 0.16) }));
+    }, 80);
+
+    return () => window.clearInterval(intervalo);
+  }, [arrastoMapa, giroAutomaticoMapa]);
+
+  useEffect(() => () => {
+    if (retomadaGiroMapa.current) window.clearTimeout(retomadaGiroMapa.current);
   }, []);
 
   const filtrados = useMemo(() => {
@@ -477,13 +492,28 @@ export default function QuadraSeguranca() {
     return Math.min(maximo, Math.max(minimo, valor));
   }
 
+  function normalizarGiro(valor: number) {
+    return ((valor % 360) + 360) % 360;
+  }
+
+  function pausarGiroAutomatico(tempoRetorno = 4500) {
+    setGiroAutomaticoMapa(false);
+    if (retomadaGiroMapa.current) window.clearTimeout(retomadaGiroMapa.current);
+    retomadaGiroMapa.current = window.setTimeout(() => {
+      setGiroAutomaticoMapa(true);
+      retomadaGiroMapa.current = null;
+    }, tempoRetorno);
+  }
+
   function iniciarArrastoMapa(event: PointerEvent<HTMLDivElement>) {
+    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
+    pausarGiroAutomatico();
     setArrastoMapa({
       x: event.clientX,
       y: event.clientY,
       anguloX: anguloMapa.x,
-      anguloZ: anguloMapa.z,
+      anguloZ: normalizarGiro(anguloMapa.z),
     });
   }
 
@@ -493,7 +523,7 @@ export default function QuadraSeguranca() {
     const deltaY = event.clientY - arrastoMapa.y;
     setAnguloMapa({
       x: limitarAngulo(arrastoMapa.anguloX - deltaY * 0.18, 38, 74),
-      z: limitarAngulo(arrastoMapa.anguloZ + deltaX * 0.18, -78, 28),
+      z: normalizarGiro(arrastoMapa.anguloZ + deltaX * 0.18),
     });
   }
 
@@ -656,7 +686,7 @@ export default function QuadraSeguranca() {
             <div>
               <h2 className="text-xl font-black text-white">Mapa 3D de posicionamento</h2>
               <p className="mt-1 text-sm text-slate-300">
-                Visao operacional por quadra, pilha e altura. Contêineres de 40 pes ocupam dois vãos e mantêm a posição oficial na segunda quadra.
+                Visão operacional por quadra, pilha e altura. Contêineres de 40 pés ocupam dois vãos e mantêm a posição oficial na segunda quadra.
               </p>
             </div>
           </div>
@@ -678,7 +708,8 @@ export default function QuadraSeguranca() {
 
         <div className="grid gap-5 p-5 xl:grid-cols-[1fr_280px]">
           <div
-            className={`relative min-h-[560px] overflow-hidden rounded-3xl border border-blue-400/10 bg-[radial-gradient(circle_at_50%_25%,rgba(37,99,235,0.25),transparent_32%),linear-gradient(145deg,#020617,#071426_48%,#020617)] ${arrastoMapa ? "cursor-grabbing" : "cursor-grab"}`}
+            className={`relative min-h-[560px] select-none overflow-hidden rounded-3xl border border-blue-400/10 bg-[radial-gradient(circle_at_50%_25%,rgba(37,99,235,0.25),transparent_32%),linear-gradient(145deg,#020617,#071426_48%,#020617)] ${arrastoMapa ? "cursor-grabbing" : "cursor-grab"}`}
+            style={{ userSelect: "none", WebkitUserSelect: "none", touchAction: "none" }}
             onPointerDown={iniciarArrastoMapa}
             onPointerMove={moverArrastoMapa}
             onPointerUp={encerrarArrastoMapa}
@@ -689,8 +720,8 @@ export default function QuadraSeguranca() {
           >
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:34px_34px]" />
             <div className="absolute left-5 top-5 z-20 rounded-2xl border border-slate-700/70 bg-slate-950/70 px-4 py-3 backdrop-blur">
-              <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Visao operacional</p>
-              <p className="mt-1 text-sm text-slate-300">Pilha ativa <span className="font-black text-white">{pilhaMapa}</span> | {containersMapa3D.length} contÃªineres no pÃ¡tio</p>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Visão operacional</p>
+              <p className="mt-1 text-sm text-slate-300">Pilha ativa <span className="font-black text-white">{pilhaMapa}</span> | {containersMapa3D.length} contêineres no pátio</p>
             </div>
 
             <div
@@ -698,20 +729,29 @@ export default function QuadraSeguranca() {
               onPointerDown={(event) => event.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Angulo 3D</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Giro 3D 360</p>
                 <button
                   type="button"
-                  onClick={() => setAnguloMapa({ x: 60, z: -36 })}
+                  onClick={() => {
+                    pausarGiroAutomatico();
+                    setAnguloMapa({ x: 60, z: 324 });
+                  }}
                   className="rounded-full border border-slate-700 px-3 py-1 text-[11px] font-black text-slate-300 transition hover:border-blue-400 hover:text-white"
                 >
                   Reset
                 </button>
               </div>
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Rotação automática</span>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${giroAutomaticoMapa ? "bg-emerald-500/15 text-emerald-200" : "bg-amber-500/15 text-amber-200"}`}>
+                  {giroAutomaticoMapa ? "Girando" : "Pausado"}
+                </span>
+              </div>
               <div className="mt-4 grid grid-cols-4 gap-2">
-                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, z: limitarAngulo(atual.z - 12, -78, 28) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Esq.</button>
-                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, z: limitarAngulo(atual.z + 12, -78, 28) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Dir.</button>
-                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x - 8, 38, 74) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Baixo</button>
-                <button type="button" onClick={() => setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x + 8, 38, 74) }))} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Topo</button>
+                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, z: normalizarGiro(atual.z - 18) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Esq.</button>
+                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, z: normalizarGiro(atual.z + 18) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Dir.</button>
+                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x - 8, 38, 74) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Baixo</button>
+                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x + 8, 38, 74) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Topo</button>
               </div>
               <label className="mt-4 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 Inclinação
@@ -720,22 +760,28 @@ export default function QuadraSeguranca() {
                   min={38}
                   max={74}
                   value={anguloMapa.x}
-                  onChange={(event) => setAnguloMapa((atual) => ({ ...atual, x: Number(event.target.value) }))}
+                  onChange={(event) => {
+                    pausarGiroAutomatico();
+                    setAnguloMapa((atual) => ({ ...atual, x: Number(event.target.value) }));
+                  }}
                   className="mt-2 w-full accent-blue-500"
                 />
               </label>
               <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                Giro lateral
+                Giro lateral 360º
                 <input
                   type="range"
-                  min={-78}
-                  max={28}
-                  value={anguloMapa.z}
-                  onChange={(event) => setAnguloMapa((atual) => ({ ...atual, z: Number(event.target.value) }))}
+                  min={0}
+                  max={360}
+                  value={normalizarGiro(anguloMapa.z)}
+                  onChange={(event) => {
+                    pausarGiroAutomatico();
+                    setAnguloMapa((atual) => ({ ...atual, z: Number(event.target.value) }));
+                  }}
                   className="mt-2 w-full accent-blue-500"
                 />
               </label>
-              <p className="mt-3 text-[11px] text-slate-400">Arraste o mapa para girar livremente.</p>
+              <p className="mt-3 text-[11px] text-slate-400">Arraste o mapa para pausar, girar e inspecionar. A rotação volta sozinha em alguns segundos.</p>
             </div>
 
             <div className="absolute inset-x-4 bottom-4 z-20 flex flex-wrap justify-center gap-2">
