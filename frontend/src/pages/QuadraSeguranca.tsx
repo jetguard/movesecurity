@@ -784,7 +784,10 @@ export default function QuadraSeguranca() {
               <p className="mt-3 text-[11px] text-slate-400">Arraste o mapa para pausar, girar e inspecionar. A rotação volta sozinha em alguns segundos.</p>
             </div>
 
-            <div className="absolute inset-x-4 bottom-4 z-20 flex flex-wrap justify-center gap-2">
+            <div
+              className="absolute inset-x-4 bottom-4 z-20 flex flex-wrap justify-center gap-2"
+              onPointerDown={(event) => event.stopPropagation()}
+            >
               {pilhasMapa.map((pilha) => (
                 <button
                   key={pilha}
@@ -926,6 +929,7 @@ export default function QuadraSeguranca() {
                     <button
                       key={pilha}
                       type="button"
+                      onPointerDown={(event) => event.stopPropagation()}
                       onClick={() => {
                         setPilhaManual(true);
                         setPilhaMapa(pilha);
