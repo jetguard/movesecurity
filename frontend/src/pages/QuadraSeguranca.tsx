@@ -356,10 +356,10 @@ export default function QuadraSeguranca() {
           quadraAtiva,
           left: 62 + quadraIndice * slotLargura,
           top: 76 + pilhaIndice * slotAltura,
-          width: eh40 ? 206 : 94,
-          height: 48,
-          depth: 46,
-          z: alturaIndice * 28,
+          width: eh40 ? 222 : 102,
+          height: 34,
+          depth: 42,
+          z: alturaIndice * 30,
           zIndex: 60 + pilhaIndice * 12 + alturaIndice + (destaque ? 220 : pilhaAtiva ? 80 : 0),
         };
       })
@@ -906,20 +906,21 @@ export default function QuadraSeguranca() {
                 {containersMapa3D.map(({ container, posicao, eh40, destaque, pilhaAtiva, quadraAtiva, left, top, width, height, depth, z, zIndex }) => {
                   const opacidade = destaque ? 1 : quadraAtiva && pilhaAtiva ? 0.96 : quadraAtiva ? 0.48 : 0.12;
                   const faceBackground = destaque
-                    ? "repeating-linear-gradient(90deg, rgba(255,255,255,.16) 0 1px, transparent 1px 15px), linear-gradient(135deg, rgba(251,191,36,.44), rgba(249,115,22,.18))"
+                    ? "repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.13) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(251,191,36,.46), rgba(245,158,11,.20))"
                     : eh40
-                      ? "repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 1px, transparent 1px 15px), linear-gradient(135deg, rgba(16,185,129,.34), rgba(20,184,166,.16))"
-                      : "repeating-linear-gradient(90deg, rgba(255,255,255,.14) 0 1px, transparent 1px 15px), linear-gradient(135deg, rgba(59,130,246,.36), rgba(37,99,235,.16))";
-                  const faceBorder = destaque ? "rgba(255,255,255,.70)" : eh40 ? "rgba(110,231,183,.36)" : "rgba(191,219,254,.34)";
+                      ? "repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.10) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(20,184,166,.40), rgba(16,185,129,.16))"
+                      : "repeating-linear-gradient(90deg, rgba(255,255,255,.23) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.11) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(59,130,246,.40), rgba(37,99,235,.16))";
+                  const faceBorder = destaque ? "rgba(254,240,138,.88)" : eh40 ? "rgba(94,234,212,.58)" : "rgba(147,197,253,.58)";
                   const faceShadow = destaque
-                    ? "inset 0 0 26px rgba(255,255,255,.18), 0 0 30px rgba(34,211,238,.50), 0 20px 44px rgba(0,0,0,.34)"
-                    : "inset 0 0 20px rgba(255,255,255,.10), inset 0 -12px 25px rgba(2,8,23,.28), 0 12px 34px rgba(0,0,0,.36)";
+                    ? "inset 0 0 26px rgba(255,255,255,.20), inset 0 -10px 24px rgba(120,53,15,.22), 0 0 34px rgba(251,191,36,.42), 0 18px 42px rgba(0,0,0,.38)"
+                    : "inset 0 0 22px rgba(255,255,255,.12), inset 0 -12px 24px rgba(2,8,23,.30), 0 0 20px rgba(34,211,238,.16), 0 14px 36px rgba(0,0,0,.38)";
                   const faceStyle = {
                     position: "absolute" as const,
                     border: `1px solid ${faceBorder}`,
                     background: faceBackground,
                     boxShadow: faceShadow,
                     backdropFilter: "blur(2px)",
+                    opacity: 0.86,
                   };
 
                   return (
@@ -932,12 +933,12 @@ export default function QuadraSeguranca() {
                         setPilhaMapa(posicao.pilha);
                         abrirDossie(container);
                       }}
-                      className={`group absolute rounded-xl border text-left transition duration-200 hover:scale-[1.03] ${
+                      className={`group absolute border text-left transition duration-200 hover:scale-[1.03] ${
                         destaque
-                          ? "border-amber-200 shadow-[0_0_34px_rgba(251,191,36,0.75)]"
+                          ? "border-amber-200/60 shadow-[0_0_34px_rgba(251,191,36,0.58)]"
                           : quadraMapa && quadraAtiva
-                            ? "border-blue-200/70 shadow-[0_0_24px_rgba(96,165,250,0.28)]"
-                          : "border-white/20 shadow-[0_16px_35px_rgba(0,0,0,0.35)]"
+                            ? "border-cyan-200/40 shadow-[0_0_26px_rgba(34,211,238,0.24)]"
+                          : "border-white/10 shadow-[0_16px_35px_rgba(0,0,0,0.35)]"
                       }`}
                       style={{
                         left,
@@ -958,7 +959,7 @@ export default function QuadraSeguranca() {
                           top: 0,
                           width,
                           height,
-                          borderRadius: 4,
+                          borderRadius: 2,
                           transform: `translateZ(${depth / 2}px)`,
                         }}
                       />
@@ -969,7 +970,7 @@ export default function QuadraSeguranca() {
                           top: 0,
                           width,
                           height,
-                          borderRadius: 4,
+                          borderRadius: 2,
                           filter: "brightness(.70)",
                           transform: `rotateY(180deg) translateZ(${depth / 2}px)`,
                         }}
@@ -981,7 +982,7 @@ export default function QuadraSeguranca() {
                           top: 0,
                           width: depth,
                           height,
-                          borderRadius: 4,
+                          borderRadius: 2,
                           filter: "brightness(.78)",
                           transform: `rotateY(-90deg) translateZ(${width / 2}px)`,
                         }}
@@ -993,7 +994,7 @@ export default function QuadraSeguranca() {
                           top: 0,
                           width: depth,
                           height,
-                          borderRadius: 4,
+                          borderRadius: 2,
                           filter: "brightness(.82)",
                           transform: `rotateY(90deg) translateZ(${width / 2}px)`,
                         }}
@@ -1005,7 +1006,7 @@ export default function QuadraSeguranca() {
                           top: (height - depth) / 2,
                           width,
                           height: depth,
-                          borderRadius: 4,
+                          borderRadius: 2,
                           filter: "brightness(1.12)",
                           transform: `rotateX(90deg) translateZ(${height / 2}px)`,
                         }}
@@ -1017,7 +1018,7 @@ export default function QuadraSeguranca() {
                           top: (height - depth) / 2,
                           width,
                           height: depth,
-                          borderRadius: 4,
+                          borderRadius: 2,
                           filter: "brightness(.58)",
                           transform: `rotateX(-90deg) translateZ(${height / 2}px)`,
                         }}
