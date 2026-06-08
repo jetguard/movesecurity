@@ -305,6 +305,23 @@ export default function QuadraSeguranca() {
     return mapa;
   }, [containersNoPatio]);
 
+  const containersPorQuadraMapa = useMemo(() => {
+    const mapa = new Map<string, ContainerQuadra[]>();
+    containersNoPatio.forEach((container) => {
+      const posicao = interpretarPosicao(container.posicionamento);
+      if (!posicao) return;
+      const lista = mapa.get(posicao.quadra) || [];
+      lista.push(container);
+      mapa.set(posicao.quadra, lista);
+    });
+
+    mapa.forEach((lista) => {
+      lista.sort((a, b) => (a.posicionamento || "").localeCompare(b.posicionamento || "", "pt-BR"));
+    });
+
+    return mapa;
+  }, [containersNoPatio]);
+
   const referenciasMapa = useMemo(() => {
     const mapa = new Map<string, ContainerQuadra[]>();
     containersNoPatio.forEach((container) => {
@@ -770,24 +787,64 @@ export default function QuadraSeguranca() {
                 {quadrasMapa.filter((quadra) => ocupacaoPorQuadra.has(quadra)).map((quadra) => {
                   const total = ocupacaoPorQuadra.get(quadra) || 0;
                   const ativo = quadraMapa === quadra;
+                  const containersQuadra = containersPorQuadraMapa.get(quadra) || [];
 
                   return (
-                    <button
-                      key={quadra}
-                      type="button"
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={() => setQuadraMapa((atual) => atual === quadra ? null : quadra)}
-                      className={`flex items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-black transition ${
-                        ativo
-                          ? "border-blue-300 bg-blue-500 text-white shadow-lg shadow-blue-500/25"
-                          : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-blue-400 hover:text-white"
-                      }`}
-                    >
-                      <span>{quadra}</span>
-                      <span className={`rounded-full px-2 py-0.5 text-[10px] ${ativo ? "bg-white/20 text-white" : "bg-blue-500/10 text-blue-200"}`}>
-                        {total}
-                      </span>
-                    </button>
+                    <div key={quadra} className="space-y-2">
+                      <button
+                        type="button"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={() => setQuadraMapa((atual) => atual === quadra ? null : quadra)}
+                        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-black transition ${
+                          ativo
+                            ? "border-blue-300 bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                            : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-blue-400 hover:text-white"
+                        }`}
+                      >
+                        <span>{quadra}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${ativo ? "bg-white/20 text-white" : "bg-blue-500/10 text-blue-200"}`}>
+                          {total}
+                        </span>
+                      </button>
+
+                      {ativo && (
+                        <div className="rounded-2xl border border-blue-400/20 bg-slate-950/85 p-2 shadow-inner shadow-blue-950/30">
+                          <div className="max-h-44 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(96,165,250,0.45)_rgba(15,23,42,0.6)]">
+                            {containersQuadra.map((container) => {
+                              const selecionado = containerPainelMapa?.id === container.id;
+                              const posicao = interpretarPosicao(container.posicionamento);
+
+                              return (
+                                <button
+                                  key={container.id}
+                                  type="button"
+                                  onPointerDown={(event) => event.stopPropagation()}
+                                  onClick={() => {
+                                    setContainerMapaSelecionado(container);
+                                    if (posicao) {
+                                      setPilhaManual(true);
+                                      setPilhaMapa(posicao.pilha);
+                                    }
+                                  }}
+                                  className={`w-full rounded-xl border px-2.5 py-2 text-left transition ${
+                                    selecionado
+                                      ? "border-amber-300/70 bg-amber-400/15 text-amber-50 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
+                                      : "border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-cyan-300/50 hover:bg-cyan-500/10 hover:text-white"
+                                  }`}
+                                  title={`${container.numeroContainer} - ${container.posicionamento || "Sem posição"}`}
+                                >
+                                  <span className="block truncate text-[11px] font-black">{container.numeroContainer}</span>
+                                  <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                    <span>{container.posicionamento || "Sem posição"}</span>
+                                    <span>{container.dimensao}</span>
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
                 {quadrasMapa.every((quadra) => !ocupacaoPorQuadra.has(quadra)) && (
@@ -912,23 +969,23 @@ export default function QuadraSeguranca() {
                 ))}
 
                 {containersMapa3D.map(({ container, posicao, eh40, destaque, pilhaAtiva, quadraAtiva, left, top, width, height, depth, z, zIndex }) => {
-                  const opacidade = destaque ? 1 : quadraAtiva && pilhaAtiva ? 0.96 : quadraAtiva ? 0.48 : 0.12;
+                  const opacidade = destaque ? 1 : quadraAtiva && pilhaAtiva ? 0.92 : quadraAtiva ? 0.72 : 0.38;
                   const faceBackground = destaque
-                    ? "repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.13) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(251,191,36,.46), rgba(245,158,11,.20))"
+                    ? "repeating-linear-gradient(90deg, rgba(255,255,255,.34) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(251,191,36,.58), rgba(245,158,11,.24))"
                     : eh40
-                      ? "repeating-linear-gradient(90deg, rgba(255,255,255,.22) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.10) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(20,184,166,.40), rgba(16,185,129,.16))"
-                      : "repeating-linear-gradient(90deg, rgba(255,255,255,.23) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.11) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(59,130,246,.40), rgba(37,99,235,.16))";
-                  const faceBorder = destaque ? "rgba(254,240,138,.88)" : eh40 ? "rgba(94,234,212,.58)" : "rgba(147,197,253,.58)";
+                      ? "repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.15) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(20,184,166,.52), rgba(16,185,129,.22))"
+                      : "repeating-linear-gradient(90deg, rgba(255,255,255,.29) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.15) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(59,130,246,.52), rgba(37,99,235,.22))";
+                  const faceBorder = destaque ? "rgba(254,240,138,.95)" : eh40 ? "rgba(94,234,212,.74)" : "rgba(147,197,253,.74)";
                   const faceShadow = destaque
-                    ? "inset 0 0 26px rgba(255,255,255,.20), inset 0 -10px 24px rgba(120,53,15,.22), 0 0 34px rgba(251,191,36,.42), 0 18px 42px rgba(0,0,0,.38)"
-                    : "inset 0 0 22px rgba(255,255,255,.12), inset 0 -12px 24px rgba(2,8,23,.30), 0 0 20px rgba(34,211,238,.16), 0 14px 36px rgba(0,0,0,.38)";
+                    ? "inset 0 0 30px rgba(255,255,255,.24), inset 0 -10px 24px rgba(120,53,15,.22), 0 0 40px rgba(251,191,36,.56), 0 18px 42px rgba(0,0,0,.38)"
+                    : "inset 0 0 26px rgba(255,255,255,.16), inset 0 -12px 24px rgba(2,8,23,.28), 0 0 28px rgba(34,211,238,.24), 0 14px 36px rgba(0,0,0,.38)";
                   const faceStyle = {
                     position: "absolute" as const,
                     border: `1px solid ${faceBorder}`,
                     background: faceBackground,
                     boxShadow: faceShadow,
                     backdropFilter: "blur(2px)",
-                    opacity: 0.86,
+                    opacity: destaque ? 0.94 : 0.9,
                   };
 
                   return (
