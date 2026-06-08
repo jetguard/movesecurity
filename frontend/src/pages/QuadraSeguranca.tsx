@@ -357,9 +357,9 @@ export default function QuadraSeguranca() {
           left: 62 + quadraIndice * slotLargura,
           top: 76 + pilhaIndice * slotAltura,
           width: eh40 ? 222 : 102,
-          height: 34,
-          depth: 42,
-          z: alturaIndice * 30,
+          height: 46,
+          depth: 58,
+          z: alturaIndice * 42,
           zIndex: 60 + pilhaIndice * 12 + alturaIndice + (destaque ? 220 : pilhaAtiva ? 80 : 0),
         };
       })
