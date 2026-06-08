@@ -709,12 +709,12 @@ export default function QuadraSeguranca() {
           </select>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="max-h-[470px] overflow-x-auto overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800">
           {carregando && filtrados.length === 0 ? (
             <SkeletonTable rows={6} columns={10} className="border-0 shadow-none" />
           ) : (
           <table className="min-w-full text-sm">
-            <thead className="bg-slate-100 text-left text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+            <thead className="sticky top-0 z-10 bg-slate-100 text-left text-slate-600 shadow-sm dark:bg-slate-950 dark:text-slate-300">
               <tr>
                 <th className="p-3">Contêiner</th>
                 <th className="p-3">Posição</th>

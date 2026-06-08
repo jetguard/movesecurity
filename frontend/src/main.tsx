@@ -25,12 +25,8 @@ window.addEventListener("unhandledrejection", (event) => {
   recarregarUmaVezPorBuildAntigo(event.reason);
 });
 
-const temaSalvo = localStorage.getItem("tema");
-const temaInicial =
-  temaSalvo === "dark" ||
-  (!temaSalvo && window.matchMedia("(prefers-color-scheme: dark)").matches);
-
-document.documentElement.classList.toggle("dark", temaInicial);
+localStorage.setItem("tema", "dark");
+document.documentElement.classList.add("dark");
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -25,8 +25,6 @@ import {
   Target,
   Grid3X3,
   Users,
-  Moon,
-  Sun,
   Video,
   Menu,
   X,
@@ -67,11 +65,6 @@ export default function AdminLayout() {
   const [pinDesbloqueio, setPinDesbloqueio] = useState("");
   const [erroDesbloqueio, setErroDesbloqueio] = useState("");
   const [desbloqueando, setDesbloqueando] = useState(false);
-  const [tema, setTema] = useState(() => {
-    const salvo = localStorage.getItem("tema");
-    if (salvo === "dark" || salvo === "light") return salvo;
-    return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-  });
   const usuario = usuarioAtual();
   const unidadesDisponiveis = useMemo(() => unidadesPermitidasUsuario(), []);
   const unidadeSalva = sessionStorage.getItem("unidadeAtiva");
@@ -82,9 +75,9 @@ export default function AdminLayout() {
   const [unidadeAtiva, setUnidadeAtiva] = useState(unidadeInicial);
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", tema === "dark");
-    localStorage.setItem("tema", tema);
-  }, [tema]);
+    document.documentElement.classList.add("dark");
+    localStorage.setItem("tema", "dark");
+  }, []);
 
   useEffect(() => {
     function sincronizarBloqueio(event: StorageEvent) {
@@ -232,10 +225,6 @@ export default function AdminLayout() {
     setUnidadeAtiva(unidade);
     sessionStorage.setItem("unidadeAtiva", unidade);
     window.location.reload();
-  }
-
-  function alternarTema() {
-    setTema((atual) => (atual === "dark" ? "light" : "dark"));
   }
 
   function bloquearSistema() {
@@ -593,19 +582,19 @@ export default function AdminLayout() {
       </aside>
 
       <main className={`${mainOffset} min-w-0 overflow-x-hidden`}>
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-5 md:flex md:min-h-20 md:items-center md:justify-between md:gap-4 md:px-6 lg:px-8">
+        <header className="sticky top-0 z-20 border-b border-slate-800 bg-slate-950 px-3 py-3 shadow-sm sm:px-5 md:flex md:min-h-20 md:items-center md:justify-between md:gap-4 md:px-6 lg:px-8">
           <div className="flex min-w-0 items-center justify-between gap-2 md:hidden">
             <button
               type="button"
               onClick={() => setMobileMenuOpen(true)}
-              className="shrink-0 rounded-xl bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200"
+              className="shrink-0 rounded-xl bg-slate-900 p-2.5 text-slate-100 transition hover:bg-slate-800"
               aria-label="Abrir menu"
             >
               <Menu size={21} />
             </button>
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
-              <Link to="/notificacoes" className="relative shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200">
+              <Link to="/notificacoes" className="relative shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800">
                 <Bell size={16} />
                 {notificacoes.length > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">
@@ -613,7 +602,7 @@ export default function AdminLayout() {
                   </span>
                 )}
               </Link>
-              <Link to="/meus-dados?aba=mencoes" className="relative hidden shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200 min-[390px]:inline-flex">
+              <Link to="/meus-dados?aba=mencoes" className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[390px]:inline-flex">
                 <AtSign size={16} />
                 {mencoesPendentes > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
@@ -623,7 +612,7 @@ export default function AdminLayout() {
               </Link>
               <Link
                 to="/operacao-soc"
-                className="relative hidden shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 hover:bg-slate-200 min-[460px]:inline-flex"
+                className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[460px]:inline-flex"
                 title={passagensAbertas > 0 ? "Há Relatório CCOS em aberto" : "Relatório CCOS"}
               >
                 <Activity size={16} />
@@ -635,30 +624,22 @@ export default function AdminLayout() {
               </Link>
               <button
                 type="button"
-                onClick={alternarTema}
-                className="shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200"
-                title={tema === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
-              >
-                {tema === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-              </button>
-              <button
-                type="button"
                 onClick={bloquearSistema}
-                className="hidden shrink-0 rounded-full bg-slate-100 p-2.5 text-slate-700 transition hover:bg-slate-200 min-[360px]:inline-flex"
+                className="hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 transition hover:bg-slate-800 min-[360px]:inline-flex"
                 title="Bloquear sistema"
               >
                 <Lock size={16} />
               </button>
 
               <Link to="/meus-dados" className="min-w-0 max-w-[6.5rem] text-right min-[430px]:max-w-[9rem]">
-                <p className="hidden truncate text-sm font-semibold text-slate-900 min-[430px]:block">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
-                <p className="truncate text-[11px] font-semibold text-slate-600">Unidade: {unidadeAtiva}</p>
+                <p className="hidden truncate text-sm font-semibold text-white min-[430px]:block">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
+                <p className="truncate text-[11px] font-semibold text-slate-300">Unidade: {unidadeAtiva}</p>
               </Link>
-              <Link to="/meus-dados" className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-200 ring-2 ring-transparent transition hover:ring-blue-400 min-[430px]:h-10 min-[430px]:w-10">
+              <Link to="/meus-dados" className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-800 ring-2 ring-transparent transition hover:ring-blue-400 min-[430px]:h-10 min-[430px]:w-10">
                 {usuario?.fotoPerfil ? (
                   <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center font-bold text-slate-600">
+                  <div className="flex h-full w-full items-center justify-center font-bold text-slate-100">
                     {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
                   </div>
                 )}
@@ -667,12 +648,12 @@ export default function AdminLayout() {
           </div>
 
           <div className="hidden min-w-0 md:block">
-            <p className="text-sm text-slate-500">Ambiente de trabalho</p>
+            <p className="text-sm text-slate-400">Ambiente de trabalho</p>
             {podeTrocarAmbiente() ? (
               <select
                 value={unidadeAtiva}
                 onChange={(e) => alterarUnidade(e.target.value)}
-                className="mt-1 w-full max-w-xs rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-900"
+                className="mt-1 w-full max-w-xs rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-100"
               >
                 {unidadesDisponiveis.map((unidade) => (
                   <option key={unidade} value={unidade}>
@@ -681,12 +662,12 @@ export default function AdminLayout() {
                 ))}
               </select>
             ) : (
-              <p className="font-bold text-slate-900">Unidade: {usuario?.unidade || "GJA-T1"}</p>
+              <p className="font-bold text-slate-100">Unidade: {usuario?.unidade || "GJA-T1"}</p>
             )}
           </div>
 
           <div className="hidden min-w-0 items-center justify-end gap-3 sm:gap-4 md:flex">
-            <Link to="/notificacoes" className="relative rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200">
+            <Link to="/notificacoes" className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800">
               <Bell size={18} />
               {notificacoes.length > 0 && (
                 <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
@@ -694,7 +675,7 @@ export default function AdminLayout() {
                 </span>
               )}
             </Link>
-            <Link to="/meus-dados?aba=mencoes" className="relative rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200">
+            <Link to="/meus-dados?aba=mencoes" className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800">
               <AtSign size={18} />
               {mencoesPendentes > 0 && (
                 <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-xs font-bold text-white">
@@ -704,7 +685,7 @@ export default function AdminLayout() {
             </Link>
             <Link
               to="/operacao-soc"
-              className="relative rounded-full bg-slate-100 p-3 text-slate-700 hover:bg-slate-200"
+              className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
               title={passagensAbertas > 0 ? "Há Relatório CCOS em aberto" : "Relatório CCOS"}
             >
               <Activity size={18} />
@@ -716,29 +697,21 @@ export default function AdminLayout() {
             </Link>
             <button
               type="button"
-              onClick={alternarTema}
-              className="rounded-full bg-slate-100 p-3 text-slate-700 transition hover:bg-slate-200"
-              title={tema === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
-            >
-              {tema === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <button
-              type="button"
               onClick={bloquearSistema}
-              className="rounded-full bg-slate-100 p-3 text-slate-700 transition hover:bg-slate-200"
+              className="rounded-full bg-slate-900 p-3 text-slate-100 transition hover:bg-slate-800"
               title="Bloquear sistema"
             >
               <Lock size={18} />
             </button>
             <Link to="/meus-dados" className="hidden min-w-0 text-left sm:text-right md:block">
-              <p className="font-semibold text-slate-900">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
-              <p className="text-xs text-slate-500">Sessao: {formatarSessao(segundosSessao)}</p>
+              <p className="font-semibold text-white">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
+              <p className="text-xs text-slate-400">Sessao: {formatarSessao(segundosSessao)}</p>
             </Link>
-            <Link to="/meus-dados" className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-200 ring-2 ring-transparent transition hover:ring-blue-400 md:block">
+            <Link to="/meus-dados" className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-800 ring-2 ring-transparent transition hover:ring-blue-400 md:block">
               {usuario?.fotoPerfil ? (
                 <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center font-bold text-slate-600">
+                <div className="flex h-full w-full items-center justify-center font-bold text-slate-100">
                   {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
                 </div>
               )}
