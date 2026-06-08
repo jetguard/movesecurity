@@ -192,6 +192,7 @@ export default function QuadraSeguranca() {
   const [reposicionando, setReposicionando] = useState<ContainerQuadra | null>(null);
   const [novaPosicao, setNovaPosicao] = useState("");
   const [dossie, setDossie] = useState<ContainerQuadra | null>(null);
+  const [containerMapaSelecionado, setContainerMapaSelecionado] = useState<ContainerQuadra | null>(null);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("");
@@ -269,6 +270,13 @@ export default function QuadraSeguranca() {
     return containersNoPatio.find((item) => `${item.numeroContainer} ${item.posicionamento || ""} ${item.armador || ""}`.toLowerCase().includes(termo)) || null;
   }, [busca, containersNoPatio]);
 
+  const containerPainelMapa = useMemo(() => {
+    const selecionadoAtual = containerMapaSelecionado
+      ? containersNoPatio.find((item) => item.id === containerMapaSelecionado.id) || null
+      : null;
+    return selecionadoAtual || containerDestacado || null;
+  }, [containerDestacado, containerMapaSelecionado, containersNoPatio]);
+
   const ocupacaoMapa = useMemo(() => {
     const mapa = new Map<string, ContainerQuadra>();
     containersNoPatio.forEach((container) => {
@@ -343,7 +351,7 @@ export default function QuadraSeguranca() {
         const alturaIndice = Number(posicao.altura) - 1;
         if (quadraIndice < 0 || pilhaIndice < 0 || alturaIndice < 0) return null;
 
-        const destaque = containerDestacado?.id === container.id;
+        const destaque = containerDestacado?.id === container.id || containerPainelMapa?.id === container.id;
         const pilhaAtiva = posicao.pilha === pilhaMapa;
         const quadraAtiva = !quadraMapa || posicao.quadra === quadraMapa;
 
@@ -379,7 +387,7 @@ export default function QuadraSeguranca() {
         z: number;
         zIndex: number;
       }>;
-  }, [containerDestacado, containersNoPatio, pilhaMapa, quadraMapa]);
+  }, [containerDestacado, containerPainelMapa, containersNoPatio, pilhaMapa, quadraMapa]);
 
   useEffect(() => {
     const posicao = interpretarPosicao(containerDestacado?.posicionamento);
@@ -931,7 +939,7 @@ export default function QuadraSeguranca() {
                       onClick={() => {
                         setPilhaManual(true);
                         setPilhaMapa(posicao.pilha);
-                        abrirDossie(container);
+                        setContainerMapaSelecionado(container);
                       }}
                       className={`group absolute border text-left transition duration-200 hover:scale-[1.03] ${
                         destaque
@@ -1041,6 +1049,84 @@ export default function QuadraSeguranca() {
           </div>
 
           <aside className="space-y-3">
+            <div className="rounded-3xl border border-blue-400/20 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,8,23,0.88))] p-4 shadow-2xl shadow-blue-950/20">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Contêiner selecionado</p>
+              {containerPainelMapa ? (
+                <div className="mt-4 space-y-4">
+                  <div className="rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xl font-black text-white">{containerPainelMapa.numeroContainer}</p>
+                        <p className="mt-1 text-sm text-cyan-100">{containerPainelMapa.posicionamento || "Sem posição"}</p>
+                      </div>
+                      <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase text-cyan-100">
+                        {containerPainelMapa.dimensao}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
+                      <p className="font-black uppercase tracking-wide text-slate-500">Status</p>
+                      <p className="mt-1 font-black text-white">{containerPainelMapa.statusOperacional}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
+                      <p className="font-black uppercase tracking-wide text-slate-500">Prioridade</p>
+                      <p className="mt-1 font-black text-white">{containerPainelMapa.prioridade || "Não informada"}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
+                      <p className="font-black uppercase tracking-wide text-slate-500">Entrada</p>
+                      <p className="mt-1 font-black text-white">{new Date(containerPainelMapa.dataHoraEntrada).toLocaleDateString("pt-BR")}</p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
+                      <p className="font-black uppercase tracking-wide text-slate-500">Terminal</p>
+                      <p className="mt-1 font-black text-white">{containerPainelMapa.tempoTerminal}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-300">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500">Armador</span>
+                      <strong className="text-right text-white">{containerPainelMapa.armador || "Não informado"}</strong>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500">Lacre</span>
+                      <strong className="text-right text-white">{containerPainelMapa.numeroLacre || "Não informado"}</strong>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500">Destino</span>
+                      <strong className="text-right text-white">{containerPainelMapa.destino}</strong>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-slate-500">Scanner entrada</span>
+                      <strong className="text-right text-white">{containerPainelMapa.scannerEntrada ? "Sim" : "Não"}</strong>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => abrirDossie(containerPainelMapa)}
+                      className="rounded-2xl border border-blue-400/30 bg-blue-500/15 px-3 py-3 text-xs font-black text-blue-100 transition hover:bg-blue-500/25"
+                    >
+                      Ver dossiê
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => baixarDossiePdf(containerPainelMapa)}
+                      className="rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-3 py-3 text-xs font-black text-emerald-100 transition hover:bg-emerald-500/25"
+                    >
+                      Baixar PDF
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-400">
+                  Pesquise ou clique em um bloco no mapa para visualizar os dados operacionais do contêiner.
+                </div>
+              )}
+            </div>
+
             <div className="rounded-3xl border border-slate-700 bg-slate-950/80 p-4">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Legenda</p>
               <div className="mt-4 space-y-3 text-sm text-slate-300">
