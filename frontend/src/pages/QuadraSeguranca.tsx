@@ -290,15 +290,9 @@ export default function QuadraSeguranca() {
   const ocupacaoPorQuadra = useMemo(() => {
     const mapa = new Map<string, number>();
     containersNoPatio.forEach((container) => {
-      const quadrasOcupadas = new Set<string>();
-      slotsContainer(container).forEach((slot) => {
-        const posicao = interpretarPosicao(slot);
-        if (posicao) quadrasOcupadas.add(posicao.quadra);
-      });
-
-      quadrasOcupadas.forEach((quadra) => {
-        mapa.set(quadra, (mapa.get(quadra) || 0) + 1);
-      });
+      const posicao = interpretarPosicao(container.posicionamento);
+      if (!posicao) return;
+      mapa.set(posicao.quadra, (mapa.get(posicao.quadra) || 0) + 1);
     });
     return mapa;
   }, [containersNoPatio]);
@@ -351,12 +345,7 @@ export default function QuadraSeguranca() {
 
         const destaque = containerDestacado?.id === container.id;
         const pilhaAtiva = posicao.pilha === pilhaMapa;
-        const quadrasOcupadas = Array.from(new Set(
-          slotsContainer(container)
-            .map((slot) => interpretarPosicao(slot)?.quadra)
-            .filter(Boolean) as string[]
-        ));
-        const quadraAtiva = !quadraMapa || quadrasOcupadas.includes(quadraMapa);
+        const quadraAtiva = !quadraMapa || posicao.quadra === quadraMapa;
 
         return {
           container,
@@ -364,7 +353,6 @@ export default function QuadraSeguranca() {
           eh40,
           destaque,
           pilhaAtiva,
-          quadrasOcupadas,
           quadraAtiva,
           left: 62 + quadraIndice * slotLargura,
           top: 76 + pilhaIndice * slotAltura,
@@ -382,7 +370,6 @@ export default function QuadraSeguranca() {
         eh40: boolean;
         destaque: boolean;
         pilhaAtiva: boolean;
-        quadrasOcupadas: string[];
         quadraAtiva: boolean;
         left: number;
         top: number;
