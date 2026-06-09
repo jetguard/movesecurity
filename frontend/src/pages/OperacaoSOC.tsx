@@ -545,24 +545,24 @@ export default function OperacaoSOC() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <form onSubmit={salvarRegistro} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
-            <BookOpen className="text-emerald-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Livro eletrônico de ocorrências</h2>
+            <ClipboardCheck className="text-blue-600" size={20} />
+            <h2 className="font-bold text-slate-900 dark:text-white">Informações do Plantão</h2>
           </div>
-          <div className="max-h-[430px] space-y-3 overflow-auto pr-2">
-            {dados.livroEletronico.map((item, index) => (
-              <div key={`${item.tipo}-${index}`} className="rounded-xl border border-slate-100 p-3 text-sm dark:border-slate-800">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{item.tipo}</span>
-                  <span className="text-xs text-slate-500">{new Date(item.data).toLocaleString("pt-BR")}</span>
-                </div>
-                <p className="mt-2 font-bold text-slate-900 dark:text-white">{item.titulo}</p>
-                <p className="mt-1 text-slate-500 dark:text-slate-400">{item.detalhe}</p>
-              </div>
-            ))}
+          <p className="mb-4 text-sm text-slate-500 dark:text-slate-400">
+            Registre ocorrências, pendências, alertas e orientações durante o turno.
+          </p>
+          <div className="grid gap-3">
+            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título do registro operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Local operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações, pendências, alertas e orientações para o próximo turno" rows={6} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <button disabled={salvando} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:bg-slate-400">
+              <Send size={16} />
+              {salvando ? "Salvando..." : "Registrar informação"}
+            </button>
           </div>
-        </div>
+        </form>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center justify-between gap-3">
@@ -836,21 +836,24 @@ export default function OperacaoSOC() {
       </section>
 
       <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <form onSubmit={salvarRegistro} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
-            <ClipboardCheck className="text-blue-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Informações do Plantão</h2>
+            <BookOpen className="text-emerald-600" size={20} />
+            <h2 className="font-bold text-slate-900 dark:text-white">Livro eletrônico de ocorrências</h2>
           </div>
-          <div className="grid gap-3">
-            <input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Título do registro operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-            <input value={local} onChange={(e) => setLocal(e.target.value)} placeholder="Local operacional" className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-            <textarea value={observacoes} onChange={(e) => setObservacoes(e.target.value)} placeholder="Observações, pendências, alertas e orientações para o próximo turno" rows={6} className="rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
-            <button disabled={salvando} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:bg-slate-400">
-              <Send size={16} />
-              {salvando ? "Salvando..." : "Registrar informação"}
-            </button>
+          <div className="max-h-[430px] space-y-3 overflow-auto pr-2">
+            {dados.livroEletronico.map((item, index) => (
+              <div key={`${item.tipo}-${index}`} className="rounded-xl border border-slate-100 p-3 text-sm dark:border-slate-800">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{item.tipo}</span>
+                  <span className="text-xs text-slate-500">{new Date(item.data).toLocaleString("pt-BR")}</span>
+                </div>
+                <p className="mt-2 font-bold text-slate-900 dark:text-white">{item.titulo}</p>
+                <p className="mt-1 text-slate-500 dark:text-slate-400">{item.detalhe}</p>
+              </div>
+            ))}
           </div>
-        </form>
+        </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex items-center gap-2">
