@@ -316,6 +316,7 @@ export default function Cameras() {
   const [formIndisponibilidadeAberto, setFormIndisponibilidadeAberto] = useState(false);
   const [form, setForm] = useState(cameraInicial);
   const [checklist, setChecklist] = useState(checklistInicial);
+  const [ultimaVerificacaoAutomatica, setUltimaVerificacaoAutomatica] = useState<Date | null>(null);
 
   async function carregar() {
     const [camerasResponse, dashboardResponse] = await Promise.all([
@@ -324,6 +325,7 @@ export default function Cameras() {
     ]);
     setCameras(camerasResponse.data);
     setDashboard(dashboardResponse.data);
+    setUltimaVerificacaoAutomatica(new Date());
   }
 
   useEffect(() => {
@@ -937,6 +939,35 @@ export default function Cameras() {
               <option value="Conectada">Conectada</option>
               <option value="Desconectada">Desconectada</option>
             </select>
+          </div>
+        </div>
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-emerald-300/20 bg-emerald-400/10 text-emerald-300">
+              <Activity size={19} />
+            </span>
+            <div>
+              <p className="text-sm font-black text-emerald-100">Verificação automática da retenção</p>
+              <p className="text-xs text-emerald-100/70">
+                O JetGuard recalcula os dias disponíveis de gravação considerando a data e hora atuais.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-xl border border-emerald-300/15 bg-slate-950/30 px-3 py-2 text-left sm:text-right">
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/70">Última verificação</p>
+            <p className="mt-0.5 text-sm font-black text-white">
+              {ultimaVerificacaoAutomatica
+                ? ultimaVerificacaoAutomatica.toLocaleString("pt-BR", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })
+                : "Aguardando verificação"}
+            </p>
+            <p className="mt-0.5 text-[10px] text-emerald-100/60">Atualização automática a cada 30 segundos</p>
           </div>
         </div>
         <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center dark:border-blue-500/20 dark:bg-blue-500/10">
