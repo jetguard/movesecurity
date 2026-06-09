@@ -1034,7 +1034,7 @@ export default function QuadraSeguranca() {
                         width,
                         height,
                         zIndex,
-                        transform: `translateZ(${z}px)`,
+                        transform: `translateZ(${z + (destaque ? height / 2 + 2 : 1)}px)`,
                         transformStyle: "preserve-3d",
                       }}
                       title={`${container.numeroContainer} - ${container.posicionamento}`}
