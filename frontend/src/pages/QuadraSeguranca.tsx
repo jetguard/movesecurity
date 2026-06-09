@@ -207,6 +207,8 @@ export default function QuadraSeguranca() {
   const [arrastoMapa, setArrastoMapa] = useState<{ x: number; y: number; anguloX: number; anguloZ: number } | null>(null);
   const [giroAutomaticoMapa, setGiroAutomaticoMapa] = useState(true);
   const retomadaGiroMapa = useRef<number | null>(null);
+  const mapa3DRef = useRef<HTMLDivElement | null>(null);
+  const anguloAtualMapa = useRef({ x: 60, z: -36 });
   const podeExcluir = podeAdministrar() || podeAnalisar();
   const usuario = usuarioAtual();
 
@@ -223,12 +225,29 @@ export default function QuadraSeguranca() {
 
   useEffect(() => {
     if (!giroAutomaticoMapa || arrastoMapa) return;
-    const intervalo = window.setInterval(() => {
-      setAnguloMapa((atual) => ({ ...atual, z: normalizarGiro(atual.z + 0.16) }));
-    }, 80);
+    let quadro = 0;
+    let anterior = performance.now();
 
-    return () => window.clearInterval(intervalo);
+    const girar = (agora: number) => {
+      const delta = Math.min(50, agora - anterior);
+      anterior = agora;
+      anguloAtualMapa.current.z = normalizarGiro(anguloAtualMapa.current.z + delta * 0.002);
+      if (mapa3DRef.current) {
+        mapa3DRef.current.style.transform = `rotateX(${anguloAtualMapa.current.x}deg) rotateZ(${anguloAtualMapa.current.z}deg)`;
+      }
+      quadro = window.requestAnimationFrame(girar);
+    };
+
+    quadro = window.requestAnimationFrame(girar);
+    return () => window.cancelAnimationFrame(quadro);
   }, [arrastoMapa, giroAutomaticoMapa]);
+
+  useEffect(() => {
+    anguloAtualMapa.current = anguloMapa;
+    if (mapa3DRef.current) {
+      mapa3DRef.current.style.transform = `rotateX(${anguloMapa.x}deg) rotateZ(${anguloMapa.z}deg)`;
+    }
+  }, [anguloMapa]);
 
   useEffect(() => () => {
     if (retomadaGiroMapa.current) window.clearTimeout(retomadaGiroMapa.current);
@@ -540,6 +559,7 @@ export default function QuadraSeguranca() {
   }
 
   function pausarGiroAutomatico(tempoRetorno = 4500) {
+    setAnguloMapa({ ...anguloAtualMapa.current });
     setGiroAutomaticoMapa(false);
     if (retomadaGiroMapa.current) window.clearTimeout(retomadaGiroMapa.current);
     retomadaGiroMapa.current = window.setTimeout(() => {
@@ -555,8 +575,8 @@ export default function QuadraSeguranca() {
     setArrastoMapa({
       x: event.clientX,
       y: event.clientY,
-      anguloX: anguloMapa.x,
-      anguloZ: normalizarGiro(anguloMapa.z),
+      anguloX: anguloAtualMapa.current.x,
+      anguloZ: normalizarGiro(anguloAtualMapa.current.z),
     });
   }
 
@@ -938,8 +958,13 @@ export default function QuadraSeguranca() {
 
             <div className="absolute left-1/2 top-[52%] h-[470px] w-[790px] max-w-none" style={{ perspective: "1200px", transform: "translate(-50%, -50%)" }}>
               <div
+                ref={mapa3DRef}
                 className="relative h-full w-full"
-                style={{ transform: `rotateX(${anguloMapa.x}deg) rotateZ(${anguloMapa.z}deg)`, transformStyle: "preserve-3d" }}
+                style={{
+                  transform: `rotateX(${anguloMapa.x}deg) rotateZ(${anguloMapa.z}deg)`,
+                  transformStyle: "preserve-3d",
+                  willChange: "transform",
+                }}
               >
                 <div className="absolute left-8 top-12 h-[390px] w-[720px] rounded-[34px] border border-blue-300/20 bg-slate-900/80 shadow-[0_0_70px_rgba(37,99,235,0.24)]" />
                 <div className="absolute left-8 top-12 h-[390px] w-[720px] rounded-[34px] bg-[linear-gradient(90deg,rgba(96,165,250,0.22)_1px,transparent_1px),linear-gradient(rgba(96,165,250,0.18)_1px,transparent_1px)] bg-[size:112px_74px]" />
@@ -978,16 +1003,19 @@ export default function QuadraSeguranca() {
                       : "repeating-linear-gradient(90deg, rgba(255,255,255,.29) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.15) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(59,130,246,.52), rgba(37,99,235,.22))";
                   const faceBorder = destaque ? "rgba(254,240,138,.95)" : eh40 ? "rgba(94,234,212,.74)" : "rgba(147,197,253,.74)";
                   const faceShadow = destaque
-                    ? "inset 0 0 30px rgba(255,255,255,.24), inset 0 -10px 24px rgba(120,53,15,.22), 0 0 40px rgba(251,191,36,.56), 0 18px 42px rgba(0,0,0,.38)"
-                    : "inset 0 0 26px rgba(255,255,255,.16), inset 0 -12px 24px rgba(2,8,23,.28), 0 0 28px rgba(34,211,238,.24), 0 14px 36px rgba(0,0,0,.38)";
+                    ? "inset 0 0 18px rgba(255,255,255,.20), 0 0 24px rgba(251,191,36,.46), 0 12px 26px rgba(0,0,0,.32)"
+                    : "inset 0 0 14px rgba(255,255,255,.12), 0 0 12px rgba(34,211,238,.14), 0 10px 22px rgba(0,0,0,.30)";
                   const faceStyle = {
                     position: "absolute" as const,
                     border: `1px solid ${faceBorder}`,
                     background: faceBackground,
                     boxShadow: faceShadow,
-                    backdropFilter: "blur(2px)",
                     opacity: opacidadeFaces,
+                    backfaceVisibility: "hidden" as const,
                   };
+                  const blocoLeveBackground = eh40
+                    ? "repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 14px), linear-gradient(135deg, rgba(20,184,166,.50), rgba(15,118,110,.22))"
+                    : "repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 14px), linear-gradient(135deg, rgba(59,130,246,.52), rgba(30,64,175,.24))";
 
                   return (
                     <button
@@ -1011,80 +1039,94 @@ export default function QuadraSeguranca() {
                       }}
                       title={`${container.numeroContainer} - ${container.posicionamento}`}
                     >
-                      <span
-                        style={{
-                          ...faceStyle,
-                          left: 0,
-                          top: 0,
-                          width,
-                          height,
-                          borderRadius: 2,
-                          transform: `translateZ(${depth / 2}px)`,
-                        }}
-                      />
-                      <span
-                        style={{
-                          ...faceStyle,
-                          left: 0,
-                          top: 0,
-                          width,
-                          height,
-                          borderRadius: 2,
-                          filter: "brightness(.70)",
-                          transform: `rotateY(180deg) translateZ(${depth / 2}px)`,
-                        }}
-                      />
-                      <span
-                        style={{
-                          ...faceStyle,
-                          left: (width - depth) / 2,
-                          top: 0,
-                          width: depth,
-                          height,
-                          borderRadius: 2,
-                          filter: "brightness(.78)",
-                          transform: `rotateY(-90deg) translateZ(${width / 2}px)`,
-                        }}
-                      />
-                      <span
-                        style={{
-                          ...faceStyle,
-                          left: (width - depth) / 2,
-                          top: 0,
-                          width: depth,
-                          height,
-                          borderRadius: 2,
-                          filter: "brightness(.82)",
-                          transform: `rotateY(90deg) translateZ(${width / 2}px)`,
-                        }}
-                      />
-                      <span
-                        style={{
-                          ...faceStyle,
-                          left: 0,
-                          top: (height - depth) / 2,
-                          width,
-                          height: depth,
-                          borderRadius: 2,
-                          filter: "brightness(1.12)",
-                          transform: `rotateX(90deg) translateZ(${height / 2}px)`,
-                        }}
-                      />
-                      <span
-                        style={{
-                          ...faceStyle,
-                          left: 0,
-                          top: (height - depth) / 2,
-                          width,
-                          height: depth,
-                          borderRadius: 2,
-                          filter: "brightness(.58)",
-                          transform: `rotateX(-90deg) translateZ(${height / 2}px)`,
-                        }}
-                      />
+                      {destaque ? (
+                        <>
+                          <span
+                            style={{
+                              ...faceStyle,
+                              left: 0,
+                              top: 0,
+                              width,
+                              height,
+                              borderRadius: 2,
+                              transform: `translateZ(${depth / 2}px)`,
+                            }}
+                          />
+                          <span
+                            style={{
+                              ...faceStyle,
+                              left: 0,
+                              top: 0,
+                              width,
+                              height,
+                              borderRadius: 2,
+                              filter: "brightness(.70)",
+                              transform: `rotateY(180deg) translateZ(${depth / 2}px)`,
+                            }}
+                          />
+                          <span
+                            style={{
+                              ...faceStyle,
+                              left: (width - depth) / 2,
+                              top: 0,
+                              width: depth,
+                              height,
+                              borderRadius: 2,
+                              filter: "brightness(.78)",
+                              transform: `rotateY(-90deg) translateZ(${width / 2}px)`,
+                            }}
+                          />
+                          <span
+                            style={{
+                              ...faceStyle,
+                              left: (width - depth) / 2,
+                              top: 0,
+                              width: depth,
+                              height,
+                              borderRadius: 2,
+                              filter: "brightness(.82)",
+                              transform: `rotateY(90deg) translateZ(${width / 2}px)`,
+                            }}
+                          />
+                          <span
+                            style={{
+                              ...faceStyle,
+                              left: 0,
+                              top: (height - depth) / 2,
+                              width,
+                              height: depth,
+                              borderRadius: 2,
+                              filter: "brightness(1.12)",
+                              transform: `rotateX(90deg) translateZ(${height / 2}px)`,
+                            }}
+                          />
+                          <span
+                            style={{
+                              ...faceStyle,
+                              left: 0,
+                              top: (height - depth) / 2,
+                              width,
+                              height: depth,
+                              borderRadius: 2,
+                              filter: "brightness(.58)",
+                              transform: `rotateX(-90deg) translateZ(${height / 2}px)`,
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <span
+                          className="absolute inset-0 rounded-sm border shadow-[0_10px_22px_rgba(0,0,0,0.26)]"
+                          style={{
+                            borderColor: eh40 ? "rgba(94,234,212,.58)" : "rgba(147,197,253,.58)",
+                            background: blocoLeveBackground,
+                            opacity: !quadraMapa || quadraAtiva ? 0.84 : 0.34,
+                            transform: "translateZ(1px)",
+                          }}
+                        />
+                      )}
                       <span
                         className="absolute z-10 flex h-full flex-col justify-center px-3"
-                        style={{ inset: 0, opacity: opacidadeTexto, transform: `translateZ(${depth / 2 + 1}px)` }}
+                        style={{ inset: 0, opacity: opacidadeTexto, transform: `translateZ(${destaque ? depth / 2 + 1 : 2}px)` }}
                       >
                         <span className="truncate text-[11px] font-black text-white drop-shadow">{container.numeroContainer}</span>
                         <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-white/80">
