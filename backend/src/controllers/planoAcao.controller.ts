@@ -22,6 +22,77 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
   }
 }
 
+export async function listarOrigensPlanoAcao(req: AuthRequest, res: Response) {
+  try {
+    const unidade = req.unidadeAtiva;
+    const [ocorrencias, eventos, investigacoes, riscos, analisesEstrategicas] = await Promise.all([
+      prisma.ocorrencia.findMany({
+        where: { unidade },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, codigo: true, assunto: true, status: true },
+      }),
+      prisma.evento.findMany({
+        where: { unidade },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, codigo: true, assunto: true, status: true },
+      }),
+      prisma.investigacao.findMany({
+        where: { unidade },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, codigo: true, titulo: true, status: true },
+      }),
+      prisma.analiseRisco.findMany({
+        where: { unidade },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, codigo: true, descricaoRisco: true, nivelRisco: true, status: true },
+      }),
+      prisma.analiseEstrategica.findMany({
+        where: { unidade },
+        orderBy: { createdAt: "desc" },
+        select: { id: true, codigo: true, titulo: true, tipo: true, status: true },
+      }),
+    ]);
+
+    return res.json({
+      Ocorrencia: ocorrencias.map((item) => ({
+        id: item.id,
+        codigo: item.codigo,
+        titulo: item.assunto,
+        status: item.status,
+      })),
+      Evento: eventos.map((item) => ({
+        id: item.id,
+        codigo: item.codigo,
+        titulo: item.assunto,
+        status: item.status,
+      })),
+      Investigacao: investigacoes.map((item) => ({
+        id: item.id,
+        codigo: item.codigo || `R.I. ${item.id}`,
+        titulo: item.titulo,
+        status: item.status,
+      })),
+      AnaliseRisco: riscos.map((item) => ({
+        id: item.id,
+        codigo: item.codigo,
+        titulo: item.descricaoRisco,
+        status: item.status,
+        complemento: item.nivelRisco,
+      })),
+      AnaliseEstrategica: analisesEstrategicas.map((item) => ({
+        id: item.id,
+        codigo: item.codigo,
+        titulo: item.titulo,
+        status: item.status,
+        complemento: item.tipo,
+      })),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar registros de origem do plano de acao" });
+  }
+}
+
 export async function criarPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const { titulo, descricao, prazo } = req.body;
