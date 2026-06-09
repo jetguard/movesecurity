@@ -968,8 +968,9 @@ export default function QuadraSeguranca() {
                   </div>
                 ))}
 
-                {containersMapa3D.map(({ container, posicao, eh40, destaque, pilhaAtiva, quadraAtiva, left, top, width, height, depth, z, zIndex }) => {
-                  const opacidade = destaque ? 1 : quadraAtiva && pilhaAtiva ? 0.92 : quadraAtiva ? 0.72 : 0.38;
+                {containersMapa3D.map(({ container, posicao, eh40, destaque, quadraAtiva, left, top, width, height, depth, z, zIndex }) => {
+                  const opacidadeFaces = destaque ? 0.96 : !quadraMapa ? 0.9 : quadraAtiva ? 0.9 : 0.36;
+                  const opacidadeTexto = destaque || !quadraMapa || quadraAtiva ? 1 : 0.42;
                   const faceBackground = destaque
                     ? "repeating-linear-gradient(90deg, rgba(255,255,255,.34) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(251,191,36,.58), rgba(245,158,11,.24))"
                     : eh40
@@ -985,7 +986,7 @@ export default function QuadraSeguranca() {
                     background: faceBackground,
                     boxShadow: faceShadow,
                     backdropFilter: "blur(2px)",
-                    opacity: destaque ? 0.94 : 0.9,
+                    opacity: opacidadeFaces,
                   };
 
                   return (
@@ -998,19 +999,12 @@ export default function QuadraSeguranca() {
                         setPilhaMapa(posicao.pilha);
                         setContainerMapaSelecionado(container);
                       }}
-                      className={`group absolute border text-left transition duration-200 hover:scale-[1.03] ${
-                        destaque
-                          ? "border-amber-200/60 shadow-[0_0_34px_rgba(251,191,36,0.58)]"
-                          : quadraMapa && quadraAtiva
-                            ? "border-cyan-200/40 shadow-[0_0_26px_rgba(34,211,238,0.24)]"
-                          : "border-white/10 shadow-[0_16px_35px_rgba(0,0,0,0.35)]"
-                      }`}
+                      className="group absolute border-0 bg-transparent text-left transition duration-200"
                       style={{
                         left,
                         top,
                         width,
                         height,
-                        opacity: opacidade,
                         zIndex,
                         transform: `translateZ(${z}px)`,
                         transformStyle: "preserve-3d",
@@ -1090,7 +1084,7 @@ export default function QuadraSeguranca() {
                       />
                       <span
                         className="absolute z-10 flex h-full flex-col justify-center px-3"
-                        style={{ inset: 0, transform: `translateZ(${depth / 2 + 1}px)` }}
+                        style={{ inset: 0, opacity: opacidadeTexto, transform: `translateZ(${depth / 2 + 1}px)` }}
                       >
                         <span className="truncate text-[11px] font-black text-white drop-shadow">{container.numeroContainer}</span>
                         <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-white/80">
