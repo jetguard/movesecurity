@@ -98,6 +98,7 @@ export async function buscarConfiguracaoOpenAi(req: AuthRequest, res: Response) 
     return res.json({
       ocrProvider: configuracao.ocrProvider || "openai",
       openaiOcrModel: configuracao.openaiOcrModel || process.env.OPENAI_OCR_MODEL || "gpt-4.1-mini",
+      openaiAprimoramentoTextoAtivo: configuracao.openaiAprimoramentoTextoAtivo,
       openaiApiKeyConfigurada: Boolean(apiKey),
       openaiApiKey: apiKey ? chaveMascarada : "",
       origemChave: configuracao.openaiApiKey ? "Banco de dados" : process.env.OPENAI_API_KEY ? ".env do servidor" : "Nao configurada",
@@ -171,7 +172,7 @@ export async function rankingUsoOpenAi(req: AuthRequest, res: Response) {
 export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
   try {
     const anterior = await obterOuCriarConfiguracao();
-    const data: Record<string, string | number | null | undefined> = {
+    const data: Record<string, string | number | boolean | null | undefined> = {
       nomeEmpresa: req.body.nomeEmpresa || anterior.nomeEmpresa,
       slaCameras: Number(req.body.slaCameras || anterior.slaCameras),
       tempoMaximoOffline: Number(req.body.tempoMaximoOffline || anterior.tempoMaximoOffline),
@@ -180,6 +181,10 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
       logoUrl: req.body.logoUrl,
       rodapePdf: req.body.rodapePdf,
     };
+
+    if (typeof req.body.openaiAprimoramentoTextoAtivo === "boolean") {
+      data.openaiAprimoramentoTextoAtivo = req.body.openaiAprimoramentoTextoAtivo;
+    }
 
     if (req.usuarioPerfil === "SUPER_ADMIN") {
       data.ocrProvider = req.body.ocrProvider || "openai";

@@ -9,6 +9,7 @@ type ConfigOpenAi = {
   openaiOcrModel: string;
   openaiApiKey: string;
   openaiApiKeyConfigurada: boolean;
+  openaiAprimoramentoTextoAtivo: boolean;
   origemChave: string;
   somenteLeitura: boolean;
   removerOpenaiApiKey?: boolean;
@@ -41,6 +42,7 @@ const configInicial: ConfigOpenAi = {
   openaiOcrModel: "gpt-4.1-mini",
   openaiApiKey: "",
   openaiApiKeyConfigurada: false,
+  openaiAprimoramentoTextoAtivo: false,
   origemChave: "Nao configurada",
   somenteLeitura: true,
   removerOpenaiApiKey: false,
@@ -105,15 +107,17 @@ export default function APIsOpenAI() {
 
   async function salvar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!superAdmin) return;
 
     setSalvando(true);
     try {
       await api.put("/configuracoes", {
-        ocrProvider: config.ocrProvider,
-        openaiOcrModel: config.openaiOcrModel,
-        openaiApiKey: config.openaiApiKey,
-        removerOpenaiApiKey: config.removerOpenaiApiKey,
+        openaiAprimoramentoTextoAtivo: config.openaiAprimoramentoTextoAtivo,
+        ...(superAdmin ? {
+          ocrProvider: config.ocrProvider,
+          openaiOcrModel: config.openaiOcrModel,
+          openaiApiKey: config.openaiApiKey,
+          removerOpenaiApiKey: config.removerOpenaiApiKey,
+        } : {}),
       });
       await carregar();
       alert("Configuração OpenAI salva com sucesso.");
@@ -172,6 +176,38 @@ export default function APIsOpenAI() {
           </div>
         </div>
       </div>
+
+      <section className="rounded-3xl border border-cyan-400/20 bg-gradient-to-br from-slate-900 to-slate-950 p-5 shadow-xl">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-cyan-500/10 p-3 text-cyan-300 ring-1 ring-cyan-400/20">
+              <Sparkles size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">Recursos de IA</p>
+              <h2 className="mt-1 text-xl font-black text-white">Aprimoramento de textos com OpenAI</h2>
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                Quando ativo, módulos compatíveis podem aprimorar a redação corporativa sem alterar fatos,
+                protocolos, nomes, horários ou valores registrados pelo JetGuard.
+              </p>
+            </div>
+          </div>
+          <label className="flex cursor-pointer items-center justify-between gap-5 rounded-2xl border border-slate-700 bg-slate-900/80 px-5 py-4 lg:min-w-72">
+            <span>
+              <strong className="block text-sm text-white">
+                {config.openaiAprimoramentoTextoAtivo ? "Recurso ativado" : "Recurso desativado"}
+              </strong>
+              <span className="text-xs text-slate-400">Aplicação global nos módulos habilitados</span>
+            </span>
+            <input
+              type="checkbox"
+              checked={config.openaiAprimoramentoTextoAtivo}
+              onChange={(event) => alterar("openaiAprimoramentoTextoAtivo", event.target.checked)}
+              className="h-5 w-5 accent-cyan-500"
+            />
+          </label>
+        </div>
+      </section>
 
       <form onSubmit={salvar} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-col gap-3 border-b border-slate-200 pb-5 dark:border-slate-800 md:flex-row md:items-center md:justify-between">
@@ -263,14 +299,16 @@ export default function APIsOpenAI() {
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button
             type="submit"
-            disabled={bloqueado || salvando}
+            disabled={salvando}
             className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
             <Sparkles size={17} />
-            {salvando ? "Salvando..." : "Salvar OpenAI"}
+            {salvando ? "Salvando..." : "Salvar configurações OpenAI"}
           </button>
           {bloqueado && (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Admin pode auditar a configuração, mas não alterar credenciais.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Administrador pode controlar os recursos de IA, mas não alterar credenciais.
+            </p>
           )}
         </div>
       </form>

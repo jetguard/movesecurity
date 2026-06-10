@@ -20,6 +20,7 @@ import { AutoSaveStatus } from "../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
+import { descricaoEquipe, EQUIPES_FIXAS } from "../utils/equipes";
 
 type UsuarioEquipe = {
   id: number;
@@ -61,6 +62,7 @@ type PassagemTurno = {
   horaEncerramento?: string | null;
   unidade: string;
   equipe: string;
+  equipeCoberta?: string | null;
   status: string;
   colaboradoresIds: number[];
   statusPostoGocil: string;
@@ -177,6 +179,7 @@ export default function OperacaoSOC() {
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
   const [form, setForm] = useState({
     dataPassagem: dataInput(),
+    equipeCoberta: "",
     colaboradoresIds: [] as number[],
     postos: [{ ...postoVazio }],
     statusPostoGocil: "Completo",
@@ -212,6 +215,7 @@ export default function OperacaoSOC() {
       setObservacoes(dados.observacoes || "");
       setForm({
         dataPassagem: dados.form?.dataPassagem || dataInput(),
+        equipeCoberta: dados.form?.equipeCoberta || "",
         colaboradoresIds: dados.form?.colaboradoresIds || [],
         postos: dados.form?.postos?.length ? dados.form.postos : [{ ...postoVazio }],
         statusPostoGocil: dados.form?.statusPostoGocil || "Completo",
@@ -230,6 +234,7 @@ export default function OperacaoSOC() {
     setFiltroEquipe(passagem.equipe || usuario?.equipe || "");
     setForm({
       dataPassagem: dataInput(passagem.dataPassagem),
+      equipeCoberta: passagem.equipeCoberta || "",
       colaboradoresIds: passagem.colaboradoresIds || [],
       postos: passagem.postos?.length ? passagem.postos.map((posto) => ({ ...posto, re: posto.re || "" })) : [{ ...postoVazio }],
       statusPostoGocil: passagem.statusPostoGocil || "Completo",
@@ -304,6 +309,11 @@ export default function OperacaoSOC() {
   const informacoesPlantao = separarInformacoes(form.informacoesComplementares);
 
   async function abrirNovaPassagem() {
+    if (equipeAtual === "Equipe D" && !form.equipeCoberta) {
+      alert("Selecione qual equipe/turno a Equipe D está cobrindo.");
+      return;
+    }
+
     const passagemAbertaDia = dados?.passagensTurno.find((item) => {
       const mesmaData = dataInput(item.dataPassagem) === form.dataPassagem;
       const mesmaEquipe = !equipeAtual || item.equipe === equipeAtual;
@@ -323,6 +333,7 @@ export default function OperacaoSOC() {
     try {
       const response = await api.post("/operacao/passagens-turno", {
         equipe: equipeAtual,
+        equipeCoberta: equipeAtual === "Equipe D" ? form.equipeCoberta : null,
         dataPassagem: form.dataPassagem,
         colaboradoresIds: form.colaboradoresIds,
         postos: form.postos,
@@ -345,7 +356,11 @@ export default function OperacaoSOC() {
     }
     setSalvando(true);
     try {
-      const payload = { ...formOverride, equipe: equipeAtual };
+      const payload = {
+        ...formOverride,
+        equipe: equipeAtual,
+        equipeCoberta: equipeAtual === "Equipe D" ? formOverride.equipeCoberta : null,
+      };
       const response = passagemSelecionada
         ? await api.put(`/operacao/passagens-turno/${passagemSelecionada.id}`, payload)
         : await api.post("/operacao/passagens-turno", payload);
@@ -403,6 +418,7 @@ export default function OperacaoSOC() {
         setPassagemSelecionada(null);
         setForm({
           dataPassagem: dataInput(),
+          equipeCoberta: "",
           colaboradoresIds: [],
           postos: [{ ...postoVazio }],
           statusPostoGocil: "Completo",
@@ -530,7 +546,9 @@ export default function OperacaoSOC() {
         <select value={filtroEquipe} onChange={(e) => setFiltroEquipe(e.target.value)} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white md:max-w-xs">
           <option value="">Minha equipe / todas permitidas</option>
           {(dados.equipes || equipesPadrao).map((equipe) => (
-            <option key={equipe} value={equipe}>{equipe}</option>
+            <option key={equipe} value={equipe}>
+              {equipe} - {descricaoEquipe(equipe)}
+            </option>
           ))}
         </select>
       </div>
@@ -593,7 +611,9 @@ export default function OperacaoSOC() {
                         {passagem.status}
                       </span>
                     </div>
-                    <p className="mt-2 text-slate-600 dark:text-slate-300">{passagem.unidade} | {passagem.equipe}</p>
+                    <p className="mt-2 text-slate-600 dark:text-slate-300">
+                      {passagem.unidade} | {passagem.equipe} | {descricaoEquipe(passagem.equipe, passagem.equipeCoberta)}
+                    </p>
                     <p className="text-slate-500 dark:text-slate-400">Responsável: {passagem.responsavel?.apelido || passagem.responsavel?.nome || "Não informado"}</p>
                     <p className="mt-1 text-xs text-slate-500">Aberto em {new Date(passagem.horaAbertura).toLocaleString("pt-BR")}</p>
                   </button>
@@ -656,9 +676,35 @@ export default function OperacaoSOC() {
             Equipe
             <select value={equipeAtual} onChange={(e) => setFiltroEquipe(e.target.value)} disabled={!gerenciaPassagem || !podeEditarPassagem} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">
               <option value="">Selecione a equipe</option>
-              {(dados.equipes || equipesPadrao).map((equipe) => <option key={equipe} value={equipe}>{equipe}</option>)}
+              {(dados.equipes || equipesPadrao).map((equipe) => (
+                <option key={equipe} value={equipe}>
+                  {equipe} - {descricaoEquipe(equipe)}
+                </option>
+              ))}
             </select>
+            {equipeAtual && (
+              <span className="mt-2 block text-xs font-normal text-blue-300">
+                {descricaoEquipe(equipeAtual, form.equipeCoberta)}
+              </span>
+            )}
           </label>
+          {equipeAtual === "Equipe D" && (
+            <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+              Equipe/turno coberto
+              <select
+                value={form.equipeCoberta}
+                onChange={(e) => setForm((atual) => ({ ...atual, equipeCoberta: e.target.value }))}
+                disabled={!podeEditarPassagem}
+                required
+                className="mt-2 w-full rounded-xl border border-amber-500/50 bg-white p-3 font-normal dark:bg-slate-950 dark:text-white"
+              >
+                <option value="">Selecione a equipe em cobertura</option>
+                {EQUIPES_FIXAS.map((equipe) => (
+                  <option key={equipe} value={equipe}>{equipe} - {descricaoEquipe(equipe)}</option>
+                ))}
+              </select>
+            </label>
+          )}
           <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
             Colaboradores da equipe
             <div className="mt-2 min-h-24 rounded-xl border border-slate-300 bg-white p-2 font-normal dark:border-slate-700 dark:bg-slate-950">

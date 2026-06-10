@@ -50,6 +50,7 @@ const IntegridadeSistema = lazyWithReload(() => import("./pages/IntegridadeSiste
 const SugestoesMelhoria = lazyWithReload(() => import("./pages/SugestoesMelhoria"));
 const Sessoes = lazyWithReload(() => import("./pages/Sessoes"));
 const APIsOpenAI = lazyWithReload(() => import("./pages/APIsOpenAI"));
+const RelatorioDiarioExecutivo = lazyWithReload(() => import("./pages/RelatorioDiarioExecutivo"));
 
 function CarregandoPagina() {
   return <SkeletonPage />;
@@ -96,6 +97,14 @@ export default function App() {
             <Route path="anulacoes" element={<Navigate to="/documentos" replace />} />
             <Route path="cameras" element={<Cameras />} />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
+            <Route
+              path="relatorio-diario"
+              element={
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                  <RelatorioDiarioExecutivo />
+                </ProtectedRoute>
+              }
+            />
             <Route path="relatos-campo" element={<RelatosCampo />} />
             <Route path="mapa-operacional" element={<MapaOperacional />} />
             <Route path="planejamento" element={<Planejamento />} />

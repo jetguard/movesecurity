@@ -215,6 +215,7 @@ function escaparHtml(valor: unknown) {
 async function linkPdfAssinatura(req: Request, assinatura: {
   modulo: string;
   registroId: number;
+  token: string;
 }) {
   if (assinatura.modulo === "Ocorrencia") {
     const ocorrencia = await prisma.ocorrencia.findUnique({ where: { id: assinatura.registroId }, select: { id: true, codigo: true, unidade: true } });
@@ -249,6 +250,16 @@ async function linkPdfAssinatura(req: Request, assinatura: {
   if (assinatura.modulo === "ChecklistInspecao") {
     const checklist = await prisma.checklistInspecao.findUnique({ where: { id: assinatura.registroId }, select: { id: true, codigo: true, unidade: true } });
     return checklist ? criarUrlPublicaChecklist(req, { id: checklist.id, codigo: checklist.codigo, unidade: checklist.unidade }) : "";
+  }
+
+  if (assinatura.modulo === "RelatorioDiario") {
+    const relatorio = await prisma.relatorioDiarioExecutivo.findUnique({
+      where: { id: assinatura.registroId },
+      select: { id: true },
+    });
+    return relatorio
+      ? `${req.protocol}://${req.get("host")}/api/public/relatorios-diarios/${relatorio.id}/pdf?token=${encodeURIComponent(assinatura.token)}`
+      : "";
   }
 
   return "";

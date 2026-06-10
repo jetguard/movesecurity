@@ -18,6 +18,7 @@ export type ModuloAssinavel =
   | "AnaliseOcorrencia"
   | "AnaliseEvento"
   | "PassagemTurno"
+  | "RelatorioDiario"
   | "ChecklistInspecao"
   | "RelatorioCftv";
 

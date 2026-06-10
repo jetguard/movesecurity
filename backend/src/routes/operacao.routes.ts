@@ -12,6 +12,12 @@ import {
   ultimoChecklistEquipamentosPassagem,
   painelOperacionalSoc,
 } from "../controllers/operacao.controller";
+import {
+  consolidarRelatorioDiario,
+  gerarPdfRelatorioDiario,
+  listarRelatoriosDiarios,
+  previsualizarRelatorioDiario,
+} from "../controllers/relatorioDiario.controller";
 import { acessoRelatorios, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
@@ -27,5 +33,9 @@ router.put("/passagens-turno/:id", autenticarUsuario, autorizarPerfis(acessoRela
 router.post("/passagens-turno/:id/finalizar", autenticarUsuario, autorizarPerfis(acessoRelatorios), finalizarPassagemTurno);
 router.get("/passagens-turno/:id/pdf", autenticarUsuario, autorizarPerfis(acessoRelatorios), gerarPdfPassagemTurno);
 router.delete("/passagens-turno/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirPassagemTurno);
+router.get("/relatorios-diarios", autenticarUsuario, autorizarPerfis(acessoTotal), listarRelatoriosDiarios);
+router.get("/relatorios-diarios/previa", autenticarUsuario, autorizarPerfis(acessoTotal), previsualizarRelatorioDiario);
+router.post("/relatorios-diarios", autenticarUsuario, autorizarPerfis(acessoTotal), consolidarRelatorioDiario);
+router.get("/relatorios-diarios/:id/pdf", autenticarUsuario, autorizarPerfis(acessoTotal), gerarPdfRelatorioDiario);
 
 export default router;

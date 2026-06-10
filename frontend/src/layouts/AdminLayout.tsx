@@ -10,6 +10,7 @@ import {
   AtSign,
   BrainCircuit,
   FileText,
+  FileBarChart,
   FolderOpen,
   LayoutDashboard,
   LogOut,
@@ -360,6 +361,12 @@ export default function AdminLayout() {
                 <Activity size={16} />
                 Relatório CCOS
               </Link>
+              {podeAdministrar() && (
+                <Link to="/relatorio-diario" className={subItem}>
+                  <FileBarChart size={16} />
+                  Relatório Diário Executivo
+                </Link>
+              )}
               <Link to="/relatos-campo" className={subItem}>
                 <FileText size={16} />
                 Relatos de Campo

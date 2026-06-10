@@ -10,6 +10,7 @@ import { jwtSecret } from "../config/security";
 import { registrarLog } from "../services/auditoria.service";
 import { assinarDocumento, assinaturaValidaDocumento, criarUrlValidacaoAssinatura, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
 import { emitirRealtime } from "../services/realtime.service";
+import { equipeFixaValida, escalaEquipe } from "../config/equipes";
 
 function inicioDia(data = new Date()) {
   const inicio = new Date(data);
@@ -473,6 +474,10 @@ export async function criarPassagemTurno(req: AuthRequest, res: Response) {
     const unidade = req.unidadeAtiva || usuario.unidade || "GJA-T1";
     const equipe = String(req.body.equipe || usuario.equipe || "").trim();
     if (!equipe) return res.status(400).json({ error: "Usuário sem equipe definida para abertura da passagem." });
+    const equipeCoberta = equipe === "Equipe D" ? String(req.body.equipeCoberta || "").trim() : "";
+    if (equipe === "Equipe D" && !equipeFixaValida(equipeCoberta)) {
+      return res.status(400).json({ error: "Informe qual equipe/turno a Equipe D está cobrindo." });
+    }
     const aberta = await prisma.passagemTurno.findFirst({
       where: { unidade, equipe, status: "Aberto" },
       include: { responsavel: true, postos: true },
@@ -484,6 +489,7 @@ export async function criarPassagemTurno(req: AuthRequest, res: Response) {
         ...codigo,
         unidade,
         equipe,
+        equipeCoberta: equipe === "Equipe D" ? equipeCoberta : null,
         responsavelId: req.usuarioId,
         dataPassagem: req.body.dataPassagem ? new Date(req.body.dataPassagem) : new Date(),
         colaboradoresIds: JSON.stringify(idsColaboradores(req.body.colaboradoresIds)),
@@ -502,7 +508,7 @@ export async function criarPassagemTurno(req: AuthRequest, res: Response) {
     emitirRealtime({
       tipo: "ccos.aberto",
       titulo: `Relatório CCOS ${passagem.codigo} aberto`,
-      mensagem: `${usuario.apelido || usuario.nome} abriu o relatório da ${passagem.equipe}`,
+      mensagem: `${usuario.apelido || usuario.nome} abriu o relatório da ${passagem.equipe} - ${escalaEquipe(passagem.equipe, passagem.equipeCoberta)}`,
       severidade: "media",
       unidade: passagem.unidade,
       link: "/operacoes-soc",
@@ -525,12 +531,19 @@ export async function atualizarPassagemTurno(req: AuthRequest, res: Response) {
     if (!anterior) return res.status(404).json({ error: "Passagem não encontrada" });
     if (anterior.status !== "Aberto" && !podeGerenciarPassagem(req.usuarioPerfil)) return res.status(403).json({ error: "Relatório finalizado não pode ser editado por este perfil." });
     if (!podeGerenciarPassagem(req.usuarioPerfil) && anterior.equipe !== usuario?.equipe) return res.status(403).json({ error: "Apenas integrantes da equipe podem editar esta passagem." });
+    const equipeCoberta = anterior.equipe === "Equipe D"
+      ? String(req.body.equipeCoberta || anterior.equipeCoberta || "").trim()
+      : "";
+    if (anterior.equipe === "Equipe D" && !equipeFixaValida(equipeCoberta)) {
+      return res.status(400).json({ error: "Informe qual equipe/turno a Equipe D está cobrindo." });
+    }
     const passagem = await prisma.$transaction(async (tx) => {
       await tx.passagemTurnoPosto.deleteMany({ where: { passagemId: anterior.id } });
       return tx.passagemTurno.update({
         where: { id: anterior.id },
         data: {
           dataPassagem: req.body.dataPassagem ? new Date(req.body.dataPassagem) : anterior.dataPassagem,
+          equipeCoberta: anterior.equipe === "Equipe D" ? equipeCoberta : null,
           colaboradoresIds: JSON.stringify(idsColaboradores(req.body.colaboradoresIds)),
           statusPostoGocil: req.body.statusPostoGocil || "Completo",
           observacaoPostoGocil: req.body.observacaoPostoGocil || null,
@@ -705,7 +718,12 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
       doc.image(logoPath, 56, 50, { width: 110, height: 22, fit: [110, 22] });
       doc.font("Helvetica").fontSize(8).fillColor("#dbeafe").text("RELATÓRIO CCOS", 184, 42, { width: 230 });
       doc.font("Helvetica-Bold").fontSize(18).fillColor("#ffffff").text(passagem.codigo, 184, 56, { width: 230 });
-      doc.font("Helvetica").fontSize(9).fillColor("#cbd5e1").text(`Unidade: ${passagem.unidade} | Equipe: ${passagem.equipe}`, 184, 79, { width: 250 });
+      doc.font("Helvetica").fontSize(8).fillColor("#cbd5e1").text(
+        `${passagem.unidade} | ${passagem.equipe} | ${escalaEquipe(passagem.equipe, passagem.equipeCoberta)}`,
+        184,
+        79,
+        { width: 250 }
+      );
       doc.font("Helvetica").fontSize(8.5).fillColor("#bfdbfe").text(`Emitido em ${new Date().toLocaleString("pt-BR")}`, 370, 52, { align: "right", width: 174 });
       doc.font("Helvetica-Bold").fontSize(10).fillColor("#ffffff").text(passagem.status, 370, 74, { align: "right", width: 174 });
       doc.moveTo(36, 114).lineTo(559, 114).strokeColor("#dbe4ef").lineWidth(0.8).stroke();
@@ -766,7 +784,15 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
     summaryBox(36, yResumo, 168, "Data", passagem.dataPassagem.toLocaleDateString("pt-BR"));
     summaryBox(214, yResumo, 168, "Hora de abertura", passagem.horaAbertura.toLocaleString("pt-BR"));
     summaryBox(392, yResumo, 167, "Hora de encerramento", passagem.horaEncerramento?.toLocaleString("pt-BR") || "Em aberto");
-    summaryBox(36, yResumo + 50, 168, "Unidade / equipe", `${passagem.unidade} | ${passagem.equipe}`);
+    summaryBox(
+      36,
+      yResumo + 50,
+      168,
+      "Unidade / equipe",
+      passagem.equipe === "Equipe D"
+        ? `${passagem.unidade} | D cobre ${passagem.equipeCoberta || "turno não informado"}`
+        : `${passagem.unidade} | ${passagem.equipe}`
+    );
     summaryBox(214, yResumo + 50, 168, "Responsável", responsavel);
     summaryBox(392, yResumo + 50, 167, "Colaboradores", colaboradoresTexto);
     doc.y = yResumo + 98;
