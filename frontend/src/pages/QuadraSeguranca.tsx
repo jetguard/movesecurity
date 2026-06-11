@@ -87,8 +87,8 @@ const pilhasMapa = ["01", "02", "03", "04", "05"];
 const alturasMapa = ["5", "4", "3", "2", "1"];
 const posicoes40: Record<string, string> = { A09: "A08", A11: "A10" };
 const angulosCameraMapa: Record<string, { x: number; z: number }> = {
-  "119": { x: 60, z: 144 },
-  "120": { x: 60, z: 324 },
+  "119": { x: 66, z: 68 },
+  "120": { x: 57, z: 290 },
 };
 
 function inputData(data?: string | null) {
