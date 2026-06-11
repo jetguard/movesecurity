@@ -40,6 +40,7 @@ export default function Login() {
       });
 
       localStorage.setItem("usuario", JSON.stringify(response.data.usuario));
+      localStorage.setItem("jetguardUltimaAtividade", String(Date.now()));
       sessionStorage.setItem("loginInicio", String(Date.now()));
 
       if (localStorage.getItem("bloquearAposProximoLogin") === "true") {

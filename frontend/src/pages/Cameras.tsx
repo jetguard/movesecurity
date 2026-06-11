@@ -921,7 +921,7 @@ export default function Cameras() {
         <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
             <h2 className="text-xl font-bold text-slate-900">Inventário operacional</h2>
-            <p className="text-sm text-slate-500">Cadastro, atualização de status e checklist semanal obrigatório.</p>
+            <p className="text-sm text-slate-500">Cadastro, inspeção operacional e retenção recalculada automaticamente.</p>
           </div>
           <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[minmax(220px,320px)_180px] lg:w-auto">
             <input

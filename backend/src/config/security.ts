@@ -16,7 +16,7 @@ export const loginPolicy = {
 };
 
 export const sessionPolicy = {
-  idleMinutes: Number(process.env.SESSION_IDLE_MINUTES || 30),
+  idleMinutes: Number(process.env.SESSION_IDLE_MINUTES || 5),
   refreshDays: Number(process.env.REFRESH_TOKEN_DAYS || 7),
 };
 

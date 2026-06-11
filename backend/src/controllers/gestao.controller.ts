@@ -199,14 +199,10 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
       status: () => fakeRes,
     } as unknown as Response;
 
-    const [camerasOffline, checklistsCamera, planos] = await Promise.all([
+    const [camerasOffline, planos] = await Promise.all([
       prisma.cameraMonitoramento.findMany({
         where: { unidade: req.unidadeAtiva, status: "Desconectada", statusCadastro: "Ativa" },
         orderBy: { desconectadaDesde: "asc" },
-      }),
-      prisma.cameraMonitoramento.findMany({
-        where: { unidade: req.unidadeAtiva, statusCadastro: "Ativa" },
-        include: { checklists: { orderBy: { createdAt: "desc" }, take: 1 } },
       }),
       prisma.planoAcaoCorporativo.findMany({
         where: { unidade: req.unidadeAtiva, status: { not: "Concluido" } },
@@ -241,22 +237,6 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
       createdAt: camera.desconectadaDesde || camera.updatedAt,
     }));
 
-    const notificacoesChecklist = checklistsCamera
-      .filter((camera) => {
-        const ultimo = camera.checklists[0]?.createdAt;
-        if (!ultimo) return true;
-        return diasAte(new Date(Date.now() + 7 * 86400000)) !== null && Date.now() - ultimo.getTime() > 7 * 86400000;
-      })
-      .map((camera) => ({
-        id: `checklist-camera-${camera.id}`,
-        tipo: "Checklist CFTV",
-        titulo: `Checklist pendente da câmera ${camera.numeroCamera}`,
-        mensagem: `${camera.areaMonitorada} | último checklist não encontrado ou vencido`,
-        severidade: "media",
-        link: "/cameras",
-        createdAt: camera.updatedAt,
-      }));
-
     const notificacoesPlanos = planos
       .filter((plano) => diasAte(plano.prazo) !== null && (diasAte(plano.prazo) as number) <= 7)
       .map((plano) => ({
@@ -271,7 +251,6 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
 
     const notificacoes = [
       ...notificacoesCameras,
-      ...notificacoesChecklist,
       ...notificacoesPlanos,
       ...notificacoesPendencias,
     ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

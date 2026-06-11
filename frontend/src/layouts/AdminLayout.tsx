@@ -48,6 +48,9 @@ import {
   usuarioAtual,
 } from "../utils/permissoes";
 
+const LIMITE_INATIVIDADE_MS = 5 * 60 * 1000;
+const CHAVE_ULTIMA_ATIVIDADE = "jetguardUltimaAtividade";
+
 export default function AdminLayout() {
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -111,26 +114,55 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
-    const limiteInatividade = 30 * 60 * 1000;
-    const atualizarAtividade = () => sessionStorage.setItem("ultimaAtividade", String(Date.now()));
-    const eventos = ["click", "keydown", "mousemove", "touchstart"];
+    let ultimaPersistencia = 0;
 
-    atualizarAtividade();
-    eventos.forEach((evento) => window.addEventListener(evento, atualizarAtividade));
+    const bloquearPorInatividade = () => {
+      if (localStorage.getItem("sistemaBloqueado") === "true") return;
 
-    const interval = window.setInterval(() => {
-      const ultimaAtividade = Number(sessionStorage.getItem("ultimaAtividade") || Date.now());
-      if (Date.now() - ultimaAtividade > limiteInatividade) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("usuario");
-        sessionStorage.removeItem("loginInicio");
-        sessionStorage.removeItem("ultimaAtividade");
-        window.location.href = "/login";
+      localStorage.setItem("sistemaBloqueado", "true");
+      setPinDesbloqueio("");
+      setErroDesbloqueio("");
+      setSistemaBloqueado(true);
+    };
+
+    const verificarInatividade = () => {
+      const ultimaAtividade = Number(localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE) || Date.now());
+      if (Date.now() - ultimaAtividade >= LIMITE_INATIVIDADE_MS) {
+        bloquearPorInatividade();
       }
-    }, 30000);
+    };
+
+    const atualizarAtividade = () => {
+      if (localStorage.getItem("sistemaBloqueado") === "true") return;
+
+      const agora = Date.now();
+      if (agora - ultimaPersistencia < 1000) return;
+      ultimaPersistencia = agora;
+      localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE, String(agora));
+    };
+
+    const verificarAoRetornar = () => {
+      if (document.visibilityState === "visible") {
+        verificarInatividade();
+      }
+    };
+
+    if (!localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE)) {
+      localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE, String(Date.now()));
+    }
+    verificarInatividade();
+
+    const eventos = ["click", "keydown", "mousemove", "touchstart", "scroll"];
+    eventos.forEach((evento) => window.addEventListener(evento, atualizarAtividade, { passive: true }));
+    window.addEventListener("focus", verificarInatividade);
+    document.addEventListener("visibilitychange", verificarAoRetornar);
+
+    const interval = window.setInterval(verificarInatividade, 10000);
 
     return () => {
       eventos.forEach((evento) => window.removeEventListener(evento, atualizarAtividade));
+      window.removeEventListener("focus", verificarInatividade);
+      document.removeEventListener("visibilitychange", verificarAoRetornar);
       window.clearInterval(interval);
     };
   }, []);
@@ -206,6 +238,7 @@ export default function AdminLayout() {
       localStorage.removeItem("token");
       localStorage.removeItem("usuario");
       localStorage.removeItem("sistemaBloqueado");
+      localStorage.removeItem(CHAVE_ULTIMA_ATIVIDADE);
       sessionStorage.removeItem("loginInicio");
       window.location.href = "/login";
     }
@@ -261,7 +294,7 @@ export default function AdminLayout() {
       setDesbloqueando(true);
       await api.post("/auth/desbloquear-sessao", { pinOperacional: pinDesbloqueio });
       localStorage.removeItem("sistemaBloqueado");
-      sessionStorage.setItem("ultimaAtividade", String(Date.now()));
+      localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE, String(Date.now()));
       setPinDesbloqueio("");
       setSistemaBloqueado(false);
     } catch (error: unknown) {

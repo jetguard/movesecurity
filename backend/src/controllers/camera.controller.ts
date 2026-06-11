@@ -854,8 +854,6 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
     const sla = total === 0 ? 100 : Math.max(0, Math.round((online / total) * 100));
     const metaSla = configuracao?.slaCameras || 98;
     const tempoMaximoOffline = configuracao?.tempoMaximoOffline || 60;
-    const checklistCameraDias = configuracao?.checklistCameraDias || 7;
-    const limiteChecklist = new Date(Date.now() - checklistCameraDias * 24 * 60 * 60 * 1000);
     const checklistsComRetencao = checklists.map((checklist) => {
       const retencao = calcularRetencaoEfetiva({
         dataMaisAntiga: checklist.dataInicialGravacao,
@@ -870,10 +868,6 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         retencaoEstimadaTexto: retencao.retencaoTexto,
         indisponibilidadeMinutos: retencao.indisponibilidadeMinutos,
       };
-    });
-    const camerasSemChecklist = cameras.filter((camera) => {
-      const ultimo = checklistsComRetencao.find((checklist) => checklist.cameraId === camera.id);
-      return !ultimo || ultimo.createdAt < limiteChecklist;
     });
     const ultimoChecklistPorCamera = cameras.map((camera) => ({
       camera,
@@ -1043,11 +1037,6 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
             mensagem: `Camera ${camera.numeroCamera} abaixo da meta de 180 dias (${camera.diasRetencao} dia(s))`,
             severidade: "Atencao",
           })),
-        ...camerasSemChecklist.map((camera) => ({
-          tipo: "Checklist vencido",
-          mensagem: `Câmera ${camera.numeroCamera} sem checklist nos últimos ${checklistCameraDias} dias`,
-          severidade: "Atenção",
-        })),
       ],
     });
   } catch (error) {

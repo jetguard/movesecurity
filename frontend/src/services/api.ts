@@ -15,6 +15,20 @@ function lerCookie(nome: string) {
 
 const metodosComCsrf = new Set(["post", "put", "patch", "delete"]);
 const rotasSemCsrf = ["/auth/login", "/auth/refresh", "/auth/csrf"];
+let renovacaoEmAndamento: Promise<{ usuario?: unknown }> | null = null;
+
+function renovarSessaoUmaVez() {
+  if (!renovacaoEmAndamento) {
+    renovacaoEmAndamento = axios
+      .post("/api/auth/refresh", {}, { withCredentials: true })
+      .then((response) => response.data)
+      .finally(() => {
+        renovacaoEmAndamento = null;
+      });
+  }
+
+  return renovacaoEmAndamento;
+}
 
 api.interceptors.request.use(async (config) => {
   const unidadeAtiva = sessionStorage.getItem("unidadeAtiva");
@@ -52,9 +66,9 @@ api.interceptors.response.use(
       if (!originalRequest?._retry && !String(originalRequest?.url || "").includes("/auth/refresh")) {
         originalRequest._retry = true;
         try {
-          const refresh = await api.post("/auth/refresh");
-          if (refresh.data?.usuario) {
-            localStorage.setItem("usuario", JSON.stringify(refresh.data.usuario));
+          const refresh = await renovarSessaoUmaVez();
+          if (refresh.usuario) {
+            localStorage.setItem("usuario", JSON.stringify(refresh.usuario));
           }
           return api(originalRequest);
         } catch {
@@ -64,6 +78,7 @@ api.interceptors.response.use(
 
       localStorage.removeItem("usuario");
       localStorage.removeItem("sistemaBloqueado");
+      localStorage.removeItem("jetguardUltimaAtividade");
       sessionStorage.removeItem("loginInicio");
       if (error.response?.data?.code === "SESSAO_ENCERRADA") {
         alert("Sua sessão foi encerrada pelo administrador. Faça login novamente.");
