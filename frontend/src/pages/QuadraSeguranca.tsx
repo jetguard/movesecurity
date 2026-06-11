@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ChevronDown, Download, Eye, FileText, MapPinned, PackageSearch, Pencil, Trash2 } from "lucide-react";
+import { Camera, ChevronDown, Download, Eye, FileText, MapPinned, PackageSearch, Pencil, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
 import { SkeletonTable } from "../components/ui/Skeleton";
@@ -47,6 +47,16 @@ type ContainerQuadra = {
   historico?: Historico[];
 };
 
+type CameraMapa = {
+  id: number;
+  numeroCamera: string;
+  nomeCamera?: string | null;
+  tipoCamera: string;
+  localInstalado: string;
+  areaMonitorada: string;
+  status: string;
+};
+
 const inicial = {
   numeroContainer: "",
   dataHoraEntrada: "",
@@ -76,6 +86,10 @@ const quadrasMapa = ["A06", "A07", "A08", "A09", "A10", "A11"];
 const pilhasMapa = ["01", "02", "03", "04", "05"];
 const alturasMapa = ["5", "4", "3", "2", "1"];
 const posicoes40: Record<string, string> = { A09: "A08", A11: "A10" };
+const angulosCameraMapa: Record<string, { x: number; z: number }> = {
+  "119": { x: 60, z: 144 },
+  "120": { x: 60, z: 324 },
+};
 
 function inputData(data?: string | null) {
   if (!data) return "";
@@ -186,6 +200,7 @@ function calcularPosicoesDisponiveis(containers: ContainerQuadra[], dimensaoValo
 
 export default function QuadraSeguranca() {
   const [containers, setContainers] = useState<ContainerQuadra[]>([]);
+  const [camerasMapa, setCamerasMapa] = useState<CameraMapa[]>([]);
   const [form, setForm] = useState({ ...inicial });
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [editando, setEditando] = useState<ContainerQuadra | null>(null);
@@ -206,6 +221,7 @@ export default function QuadraSeguranca() {
   const [anguloMapa, setAnguloMapa] = useState({ x: 60, z: -36 });
   const [arrastoMapa, setArrastoMapa] = useState<{ x: number; y: number; anguloX: number; anguloZ: number } | null>(null);
   const [giroAutomaticoMapa, setGiroAutomaticoMapa] = useState(true);
+  const [cameraPresetAtiva, setCameraPresetAtiva] = useState<number | null>(null);
   const retomadaGiroMapa = useRef<number | null>(null);
   const mapa3DRef = useRef<HTMLDivElement | null>(null);
   const anguloAtualMapa = useRef({ x: 60, z: -36 });
@@ -214,8 +230,12 @@ export default function QuadraSeguranca() {
 
   async function carregar() {
     setCarregando(true);
-    const response = await api.get("/quadra-seguranca");
-    setContainers(response.data);
+    const [containersResponse, camerasResponse] = await Promise.all([
+      api.get("/quadra-seguranca"),
+      api.get("/cameras").catch(() => ({ data: [] })),
+    ]);
+    setContainers(containersResponse.data);
+    setCamerasMapa(camerasResponse.data);
     setCarregando(false);
   }
 
@@ -340,6 +360,26 @@ export default function QuadraSeguranca() {
 
     return mapa;
   }, [containersNoPatio]);
+
+  const camerasVisaoQuadra = useMemo(() => {
+    const speedDomes = camerasMapa.filter((camera) =>
+      camera.tipoCamera.toLocaleLowerCase("pt-BR").includes("speed dome")
+    );
+    const relacionadasAoPatio = speedDomes.filter((camera) => {
+      const referencia = `${camera.localInstalado} ${camera.areaMonitorada}`.toLocaleLowerCase("pt-BR");
+      return referencia.includes("quadra") || referencia.includes("pátio") || referencia.includes("patio");
+    });
+    const candidatas = relacionadasAoPatio.length > 0 ? relacionadasAoPatio : speedDomes;
+
+    return candidatas
+      .slice()
+      .sort((a, b) => {
+        const prioridadeA = a.numeroCamera.trim() === "120" ? 0 : 1;
+        const prioridadeB = b.numeroCamera.trim() === "120" ? 0 : 1;
+        return prioridadeA - prioridadeB || a.numeroCamera.localeCompare(b.numeroCamera, "pt-BR", { numeric: true });
+      })
+      .slice(0, 4);
+  }, [camerasMapa]);
 
   const referenciasMapa = useMemo(() => {
     const mapa = new Map<string, ContainerQuadra[]>();
@@ -559,6 +599,7 @@ export default function QuadraSeguranca() {
   }
 
   function pausarGiroAutomatico(tempoRetorno = 4500) {
+    setCameraPresetAtiva(null);
     setAnguloMapa({ ...anguloAtualMapa.current });
     setGiroAutomaticoMapa(false);
     if (retomadaGiroMapa.current) window.clearTimeout(retomadaGiroMapa.current);
@@ -566,6 +607,17 @@ export default function QuadraSeguranca() {
       setGiroAutomaticoMapa(true);
       retomadaGiroMapa.current = null;
     }, tempoRetorno);
+  }
+
+  function aplicarVisaoCamera(camera: CameraMapa) {
+    if (retomadaGiroMapa.current) {
+      window.clearTimeout(retomadaGiroMapa.current);
+      retomadaGiroMapa.current = null;
+    }
+    setArrastoMapa(null);
+    setGiroAutomaticoMapa(false);
+    setCameraPresetAtiva(camera.id);
+    setAnguloMapa(angulosCameraMapa[camera.numeroCamera.trim()] || { x: 60, z: 324 });
   }
 
   function iniciarArrastoMapa(event: PointerEvent<HTMLDivElement>) {
@@ -786,6 +838,49 @@ export default function QuadraSeguranca() {
               <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Visão operacional</p>
               <p className="mt-1 text-sm text-slate-300">Pilha ativa <span className="font-black text-white">{pilhaMapa}</span> | {containersMapa3D.length} contêineres no pátio</p>
             </div>
+
+            {camerasVisaoQuadra.length > 0 && (
+              <div
+                className="absolute left-[310px] top-5 z-30 flex max-w-[380px] flex-wrap gap-2"
+                onPointerDown={(event) => event.stopPropagation()}
+              >
+                {camerasVisaoQuadra.map((camera) => {
+                  const ativa = cameraPresetAtiva === camera.id;
+                  const conectada = camera.status === "Conectada";
+
+                  return (
+                    <button
+                      key={camera.id}
+                      type="button"
+                      onClick={() => aplicarVisaoCamera(camera)}
+                      className={`group flex min-w-40 items-center gap-3 rounded-2xl border px-3 py-2 text-left shadow-xl backdrop-blur transition ${
+                        ativa
+                          ? "border-cyan-300/70 bg-cyan-500/20 text-white shadow-cyan-950/30"
+                          : "border-slate-700/70 bg-slate-950/75 text-slate-200 hover:border-cyan-400/60 hover:bg-cyan-500/10"
+                      }`}
+                      title={`Visualizar o mapa pelo ângulo da câmera ${camera.numeroCamera}`}
+                    >
+                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                        ativa
+                          ? "border-cyan-300/50 bg-cyan-400/20 text-cyan-100"
+                          : "border-slate-700 bg-slate-900 text-blue-200 group-hover:text-cyan-200"
+                      }`}>
+                        <Camera size={18} />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2">
+                          <strong className="truncate text-sm font-black">{camera.numeroCamera}</strong>
+                          <span className={`h-2 w-2 shrink-0 rounded-full ${conectada ? "bg-emerald-400" : "bg-red-400"}`} />
+                        </span>
+                        <span className="block truncate text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          {camera.tipoCamera}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
             <div
               className="absolute left-5 top-32 z-20 w-44 rounded-2xl border border-slate-700/70 bg-slate-950/70 p-3 backdrop-blur"
