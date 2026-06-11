@@ -1010,6 +1010,9 @@ export default function QuadraSeguranca() {
                   }}
                   className="mt-2 w-full accent-blue-500"
                 />
+                <span className="mt-1 block text-center text-[10px] font-black normal-case tracking-normal text-blue-200">
+                  Ângulo exato: {Math.round(anguloMapa.x)}°
+                </span>
               </label>
               <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 Giro lateral 360º
@@ -1024,6 +1027,9 @@ export default function QuadraSeguranca() {
                   }}
                   className="mt-2 w-full accent-blue-500"
                 />
+                <span className="mt-1 block text-center text-[10px] font-black normal-case tracking-normal text-blue-200">
+                  Ângulo exato: {Math.round(normalizarGiro(anguloMapa.z))}°
+                </span>
               </label>
               <p className="mt-3 text-[11px] text-slate-400">Arraste o mapa para pausar, girar e inspecionar. A rotação volta sozinha em alguns segundos.</p>
             </div>
