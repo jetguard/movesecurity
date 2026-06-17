@@ -277,6 +277,12 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       });
     }
 
+    if (eventoExiste.status === "Anulado") {
+      return res.status(403).json({
+        error: "Este relatório está anulado e não pode ser editado.",
+      });
+    }
+
     const assinaturaAprovacao = estaAprovado(eventoExiste)
       ? await assinaturaValidaDocumento("Evento", eventoExiste.id)
       : null;

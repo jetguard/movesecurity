@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { assinarDocumento, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
+import { validarPinOperacional } from "../services/pinOperacional.service";
 
 function formatarCodigo(numero: number, ano: number) {
   return `${String(numero).padStart(4, "0")}/${ano}`;
@@ -33,6 +34,11 @@ async function proximaNumeracaoInvestigacao(unidade: string) {
 }
 
 function statusOcorrenciaAposInvestigacao(statusInvestigacao: string, analise?: { status?: string | null } | null) {
+  if (statusInvestigacao === "Anulada") {
+    if (analise?.status === "Concluído") return "Aguardando Aprovação";
+    if (analise) return "Em Análise";
+    return "Aberto";
+  }
   if (statusInvestigacao !== "Concluído") return "Em Investigação";
   if (analise?.status === "Concluído") return "Aguardando Aprovação";
   if (analise) return "Em Análise";
@@ -76,6 +82,9 @@ export async function converterOcorrenciaParaInvestigacao(
         id: Number(ocorrenciaId),
         unidade: req.unidadeAtiva,
       },
+      include: {
+        analise: true,
+      },
     });
 
     if (!ocorrencia) {
@@ -96,10 +105,48 @@ export async function converterOcorrenciaParaInvestigacao(
 
     if (investigacaoExistente) {
       if (investigacaoExistente.codigo) {
+        if (investigacaoExistente.status === "Anulada") {
+          await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
+
+          const investigacaoReaberta = await prisma.$transaction(async (tx) => {
+            const reaberta = await tx.investigacao.update({
+              where: { id: investigacaoExistente.id },
+              data: {
+                status: "Em Análise",
+                fluxoStatus: "Aguardando Revisao",
+              },
+              include: {
+                ocorrencia: true,
+                responsavel: true,
+              },
+            });
+
+            if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+              await tx.ocorrencia.update({
+                where: { id: ocorrencia.id },
+                data: { status: statusOcorrenciaAposInvestigacao(reaberta.status, ocorrencia.analise) },
+              });
+            }
+
+            return reaberta;
+          });
+
+          await registrarLog({
+            req,
+            acao: `Reabertura da investigação ${investigacaoReaberta.codigo} vinculada à ocorrência ${ocorrencia.codigo}`,
+            tipoRegistro: "Investigacao",
+            registroId: investigacaoReaberta.id,
+            dadosAnteriores: investigacaoExistente,
+            dadosNovos: investigacaoReaberta,
+          });
+
+          return res.status(200).json(investigacaoReaberta);
+        }
+
         if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
           await prisma.ocorrencia.update({
             where: { id: ocorrencia.id },
-            data: { status: statusOcorrenciaAposInvestigacao(investigacaoExistente.status) },
+            data: { status: statusOcorrenciaAposInvestigacao(investigacaoExistente.status, ocorrencia.analise) },
           });
         }
 
@@ -122,7 +169,7 @@ export async function converterOcorrenciaParaInvestigacao(
         if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
           await tx.ocorrencia.update({
             where: { id: ocorrencia.id },
-            data: { status: statusOcorrenciaAposInvestigacao(atualizada.status) },
+            data: { status: statusOcorrenciaAposInvestigacao(atualizada.status, ocorrencia.analise) },
           });
         }
 
@@ -183,6 +230,79 @@ export async function converterOcorrenciaParaInvestigacao(
   }
 }
 
+export async function cancelarConversaoInvestigacao(req: AuthRequest, res: Response) {
+  try {
+    const { ocorrenciaId } = req.params;
+    await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
+
+    const ocorrencia = await prisma.ocorrencia.findFirst({
+      where: {
+        id: Number(ocorrenciaId),
+        unidade: req.unidadeAtiva,
+      },
+      include: {
+        analise: true,
+        investigacao: {
+          include: {
+            responsavel: true,
+          },
+        },
+      },
+    });
+
+    if (!ocorrencia) {
+      return res.status(404).json({ error: "Ocorrência não encontrada" });
+    }
+
+    if (!ocorrencia.investigacao) {
+      return res.status(404).json({ error: "Esta ocorrência não possui investigação vinculada" });
+    }
+
+    if (ocorrencia.investigacao.status === "Anulada") {
+      return res.json(ocorrencia.investigacao);
+    }
+
+    const investigacaoAnulada = await prisma.$transaction(async (tx) => {
+      const anulada = await tx.investigacao.update({
+        where: { id: ocorrencia.investigacao!.id },
+        data: {
+          status: "Anulada",
+          fluxoStatus: "Anulado",
+        },
+        include: {
+          ocorrencia: true,
+          responsavel: true,
+        },
+      });
+
+      if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+        await tx.ocorrencia.update({
+          where: { id: ocorrencia.id },
+          data: {
+            status: statusOcorrenciaAposInvestigacao("Anulada", ocorrencia.analise),
+          },
+        });
+      }
+
+      return anulada;
+    });
+
+    await registrarLog({
+      req,
+      acao: `Cancelamento da conversão para R.I ${investigacaoAnulada.codigo} vinculada à ocorrência ${ocorrencia.codigo}`,
+      tipoRegistro: "Investigacao",
+      registroId: investigacaoAnulada.id,
+      dadosAnteriores: ocorrencia.investigacao,
+      dadosNovos: investigacaoAnulada,
+    });
+
+    return res.json(investigacaoAnulada);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao cancelar conversão para investigação" });
+  }
+}
+
 export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
@@ -203,6 +323,12 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
     if (!anterior) {
       return res.status(404).json({
         error: "Investigação não encontrada",
+      });
+    }
+
+    if (anterior.status === "Anulada") {
+      return res.status(403).json({
+        error: "Esta investigação está anulada e não pode ser editada. Reabra a R.I para realizar novas alterações.",
       });
     }
 

@@ -6,7 +6,7 @@ import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../../components/ui/PdfLightbox";
 import { solicitarPinOperacional } from "../../utils/pinPrompt";
-import { AtSign, Ban, Edit3, FileText, FileUp, Loader2, MapPin, Mic, Sparkles, Square, Tags, Upload, Users, X } from "lucide-react";
+import { AtSign, Ban, ClipboardCheck, Edit3, FileSearch, FileText, FileUp, Loader2, MapPin, Mic, Sparkles, Square, Tags, Upload, Users, X } from "lucide-react";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -70,6 +70,8 @@ type AnaliseOcorrencia = {
 type InvestigacaoVinculada = {
   id: number;
   codigo?: string | null;
+  status?: string;
+  fluxoStatus?: string;
   createdAt: string;
   numeroOcorrencia?: string;
 };
@@ -183,6 +185,7 @@ export default function Ocorrencias() {
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
+  const [ocorrenciaAnaliseModal, setOcorrenciaAnaliseModal] = useState<Ocorrencia | null>(null);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [locais, setLocais] = useState<LocalCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
@@ -799,18 +802,23 @@ export default function Ocorrencias() {
   function documentoBloqueadoParaEdicao(ocorrencia?: Ocorrencia | null) {
     if (!ocorrencia) return false;
     return Boolean(
+      ocorrencia.status === "Anulado" ||
       ocorrencia.assinaturaAprovacaoValida &&
       (ocorrencia.fluxoStatus === "Aprovado" || ocorrencia.status === "Concluido" || ocorrencia.status === "Concluído")
     );
   }
 
-  function mensagemDocumentoBloqueado() {
+  function mensagemDocumentoBloqueado(ocorrencia?: Ocorrencia | null) {
+    if (ocorrencia?.status === "Anulado") {
+      alert("Este relatório está anulado e não pode ser editado.");
+      return;
+    }
     alert("Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.");
   }
 
   function desbloquearEdicaoOcorrencia() {
     if (documentoBloqueadoParaEdicao(ocorrenciaEditando)) {
-      mensagemDocumentoBloqueado();
+      mensagemDocumentoBloqueado(ocorrenciaEditando);
       return;
     }
     setPermitirEdicao(true);
@@ -818,7 +826,7 @@ export default function Ocorrencias() {
 
   function editarOcorrencia(ocorrencia: Ocorrencia) {
     if (documentoBloqueadoParaEdicao(ocorrencia)) {
-      mensagemDocumentoBloqueado();
+      mensagemDocumentoBloqueado(ocorrencia);
       return;
     }
 
@@ -859,12 +867,33 @@ export default function Ocorrencias() {
     limparFormulario();
   }
 
-  async function iniciarAnaliseOcorrencia(id: number) {
+  async function abrirAnaliseOcorrencia(ocorrencia: Ocorrencia) {
+    setOcorrenciaAnaliseModal(ocorrencia);
+    setAnaliseAtual(ocorrencia.analise || null);
+    setStatusAnalise(ocorrencia.analise?.status || "Em Análise");
+    setPrejuizoFinanceiro(ocorrencia.analise?.prejuizoFinanceiro || "0,00");
+    setConclusaoAnalise(ocorrencia.analise?.conclusaoAnalise || "");
+  }
+
+  function fecharAnaliseOcorrencia() {
+    setOcorrenciaAnaliseModal(null);
+    setAnaliseAtual(null);
+    setStatusAnalise("Em Análise");
+    setPrejuizoFinanceiro("0,00");
+    setConclusaoAnalise("");
+  }
+
+  async function iniciarAnaliseOcorrencia(id: number, abrirModal = false) {
     const response = await api.post(`/analises/ocorrencias/${id}`);
     setAnaliseAtual(response.data);
     setStatusAnalise(response.data.status);
     setPrejuizoFinanceiro(response.data.prejuizoFinanceiro || "0,00");
     setConclusaoAnalise(response.data.conclusaoAnalise || "");
+    if (abrirModal) {
+      setOcorrenciaAnaliseModal((atual) =>
+        atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+      );
+    }
     setOcorrenciaEditando((atual) =>
       atual ? { ...atual, status: response.data.status, analise: response.data } : atual
     );
@@ -887,6 +916,9 @@ export default function Ocorrencias() {
     });
 
     setAnaliseAtual(response.data);
+    setOcorrenciaAnaliseModal((atual) =>
+      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+    );
     setOcorrenciaEditando((atual) =>
       atual ? { ...atual, status: response.data.status, analise: response.data } : atual
     );
@@ -896,17 +928,48 @@ export default function Ocorrencias() {
 
   async function converterParaInvestigacao(ocorrencia: Ocorrencia) {
     const confirmar = window.confirm(
-      `Deseja iniciar uma investigação para a Ocorrência Nº ${ocorrencia.codigo}?`
+      ocorrencia.investigacao?.status === "Anulada"
+        ? `Deseja reabrir a R.I Nº ${formatarNumeroInvestigacao(ocorrencia.investigacao)} vinculada à Ocorrência Nº ${ocorrencia.codigo}?`
+        : `Deseja iniciar uma investigação para a Ocorrência Nº ${ocorrencia.codigo}?`
     );
 
     if (!confirmar) return;
 
-    const response = await api.post(`/investigacoes/converter/ocorrencias/${ocorrencia.id}`);
+    const pinOperacional = ocorrencia.investigacao?.status === "Anulada"
+      ? await solicitarPinOperacional("Informe seu PIN para reabrir a R.I anulada.")
+      : "";
+    if (ocorrencia.investigacao?.status === "Anulada" && !pinOperacional) return;
+
+    const response = await api.post(`/investigacoes/converter/ocorrencias/${ocorrencia.id}`, {
+      pinOperacional,
+    });
     setOcorrenciaEditando((atual) =>
       atual ? { ...atual, investigacao: response.data } : atual
     );
     carregarOcorrencias();
-    alert("Investigação criada com sucesso");
+    alert(ocorrencia.investigacao?.status === "Anulada" ? "Investigação reaberta com sucesso" : "Investigação criada com sucesso");
+  }
+
+  async function cancelarConversaoInvestigacao(ocorrencia: Ocorrencia) {
+    if (!ocorrencia.investigacao) return;
+
+    const confirmar = window.confirm(
+      `Deseja cancelar a conversão para R.I Nº ${formatarNumeroInvestigacao(ocorrencia.investigacao)}? A investigação ficará como anulada e poderá ser reaberta futuramente.`
+    );
+
+    if (!confirmar) return;
+
+    const pinOperacional = await solicitarPinOperacional("Informe seu PIN para cancelar a conversão para R.I.");
+    if (!pinOperacional) return;
+
+    const response = await api.post(`/investigacoes/converter/ocorrencias/${ocorrencia.id}/cancelar`, {
+      pinOperacional,
+    });
+    setOcorrenciaEditando((atual) =>
+      atual ? { ...atual, investigacao: response.data, status: response.data.ocorrencia?.status || atual.status } : atual
+    );
+    carregarOcorrencias();
+    alert("Conversão para R.I cancelada. A investigação foi marcada como anulada.");
   }
 
   async function salvarOcorrencia(e: React.FormEvent) {
@@ -1006,26 +1069,6 @@ export default function Ocorrencias() {
                 >
                   Editar Dados
                 </button>
-
-                {!analiseAtual && podeAnalisar() && (
-                  <button
-                    type="button"
-                    onClick={() => iniciarAnaliseOcorrencia(ocorrenciaEditando.id)}
-                    className="bg-amber-600 text-white px-4 py-2 rounded-lg"
-                  >
-                    Iniciar Análise
-                  </button>
-                )}
-
-                {!ocorrenciaEditando.investigacao && podeAnalisar() && (
-                  <button
-                    type="button"
-                    onClick={() => converterParaInvestigacao(ocorrenciaEditando)}
-                    className="bg-purple-700 text-white px-4 py-2 rounded-lg"
-                  >
-                    CONVERTER PARA R.I
-                  </button>
-                )}
               </div>
 
               {analiseAtual && (
@@ -1035,10 +1078,16 @@ export default function Ocorrencias() {
                 </div>
               )}
 
-              {ocorrenciaEditando.investigacao && (
+              {ocorrenciaEditando.investigacao && ocorrenciaEditando.investigacao.status !== "Anulada" && (
                 <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-800">
                   Este relatório foi convertido para R.I Nº{" "}
                   {formatarNumeroInvestigacao(ocorrenciaEditando.investigacao)}.
+                </div>
+              )}
+
+              {ocorrenciaEditando.investigacao?.status === "Anulada" && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  A R.I Nº {formatarNumeroInvestigacao(ocorrenciaEditando.investigacao)} está anulada. Ela será reaberta se a ocorrência for convertida novamente.
                 </div>
               )}
             </div>
@@ -1483,46 +1532,6 @@ export default function Ocorrencias() {
 
           </fieldset>
 
-          {analiseAtual && podeAnalisar() && (
-            <div className="border rounded-xl p-4 space-y-4 bg-amber-50">
-              <h3 className="font-bold text-lg">Análise da Ocorrência</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  className="w-full border rounded-lg p-3"
-                  value={statusAnalise}
-                  onChange={(e) => setStatusAnalise(e.target.value)}
-                >
-                  <option value="Em Análise">Em Análise</option>
-                  <option value="Concluído">Concluído</option>
-                </select>
-
-                <input
-                  className="w-full border rounded-lg p-3"
-                  value={prejuizoFinanceiro}
-                  onChange={(e) => setPrejuizoFinanceiro(formatarBrl(e.target.value))}
-                  placeholder="Prejuízo financeiro em BRL"
-                  inputMode="numeric"
-                />
-              </div>
-
-              <LexicalEditor
-                value={conclusaoAnalise}
-                onChange={setConclusaoAnalise}
-                title="Descrição da análise"
-                placeholder="Descreva a análise da ocorrência..."
-              />
-
-              <button
-                type="button"
-                onClick={salvarAnaliseOcorrencia}
-                className="bg-amber-600 text-white px-4 py-2 rounded-lg"
-              >
-                Salvar Análise
-              </button>
-            </div>
-          )}
-
           <div className="flex gap-3">
             {etapaFormulario > 1 && (
               <button
@@ -1591,7 +1600,47 @@ export default function Ocorrencias() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2 sm:flex sm:items-center">
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
+                  {podeAnalisar() && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        ocorrencia.analise
+                          ? abrirAnaliseOcorrencia(ocorrencia)
+                          : (setOcorrenciaAnaliseModal(ocorrencia), iniciarAnaliseOcorrencia(ocorrencia.id, true))
+                      }
+                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100 hover:text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20 dark:hover:text-amber-100"
+                      title={ocorrencia.analise ? "Abrir análise" : "Iniciar análise"}
+                    >
+                      <ClipboardCheck size={17} />
+                      <span>{ocorrencia.analise ? "Análise" : "Analisar"}</span>
+                    </button>
+                  )}
+
+                  {(!ocorrencia.investigacao || ocorrencia.investigacao.status === "Anulada") && podeAnalisar() && (
+                    <button
+                      type="button"
+                      onClick={() => converterParaInvestigacao(ocorrencia)}
+                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-100 hover:text-purple-800 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-200 dark:hover:bg-purple-500/20 dark:hover:text-purple-100"
+                      title={ocorrencia.investigacao?.status === "Anulada" ? "Reabrir investigação anulada" : "Converter para investigação"}
+                    >
+                      <FileSearch size={17} />
+                      <span>{ocorrencia.investigacao?.status === "Anulada" ? "Reabrir R.I" : "R.I"}</span>
+                    </button>
+                  )}
+
+                  {ocorrencia.investigacao && ocorrencia.investigacao.status !== "Anulada" && podeAnalisar() && (
+                    <button
+                      type="button"
+                      onClick={() => cancelarConversaoInvestigacao(ocorrencia)}
+                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-500/30 dark:bg-slate-500/10 dark:text-slate-200 dark:hover:bg-slate-500/20 dark:hover:text-white"
+                      title="Cancelar conversão para R.I"
+                    >
+                      <X size={17} />
+                      <span>Cancelar R.I</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setOcorrenciaMencao(ocorrencia)}
@@ -1637,6 +1686,100 @@ export default function Ocorrencias() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {ocorrenciaAnaliseModal && podeAnalisar() && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-amber-500/20 bg-white shadow-2xl dark:bg-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20">
+                  <ClipboardCheck size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-300">
+                    Análise da ocorrência
+                  </p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {ocorrenciaAnaliseModal.codigo} - {ocorrenciaAnaliseModal.assunto}
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Registre a avaliação técnica sem alterar os dados originais do relatório.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={fecharAnaliseOcorrencia}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                title="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(92vh-104px)] space-y-5 overflow-auto p-5">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase text-slate-500">Status do relatório</p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{ocorrenciaAnaliseModal.status}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase text-slate-500">Local</p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{ocorrenciaAnaliseModal.local}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase text-slate-500">Natureza</p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{ocorrenciaAnaliseModal.natureza}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <select
+                  className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  value={statusAnalise}
+                  onChange={(e) => setStatusAnalise(e.target.value)}
+                >
+                  <option value="Em Análise">Em Análise</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
+
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  value={prejuizoFinanceiro}
+                  onChange={(e) => setPrejuizoFinanceiro(formatarBrl(e.target.value))}
+                  placeholder="Prejuízo financeiro em BRL"
+                  inputMode="numeric"
+                />
+              </div>
+
+              <LexicalEditor
+                value={conclusaoAnalise}
+                onChange={setConclusaoAnalise}
+                title="Descrição da análise"
+                placeholder="Descreva a análise da ocorrência, providências avaliadas e conclusão técnica..."
+              />
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={fecharAnaliseOcorrencia}
+                  className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={salvarAnaliseOcorrencia}
+                  disabled={!analiseAtual}
+                  className="rounded-2xl bg-amber-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Salvar Análise
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

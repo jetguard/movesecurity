@@ -1,6 +1,7 @@
 ﻿import { Router } from "express";
 import {
   atualizarInvestigacao,
+  cancelarConversaoInvestigacao,
   converterOcorrenciaParaInvestigacao,
   listarInvestigacoes,
 } from "../controllers/investigacao.controller";
@@ -14,6 +15,12 @@ router.post(
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   converterOcorrenciaParaInvestigacao
+);
+router.post(
+  "/converter/ocorrencias/:ocorrenciaId/cancelar",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  cancelarConversaoInvestigacao
 );
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), atualizarInvestigacao);
 

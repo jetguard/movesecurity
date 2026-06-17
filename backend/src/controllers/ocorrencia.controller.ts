@@ -273,6 +273,12 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
       });
     }
 
+    if (ocorrenciaExiste.status === "Anulado") {
+      return res.status(403).json({
+        error: "Este relatório está anulado e não pode ser editado.",
+      });
+    }
+
     const assinaturaAprovacao = estaAprovado(ocorrenciaExiste)
       ? await assinaturaValidaDocumento("Ocorrencia", ocorrenciaExiste.id)
       : null;

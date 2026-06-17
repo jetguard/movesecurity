@@ -6,7 +6,7 @@ import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../../components/ui/PdfLightbox";
 import { solicitarPinOperacional } from "../../utils/pinPrompt";
-import { AtSign, Ban, Edit3, FileText, MapPin, Tags, Users } from "lucide-react";
+import { AtSign, Ban, ClipboardCheck, Edit3, FileText, MapPin, Tags, Users, X } from "lucide-react";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -116,6 +116,7 @@ export default function Eventos() {
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
+  const [eventoAnaliseModal, setEventoAnaliseModal] = useState<Evento | null>(null);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [locais, setLocais] = useState<LocalCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
@@ -380,18 +381,23 @@ export default function Eventos() {
   function documentoBloqueadoParaEdicao(evento?: Evento | null) {
     if (!evento) return false;
     return Boolean(
+      evento.status === "Anulado" ||
       evento.assinaturaAprovacaoValida &&
       (evento.fluxoStatus === "Aprovado" || evento.status === "Concluido" || evento.status === "Concluído")
     );
   }
 
-  function mensagemDocumentoBloqueado() {
+  function mensagemDocumentoBloqueado(evento?: Evento | null) {
+    if (evento?.status === "Anulado") {
+      alert("Este relatório está anulado e não pode ser editado.");
+      return;
+    }
     alert("Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.");
   }
 
   function desbloquearEdicaoEvento() {
     if (documentoBloqueadoParaEdicao(eventoEditando)) {
-      mensagemDocumentoBloqueado();
+      mensagemDocumentoBloqueado(eventoEditando);
       return;
     }
     setPermitirEdicao(true);
@@ -399,7 +405,7 @@ export default function Eventos() {
 
   function editarEvento(evento: Evento) {
     if (documentoBloqueadoParaEdicao(evento)) {
-      mensagemDocumentoBloqueado();
+      mensagemDocumentoBloqueado(evento);
       return;
     }
 
@@ -438,12 +444,33 @@ export default function Eventos() {
     limparFormulario();
   }
 
-  async function iniciarAnaliseEvento(id: number) {
+  function abrirAnaliseEvento(evento: Evento) {
+    setEventoAnaliseModal(evento);
+    setAnaliseAtual(evento.analise || null);
+    setStatusAnalise(evento.analise?.status || "Em Análise");
+    setValorRecuperado(evento.analise?.valorRecuperado || "0,00");
+    setConclusaoAnalise(evento.analise?.conclusaoAnalise || "");
+  }
+
+  function fecharAnaliseEvento() {
+    setEventoAnaliseModal(null);
+    setAnaliseAtual(null);
+    setStatusAnalise("Em Análise");
+    setValorRecuperado("0,00");
+    setConclusaoAnalise("");
+  }
+
+  async function iniciarAnaliseEvento(id: number, abrirModal = false) {
     const response = await api.post(`/analises/eventos/${id}`);
     setAnaliseAtual(response.data);
     setStatusAnalise(response.data.status);
     setValorRecuperado(response.data.valorRecuperado || "0,00");
     setConclusaoAnalise(response.data.conclusaoAnalise || "");
+    if (abrirModal) {
+      setEventoAnaliseModal((atual) =>
+        atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+      );
+    }
     setEventoEditando((atual) =>
       atual ? { ...atual, status: response.data.status, analise: response.data } : atual
     );
@@ -466,6 +493,9 @@ export default function Eventos() {
     });
 
     setAnaliseAtual(response.data);
+    setEventoAnaliseModal((atual) =>
+      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+    );
     setEventoEditando((atual) =>
       atual ? { ...atual, status: response.data.status, analise: response.data } : atual
     );
@@ -558,16 +588,6 @@ export default function Eventos() {
                 >
                   Editar Dados
                 </button>
-
-                {!analiseAtual && podeAnalisar() && (
-                  <button
-                    type="button"
-                    onClick={() => iniciarAnaliseEvento(eventoEditando.id)}
-                    className="bg-amber-600 text-white px-4 py-2 rounded-lg"
-                  >
-                    Iniciar Análise
-                  </button>
-                )}
               </div>
 
               {analiseAtual && (
@@ -958,46 +978,6 @@ export default function Eventos() {
 
           </fieldset>
 
-          {analiseAtual && podeAnalisar() && (
-            <div className="border rounded-xl p-4 space-y-4 bg-amber-50">
-              <h3 className="font-bold text-lg">Análise do Evento</h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <select
-                  className="w-full border rounded-lg p-3"
-                  value={statusAnalise}
-                  onChange={(e) => setStatusAnalise(e.target.value)}
-                >
-                  <option value="Em Análise">Em Análise</option>
-                  <option value="Concluído">Concluído</option>
-                </select>
-
-                <input
-                  className="w-full border rounded-lg p-3"
-                  value={valorRecuperado}
-                  onChange={(e) => setValorRecuperado(formatarBrl(e.target.value))}
-                  placeholder="Valor recuperado em BRL"
-                  inputMode="numeric"
-                />
-              </div>
-
-              <LexicalEditor
-                value={conclusaoAnalise}
-                onChange={setConclusaoAnalise}
-                title="Descrição da análise"
-                placeholder="Descreva a análise do evento..."
-              />
-
-              <button
-                type="button"
-                onClick={salvarAnaliseEvento}
-                className="bg-amber-600 text-white px-4 py-2 rounded-lg"
-              >
-                Salvar Análise
-              </button>
-            </div>
-          )}
-
           <div className="flex gap-3">
             {etapaFormulario > 1 && (
               <button
@@ -1066,7 +1046,23 @@ export default function Eventos() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-2 sm:flex sm:items-center">
+                <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
+                  {podeAnalisar() && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        evento.analise
+                          ? abrirAnaliseEvento(evento)
+                          : (setEventoAnaliseModal(evento), iniciarAnaliseEvento(evento.id, true))
+                      }
+                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100 hover:text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20 dark:hover:text-amber-100"
+                      title={evento.analise ? "Abrir análise" : "Iniciar análise"}
+                    >
+                      <ClipboardCheck size={17} />
+                      <span>{evento.analise ? "Análise" : "Analisar"}</span>
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setEventoMencao(evento)}
@@ -1112,6 +1108,100 @@ export default function Eventos() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {eventoAnaliseModal && podeAnalisar() && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-amber-500/20 bg-white shadow-2xl dark:bg-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20">
+                  <ClipboardCheck size={22} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-300">
+                    Análise do evento
+                  </p>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                    {eventoAnaliseModal.codigo} - {eventoAnaliseModal.assunto}
+                  </h2>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Registre a avaliação sem misturar a análise com os dados originais do evento.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={fecharAnaliseEvento}
+                className="rounded-full border border-slate-200 p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                title="Fechar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="max-h-[calc(92vh-104px)] space-y-5 overflow-auto p-5">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase text-slate-500">Status do relatório</p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{eventoAnaliseModal.status}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase text-slate-500">Local</p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{eventoAnaliseModal.local}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
+                  <p className="text-xs font-bold uppercase text-slate-500">Natureza</p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{eventoAnaliseModal.natureza}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <select
+                  className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  value={statusAnalise}
+                  onChange={(e) => setStatusAnalise(e.target.value)}
+                >
+                  <option value="Em Análise">Em Análise</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
+
+                <input
+                  className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                  value={valorRecuperado}
+                  onChange={(e) => setValorRecuperado(formatarBrl(e.target.value))}
+                  placeholder="Valor recuperado em BRL"
+                  inputMode="numeric"
+                />
+              </div>
+
+              <LexicalEditor
+                value={conclusaoAnalise}
+                onChange={setConclusaoAnalise}
+                title="Descrição da análise"
+                placeholder="Descreva a análise do evento, providências avaliadas e conclusão técnica..."
+              />
+
+              <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={fecharAnaliseEvento}
+                  className="rounded-2xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={salvarAnaliseEvento}
+                  disabled={!analiseAtual}
+                  className="rounded-2xl bg-amber-500 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Salvar Análise
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
