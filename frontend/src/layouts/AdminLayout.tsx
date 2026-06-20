@@ -40,6 +40,7 @@ import {
 import { api } from "../services/api";
 import {
   podeAdministrar,
+  podeAnalisar,
   podeGerenciarRiscos,
   podeTrocarAmbiente,
   podeVerNaturezas,
@@ -61,11 +62,23 @@ export default function AdminLayout() {
   const [apisOpen, setApisOpen] = useState(false);
   const [sistemaOpen, setSistemaOpen] = useState(false);
   const [segundosSessao, setSegundosSessao] = useState(0);
-  const [notificacoes, setNotificacoes] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string }>>([]);
-  const [toasts, setToasts] = useState<Array<{ id: string; titulo: string; mensagem: string; severidade: string; link?: string }>>([]);
+  const [notificacoes, setNotificacoes] = useState<
+    Array<{ id: string; titulo: string; mensagem: string; severidade: string }>
+  >([]);
+  const [toasts, setToasts] = useState<
+    Array<{
+      id: string;
+      titulo: string;
+      mensagem: string;
+      severidade: string;
+      link?: string;
+    }>
+  >([]);
   const [mencoesPendentes, setMencoesPendentes] = useState(0);
   const [passagensAbertas, setPassagensAbertas] = useState(0);
-  const [sistemaBloqueado, setSistemaBloqueado] = useState(() => localStorage.getItem("sistemaBloqueado") === "true");
+  const [sistemaBloqueado, setSistemaBloqueado] = useState(
+    () => localStorage.getItem("sistemaBloqueado") === "true",
+  );
   const [pinDesbloqueio, setPinDesbloqueio] = useState("");
   const [erroDesbloqueio, setErroDesbloqueio] = useState("");
   const [desbloqueando, setDesbloqueando] = useState(false);
@@ -98,7 +111,8 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (!unidadesDisponiveis.includes(unidadeAtiva)) {
-      const proximaUnidade = unidadesDisponiveis[0] || usuario?.unidade || "GJA-T1";
+      const proximaUnidade =
+        unidadesDisponiveis[0] || usuario?.unidade || "GJA-T1";
       setUnidadeAtiva(proximaUnidade);
       sessionStorage.setItem("unidadeAtiva", proximaUnidade);
     }
@@ -126,7 +140,9 @@ export default function AdminLayout() {
     };
 
     const verificarInatividade = () => {
-      const ultimaAtividade = Number(localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE) || Date.now());
+      const ultimaAtividade = Number(
+        localStorage.getItem(CHAVE_ULTIMA_ATIVIDADE) || Date.now(),
+      );
       if (Date.now() - ultimaAtividade >= LIMITE_INATIVIDADE_MS) {
         bloquearPorInatividade();
       }
@@ -153,14 +169,18 @@ export default function AdminLayout() {
     verificarInatividade();
 
     const eventos = ["click", "keydown", "mousemove", "touchstart", "scroll"];
-    eventos.forEach((evento) => window.addEventListener(evento, atualizarAtividade, { passive: true }));
+    eventos.forEach((evento) =>
+      window.addEventListener(evento, atualizarAtividade, { passive: true }),
+    );
     window.addEventListener("focus", verificarInatividade);
     document.addEventListener("visibilitychange", verificarAoRetornar);
 
     const interval = window.setInterval(verificarInatividade, 10000);
 
     return () => {
-      eventos.forEach((evento) => window.removeEventListener(evento, atualizarAtividade));
+      eventos.forEach((evento) =>
+        window.removeEventListener(evento, atualizarAtividade),
+      );
       window.removeEventListener("focus", verificarInatividade);
       document.removeEventListener("visibilitychange", verificarAoRetornar);
       window.clearInterval(interval);
@@ -169,19 +189,22 @@ export default function AdminLayout() {
 
   useEffect(() => {
     function carregarNotificacoes() {
-      api.get("/gestao/notificacoes")
-      .then((response) => setNotificacoes(response.data))
-      .catch(() => setNotificacoes([]));
+      api
+        .get("/gestao/notificacoes")
+        .then((response) => setNotificacoes(response.data))
+        .catch(() => setNotificacoes([]));
     }
 
     carregarNotificacoes();
     window.addEventListener("notificacoes-atualizadas", carregarNotificacoes);
 
-    api.get("/mencoes/contador")
+    api
+      .get("/mencoes/contador")
       .then((response) => setMencoesPendentes(response.data.total || 0))
       .catch(() => setMencoesPendentes(0));
 
-    api.get("/operacao/passagens-turno")
+    api
+      .get("/operacao/passagens-turno")
       .then((response) => {
         const abertas = Array.isArray(response.data)
           ? response.data.filter((item) => item.status === "Aberto").length
@@ -190,7 +213,11 @@ export default function AdminLayout() {
       })
       .catch(() => setPassagensAbertas(0));
 
-    return () => window.removeEventListener("notificacoes-atualizadas", carregarNotificacoes);
+    return () =>
+      window.removeEventListener(
+        "notificacoes-atualizadas",
+        carregarNotificacoes,
+      );
   }, []);
 
   useEffect(() => {
@@ -210,19 +237,29 @@ export default function AdminLayout() {
           severidade: data.severidade || "media",
           link: data.link,
         };
-        setNotificacoes((atuais) => [
-          {
-            id,
-            titulo: novaNotificacao.titulo,
-            mensagem: novaNotificacao.mensagem,
-            severidade: novaNotificacao.severidade,
+        setNotificacoes((atuais) =>
+          [
+            {
+              id,
+              titulo: novaNotificacao.titulo,
+              mensagem: novaNotificacao.mensagem,
+              severidade: novaNotificacao.severidade,
+            },
+            ...atuais,
+          ].slice(0, 50),
+        );
+        setToasts((atuais) =>
+          [novaNotificacao, ...atuais.filter((item) => item.id !== id)].slice(
+            0,
+            3,
+          ),
+        );
+        window.setTimeout(
+          () => {
+            setToasts((atuais) => atuais.filter((item) => item.id !== id));
           },
-          ...atuais,
-        ].slice(0, 50));
-        setToasts((atuais) => [novaNotificacao, ...atuais.filter((item) => item.id !== id)].slice(0, 3));
-        window.setTimeout(() => {
-          setToasts((atuais) => atuais.filter((item) => item.id !== id));
-        }, data.severidade === "alta" ? 9500 : 7000);
+          data.severidade === "alta" ? 9500 : 7000,
+        );
       } catch {
         // Mensagens inválidas do socket são ignoradas para não interromper a sessão.
       }
@@ -262,7 +299,9 @@ export default function AdminLayout() {
   }
 
   function bloquearSistema() {
-    const confirmarBloqueio = window.confirm("Deseja realmente bloquear a sessão atual?");
+    const confirmarBloqueio = window.confirm(
+      "Deseja realmente bloquear a sessão atual?",
+    );
     if (!confirmarBloqueio) return;
 
     localStorage.setItem("sistemaBloqueado", "true");
@@ -276,8 +315,10 @@ export default function AdminLayout() {
   }
 
   function classeToast(severidade: string) {
-    if (severidade === "alta") return "border-red-400/40 bg-red-950/95 text-red-50 shadow-red-950/30";
-    if (severidade === "baixa") return "border-emerald-400/30 bg-emerald-950/95 text-emerald-50 shadow-emerald-950/30";
+    if (severidade === "alta")
+      return "border-red-400/40 bg-red-950/95 text-red-50 shadow-red-950/30";
+    if (severidade === "baixa")
+      return "border-emerald-400/30 bg-emerald-950/95 text-emerald-50 shadow-emerald-950/30";
     return "border-blue-400/35 bg-slate-950/95 text-white shadow-blue-950/30";
   }
 
@@ -292,14 +333,19 @@ export default function AdminLayout() {
 
     try {
       setDesbloqueando(true);
-      await api.post("/auth/desbloquear-sessao", { pinOperacional: pinDesbloqueio });
+      await api.post("/auth/desbloquear-sessao", {
+        pinOperacional: pinDesbloqueio,
+      });
       localStorage.removeItem("sistemaBloqueado");
       localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE, String(Date.now()));
       setPinDesbloqueio("");
       setSistemaBloqueado(false);
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { error?: string } } };
-      setErroDesbloqueio(apiError.response?.data?.error || "Não foi possível desbloquear o sistema.");
+      setErroDesbloqueio(
+        apiError.response?.data?.error ||
+          "Não foi possível desbloquear o sistema.",
+      );
     } finally {
       setDesbloqueando(false);
     }
@@ -337,10 +383,18 @@ export default function AdminLayout() {
       <aside
         className={`fixed inset-y-0 left-0 z-30 w-80 max-w-[86vw] ${sidebarWidth} transform-gpu overflow-y-auto bg-slate-950 text-white shadow-2xl transition-[width,transform] duration-75 ease-out [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin] [will-change:width,transform] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700/70 [&::-webkit-scrollbar-track]:bg-transparent ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:translate-x-0 md:shadow-none`}
       >
-        <div className={`flex h-20 items-center border-b border-slate-800 p-4 ${mostrarTextoMenu ? "justify-between" : "justify-center"}`}>
-          <div className={`overflow-hidden ${mostrarTextoMenu ? "w-40 opacity-100" : "w-0 opacity-0"}`}>
+        <div
+          className={`flex h-20 items-center border-b border-slate-800 p-4 ${mostrarTextoMenu ? "justify-between" : "justify-center"}`}
+        >
+          <div
+            className={`overflow-hidden ${mostrarTextoMenu ? "w-40 opacity-100" : "w-0 opacity-0"}`}
+          >
             <Link to="/" className="flex min-w-0 items-center">
-              <img src="/images/movecta-logo.png" alt="Movecta" className="brand-logo h-10 w-40 rounded bg-white object-contain px-3 py-2" />
+              <img
+                src="/images/movecta-logo.png"
+                alt="Movecta"
+                className="brand-logo h-10 w-40 rounded bg-white object-contain px-3 py-2"
+              />
             </Link>
           </div>
 
@@ -353,18 +407,28 @@ export default function AdminLayout() {
           >
             {open ? "<" : ">"}
           </button>
-          <button onClick={() => setMobileMenuOpen(false)} className="rounded-lg bg-slate-800 p-2 text-sm hover:bg-slate-700 md:hidden" aria-label="Fechar menu">
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="rounded-lg bg-slate-800 p-2 text-sm hover:bg-slate-700 md:hidden"
+            aria-label="Fechar menu"
+          >
             <X size={20} />
           </button>
         </div>
 
-        <nav onClick={fecharMenuMobileAoNavegar} className="mt-6 flex flex-col gap-2 px-2 pb-6 sm:px-3">
+        <nav
+          onClick={fecharMenuMobileAoNavegar}
+          className="mt-6 flex flex-col gap-2 px-2 pb-6 sm:px-3"
+        >
           <Link to="/" className={item}>
             <LayoutDashboard size={20} className="shrink-0" />
             <span className={menuText}>Dashboard</span>
           </Link>
 
-          <button onClick={() => setRelatoriosOpen(!relatoriosOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
+          <button
+            onClick={() => setRelatoriosOpen(!relatoriosOpen)}
+            className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+          >
             <div className="flex items-center gap-3">
               <FolderOpen size={20} className="shrink-0" />
               <span className={menuText}>Relatórios</span>
@@ -407,7 +471,10 @@ export default function AdminLayout() {
             </div>
           )}
 
-          <button onClick={() => setOperacaoOpen(!operacaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
+          <button
+            onClick={() => setOperacaoOpen(!operacaoOpen)}
+            className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+          >
             <div className="flex items-center gap-3">
               <ListChecks size={20} className="shrink-0" />
               <span className={menuText}>Operação</span>
@@ -458,12 +525,17 @@ export default function AdminLayout() {
 
           {podeGerenciarRiscos() && (
             <>
-              <button onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
+              <button
+                onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)}
+                className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+              >
                 <div className="flex items-center gap-3">
                   <BrainCircuit size={20} className="shrink-0" />
                   <span className={menuText}>Gestão Avançada</span>
                 </div>
-                <span className={menuToggle}>{gestaoAvancadaOpen ? "-" : "+"}</span>
+                <span className={menuToggle}>
+                  {gestaoAvancadaOpen ? "-" : "+"}
+                </span>
               </button>
 
               {gestaoAvancadaOpen && (
@@ -503,12 +575,17 @@ export default function AdminLayout() {
 
           {(podeAdministrar() || podeVerNaturezas()) && (
             <>
-              <button onClick={() => setAdministracaoOpen(!administracaoOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
+              <button
+                onClick={() => setAdministracaoOpen(!administracaoOpen)}
+                className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+              >
                 <div className="flex items-center gap-3">
                   <Settings size={20} className="shrink-0" />
                   <span className={menuText}>Administração</span>
                 </div>
-                <span className={menuToggle}>{administracaoOpen ? "-" : "+"}</span>
+                <span className={menuToggle}>
+                  {administracaoOpen ? "-" : "+"}
+                </span>
               </button>
 
               {administracaoOpen && (
@@ -552,7 +629,10 @@ export default function AdminLayout() {
             <>
               {podeAdministrar() && (
                 <>
-                  <button onClick={() => setApisOpen(!apisOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
+                  <button
+                    onClick={() => setApisOpen(!apisOpen)}
+                    className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+                  >
                     <div className="flex items-center gap-3">
                       <KeyRound size={20} className="shrink-0" />
                       <span className={menuText}>API's</span>
@@ -571,7 +651,10 @@ export default function AdminLayout() {
                 </>
               )}
 
-              <button onClick={() => setSistemaOpen(!sistemaOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4">
+              <button
+                onClick={() => setSistemaOpen(!sistemaOpen)}
+                className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+              >
                 <div className="flex items-center gap-3">
                   <Server size={20} className="shrink-0" />
                   <span className={menuText}>Sistema</span>
@@ -581,12 +664,14 @@ export default function AdminLayout() {
 
               {sistemaOpen && (
                 <div className={submenuClass}>
+                  {podeAnalisar() && (
+                    <Link to="/governanca" className={subItem}>
+                      <Server size={16} />
+                      Governança
+                    </Link>
+                  )}
                   {podeAdministrar() && (
                     <>
-                      <Link to="/governanca" className={subItem}>
-                        <Server size={16} />
-                        Governança
-                      </Link>
                       <Link to="/atualizacoes" className={subItem}>
                         <ScrollText size={16} />
                         Atualizações
@@ -614,7 +699,10 @@ export default function AdminLayout() {
             </>
           )}
 
-          <button onClick={logout} className="mt-6 flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition-colors duration-100 hover:bg-red-900 hover:text-white">
+          <button
+            onClick={logout}
+            className="mt-6 flex items-center gap-3 rounded-xl px-4 py-3 text-slate-300 transition-colors duration-100 hover:bg-red-900 hover:text-white"
+          >
             <LogOut size={20} className="shrink-0" />
             <span className={menuText}>Sair</span>
           </button>
@@ -634,7 +722,10 @@ export default function AdminLayout() {
             </button>
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
-              <Link to="/notificacoes" className="relative shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800">
+              <Link
+                to="/notificacoes"
+                className="relative shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800"
+              >
                 <Bell size={16} />
                 {notificacoes.length > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">
@@ -642,7 +733,10 @@ export default function AdminLayout() {
                   </span>
                 )}
               </Link>
-              <Link to="/meus-dados?aba=mencoes" className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[390px]:inline-flex">
+              <Link
+                to="/meus-dados?aba=mencoes"
+                className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[390px]:inline-flex"
+              >
                 <AtSign size={16} />
                 {mencoesPendentes > 0 && (
                   <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
@@ -653,7 +747,11 @@ export default function AdminLayout() {
               <Link
                 to="/operacao-soc"
                 className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[460px]:inline-flex"
-                title={passagensAbertas > 0 ? "Há Relatório CCOS em aberto" : "Relatório CCOS"}
+                title={
+                  passagensAbertas > 0
+                    ? "Há Relatório CCOS em aberto"
+                    : "Relatório CCOS"
+                }
               >
                 <Activity size={16} />
                 {passagensAbertas > 0 && (
@@ -671,16 +769,32 @@ export default function AdminLayout() {
                 <Lock size={16} />
               </button>
 
-              <Link to="/meus-dados" className="min-w-0 max-w-[6.5rem] text-right min-[430px]:max-w-[9rem]">
-                <p className="hidden truncate text-sm font-semibold text-white min-[430px]:block">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
-                <p className="truncate text-[11px] font-semibold text-slate-300">Unidade: {unidadeAtiva}</p>
+              <Link
+                to="/meus-dados"
+                className="min-w-0 max-w-[6.5rem] text-right min-[430px]:max-w-[9rem]"
+              >
+                <p className="hidden truncate text-sm font-semibold text-white min-[430px]:block">
+                  {usuario?.apelido || usuario?.nome || "Usuario"}
+                </p>
+                <p className="truncate text-[11px] font-semibold text-slate-300">
+                  Unidade: {unidadeAtiva}
+                </p>
               </Link>
-              <Link to="/meus-dados" className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-800 ring-2 ring-transparent transition hover:ring-blue-400 min-[430px]:h-10 min-[430px]:w-10">
+              <Link
+                to="/meus-dados"
+                className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-slate-800 ring-2 ring-transparent transition hover:ring-blue-400 min-[430px]:h-10 min-[430px]:w-10"
+              >
                 {usuario?.fotoPerfil ? (
-                  <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
+                  <img
+                    src={usuario.fotoPerfil}
+                    alt="Perfil"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center font-bold text-slate-100">
-                    {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
+                    {(usuario?.apelido || usuario?.nome || "U")
+                      .charAt(0)
+                      .toUpperCase()}
                   </div>
                 )}
               </Link>
@@ -702,12 +816,17 @@ export default function AdminLayout() {
                 ))}
               </select>
             ) : (
-              <p className="font-bold text-slate-100">Unidade: {usuario?.unidade || "GJA-T1"}</p>
+              <p className="font-bold text-slate-100">
+                Unidade: {usuario?.unidade || "GJA-T1"}
+              </p>
             )}
           </div>
 
           <div className="hidden min-w-0 items-center justify-end gap-3 sm:gap-4 md:flex">
-            <Link to="/notificacoes" className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800">
+            <Link
+              to="/notificacoes"
+              className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
+            >
               <Bell size={18} />
               {notificacoes.length > 0 && (
                 <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
@@ -715,7 +834,10 @@ export default function AdminLayout() {
                 </span>
               )}
             </Link>
-            <Link to="/meus-dados?aba=mencoes" className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800">
+            <Link
+              to="/meus-dados?aba=mencoes"
+              className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
+            >
               <AtSign size={18} />
               {mencoesPendentes > 0 && (
                 <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-xs font-bold text-white">
@@ -726,7 +848,11 @@ export default function AdminLayout() {
             <Link
               to="/operacao-soc"
               className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
-              title={passagensAbertas > 0 ? "Há Relatório CCOS em aberto" : "Relatório CCOS"}
+              title={
+                passagensAbertas > 0
+                  ? "Há Relatório CCOS em aberto"
+                  : "Relatório CCOS"
+              }
             >
               <Activity size={18} />
               {passagensAbertas > 0 && (
@@ -743,16 +869,32 @@ export default function AdminLayout() {
             >
               <Lock size={18} />
             </button>
-            <Link to="/meus-dados" className="hidden min-w-0 text-left sm:text-right md:block">
-              <p className="font-semibold text-white">{usuario?.apelido || usuario?.nome || "Usuario"}</p>
-              <p className="text-xs text-slate-400">Sessao: {formatarSessao(segundosSessao)}</p>
+            <Link
+              to="/meus-dados"
+              className="hidden min-w-0 text-left sm:text-right md:block"
+            >
+              <p className="font-semibold text-white">
+                {usuario?.apelido || usuario?.nome || "Usuario"}
+              </p>
+              <p className="text-xs text-slate-400">
+                Sessao: {formatarSessao(segundosSessao)}
+              </p>
             </Link>
-            <Link to="/meus-dados" className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-800 ring-2 ring-transparent transition hover:ring-blue-400 md:block">
+            <Link
+              to="/meus-dados"
+              className="hidden h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-800 ring-2 ring-transparent transition hover:ring-blue-400 md:block"
+            >
               {usuario?.fotoPerfil ? (
-                <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
+                <img
+                  src={usuario.fotoPerfil}
+                  alt="Perfil"
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="flex h-full w-full items-center justify-center font-bold text-slate-100">
-                  {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
+                  {(usuario?.apelido || usuario?.nome || "U")
+                    .charAt(0)
+                    .toUpperCase()}
                 </div>
               )}
             </Link>
@@ -787,7 +929,9 @@ export default function AdminLayout() {
                       <X size={15} />
                     </button>
                   </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-white/78">{toast.mensagem}</p>
+                  <p className="mt-1 line-clamp-2 text-sm text-white/78">
+                    {toast.mensagem}
+                  </p>
                   <div className="mt-3 flex items-center justify-between gap-2">
                     <span className="rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white/80">
                       Tempo real
@@ -831,38 +975,57 @@ export default function AdminLayout() {
             </div>
 
             <div className="mt-5 text-center">
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-200">JetGuard bloqueado</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-200">
+                JetGuard bloqueado
+              </p>
               <h2 className="mt-2 text-2xl font-bold">Sessão protegida</h2>
               <p className="mt-2 text-sm text-slate-300">
-                O sistema está bloqueado para proteger as informações em tela. Digite o PIN operacional do usuário conectado para continuar.
+                O sistema está bloqueado para proteger as informações em tela.
+                Digite o PIN operacional do usuário conectado para continuar.
               </p>
             </div>
 
             <div className="mt-6 flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900 p-3">
               <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-800">
                 {usuario?.fotoPerfil ? (
-                  <img src={usuario.fotoPerfil} alt="Perfil" className="h-full w-full object-cover" />
+                  <img
+                    src={usuario.fotoPerfil}
+                    alt="Perfil"
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center font-bold text-slate-300">
-                    {(usuario?.apelido || usuario?.nome || "U").charAt(0).toUpperCase()}
+                    {(usuario?.apelido || usuario?.nome || "U")
+                      .charAt(0)
+                      .toUpperCase()}
                   </div>
                 )}
               </div>
               <div className="min-w-0">
-                <p className="truncate font-semibold">{usuario?.apelido || usuario?.nome || "Usuário conectado"}</p>
-                <p className="truncate text-xs text-slate-400">{usuario?.email}</p>
+                <p className="truncate font-semibold">
+                  {usuario?.apelido || usuario?.nome || "Usuário conectado"}
+                </p>
+                <p className="truncate text-xs text-slate-400">
+                  {usuario?.email}
+                </p>
               </div>
             </div>
 
             <label className="mt-5 block">
-              <span className="mb-2 block text-sm font-semibold text-slate-200">PIN operacional</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-200">
+                PIN operacional
+              </span>
               <input
                 autoFocus
                 type="password"
                 inputMode="numeric"
                 maxLength={4}
                 value={pinDesbloqueio}
-                onChange={(event) => setPinDesbloqueio(event.target.value.replace(/\D/g, "").slice(0, 4))}
+                onChange={(event) =>
+                  setPinDesbloqueio(
+                    event.target.value.replace(/\D/g, "").slice(0, 4),
+                  )
+                }
                 className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
                 placeholder="Digite os 4 dígitos"
               />
@@ -894,5 +1057,3 @@ export default function AdminLayout() {
     </div>
   );
 }
-
-

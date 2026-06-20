@@ -2,8 +2,14 @@ import fs from "fs";
 import path from "path";
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
-import { jwtExpiresIn, jwtSecret, loginPolicy, sessionPolicy } from "../config/security";
+import {
+  jwtExpiresIn,
+  jwtSecret,
+  loginPolicy,
+  sessionPolicy,
+} from "../config/security";
 import { registrarLog } from "../services/auditoria.service";
+import { AuthRequest, PERFIS } from "../middlewares/auth";
 
 function resolverBancoSqlite() {
   const databaseUrl = process.env.DATABASE_URL || "";
@@ -20,7 +26,10 @@ function mascaraBooleano(valor: boolean) {
   return valor ? "Configurado" : "Pendente";
 }
 
-async function coletarIndicadores() {
+async function coletarIndicadores(unidade?: string) {
+  const porUnidade = unidade ? { unidade } : {};
+  const inicioHoje = new Date(new Date().setHours(0, 0, 0, 0));
+
   const [
     ocorrencias,
     eventos,
@@ -29,16 +38,19 @@ async function coletarIndicadores() {
     camerasOffline,
     logsHoje,
   ] = await Promise.all([
-    prisma.ocorrencia.count(),
-    prisma.evento.count(),
-    prisma.investigacao.count(),
-    prisma.analiseRisco.count({ where: { nivelRisco: "Crítico" } }),
-    prisma.cameraMonitoramento.count({ where: { status: "Desconectada", statusCadastro: "Ativa" } }),
+    prisma.ocorrencia.count({ where: porUnidade }),
+    prisma.evento.count({ where: porUnidade }),
+    prisma.investigacao.count({ where: porUnidade }),
+    prisma.analiseRisco.count({
+      where: { ...porUnidade, nivelRisco: "Crítico" },
+    }),
+    prisma.cameraMonitoramento.count({
+      where: { ...porUnidade, status: "Desconectada", statusCadastro: "Ativa" },
+    }),
     prisma.logAuditoria.count({
       where: {
-        createdAt: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-        },
+        ...(unidade ? { unidade } : {}),
+        createdAt: { gte: inicioHoje },
       },
     }),
   ]);
@@ -53,22 +65,74 @@ async function coletarIndicadores() {
   };
 }
 
-export async function statusGovernanca(req: Request, res: Response) {
+export async function statusGovernanca(req: AuthRequest, res: Response) {
   try {
     await prisma.$queryRaw`SELECT 1`;
+
+    const administrador = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
+      req.usuarioPerfil || "",
+    );
+    const unidade = req.unidadeAtiva;
+    const indicadores = await coletarIndicadores(unidade);
+
+    const resposta: Record<string, unknown> = {
+      unidade,
+      permissoes: {
+        operacional: true,
+        seguranca: administrador,
+        plataforma: administrador,
+      },
+      indicadores,
+      automacaoExecutiva: [
+        {
+          nome: "Resumo diário operacional",
+          frequencia: "Diário",
+          conteudo:
+            "Ocorrências, eventos, câmeras offline, riscos críticos e tarefas pendentes.",
+          status:
+            "Configurado para geração manual e pronto para agendamento externo.",
+        },
+        {
+          nome: "Relatório semanal executivo",
+          frequencia: "Semanal",
+          conteudo:
+            "Tendências, reincidência, SLA, criticidade e evolução patrimonial.",
+          status: "Pronto para integração com cron/servidor de produção.",
+        },
+        {
+          nome: "Pacote mensal de governança",
+          frequencia: "Mensal",
+          conteudo:
+            "Indicadores consolidados, auditoria, produtividade e plano de ação.",
+          status:
+            "Modelo executivo disponível no módulo de Gestão Patrimonial.",
+        },
+      ],
+      atualizadoEm: new Date().toISOString(),
+    };
+
+    if (!administrador) {
+      return res.json(resposta);
+    }
 
     const banco = resolverBancoSqlite();
     const uploadPath = path.resolve(process.cwd(), "uploads");
     const backupsPath = path.resolve(process.cwd(), "backups");
-    const jwtCustomizado = jwtSecret() !== "jetguard_dev_secret_change_me";
-    const superAdminSenha = Boolean(process.env.SUPER_ADMIN_PASSWORD);
-    const databaseUrl = Boolean(process.env.DATABASE_URL);
-    const corsRestrito = Boolean(process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*");
     const backupExiste = fs.existsSync(backupsPath)
       ? fs.readdirSync(backupsPath).some((arquivo) => arquivo.endsWith(".db"))
       : false;
+    const inicioHoje = new Date(new Date().setHours(0, 0, 0, 0));
+    const [sessoesAtivas, eventosSegurancaHoje] = await Promise.all([
+      prisma.sessaoUsuario.count({ where: { status: "ATIVA" } }),
+      prisma.logAuditoria.count({
+        where: {
+          tipoRegistro: { in: ["Auth", "SessaoUsuario", "Usuario"] },
+          createdAt: { gte: inicioHoje },
+        },
+      }),
+    ]);
 
-    return res.json({
+    Object.assign(resposta, {
       ambiente: {
         nodeEnv: process.env.NODE_ENV || "development",
         api: "online",
@@ -78,50 +142,46 @@ export async function statusGovernanca(req: Request, res: Response) {
         ultimoBackup: backupExiste ? "disponível" : "nenhum backup local",
       },
       seguranca: {
-        jwtSecret: mascaraBooleano(jwtCustomizado),
-        databaseUrl: mascaraBooleano(databaseUrl),
-        superAdminPassword: mascaraBooleano(superAdminSenha),
-        corsRestrito: mascaraBooleano(corsRestrito),
+        jwtSecret: mascaraBooleano(
+          jwtSecret() !== "jetguard_dev_secret_change_me",
+        ),
+        databaseUrl: mascaraBooleano(Boolean(process.env.DATABASE_URL)),
+        superAdminPassword: mascaraBooleano(
+          Boolean(process.env.SUPER_ADMIN_PASSWORD),
+        ),
+        corsRestrito: mascaraBooleano(
+          Boolean(process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*"),
+        ),
         jwtExpiracao: jwtExpiresIn(),
         maxTentativasLogin: loginPolicy.maxAttempts,
         bloqueioLoginMinutos: loginPolicy.lockMinutes,
         inatividadeSessaoMinutos: sessionPolicy.idleMinutes,
+        sessoesAtivas,
+        eventosSegurancaHoje,
       },
-      automacaoExecutiva: [
-        {
-          nome: "Resumo diário operacional",
-          frequencia: "Diário",
-          conteudo: "Ocorrências, eventos, câmeras offline, riscos críticos e tarefas pendentes.",
-          status: "Configurado para geração manual e pronto para agendamento externo.",
-        },
-        {
-          nome: "Relatório semanal executivo",
-          frequencia: "Semanal",
-          conteudo: "Tendências, reincidência, SLA, criticidade e evolução patrimonial.",
-          status: "Pronto para integração com cron/servidor de produção.",
-        },
-        {
-          nome: "Pacote mensal de governança",
-          frequencia: "Mensal",
-          conteudo: "Indicadores consolidados, auditoria, produtividade e plano de ação.",
-          status: "Modelo executivo disponível no módulo de Gestão Patrimonial.",
-        },
-      ],
-      indicadores: await coletarIndicadores(),
       producao: {
         backupAutomatico: {
-          status: backupExiste ? "Backup local encontrado" : "Pendente de agendamento",
-          recomendacao: "Agendar backup diário do banco e da pasta uploads no cron da VPS.",
+          status: backupExiste
+            ? "Backup local encontrado"
+            : "Pendente de agendamento",
+          recomendacao:
+            "Agendar backup diário do banco e da pasta uploads no cron da VPS.",
         },
         postgres: {
           status: (process.env.DATABASE_URL || "").startsWith("postgres")
             ? "PostgreSQL ativo"
             : "Preparado para migração futura",
-          recomendacao: "Manter SQLite em operação leve e migrar para PostgreSQL quando houver maior volume ou múltiplos acessos simultâneos.",
+          recomendacao:
+            "Migrar para PostgreSQL quando houver maior volume ou múltiplos acessos simultâneos.",
         },
         testesAutomatizados: {
           status: "Base ativa",
-          comandos: ["npm test", "npm run typecheck", "npm run lint", "npm run build"],
+          comandos: [
+            "npm test",
+            "npm run typecheck",
+            "npm run lint",
+            "npm run build",
+          ],
         },
         monitoramentoSaude: {
           api: "online",
@@ -136,9 +196,10 @@ export async function statusGovernanca(req: Request, res: Response) {
         "Migrar para PostgreSQL quando o volume de registros e usuários crescer.",
         "Publicar a API atrás de HTTPS e proxy reverso.",
       ],
-      atualizadoEm: new Date().toISOString(),
     });
-  } catch (error) {
+
+    return res.json(resposta);
+  } catch {
     return res.status(500).json({
       error: "Erro ao consultar governança do ambiente",
     });
@@ -151,7 +212,8 @@ export async function gerarBackup(req: Request, res: Response) {
 
     if (!banco || !fs.existsSync(banco)) {
       return res.status(400).json({
-        error: "Backup automático disponível apenas para SQLite local configurado em DATABASE_URL.",
+        error:
+          "Backup automático disponível apenas para SQLite local configurado em DATABASE_URL.",
       });
     }
 
@@ -177,7 +239,7 @@ export async function gerarBackup(req: Request, res: Response) {
       arquivo: path.basename(destino),
       caminhoRelativo: `backups/${path.basename(destino)}`,
     });
-  } catch (error) {
+  } catch {
     return res.status(500).json({
       error: "Erro ao gerar backup",
     });

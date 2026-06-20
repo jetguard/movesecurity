@@ -8,27 +8,41 @@ import { SkeletonPage } from "./components/ui/Skeleton";
 import { lazyWithReload } from "./utils/lazyWithReload";
 
 const Dashboard = lazyWithReload(() => import("./pages/Dashboard"));
-const Ocorrencias = lazyWithReload(() => import("./pages/Relatórios/Ocorrencias"));
-const Investigacao = lazyWithReload(() => import("./pages/Relatórios/Investigacao"));
+const Ocorrencias = lazyWithReload(
+  () => import("./pages/Relatórios/Ocorrencias"),
+);
+const Investigacao = lazyWithReload(
+  () => import("./pages/Relatórios/Investigacao"),
+);
 const Eventos = lazyWithReload(() => import("./pages/Relatórios/Eventos"));
-const CentralDocumentos = lazyWithReload(() => import("./pages/CentralDocumentos"));
+const CentralDocumentos = lazyWithReload(
+  () => import("./pages/CentralDocumentos"),
+);
 const Naturezas = lazyWithReload(() => import("./pages/Cadastros/Naturezas"));
 const Locais = lazyWithReload(() => import("./pages/Cadastros/Locais"));
 const Login = lazyWithReload(() => import("./pages/Login"));
 const ColetaDados = lazyWithReload(() => import("./pages/ColetaDados"));
-const AlterarSenhaPrimeiroAcesso = lazyWithReload(() => import("./pages/AlterarSenhaPrimeiroAcesso"));
+const AlterarSenhaPrimeiroAcesso = lazyWithReload(
+  () => import("./pages/AlterarSenhaPrimeiroAcesso"),
+);
 const Perfil = lazyWithReload(() => import("./pages/Perfil"));
 const MeusDados = lazyWithReload(() => import("./pages/MeusDados"));
 const Logs = lazyWithReload(() => import("./pages/Logs"));
 const Usuarios = lazyWithReload(() => import("./pages/Usuarios"));
 const Riscos = lazyWithReload(() => import("./pages/Riscos"));
-const AnalisesEstrategicas = lazyWithReload(() => import("./pages/AnalisesEstrategicas"));
+const AnalisesEstrategicas = lazyWithReload(
+  () => import("./pages/AnalisesEstrategicas"),
+);
 const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
 const Pendencias = lazyWithReload(() => import("./pages/Pendencias"));
 const Notificacoes = lazyWithReload(() => import("./pages/Notificacoes"));
-const AlertasOperacionais = lazyWithReload(() => import("./pages/AlertasOperacionais"));
+const AlertasOperacionais = lazyWithReload(
+  () => import("./pages/AlertasOperacionais"),
+);
 const Timeline = lazyWithReload(() => import("./pages/Timeline"));
-const InteligenciaOperacional = lazyWithReload(() => import("./pages/InteligenciaOperacional"));
+const InteligenciaOperacional = lazyWithReload(
+  () => import("./pages/InteligenciaOperacional"),
+);
 const PlanosAcao = lazyWithReload(() => import("./pages/PlanosAcao"));
 const MatrizRisco = lazyWithReload(() => import("./pages/MatrizRisco"));
 const Checklists = lazyWithReload(() => import("./pages/Checklists"));
@@ -38,19 +52,29 @@ const Historico = lazyWithReload(() => import("./pages/Historico"));
 const Cameras = lazyWithReload(() => import("./pages/Cameras"));
 const Configuracoes = lazyWithReload(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
-const GestaoPatrimonialAvancada = lazyWithReload(() => import("./pages/GestaoPatrimonialAvancada"));
+const GestaoPatrimonialAvancada = lazyWithReload(
+  () => import("./pages/GestaoPatrimonialAvancada"),
+);
 const Governanca = lazyWithReload(() => import("./pages/Governanca"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazyWithReload(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazyWithReload(() => import("./pages/OperacaoSOC"));
 const RelatosCampo = lazyWithReload(() => import("./pages/RelatosCampo"));
 const MapaOperacional = lazyWithReload(() => import("./pages/MapaOperacional"));
-const AtualizacoesSistema = lazyWithReload(() => import("./pages/AtualizacoesSistema"));
-const IntegridadeSistema = lazyWithReload(() => import("./pages/IntegridadeSistema"));
-const SugestoesMelhoria = lazyWithReload(() => import("./pages/SugestoesMelhoria"));
+const AtualizacoesSistema = lazyWithReload(
+  () => import("./pages/AtualizacoesSistema"),
+);
+const IntegridadeSistema = lazyWithReload(
+  () => import("./pages/IntegridadeSistema"),
+);
+const SugestoesMelhoria = lazyWithReload(
+  () => import("./pages/SugestoesMelhoria"),
+);
 const Sessoes = lazyWithReload(() => import("./pages/Sessoes"));
 const APIsOpenAI = lazyWithReload(() => import("./pages/APIsOpenAI"));
-const RelatorioDiarioExecutivo = lazyWithReload(() => import("./pages/RelatorioDiarioExecutivo"));
+const RelatorioDiarioExecutivo = lazyWithReload(
+  () => import("./pages/RelatorioDiarioExecutivo"),
+);
 
 function CarregandoPagina() {
   return <SkeletonPage />;
@@ -88,19 +112,27 @@ export default function App() {
             <Route path="evidencias" element={<Evidencias />} />
             <Route path="pendencias" element={<Pendencias />} />
             <Route path="notificacoes" element={<Notificacoes />} />
-            <Route path="alertas-operacionais" element={<AlertasOperacionais />} />
+            <Route
+              path="alertas-operacionais"
+              element={<AlertasOperacionais />}
+            />
             <Route path="timeline/:tipo/:id" element={<Timeline />} />
             <Route path="meus-dados" element={<MeusDados />} />
             <Route path="mencoes" element={<Mencoes />} />
             <Route path="tarefas" element={<Tarefas />} />
             <Route path="minha-jornada" element={<MinhaJornada />} />
-            <Route path="anulacoes" element={<Navigate to="/documentos" replace />} />
+            <Route
+              path="anulacoes"
+              element={<Navigate to="/documentos" replace />}
+            />
             <Route path="cameras" element={<Cameras />} />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
             <Route
               path="relatorio-diario"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <RelatorioDiarioExecutivo />
                 </ProtectedRoute>
               }
@@ -112,7 +144,13 @@ export default function App() {
             <Route
               path="gestao-patrimonial"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <GestaoPatrimonialAvancada />
                 </ProtectedRoute>
               }
@@ -121,7 +159,13 @@ export default function App() {
             <Route
               path="inteligencia"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <InteligenciaOperacional />
                 </ProtectedRoute>
               }
@@ -129,7 +173,13 @@ export default function App() {
             <Route
               path="aprovacoes"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <Navigate to="/documentos" replace />
                 </ProtectedRoute>
               }
@@ -137,7 +187,13 @@ export default function App() {
             <Route
               path="planos-acao"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <PlanosAcao />
                 </ProtectedRoute>
               }
@@ -145,7 +201,13 @@ export default function App() {
             <Route
               path="matriz-risco"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <MatrizRisco />
                 </ProtectedRoute>
               }
@@ -153,7 +215,13 @@ export default function App() {
             <Route
               path="checklists"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <Checklists />
                 </ProtectedRoute>
               }
@@ -161,7 +229,13 @@ export default function App() {
             <Route
               path="riscos"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <Riscos />
                 </ProtectedRoute>
               }
@@ -169,7 +243,13 @@ export default function App() {
             <Route
               path="analises-estrategicas"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <AnalisesEstrategicas />
                 </ProtectedRoute>
               }
@@ -177,7 +257,14 @@ export default function App() {
             <Route
               path="naturezas"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA, PERFIS.OPERADOR]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                  ]}
+                >
                   <Naturezas />
                 </ProtectedRoute>
               }
@@ -185,7 +272,14 @@ export default function App() {
             <Route
               path="locais"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA, PERFIS.OPERADOR]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                  ]}
+                >
                   <Locais />
                 </ProtectedRoute>
               }
@@ -193,7 +287,9 @@ export default function App() {
             <Route
               path="configuracoes"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <Configuracoes />
                 </ProtectedRoute>
               }
@@ -201,7 +297,9 @@ export default function App() {
             <Route
               path="apis/openai"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <APIsOpenAI />
                 </ProtectedRoute>
               }
@@ -209,7 +307,9 @@ export default function App() {
             <Route
               path="atualizacoes"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <AtualizacoesSistema />
                 </ProtectedRoute>
               }
@@ -217,7 +317,9 @@ export default function App() {
             <Route
               path="integridade"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <IntegridadeSistema />
                 </ProtectedRoute>
               }
@@ -225,7 +327,9 @@ export default function App() {
             <Route
               path="sessoes"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <Sessoes />
                 </ProtectedRoute>
               }
@@ -233,7 +337,14 @@ export default function App() {
             <Route
               path="sugestoes-melhoria"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA, PERFIS.OPERADOR]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                  ]}
+                >
                   <SugestoesMelhoria />
                 </ProtectedRoute>
               }
@@ -241,7 +352,13 @@ export default function App() {
             <Route
               path="governanca"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
                   <Governanca />
                 </ProtectedRoute>
               }
@@ -250,7 +367,9 @@ export default function App() {
             <Route
               path="logs"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <Logs />
                 </ProtectedRoute>
               }
@@ -258,7 +377,9 @@ export default function App() {
             <Route
               path="usuarios"
               element={
-                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}>
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
+                >
                   <Usuarios />
                 </ProtectedRoute>
               }
@@ -269,4 +390,3 @@ export default function App() {
     </BrowserRouter>
   );
 }
-
