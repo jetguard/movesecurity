@@ -47,12 +47,11 @@ async function coletarIndicadores(unidade?: string) {
     prisma.cameraMonitoramento.count({
       where: { ...porUnidade, status: "Desconectada", statusCadastro: "Ativa" },
     }),
-    prisma.logAuditoria.count({
-      where: {
-        ...(unidade ? { unidade } : {}),
-        createdAt: { gte: inicioHoje },
-      },
-    }),
+      prisma.logAuditoria.count({
+        where: {
+          createdAt: { gte: inicioHoje },
+        },
+      }),
   ]);
 
   return {

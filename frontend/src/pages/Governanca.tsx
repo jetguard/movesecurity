@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import {
   Activity,
   AlertTriangle,
@@ -100,12 +101,21 @@ export default function Governanca() {
   const [carregando, setCarregando] = useState(true);
   const [backup, setBackup] = useState("");
   const [gerandoBackup, setGerandoBackup] = useState(false);
+  const [erro, setErro] = useState("");
 
   async function carregar() {
     setCarregando(true);
+    setErro("");
     try {
       const response = await api.get("/governanca/saude");
       setDados(response.data);
+    } catch (error) {
+      setDados(null);
+      setErro(
+        axios.isAxiosError(error)
+          ? error.response?.data?.error || "Não foi possível consultar a governança do sistema."
+          : "Não foi possível consultar a governança do sistema.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -127,7 +137,7 @@ export default function Governanca() {
   }
 
   useEffect(() => {
-    carregar().catch(() => setCarregando(false));
+    carregar();
   }, []);
 
   const abas = useMemo(
@@ -163,7 +173,7 @@ export default function Governanca() {
   if (!dados) {
     return (
       <div className="rounded-xl border border-red-900 bg-red-950/30 p-8 text-red-200">
-        Não foi possível consultar a governança do sistema.
+        {erro || "Não foi possível consultar a governança do sistema."}
       </div>
     );
   }
