@@ -29,6 +29,7 @@ type RelatorioPdf = {
   data: Date;
   relatoSeguranca?: string | null;
   acoesTomadas?: string | null;
+  impactoOperacional?: string | null;
   envolvidos?: EnvolvidoPdf[];
   investigacao?: {
     codigo?: string | null;
@@ -498,6 +499,83 @@ function escreverDadosRelatorio(doc: PDFKit.PDFDocument, relatorio: RelatorioPdf
   escreverCampo(doc, "Subnatureza", valor(relatorio.subNatureza), colunaDireitaX, y + 84, colunaLargura);
 
   doc.y = y + 158;
+}
+
+type ImpactoOperacionalPdf = {
+  dataHoraTermino?: string | null;
+  tempoMedioEsperaMinutos?: string | number | null;
+  quantidadeCaminhoesFila?: string | number | null;
+  quantidadeAgendamentosAfetados?: string | number | null;
+  operacoesImpactadas?: string[];
+  houveAtrasoOperacional?: string | null;
+  tratativas?: string[];
+};
+
+function lerImpactoOperacional(valorEntrada?: string | null): ImpactoOperacionalPdf | null {
+  if (!valorEntrada) return null;
+
+  try {
+    const impacto = JSON.parse(valorEntrada) as ImpactoOperacionalPdf;
+    return impacto && typeof impacto === "object" ? impacto : null;
+  } catch {
+    return null;
+  }
+}
+
+function escreverImpactoOperacional(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  const impacto = lerImpactoOperacional(relatorio.impactoOperacional);
+  if (!impacto) return;
+
+  garantirEspaco(doc, 200, relatorio, usuario, qrCode, token);
+  escreverTituloSecao(doc, "Impacto operacional externo");
+
+  const y = doc.y;
+  const larguraColuna = 230;
+  const direita = page.left + 270;
+  const numero = (valorAtual: string | number | null | undefined, sufixo = "") =>
+    valorAtual === null || valorAtual === undefined || valorAtual === ""
+      ? "Não informado"
+      : `${valorAtual}${sufixo}`;
+
+  escreverCampo(doc, "Início", formatarData(relatorio.data), page.left, y, larguraColuna);
+  escreverCampo(
+    doc,
+    "Término",
+    impacto.dataHoraTermino ? formatarData(new Date(impacto.dataHoraTermino)) : "Em andamento",
+    direita,
+    y,
+    larguraColuna
+  );
+  escreverCampo(doc, "Tempo médio de espera", numero(impacto.tempoMedioEsperaMinutos, " min"), page.left, y + 44, larguraColuna);
+  escreverCampo(doc, "Caminhões estimados na fila", numero(impacto.quantidadeCaminhoesFila), direita, y + 44, larguraColuna);
+  escreverCampo(doc, "Agendamentos afetados", numero(impacto.quantidadeAgendamentosAfetados), page.left, y + 88, larguraColuna);
+  escreverCampo(doc, "Houve atraso operacional?", valor(impacto.houveAtrasoOperacional), direita, y + 88, larguraColuna);
+
+  doc.y = y + 140;
+  escreverBlocoTexto(
+    doc,
+    "OPERAÇÕES IMPACTADAS",
+    impacto.operacoesImpactadas?.join(" | ") || "Não informado",
+    relatorio,
+    usuario,
+    qrCode,
+    token
+  );
+  escreverBlocoTexto(
+    doc,
+    "TRATATIVAS REGISTRADAS",
+    impacto.tratativas?.join("\n") || "Não informado",
+    relatorio,
+    usuario,
+    qrCode,
+    token
+  );
 }
 
 function escreverEnvolvidos(
@@ -994,6 +1072,7 @@ export async function gerarRelatorioPdf(
 
   novaPagina(doc, relatorio, usuario, qrCode, token);
   escreverDadosRelatorio(doc, relatorio);
+  escreverImpactoOperacional(doc, relatorio, usuario, qrCode, token);
   escreverEnvolvidos(doc, relatorio, usuario, qrCode, token);
   escreverRelato(doc, relatorio, usuario, qrCode, token);
   escreverAcoesTomadas(doc, relatorio, usuario, qrCode, token);

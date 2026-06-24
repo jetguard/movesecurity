@@ -31,6 +31,7 @@ type Ocorrencia = {
   dataOcorrencia: string;
   relatoSeguranca?: string;
   acoesTomadas?: string;
+  impactoOperacional?: string;
   envolvidos: Envolvido[];
   anexos?: Anexo[];
   analise?: AnaliseOcorrencia | null;
@@ -139,6 +140,50 @@ const envolvidoVazio: Envolvido = {
   relato: "",
 };
 
+type ImpactoOperacional = {
+  dataHoraTermino: string;
+  tempoMedioEsperaMinutos: string;
+  quantidadeCaminhoesFila: string;
+  quantidadeAgendamentosAfetados: string;
+  operacoesImpactadas: string[];
+  houveAtrasoOperacional: string;
+  tratativas: string[];
+};
+
+const operacoesImpactadas = ["Importação", "Exportação", "Scanner", "Gate", "Armazém"];
+const tratativasImpacto = [
+  "Comunicação ao CCOS",
+  "Comunicação à operação",
+  "Comunicação aos transportadores",
+  "Acionamento da autoridade portuária",
+  "Monitoramento da situação",
+];
+
+function impactoOperacionalVazio(): ImpactoOperacional {
+  return {
+    dataHoraTermino: "",
+    tempoMedioEsperaMinutos: "",
+    quantidadeCaminhoesFila: "",
+    quantidadeAgendamentosAfetados: "",
+    operacoesImpactadas: [],
+    houveAtrasoOperacional: "",
+    tratativas: [],
+  };
+}
+
+function ehImpactoOperacionalExterno(natureza: string) {
+  return natureza.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() === "impacto operacional externo";
+}
+
+function lerImpactoOperacional(valor?: unknown): ImpactoOperacional {
+  try {
+    const dados = typeof valor === "string" ? JSON.parse(valor) : valor;
+    return { ...impactoOperacionalVazio(), ...(dados && typeof dados === "object" ? dados : {}) };
+  } catch {
+    return impactoOperacionalVazio();
+  }
+}
+
 function formatarBrl(valor: string) {
   const digitos = valor.replace(/\D/g, "");
   const numero = Number(digitos || "0") / 100;
@@ -208,6 +253,7 @@ export default function Ocorrencias() {
   const [etapaFormulario, setEtapaFormulario] = useState(1);
   const [relatoSeguranca, setRelatoSeguranca] = useState("");
   const [acoesTomadas, setAcoesTomadas] = useState("");
+  const [impactoOperacional, setImpactoOperacional] = useState<ImpactoOperacional>(impactoOperacionalVazio());
   const [quantidadeEnvolvidos, setQuantidadeEnvolvidos] = useState(1);
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([
     { ...envolvidoVazio },
@@ -223,6 +269,7 @@ export default function Ocorrencias() {
       etapaFormulario,
       relatoSeguranca,
       acoesTomadas,
+      impactoOperacional,
       quantidadeEnvolvidos,
       envolvidos,
       statusAnalise,
@@ -238,6 +285,7 @@ export default function Ocorrencias() {
       etapaFormulario,
       relatoSeguranca,
       acoesTomadas,
+      impactoOperacional,
       quantidadeEnvolvidos,
       envolvidos,
       statusAnalise,
@@ -260,6 +308,7 @@ export default function Ocorrencias() {
       setEtapaFormulario(dados.etapaFormulario || 1);
       setRelatoSeguranca(dados.relatoSeguranca || "");
       setAcoesTomadas(dados.acoesTomadas || "");
+      setImpactoOperacional(lerImpactoOperacional(dados.impactoOperacional));
       const envolvidosRestaurados = dados.envolvidos?.length ? dados.envolvidos : [{ ...envolvidoVazio }];
       setEnvolvidos(envolvidosRestaurados);
       setQuantidadeEnvolvidos(dados.quantidadeEnvolvidos || envolvidosRestaurados.length || 1);
@@ -365,6 +414,16 @@ export default function Ocorrencias() {
   const subNaturezasDisponiveis =
     naturezas.find((item) => item.nome === natureza)?.subNaturezas || [];
   const localSelecionado = locais.find((item) => item.nome === local);
+  const naturezaImpactoOperacional = ehImpactoOperacionalExterno(natureza);
+
+  function alternarImpacto(campo: "operacoesImpactadas" | "tratativas", opcao: string) {
+    setImpactoOperacional((atual) => ({
+      ...atual,
+      [campo]: atual[campo].includes(opcao)
+        ? atual[campo].filter((item) => item !== opcao)
+        : [...atual[campo], opcao],
+    }));
+  }
 
   function alterarQuantidadeEnvolvidos(qtd: number) {
     const quantidade = Math.max(1, qtd);
@@ -775,6 +834,7 @@ export default function Ocorrencias() {
     setEtapaFormulario(1);
     setRelatoSeguranca("");
     setAcoesTomadas("");
+    setImpactoOperacional(impactoOperacionalVazio());
     setQuantidadeEnvolvidos(1);
     setEnvolvidos([{ ...envolvidoVazio }]);
     setAnexos([]);
@@ -838,6 +898,7 @@ export default function Ocorrencias() {
     setDataOcorrencia(formatarDataParaInput(ocorrencia.dataOcorrencia));
     setRelatoSeguranca(ocorrencia.relatoSeguranca || "");
     setAcoesTomadas(ocorrencia.acoesTomadas || "");
+    setImpactoOperacional(lerImpactoOperacional(ocorrencia.impactoOperacional));
     setQuantidadeEnvolvidos(ocorrencia.envolvidos.length || 1);
     setEnvolvidos(
       ocorrencia.envolvidos.length
@@ -985,6 +1046,7 @@ export default function Ocorrencias() {
     formData.append("dataOcorrencia", dataOcorrencia);
     formData.append("relatoSeguranca", relatoSeguranca);
     formData.append("acoesTomadas", acoesTomadas);
+    formData.append("impactoOperacional", JSON.stringify(naturezaImpactoOperacional ? impactoOperacional : impactoOperacionalVazio()));
     formData.append("envolvidos", JSON.stringify(envolvidos));
     formData.append("anexosRemover", JSON.stringify(anexosRemover));
 
@@ -1163,6 +1225,7 @@ export default function Ocorrencias() {
                   onChange={(e) => {
                     setNatureza(e.target.value);
                     setSubNatureza("");
+                    if (!ehImpactoOperacionalExterno(e.target.value)) setImpactoOperacional(impactoOperacionalVazio());
                   }}
                   required
                 >
@@ -1189,13 +1252,16 @@ export default function Ocorrencias() {
                   ))}
                 </select>
 
-                <input
-                  className="w-full border rounded-lg p-3"
-                  type="datetime-local"
-                  value={dataOcorrencia}
-                  onChange={(e) => setDataOcorrencia(e.target.value)}
-                  required
-                />
+                <label className="space-y-1">
+                  {naturezaImpactoOperacional && <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Data e hora de início do impacto</span>}
+                  <input
+                    className="w-full border rounded-lg p-3"
+                    type="datetime-local"
+                    value={dataOcorrencia}
+                    onChange={(e) => setDataOcorrencia(e.target.value)}
+                    required
+                  />
+                </label>
 
                 <input
                   className="w-full border rounded-lg p-3"
@@ -1209,6 +1275,38 @@ export default function Ocorrencias() {
                   required
                 />
               </div>
+
+              {naturezaImpactoOperacional && (
+                <section className="mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4 dark:border-orange-900/70 dark:bg-orange-950/20">
+                  <div className="mb-4">
+                    <h3 className="font-bold text-orange-950 dark:text-orange-200">Impacto operacional externo</h3>
+                    <p className="text-sm text-orange-800 dark:text-orange-300">Registre o impacto, a fila estimada e as tratativas realizadas.</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <label className="space-y-1 text-sm font-medium">Data e hora de término
+                      <input className="w-full rounded-lg border p-3" type="datetime-local" min={dataOcorrencia} value={impactoOperacional.dataHoraTermino} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, dataHoraTermino: e.target.value })} />
+                    </label>
+                    <label className="space-y-1 text-sm font-medium">Tempo médio de espera (minutos)
+                      <input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 45" value={impactoOperacional.tempoMedioEsperaMinutos} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, tempoMedioEsperaMinutos: e.target.value })} />
+                    </label>
+                    <label className="space-y-1 text-sm font-medium">Caminhões estimados na fila
+                      <input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 30" value={impactoOperacional.quantidadeCaminhoesFila} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, quantidadeCaminhoesFila: e.target.value })} />
+                    </label>
+                    <label className="space-y-1 text-sm font-medium">Agendamentos afetados
+                      <input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 12" value={impactoOperacional.quantidadeAgendamentosAfetados} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, quantidadeAgendamentosAfetados: e.target.value })} />
+                    </label>
+                    <label className="space-y-1 text-sm font-medium">Houve atraso operacional?
+                      <select className="w-full rounded-lg border p-3" value={impactoOperacional.houveAtrasoOperacional} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, houveAtrasoOperacional: e.target.value })}>
+                        <option value="">Selecione</option><option>Sim</option><option>Não</option>
+                      </select>
+                    </label>
+                  </div>
+                  <div className="mt-4 grid gap-4 md:grid-cols-2">
+                    <div><p className="mb-2 text-sm font-semibold">Operação impactada</p><div className="flex flex-wrap gap-2">{operacoesImpactadas.map((opcao) => <label key={opcao} className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-900"><input type="checkbox" checked={impactoOperacional.operacoesImpactadas.includes(opcao)} onChange={() => alternarImpacto("operacoesImpactadas", opcao)} />{opcao}</label>)}</div></div>
+                    <div><p className="mb-2 text-sm font-semibold">Tratativas</p><div className="space-y-2">{tratativasImpacto.map((opcao) => <label key={opcao} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={impactoOperacional.tratativas.includes(opcao)} onChange={() => alternarImpacto("tratativas", opcao)} />{opcao}</label>)}</div></div>
+                  </div>
+                </section>
+              )}
 
               <div className="space-y-4 mt-4">
                 {envolvidos.map((envolvido, index) => (

@@ -136,6 +136,7 @@ model Ocorrencia {
   dataOcorrencia  DateTime
   relatoSeguranca String?
   acoesTomadas    String?
+  impactoOperacional String?
   fluxoStatus     String    @default("Aguardando Revisao")
   revisadoPorId   Int?
   revisadoEm      DateTime?
@@ -198,6 +199,7 @@ model Evento {
   dataEvento      DateTime
   relatoSeguranca String?
   acoesTomadas    String?
+  impactoOperacional String?
   fluxoStatus     String    @default("Aguardando Revisao")
   revisadoPorId   Int?
   revisadoEm      DateTime?

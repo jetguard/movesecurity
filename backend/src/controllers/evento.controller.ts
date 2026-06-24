@@ -21,6 +21,36 @@ async function validarLocalAtivo(local: string, unidade?: string) {
   });
 }
 
+function ehImpactoOperacionalExterno(natureza?: string) {
+  return String(natureza || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase() === "impacto operacional externo";
+}
+
+function prepararImpactoOperacional(valor: unknown, dataInicio: string) {
+  if (!valor) return null;
+
+  try {
+    const impacto = typeof valor === "string" ? JSON.parse(valor) : valor;
+    if (!impacto || typeof impacto !== "object") return null;
+
+    const dados = impacto as { dataHoraTermino?: string };
+    if (
+      dados.dataHoraTermino &&
+      new Date(dados.dataHoraTermino).getTime() < new Date(dataInicio).getTime()
+    ) {
+      throw new Error("A data/hora de término não pode ser anterior ao início do impacto.");
+    }
+
+    return JSON.stringify(impacto);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("término")) throw error;
+    throw new Error("Os dados do impacto operacional são inválidos.");
+  }
+}
+
 export async function criarEvento(req: AuthRequest, res: Response) {
   try {
     const {
@@ -32,6 +62,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
       dataEvento,
       relatoSeguranca,
       acoesTomadas,
+      impactoOperacional,
       envolvidos,
       anexosRemover,
     } = req.body;
@@ -44,6 +75,9 @@ export async function criarEvento(req: AuthRequest, res: Response) {
       typeof anexosRemover === "string" && anexosRemover
         ? JSON.parse(anexosRemover)
         : [];
+    const impactoOperacionalFormatado = ehImpactoOperacionalExterno(natureza)
+      ? prepararImpactoOperacional(impactoOperacional, dataEvento)
+      : null;
 
     if (!assunto || !local || !natureza || !subNatureza || !dataEvento) {
       return res.status(400).json({
@@ -91,6 +125,7 @@ export async function criarEvento(req: AuthRequest, res: Response) {
         subNatureza,
         relatoSeguranca,
         acoesTomadas,
+        impactoOperacional: impactoOperacionalFormatado,
         status,
         fluxoStatus: "Em Elaboracao",
         dataEvento: new Date(dataEvento),
@@ -224,6 +259,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       dataEvento,
       relatoSeguranca,
       acoesTomadas,
+      impactoOperacional,
       envolvidos,
       anexosRemover,
     } = req.body;
@@ -236,6 +272,9 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       typeof anexosRemover === "string" && anexosRemover
         ? JSON.parse(anexosRemover)
         : [];
+    const impactoOperacionalFormatado = ehImpactoOperacionalExterno(natureza)
+      ? prepararImpactoOperacional(impactoOperacional, dataEvento)
+      : null;
 
     if (!assunto || !local || !natureza || !subNatureza || !dataEvento) {
       return res.status(400).json({
@@ -322,6 +361,7 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
           subNatureza,
           relatoSeguranca,
           acoesTomadas,
+          impactoOperacional: impactoOperacionalFormatado,
           status: status || eventoExiste.status,
           dataEvento: new Date(dataEvento),
 
@@ -447,6 +487,7 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         data: evento.dataEvento,
         relatoSeguranca: evento.relatoSeguranca,
         acoesTomadas: evento.acoesTomadas,
+        impactoOperacional: evento.impactoOperacional,
         envolvidos: evento.envolvidos,
         analise: evento.analise,
         assinaturaAprovacao,
