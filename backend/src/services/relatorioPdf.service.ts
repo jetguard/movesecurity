@@ -503,7 +503,9 @@ function escreverDadosRelatorio(doc: PDFKit.PDFDocument, relatorio: RelatorioPdf
 
 type ImpactoOperacionalPdf = {
   dataHoraTermino?: string | null;
-  tempoMedioEsperaMinutos?: string | number | null;
+  placaUltimoVeiculoFila?: string | null;
+  dataHoraIdentificacaoUltimoVeiculo?: string | null;
+  dataHoraChegadaBalanca?: string | null;
   quantidadeCaminhoesFila?: string | number | null;
   quantidadeAgendamentosAfetados?: string | number | null;
   operacoesImpactadas?: string[];
@@ -522,6 +524,20 @@ function lerImpactoOperacional(valorEntrada?: string | null): ImpactoOperacional
   }
 }
 
+function calcularTempoEsperaFilaPdf(impacto: ImpactoOperacionalPdf) {
+  if (!impacto.dataHoraIdentificacaoUltimoVeiculo || !impacto.dataHoraChegadaBalanca) return "Não calculado";
+
+  const inicio = new Date(impacto.dataHoraIdentificacaoUltimoVeiculo).getTime();
+  const fim = new Date(impacto.dataHoraChegadaBalanca).getTime();
+  if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim < inicio) return "Não calculado";
+
+  const totalMinutos = Math.round((fim - inicio) / 60000);
+  const horas = Math.floor(totalMinutos / 60);
+  const minutos = totalMinutos % 60;
+  if (horas <= 0) return `${minutos} min`;
+  return `${horas}h ${String(minutos).padStart(2, "0")}min`;
+}
+
 function escreverImpactoOperacional(
   doc: PDFKit.PDFDocument,
   relatorio: RelatorioPdf,
@@ -532,7 +548,7 @@ function escreverImpactoOperacional(
   const impacto = lerImpactoOperacional(relatorio.impactoOperacional);
   if (!impacto) return;
 
-  garantirEspaco(doc, 200, relatorio, usuario, qrCode, token);
+  garantirEspaco(doc, 245, relatorio, usuario, qrCode, token);
   escreverTituloSecao(doc, "Impacto operacional externo");
 
   const y = doc.y;
@@ -552,12 +568,34 @@ function escreverImpactoOperacional(
     y,
     larguraColuna
   );
-  escreverCampo(doc, "Tempo médio de espera", numero(impacto.tempoMedioEsperaMinutos, " min"), page.left, y + 44, larguraColuna);
   escreverCampo(doc, "Caminhões estimados na fila", numero(impacto.quantidadeCaminhoesFila), direita, y + 44, larguraColuna);
   escreverCampo(doc, "Agendamentos afetados", numero(impacto.quantidadeAgendamentosAfetados), page.left, y + 88, larguraColuna);
   escreverCampo(doc, "Houve atraso operacional?", valor(impacto.houveAtrasoOperacional), direita, y + 88, larguraColuna);
 
   doc.y = y + 140;
+  escreverTituloSecao(doc, "Medição operacional da fila");
+
+  const yFila = doc.y;
+  escreverCampo(doc, "Placa referência", valor(impacto.placaUltimoVeiculoFila), page.left, yFila, larguraColuna);
+  escreverCampo(
+    doc,
+    "Identificada no final da fila",
+    impacto.dataHoraIdentificacaoUltimoVeiculo ? formatarData(new Date(impacto.dataHoraIdentificacaoUltimoVeiculo)) : "Não informado",
+    direita,
+    yFila,
+    larguraColuna
+  );
+  escreverCampo(
+    doc,
+    "Chegada na balança",
+    impacto.dataHoraChegadaBalanca ? formatarData(new Date(impacto.dataHoraChegadaBalanca)) : "Não informado",
+    page.left,
+    yFila + 44,
+    larguraColuna
+  );
+  escreverCampo(doc, "Tempo calculado de espera", calcularTempoEsperaFilaPdf(impacto), direita, yFila + 44, larguraColuna);
+
+  doc.y = yFila + 96;
   escreverBlocoTexto(
     doc,
     "OPERAÇÕES IMPACTADAS",

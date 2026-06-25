@@ -96,7 +96,9 @@ const envolvidoVazio: Envolvido = {
 
 type ImpactoOperacional = {
   dataHoraTermino: string;
-  tempoMedioEsperaMinutos: string;
+  placaUltimoVeiculoFila: string;
+  dataHoraIdentificacaoUltimoVeiculo: string;
+  dataHoraChegadaBalanca: string;
   quantidadeCaminhoesFila: string;
   quantidadeAgendamentosAfetados: string;
   operacoesImpactadas: string[];
@@ -108,7 +110,17 @@ const operacoesImpactadas = ["Importação", "Exportação", "Scanner", "Gate", 
 const tratativasImpacto = ["Comunicação ao CCOS", "Comunicação à operação", "Comunicação aos transportadores", "Acionamento da autoridade portuária", "Monitoramento da situação"];
 
 function impactoOperacionalVazio(): ImpactoOperacional {
-  return { dataHoraTermino: "", tempoMedioEsperaMinutos: "", quantidadeCaminhoesFila: "", quantidadeAgendamentosAfetados: "", operacoesImpactadas: [], houveAtrasoOperacional: "", tratativas: [] };
+  return {
+    dataHoraTermino: "",
+    placaUltimoVeiculoFila: "",
+    dataHoraIdentificacaoUltimoVeiculo: "",
+    dataHoraChegadaBalanca: "",
+    quantidadeCaminhoesFila: "",
+    quantidadeAgendamentosAfetados: "",
+    operacoesImpactadas: [],
+    houveAtrasoOperacional: "",
+    tratativas: [],
+  };
 }
 
 function ehImpactoOperacionalExterno(natureza: string) {
@@ -122,6 +134,25 @@ function lerImpactoOperacional(valor?: unknown): ImpactoOperacional {
   } catch {
     return impactoOperacionalVazio();
   }
+}
+
+function normalizarPlacaFila(valor: string) {
+  return valor.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);
+}
+
+function calcularTempoEsperaFila(impacto: ImpactoOperacional) {
+  if (!impacto.dataHoraIdentificacaoUltimoVeiculo || !impacto.dataHoraChegadaBalanca) return "Aguardando horários";
+
+  const inicio = new Date(impacto.dataHoraIdentificacaoUltimoVeiculo).getTime();
+  const fim = new Date(impacto.dataHoraChegadaBalanca).getTime();
+  if (!Number.isFinite(inicio) || !Number.isFinite(fim)) return "Horários inválidos";
+  if (fim < inicio) return "Chegada não pode ser anterior à identificação";
+
+  const totalMinutos = Math.round((fim - inicio) / 60000);
+  const horas = Math.floor(totalMinutos / 60);
+  const minutos = totalMinutos % 60;
+  if (horas <= 0) return `${minutos} min`;
+  return `${horas}h ${String(minutos).padStart(2, "0")}min`;
 }
 
 function formatarBrl(valor: string) {
@@ -765,11 +796,20 @@ export default function Eventos() {
                   <div className="mb-4"><h3 className="font-bold text-orange-950 dark:text-orange-200">Impacto operacional externo</h3><p className="text-sm text-orange-800 dark:text-orange-300">Registre os reflexos operacionais e as tratativas realizadas.</p></div>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <label className="space-y-1 text-sm font-medium">Data e hora de término<input className="w-full rounded-lg border p-3" type="datetime-local" min={dataEvento} value={impactoOperacional.dataHoraTermino} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, dataHoraTermino: e.target.value })} /></label>
-                    <label className="space-y-1 text-sm font-medium">Tempo médio de espera (minutos)<input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 45" value={impactoOperacional.tempoMedioEsperaMinutos} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, tempoMedioEsperaMinutos: e.target.value })} /></label>
                     <label className="space-y-1 text-sm font-medium">Caminhões estimados na fila<input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 30" value={impactoOperacional.quantidadeCaminhoesFila} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, quantidadeCaminhoesFila: e.target.value })} /></label>
                     <label className="space-y-1 text-sm font-medium">Agendamentos afetados<input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 12" value={impactoOperacional.quantidadeAgendamentosAfetados} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, quantidadeAgendamentosAfetados: e.target.value })} /></label>
                     <label className="space-y-1 text-sm font-medium">Houve atraso operacional?<select className="w-full rounded-lg border p-3" value={impactoOperacional.houveAtrasoOperacional} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, houveAtrasoOperacional: e.target.value })}><option value="">Selecione</option><option>Sim</option><option>Não</option></select></label>
                   </div>
+                  <details className="mt-4 rounded-xl border border-orange-200 bg-white/70 p-4 dark:border-orange-900/70 dark:bg-slate-950/40">
+                    <summary className="cursor-pointer select-none font-semibold text-orange-950 dark:text-orange-200">Controle de espera da fila <span className="text-xs font-medium text-orange-700 dark:text-orange-300">(opcional)</span></summary>
+                    <p className="mt-2 text-sm text-orange-800 dark:text-orange-300">Use a placa do último veículo observado na fila como referência até a chegada na balança.</p>
+                    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <label className="space-y-1 text-sm font-medium">Placa do último veículo da fila<input className="w-full rounded-lg border p-3 uppercase" placeholder="Ex.: ABC1D23" value={impactoOperacional.placaUltimoVeiculoFila} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, placaUltimoVeiculoFila: normalizarPlacaFila(e.target.value) })} /></label>
+                      <label className="space-y-1 text-sm font-medium">Identificação da placa no final da fila<input className="w-full rounded-lg border p-3" type="datetime-local" min={dataEvento} value={impactoOperacional.dataHoraIdentificacaoUltimoVeiculo} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, dataHoraIdentificacaoUltimoVeiculo: e.target.value })} /></label>
+                      <label className="space-y-1 text-sm font-medium">Chegada do veículo na balança<input className="w-full rounded-lg border p-3" type="datetime-local" min={impactoOperacional.dataHoraIdentificacaoUltimoVeiculo || dataEvento} value={impactoOperacional.dataHoraChegadaBalanca} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, dataHoraChegadaBalanca: e.target.value })} /></label>
+                      <label className="space-y-1 text-sm font-medium">Tempo calculado de espera<input className="w-full rounded-lg border bg-slate-100 p-3 font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-100" value={calcularTempoEsperaFila(impactoOperacional)} readOnly /></label>
+                    </div>
+                  </details>
                   <div className="mt-4 grid gap-4 md:grid-cols-2">
                     <div><p className="mb-2 text-sm font-semibold">Operação impactada</p><div className="flex flex-wrap gap-2">{operacoesImpactadas.map((opcao) => <label key={opcao} className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-900"><input type="checkbox" checked={impactoOperacional.operacoesImpactadas.includes(opcao)} onChange={() => alternarImpacto("operacoesImpactadas", opcao)} />{opcao}</label>)}</div></div>
                     <div><p className="mb-2 text-sm font-semibold">Tratativas</p><div className="space-y-2">{tratativasImpacto.map((opcao) => <label key={opcao} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={impactoOperacional.tratativas.includes(opcao)} onChange={() => alternarImpacto("tratativas", opcao)} />{opcao}</label>)}</div></div>

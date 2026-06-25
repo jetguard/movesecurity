@@ -36,17 +36,34 @@ function prepararImpactoOperacional(valor: unknown, dataInicio: string) {
     const impacto = typeof valor === "string" ? JSON.parse(valor) : valor;
     if (!impacto || typeof impacto !== "object") return null;
 
-    const dados = impacto as { dataHoraTermino?: string };
+    const dados = impacto as {
+      dataHoraTermino?: string;
+      dataHoraIdentificacaoUltimoVeiculo?: string;
+      dataHoraChegadaBalanca?: string;
+    };
     if (
       dados.dataHoraTermino &&
       new Date(dados.dataHoraTermino).getTime() < new Date(dataInicio).getTime()
     ) {
       throw new Error("A data/hora de término não pode ser anterior ao início do impacto.");
     }
+    if (
+      dados.dataHoraIdentificacaoUltimoVeiculo &&
+      new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime() < new Date(dataInicio).getTime()
+    ) {
+      throw new Error("A data/hora de identificação da placa não pode ser anterior ao início do impacto.");
+    }
+    if (
+      dados.dataHoraIdentificacaoUltimoVeiculo &&
+      dados.dataHoraChegadaBalanca &&
+      new Date(dados.dataHoraChegadaBalanca).getTime() < new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime()
+    ) {
+      throw new Error("A chegada na balança não pode ser anterior à identificação da placa no final da fila.");
+    }
 
     return JSON.stringify(impacto);
   } catch (error) {
-    if (error instanceof Error && error.message.includes("término")) throw error;
+    if (error instanceof Error && (error.message.includes("término") || error.message.includes("placa") || error.message.includes("balança"))) throw error;
     throw new Error("Os dados do impacto operacional são inválidos.");
   }
 }
