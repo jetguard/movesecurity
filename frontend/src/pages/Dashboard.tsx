@@ -1,5 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import {
+  AlertTriangle,
+  CheckCircle2,
+  Gauge,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
+import {
   Bar,
   BarChart,
   CartesianGrid,
@@ -74,6 +81,10 @@ type CamerasResumo = {
   totalDesconectadas?: number;
   online?: number;
   offline?: number;
+  camerasConformidade?: number;
+  camerasAtencao?: number;
+  camerasCriticas?: number;
+  camerasDesconectadas?: number;
 };
 
 type QuadraResumo = {
@@ -89,6 +100,24 @@ type DocumentosResumo = {
   assinados: number;
   pendentes: number;
   comPdf: number;
+};
+
+type ChecklistInspecao = {
+  id: number;
+  codigo?: string;
+  status?: string;
+  itens?: Array<{ conformidade?: string; criticidade?: string }>;
+};
+
+type RiscoDashboard = {
+  id: number;
+  status?: string;
+  nivelRisco?: string;
+};
+
+type PlanoAcaoDashboard = {
+  id: number;
+  status?: string;
 };
 
 type TooltipPayloadItem = {
@@ -192,6 +221,19 @@ function topRegistros(dados: Record<string, number>, limite = 6) {
     .slice(0, limite);
 }
 
+function normalizarTexto(valor?: string) {
+  return (valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function percentual(parte: number, total: number) {
+  if (total <= 0) return 0;
+  return Math.round((parte / total) * 100);
+}
+
 function TooltipGrafico({
   active,
   payload,
@@ -240,6 +282,144 @@ function Indicador({
       </p>
       <p className="mt-2 text-sm text-slate-500">{subtitulo}</p>
     </div>
+  );
+}
+
+function ConformidadeOperacional({
+  itens,
+}: {
+  itens: Array<{ modulo: string; conforme: number; naoConforme: number; atencao: number; descricao: string }>;
+}) {
+  const totais = itens.reduce(
+    (acc, item) => ({
+      conforme: acc.conforme + item.conforme,
+      naoConforme: acc.naoConforme + item.naoConforme,
+      atencao: acc.atencao + item.atencao,
+    }),
+    { conforme: 0, naoConforme: 0, atencao: 0 },
+  );
+  const total = totais.conforme + totais.naoConforme + totais.atencao;
+  const indiceConformidade = percentual(totais.conforme, total);
+  const indiceNaoConformidade = percentual(totais.naoConforme, total);
+  const dadosRosca = total > 0
+    ? [
+        { nome: "Conforme", valor: totais.conforme, cor: "#22c55e" },
+        { nome: "Atenção", valor: totais.atencao, cor: "#f59e0b" },
+        { nome: "Não conforme", valor: totais.naoConforme, cor: "#ef4444" },
+      ]
+    : [{ nome: "Sem dados", valor: 1, cor: "#334155" }];
+
+  return (
+    <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+      <div className="relative p-5 sm:p-6">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(34,197,94,0.16),transparent_34%),radial-gradient(circle_at_bottom_left,rgba(59,130,246,0.14),transparent_30%)] dark:opacity-100" />
+        <div className="relative grid gap-6 xl:grid-cols-[330px_1fr]">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-900/70">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-500 dark:text-blue-300">Índice operacional</p>
+                <h2 className="mt-2 text-xl font-black text-slate-900 dark:text-white">Conformidade geral</h2>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15 text-emerald-500">
+                <ShieldCheck size={24} />
+              </div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-[136px_1fr] items-center gap-4">
+              <div className="relative h-32 w-32">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={dadosRosca}
+                      dataKey="valor"
+                      nameKey="nome"
+                      innerRadius={48}
+                      outerRadius={62}
+                      paddingAngle={4}
+                      cornerRadius={12}
+                      strokeWidth={0}
+                    >
+                      {dadosRosca.map((item) => (
+                        <Cell key={item.nome} fill={item.cor} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<TooltipGrafico />} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <strong className="text-2xl text-slate-900 dark:text-white">{indiceConformidade}%</strong>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">conforme</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
+                  <p className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-300"><CheckCircle2 size={15} /> Conformidades</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totais.conforme}</p>
+                </div>
+                <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3">
+                  <p className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-300"><AlertTriangle size={15} /> Atenção</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totais.atencao}</p>
+                </div>
+                <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-3">
+                  <p className="flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-300"><XCircle size={15} /> Não conformidades</p>
+                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totais.naoConforme}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950/80">
+              <p className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                <Gauge size={17} className="text-blue-500" />
+                Leitura executiva
+              </p>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                {total === 0
+                  ? "Ainda não há dados suficientes para calcular o índice de conformidade operacional."
+                  : `${indiceConformidade}% dos controles avaliados estão aderentes. ${indiceNaoConformidade}% exigem tratativa ou justificativa operacional.`}
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {itens.map((item) => {
+              const totalModulo = item.conforme + item.naoConforme + item.atencao;
+              const moduloConforme = percentual(item.conforme, totalModulo);
+              return (
+                <div key={item.modulo} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="font-black text-slate-900 dark:text-white">{item.modulo}</h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{item.descricao}</p>
+                    </div>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-black ${moduloConforme >= 80 ? "bg-emerald-500/15 text-emerald-500" : moduloConforme >= 60 ? "bg-amber-500/15 text-amber-500" : "bg-red-500/15 text-red-500"}`}>
+                      {moduloConforme}%
+                    </span>
+                  </div>
+                  <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-sky-400 to-blue-500" style={{ width: `${moduloConforme}%` }} />
+                  </div>
+                  <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="rounded-xl bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-300">
+                      <strong className="block text-base">{item.conforme}</strong>
+                      OK
+                    </div>
+                    <div className="rounded-xl bg-amber-500/10 p-2 text-amber-600 dark:text-amber-300">
+                      <strong className="block text-base">{item.atencao}</strong>
+                      Atenção
+                    </div>
+                    <div className="rounded-xl bg-red-500/10 p-2 text-red-600 dark:text-red-300">
+                      <strong className="block text-base">{item.naoConforme}</strong>
+                      Desvio
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -453,6 +633,9 @@ export default function Dashboard() {
   const [quadraResumo, setQuadraResumo] = useState<QuadraResumo>({});
   const [documentosResumo, setDocumentosResumo] = useState<DocumentosResumo>({ total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
   const [tarefasAbertas, setTarefasAbertas] = useState<PlanejamentoCard[]>([]);
+  const [checklists, setChecklists] = useState<ChecklistInspecao[]>([]);
+  const [riscos, setRiscos] = useState<RiscoDashboard[]>([]);
+  const [planosAcao, setPlanosAcao] = useState<PlanoAcaoDashboard[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [periodo, setPeriodo] = useState("todos");
   const [mes, setMes] = useState("");
@@ -464,7 +647,18 @@ export default function Dashboard() {
 
   async function carregarDashboard() {
     setCarregando(true);
-    const [ocorrenciasResponse, eventosResponse, investigacoesResponse, camerasResponse, quadraResponse, planejamentoResponse, documentosResponse] =
+    const [
+      ocorrenciasResponse,
+      eventosResponse,
+      investigacoesResponse,
+      camerasResponse,
+      quadraResponse,
+      planejamentoResponse,
+      documentosResponse,
+      checklistsResponse,
+      riscosResponse,
+      planosResponse,
+    ] =
       await Promise.all([
         api.get("/ocorrencias"),
         api.get("/eventos"),
@@ -473,6 +667,9 @@ export default function Dashboard() {
         api.get(`/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`).catch(() => ({ data: {} })),
         api.get("/planejamento").catch(() => ({ data: { colunas: [] } })),
         api.get("/documentos").catch(() => ({ data: { resumo: { total: 0, assinados: 0, pendentes: 0, comPdf: 0 } } })),
+        api.get("/checklists").catch(() => ({ data: [] })),
+        api.get("/riscos").catch(() => ({ data: [] })),
+        api.get("/planos-acao").catch(() => ({ data: [] })),
       ]);
 
     setOcorrencias(ocorrenciasResponse.data);
@@ -481,6 +678,9 @@ export default function Dashboard() {
     setCamerasResumo(camerasResponse.data);
     setQuadraResumo(quadraResponse.data);
     setDocumentosResumo(documentosResponse.data.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
+    setChecklists(Array.isArray(checklistsResponse.data) ? checklistsResponse.data : []);
+    setRiscos(Array.isArray(riscosResponse.data) ? riscosResponse.data : []);
+    setPlanosAcao(Array.isArray(planosResponse.data) ? planosResponse.data : []);
     const cards = ((planejamentoResponse.data.colunas || []) as PlanejamentoColuna[]).flatMap((coluna) =>
       (coluna.cards || []).map((card: PlanejamentoCard) => ({ ...card, status: coluna.titulo }))
     );
@@ -596,6 +796,81 @@ export default function Dashboard() {
         totalMesAtual.eventos -
         (totalMesAnterior.ocorrencias + totalMesAnterior.eventos)
       : 0;
+
+  const itensChecklist = checklists.flatMap((checklist) => checklist.itens || []);
+  const checklistConformes = itensChecklist.filter((item) => normalizarTexto(item.conformidade) === "conforme").length;
+  const checklistNaoConformes = itensChecklist.filter((item) => normalizarTexto(item.conformidade) === "nao conforme").length;
+  const checklistAtencao = itensChecklist.filter((item) => {
+    const conformidade = normalizarTexto(item.conformidade);
+    return conformidade === "nao aplicavel" || (!conformidade && normalizarTexto(item.criticidade) !== "");
+  }).length;
+
+  const camerasConformes = camerasResumo.camerasConformidade || camerasResumo.totalConectadas || camerasResumo.online || 0;
+  const camerasNaoConformes =
+    (camerasResumo.camerasCriticas || 0) +
+    (camerasResumo.camerasDesconectadas || camerasResumo.totalDesconectadas || camerasResumo.offline || 0);
+  const camerasAtencao = camerasResumo.camerasAtencao || 0;
+
+  const riscosConformes = riscos.filter((risco) => {
+    const statusRisco = normalizarTexto(risco.status);
+    const nivel = normalizarTexto(risco.nivelRisco);
+    return statusRisco === "concluido" || nivel === "baixo" || nivel === "moderado";
+  }).length;
+  const riscosNaoConformes = riscos.filter((risco) => {
+    const statusRisco = normalizarTexto(risco.status);
+    const nivel = normalizarTexto(risco.nivelRisco);
+    return statusRisco !== "concluido" && (nivel === "alto" || nivel === "critico");
+  }).length;
+  const riscosAtencao = Math.max(0, riscos.length - riscosConformes - riscosNaoConformes);
+
+  const planosConformes = planosAcao.filter((plano) => normalizarTexto(plano.status) === "concluido").length;
+  const planosNaoConformes = planosAcao.filter((plano) => {
+    const statusPlano = normalizarTexto(plano.status);
+    return statusPlano === "atrasado" || statusPlano === "vencido";
+  }).length;
+  const planosAtencao = Math.max(0, planosAcao.length - planosConformes - planosNaoConformes);
+
+  const documentosConformes = documentosResumo.assinados;
+  const documentosNaoConformes = documentosResumo.pendentes;
+  const documentosAtencao = Math.max(0, documentosResumo.total - documentosResumo.assinados - documentosResumo.pendentes);
+
+  const itensConformidade = [
+    {
+      modulo: "Inspeções CIP",
+      conforme: checklistConformes,
+      naoConforme: checklistNaoConformes,
+      atencao: checklistAtencao,
+      descricao: "Itens vistoriados em conformidade, atenção ou desvio operacional.",
+    },
+    {
+      modulo: "CFTV",
+      conforme: camerasConformes,
+      naoConforme: camerasNaoConformes,
+      atencao: camerasAtencao,
+      descricao: "Retenção, disponibilidade e status das câmeras monitoradas.",
+    },
+    {
+      modulo: "Riscos",
+      conforme: riscosConformes,
+      naoConforme: riscosNaoConformes,
+      atencao: riscosAtencao,
+      descricao: "Classificação de riscos e tratativas pendentes por criticidade.",
+    },
+    {
+      modulo: "Planos de ação",
+      conforme: planosConformes,
+      naoConforme: planosNaoConformes,
+      atencao: planosAtencao,
+      descricao: "Ações corretivas e preventivas concluídas, pendentes ou vencidas.",
+    },
+    {
+      modulo: "Documentos",
+      conforme: documentosConformes,
+      naoConforme: documentosNaoConformes,
+      atencao: documentosAtencao,
+      descricao: "Relatórios assinados, pendentes e em tramitação documental.",
+    },
+  ];
 
   function gerarRelatorioPdf() {
     const janela = window.open("", "_blank");
@@ -750,6 +1025,8 @@ export default function Dashboard() {
           status={contarPorStatus(investigacoesFiltradas)}
         />
       </div>
+
+      <ConformidadeOperacional itens={itensConformidade} />
 
       {isOperador ? (
         <>
