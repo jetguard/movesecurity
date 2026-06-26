@@ -558,7 +558,7 @@ export default function AdminLayout() {
                   </Link>
                   <Link to="/matriz-risco" className={subItem}>
                     <Grid3X3 size={16} />
-                    Matriz 5x5
+                    Metodologia 5x5
                   </Link>
                   <Link to="/planos-acao" className={subItem}>
                     <Target size={16} />
