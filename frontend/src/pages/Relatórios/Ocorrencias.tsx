@@ -1713,117 +1713,90 @@ export default function Ocorrencias() {
           Nenhuma ocorrência cadastrada.
         </div>
       ) : (
-        <div className="space-y-3">
-          {ocorrencias.map((ocorrencia) => (
-            <div key={ocorrencia.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-blue-300 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900">
-              <div className="flex flex-col gap-4 border-l-4 border-blue-600 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">{ocorrencia.codigo}</h2>
-                    <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                      {ocorrencia.status}
-                    </span>
-                  </div>
-                  <p className="mt-1 text-sm font-semibold text-slate-700 dark:text-slate-200">{ocorrencia.assunto}</p>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
-                      <MapPin size={13} /> {ocorrencia.local}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
-                      <Tags size={13} /> {ocorrencia.natureza} / {ocorrencia.subNatureza}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 dark:bg-slate-800">
-                      <Users size={13} /> {ocorrencia.envolvidos.length} envolvido(s)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
-                  {podeAnalisar() && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        ocorrencia.analise
-                          ? abrirAnaliseOcorrencia(ocorrencia)
-                          : (setOcorrenciaAnaliseModal(ocorrencia), iniciarAnaliseOcorrencia(ocorrencia.id, true))
-                      }
-                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100 hover:text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20 dark:hover:text-amber-100"
-                      title={ocorrencia.analise ? "Abrir análise" : "Iniciar análise"}
-                    >
-                      <ClipboardCheck size={17} />
-                      <span>{ocorrencia.analise ? "Análise" : "Analisar"}</span>
-                    </button>
-                  )}
-
-                  {(!ocorrencia.investigacao || ocorrencia.investigacao.status === "Anulada") && podeAnalisar() && (
-                    <button
-                      type="button"
-                      onClick={() => converterParaInvestigacao(ocorrencia)}
-                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-purple-200 bg-purple-50 px-3 py-2 text-xs font-bold text-purple-700 transition hover:bg-purple-100 hover:text-purple-800 dark:border-purple-500/30 dark:bg-purple-500/10 dark:text-purple-200 dark:hover:bg-purple-500/20 dark:hover:text-purple-100"
-                      title={ocorrencia.investigacao?.status === "Anulada" ? "Reabrir investigação anulada" : "Converter para investigação"}
-                    >
-                      <FileSearch size={17} />
-                      <span>{ocorrencia.investigacao?.status === "Anulada" ? "Reabrir R.I" : "R.I"}</span>
-                    </button>
-                  )}
-
-                  {ocorrencia.investigacao && ocorrencia.investigacao.status !== "Anulada" && podeAnalisar() && (
-                    <button
-                      type="button"
-                      onClick={() => cancelarConversaoInvestigacao(ocorrencia)}
-                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-500/30 dark:bg-slate-500/10 dark:text-slate-200 dark:hover:bg-slate-500/20 dark:hover:text-white"
-                      title="Cancelar conversão para R.I"
-                    >
-                      <X size={17} />
-                      <span>Cancelar R.I</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => setOcorrenciaMencao(ocorrencia)}
-                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-bold text-indigo-700 transition hover:bg-indigo-100 hover:text-indigo-800 dark:border-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-200 dark:hover:bg-indigo-500/20 dark:hover:text-indigo-100"
-                    title="Mencionar usuário"
-                  >
-                    <AtSign size={17} />
-                    <span>Mencionar</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => editarOcorrencia(ocorrencia)}
-                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 hover:text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20 dark:hover:text-blue-100"
-                    title="Editar relatório"
-                  >
-                    <Edit3 size={17} />
-                    <span>Editar</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => abrirPdfOcorrencia(ocorrencia.id)}
-                    className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 hover:text-red-800 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20 dark:hover:text-red-100"
-                    title="Abrir PDF"
-                  >
-                    <FileText size={17} />
-                    <span>PDF</span>
-                  </button>
-
-                  {ocorrencia.status !== "Anulado" && (
-                    <button
-                      type="button"
-                      onClick={() => setOcorrenciaAnulacao(ocorrencia)}
-                      className="flex min-w-[70px] flex-col items-center gap-1 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-200 dark:hover:bg-orange-500/20 dark:hover:text-orange-100"
-                      title="Solicitar anulação"
-                    >
-                      <Ban size={17} />
-                      <span>Anular</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1120px] w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Ocorrência</th>
+                  <th className="px-4 py-3">Assunto</th>
+                  <th className="px-4 py-3">Local</th>
+                  <th className="px-4 py-3">Natureza</th>
+                  <th className="px-4 py-3 text-center">Envolvidos</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                {ocorrencias.map((ocorrencia) => (
+                  <tr key={ocorrencia.id} className="transition hover:bg-blue-50/60 dark:hover:bg-blue-500/5">
+                    <td className="px-4 py-4">
+                      <div className="font-black text-slate-900 dark:text-white">{ocorrencia.codigo}</div>
+                      <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {new Date(ocorrencia.dataOcorrencia).toLocaleString("pt-BR")}
+                      </div>
+                    </td>
+                    <td className="max-w-[260px] px-4 py-4">
+                      <p className="line-clamp-2 font-semibold text-slate-800 dark:text-slate-100">{ocorrencia.assunto}</p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                        <MapPin size={13} /> {ocorrencia.local}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                        <Tags size={13} /> {ocorrencia.natureza} / {ocorrencia.subNatureza}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-3 py-1 text-xs font-bold text-blue-600 dark:text-blue-300">
+                        <Users size={13} /> {ocorrencia.envolvidos.length}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+                        {ocorrencia.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex justify-end gap-2">
+                        {podeAnalisar() && (
+                          <button type="button" onClick={() => ocorrencia.analise ? abrirAnaliseOcorrencia(ocorrencia) : (setOcorrenciaAnaliseModal(ocorrencia), iniciarAnaliseOcorrencia(ocorrencia.id, true))} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-600 transition hover:-translate-y-0.5 hover:bg-amber-500/20 dark:text-amber-200" title={ocorrencia.analise ? "Abrir análise" : "Iniciar análise"}>
+                            <ClipboardCheck size={17} />
+                          </button>
+                        )}
+                        {(!ocorrencia.investigacao || ocorrencia.investigacao.status === "Anulada") && podeAnalisar() && (
+                          <button type="button" onClick={() => converterParaInvestigacao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-purple-400/30 bg-purple-500/10 text-purple-600 transition hover:-translate-y-0.5 hover:bg-purple-500/20 dark:text-purple-200" title={ocorrencia.investigacao?.status === "Anulada" ? "Reabrir investigação anulada" : "Converter para investigação"}>
+                            <FileSearch size={17} />
+                          </button>
+                        )}
+                        {ocorrencia.investigacao && ocorrencia.investigacao.status !== "Anulada" && podeAnalisar() && (
+                          <button type="button" onClick={() => cancelarConversaoInvestigacao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-400/30 bg-slate-500/10 text-slate-600 transition hover:-translate-y-0.5 hover:bg-slate-500/20 dark:text-slate-200" title="Cancelar conversão para R.I">
+                            <X size={17} />
+                          </button>
+                        )}
+                        <button type="button" onClick={() => setOcorrenciaMencao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-500/10 text-indigo-600 transition hover:-translate-y-0.5 hover:bg-indigo-500/20 dark:text-indigo-200" title="Mencionar usuário">
+                          <AtSign size={17} />
+                        </button>
+                        <button type="button" onClick={() => editarOcorrencia(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-blue-600 transition hover:-translate-y-0.5 hover:bg-blue-500/20 dark:text-blue-200" title="Editar relatório">
+                          <Edit3 size={17} />
+                        </button>
+                        <button type="button" onClick={() => abrirPdfOcorrencia(ocorrencia.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 bg-red-500/10 text-red-600 transition hover:-translate-y-0.5 hover:bg-red-500/20 dark:text-red-200" title="Abrir PDF">
+                          <FileText size={17} />
+                        </button>
+                        {ocorrencia.status !== "Anulado" && (
+                          <button type="button" onClick={() => setOcorrenciaAnulacao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-orange-400/30 bg-orange-500/10 text-orange-600 transition hover:-translate-y-0.5 hover:bg-orange-500/20 dark:text-orange-200" title="Solicitar anulação">
+                            <Ban size={17} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
