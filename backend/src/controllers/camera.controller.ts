@@ -66,6 +66,15 @@ function textoPdf(valor?: string | number | null) {
   return texto || "Nao informado";
 }
 
+function textoPdfSeguro(valor?: string | number | null, maxCaracteres = 240) {
+  const texto = textoPdf(valor).replace(/\s+/g, " ");
+  const limitado = texto.length > maxCaracteres ? `${texto.slice(0, maxCaracteres - 3).trim()}...` : texto;
+  return limitado
+    .split(" ")
+    .map((parte) => (parte.length > 22 ? parte.match(/.{1,22}/g)?.join(" ") || parte : parte))
+    .join(" ");
+}
+
 function tokenRelatorioCftv(params: { id: number; codigo: string; unidade: string }) {
   return crypto
     .createHmac("sha256", jwtSecret())
@@ -1296,15 +1305,23 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
     }
 
     function ensureSpace(height = 80) {
-      if (doc.y + height < footerY - 20) return;
+      if (doc.y + height < footerY - 20) return false;
       doc.addPage();
       header();
+      return true;
     }
 
     function card(x: number, y: number, w: number, label: string, value: string, color = "#0f172a") {
+      const textoValor = String(value || "").replace(/\s+/g, " ").trim();
+      let tamanhoValor = 15;
+      while (tamanhoValor > 8) {
+        doc.fontSize(tamanhoValor);
+        if (doc.widthOfString(textoValor) <= w - 20) break;
+        tamanhoValor -= 0.5;
+      }
       doc.roundedRect(x, y, w, 48, 8).fillAndStroke("#f8fafc", "#e2e8f0");
       doc.fillColor("#64748b").fontSize(7).text(label.toUpperCase(), x + 10, y + 9, { width: w - 20 });
-      doc.fillColor(color).fontSize(15).text(value, x + 10, y + 24, { width: w - 20, lineBreak: false, ellipsis: true });
+      doc.fillColor(color).fontSize(tamanhoValor).text(textoValor, x + 10, y + 24, { width: w - 20, lineBreak: false, ellipsis: true });
     }
 
     function graficoBarras(titulo: string, dados: Array<{ label: string; value: number; color: string }>) {
@@ -1323,24 +1340,33 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
       doc.moveDown(0.3);
     }
 
-    function tabela(headers: string[], widths: number[], rows: string[][]) {
-      ensureSpace(44);
-      let y = doc.y;
+    function desenharCabecalhoTabela(headers: string[], widths: number[]) {
+      const y = doc.y;
       doc.roundedRect(42, y, contentWidth, 24, 6).fill("#0f172a");
       let x = 42;
       headers.forEach((head, i) => {
-        doc.fillColor("#ffffff").fontSize(7).text(head.toUpperCase(), x + 5, y + 8, { width: widths[i] - 8, lineBreak: false, ellipsis: true });
+        doc.fillColor("#ffffff").fontSize(7).text(textoPdfSeguro(head, 42).toUpperCase(), x + 5, y + 8, { width: widths[i] - 8, lineBreak: false, ellipsis: true });
         x += widths[i];
       });
       doc.y = y + 28;
+    }
+
+    function tabela(headers: string[], widths: number[], rows: string[][]) {
+      ensureSpace(44);
+      desenharCabecalhoTabela(headers, widths);
       rows.forEach((row, index) => {
-        const rowH = 34;
-        ensureSpace(rowH + 8);
-        y = doc.y;
+        const textos = row.map((cell, i) => textoPdfSeguro(cell, widths[i] > 140 ? 260 : 140));
+        const alturas = textos.map((cell, i) => {
+          doc.fontSize(7.2);
+          return doc.heightOfString(cell, { width: widths[i] - 10, lineGap: 1 });
+        });
+        const rowH = Math.max(34, Math.min(86, Math.max(...alturas) + 16));
+        if (ensureSpace(rowH + 8)) desenharCabecalhoTabela(headers, widths);
+        const y = doc.y;
         doc.rect(42, y, contentWidth, rowH).fill(index % 2 === 0 ? "#ffffff" : "#f8fafc").strokeColor("#e2e8f0").stroke();
-        x = 42;
-        row.forEach((cell, i) => {
-          doc.fillColor("#334155").fontSize(7.2).text(cell, x + 5, y + 8, { width: widths[i] - 8, height: rowH - 10, ellipsis: true });
+        let x = 42;
+        textos.forEach((cell, i) => {
+          doc.fillColor("#334155").fontSize(7.2).text(cell, x + 5, y + 8, { width: widths[i] - 10, height: rowH - 12, lineGap: 1, ellipsis: true });
           x += widths[i];
         });
         doc.y = y + rowH;
@@ -1403,7 +1429,8 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
     } else {
       const yComp = doc.y;
       const compCol = (contentWidth - 36) / 4;
-      card(42, yComp, compCol, "Comparado com", relatorioAnterior.codigo, "#2563eb");
+      const codigoRelatorioAnterior = String(relatorioAnterior.codigo || "").replace(/\s+/g, "");
+      card(42, yComp, compCol, "Comparado com", codigoRelatorioAnterior, "#2563eb");
       card(42 + compCol + 12, yComp, compCol, "Variacao retencao", `${variacaoRetencaoMedia && variacaoRetencaoMedia > 0 ? "+" : ""}${variacaoRetencaoMedia ?? 0} dias`, (variacaoRetencaoMedia ?? 0) < 0 ? "#dc2626" : "#059669");
       card(42 + (compCol + 12) * 2, yComp, compCol, "Cameras com ganho", String(ganhoRetencao), "#059669");
       card(42 + (compCol + 12) * 3, yComp, compCol, "Cameras com perda", String(perdaRetencao), "#dc2626");
@@ -1414,8 +1441,8 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
         : ` A variacao total de indisponibilidade foi de ${variacaoIndisponibilidadeTotal > 0 ? "+" : ""}${Math.round(variacaoIndisponibilidadeTotal / 60)} hora(s).`;
       const textoComparativo =
         (variacaoRetencaoMedia ?? 0) < 0
-          ? `Em comparacao com o relatorio ${relatorioAnterior.codigo}, houve reducao media de ${Math.abs(variacaoRetencaoMedia || 0)} dia(s) de retencao. Este comportamento pode indicar impacto por indisponibilidade, falha de gravacao ou sobrescrita operacional no Digifort.${variacaoIndisponibilidadeTexto}`
-          : `Em comparacao com o relatorio ${relatorioAnterior.codigo}, houve ganho ou estabilidade na retencao media das cameras avaliadas.${variacaoIndisponibilidadeTexto} Recomenda-se manter o acompanhamento para confirmar a tendencia operacional.`;
+          ? `Em comparacao com o relatorio ${codigoRelatorioAnterior}, houve reducao media de ${Math.abs(variacaoRetencaoMedia || 0)} dia(s) de retencao. Este comportamento pode indicar impacto por indisponibilidade, falha de gravacao ou sobrescrita operacional no Digifort.${variacaoIndisponibilidadeTexto}`
+          : `Em comparacao com o relatorio ${codigoRelatorioAnterior}, houve ganho ou estabilidade na retencao media das cameras avaliadas.${variacaoIndisponibilidadeTexto} Recomenda-se manter o acompanhamento para confirmar a tendencia operacional.`;
       const textoCompH = Math.max(42, doc.heightOfString(textoComparativo, { width: contentWidth - 28, lineGap: 2 }) + 22);
       doc.roundedRect(42, doc.y, contentWidth, textoCompH, 8).fillAndStroke("#f8fafc", "#dbeafe");
       doc.fillColor("#334155").fontSize(9).text(textoComparativo, 56, doc.y + 11, { width: contentWidth - 28, lineGap: 2 });
@@ -1443,10 +1470,10 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
 
     camerasRelatorio.forEach(({ camera, checklist, eventos, totalIndisponibilidade: totalCamera, diasRetencao }) => {
       ensureSpace(116);
-      doc.fillColor("#0f172a").fontSize(12).text(`Historico - Camera ${camera.numeroCamera}${camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}`, 42, doc.y);
+      doc.fillColor("#0f172a").fontSize(12).text(textoPdfSeguro(`Historico - Camera ${camera.numeroCamera}${camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}`, 110), 42, doc.y, { width: contentWidth, ellipsis: true });
       doc.moveDown(0.4);
       doc.fillColor("#475569").fontSize(8.5).text(
-        `Servidor ${camera.numeroServidor} | ${camera.areaMonitorada} | ${camera.localInstalado} | Status atual: ${camera.status} | Retencao: ${diasRetencao === null ? "Sem checklist" : `${diasRetencao} dias`} | Indisponibilidade acumulada: ${formatarIndisponibilidade(totalCamera)}`,
+        textoPdfSeguro(`Servidor ${camera.numeroServidor} | ${camera.areaMonitorada} | ${camera.localInstalado} | Status atual: ${camera.status} | Retencao: ${diasRetencao === null ? "Sem checklist" : `${diasRetencao} dias`} | Indisponibilidade acumulada: ${formatarIndisponibilidade(totalCamera)}`, 420),
         42,
         doc.y,
         { width: contentWidth }
@@ -1454,7 +1481,7 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
       doc.moveDown(0.6);
       if (checklist) {
         doc.fillColor("#64748b").fontSize(8).text(
-          `Ultimo checklist: ${dataPt(checklist.createdAt)} | Data mais antiga: ${dataPt(checklist.dataInicialGravacao)} | Data mais recente: ${dataPt(checklist.dataMaisRecenteGravacao)} | Responsavel: ${checklist.responsavel?.apelido || checklist.responsavel?.nome || "Nao informado"}`,
+          textoPdfSeguro(`Ultimo checklist: ${dataPt(checklist.createdAt)} | Data mais antiga: ${dataPt(checklist.dataInicialGravacao)} | Data mais recente: ${dataPt(checklist.dataMaisRecenteGravacao)} | Responsavel: ${checklist.responsavel?.apelido || checklist.responsavel?.nome || "Nao informado"}`, 420),
           42,
           doc.y,
           { width: contentWidth }

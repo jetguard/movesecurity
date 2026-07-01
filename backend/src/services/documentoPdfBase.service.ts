@@ -15,6 +15,15 @@ export const pdfAssets = {
   watermark: path.resolve(process.cwd(), "assets", "jetguard-watermark.png"),
 };
 
+function ajustarFonteParaLargura(doc: PDFKit.PDFDocument, texto: string, largura: number, tamanhoInicial: number, tamanhoMinimo: number) {
+  for (let tamanho = tamanhoInicial; tamanho >= tamanhoMinimo; tamanho -= 0.5) {
+    doc.fontSize(tamanho);
+    if (doc.widthOfString(texto) <= largura) return tamanho;
+  }
+
+  return tamanhoMinimo;
+}
+
 export type AssinaturaPdf = {
   token: string;
   usuarioNome: string;
@@ -56,11 +65,16 @@ export function desenharCabecalhoPadrao(
     doc.image(pdfAssets.logo, 62, 50, { width: 110, height: 22, fit: [110, 22] });
   }
 
-  doc.fillColor("#dbeafe").fontSize(8).text(params.titulo.toUpperCase(), 190, 43, { width: 240 });
-  doc.fillColor("#ffffff").fontSize(16).text(params.codigo, 190, 58, { width: 250 });
-  doc.fillColor("#cbd5e1").fontSize(9).text(params.subtitulo, 190, 82, { width: 270, lineBreak: false, ellipsis: true });
-  doc.fillColor("#bfdbfe").fontSize(8.5).text(`Emitido em ${(params.emitidoEm || new Date()).toLocaleString("pt-BR")}`, pageWidth - 235, 52, { width: 175, align: "right" });
-  doc.fillColor("#ffffff").fontSize(10).text(`Unidade: ${params.unidade}`, pageWidth - 235, 75, { width: 175, align: "right" });
+  const infoX = pageWidth - 235;
+  const codigoTexto = String(params.codigo || "").replace(/\s+/g, "");
+  const codigoWidth = Math.max(150, infoX - 205);
+  const codigoFonte = ajustarFonteParaLargura(doc, codigoTexto, codigoWidth, 16, 11);
+
+  doc.fillColor("#dbeafe").fontSize(8).text(params.titulo.toUpperCase(), 190, 43, { width: codigoWidth, lineBreak: false, ellipsis: true });
+  doc.fillColor("#ffffff").fontSize(codigoFonte).text(codigoTexto, 190, 58, { width: codigoWidth, lineBreak: false, ellipsis: true });
+  doc.fillColor("#cbd5e1").fontSize(9).text(params.subtitulo, 190, 82, { width: codigoWidth + 30, lineBreak: false, ellipsis: true });
+  doc.fillColor("#bfdbfe").fontSize(8.5).text(`Emitido em ${(params.emitidoEm || new Date()).toLocaleString("pt-BR")}`, infoX, 52, { width: 175, align: "right" });
+  doc.fillColor("#ffffff").fontSize(10).text(`Unidade: ${params.unidade}`, infoX, 75, { width: 175, align: "right" });
   doc.moveTo(42, 116).lineTo(pageWidth - 42, 116).strokeColor(pdfTheme.line).lineWidth(0.8).stroke();
   doc.y = 130;
 }
