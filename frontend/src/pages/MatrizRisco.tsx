@@ -89,7 +89,7 @@ export default function MatrizRisco() {
               <h1 className="mt-4 text-3xl font-black tracking-tight text-white sm:text-4xl">Matriz de Risco 5x5</h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
                 Esta tela define a régua usada pelo JetGuard para classificar riscos por probabilidade e severidade. O
-                acompanhamento dos riscos cadastrados continua na página <strong className="text-white">Análise de Risco Operacional</strong>.
+                acompanhamento dos riscos cadastrados continua na página <strong className="text-white">Análise de Riscos</strong>.
               </p>
             </div>
             <div className="rounded-2xl border border-sky-400/20 bg-sky-500/10 p-4 text-sm text-sky-100">

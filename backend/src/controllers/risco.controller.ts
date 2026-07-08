@@ -1,6 +1,6 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
-import { AuthRequest } from "../middlewares/auth";
+import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { gerarRiscoPdf } from "../services/riscoPdf.service";
 
@@ -21,6 +21,198 @@ function normalizarId(valor: unknown) {
 
 function normalizarCodigo(valor: unknown) {
   return String(valor || "").trim().toUpperCase();
+}
+
+function textoObrigatorio(valor: unknown) {
+  return String(valor || "").trim();
+}
+
+function dadosCatalogo(req: AuthRequest) {
+  const nome = textoObrigatorio(req.body.nome);
+  const tipoRisco = textoObrigatorio(req.body.tipoRisco);
+
+  return {
+    unidade: req.unidadeAtiva || req.body.unidade,
+    nome,
+    tipoRisco,
+    naturezaRisco: textoObrigatorio(req.body.naturezaRisco) || tipoRisco || "Risco operacional",
+    descricaoRisco: textoObrigatorio(req.body.descricaoRisco),
+    possivelImpacto: textoObrigatorio(req.body.possivelImpacto),
+    medidasPreventivas: textoObrigatorio(req.body.medidasPreventivas) || null,
+    planoAcaoSugerido: textoObrigatorio(req.body.planoAcaoSugerido || req.body.planoAcao) || null,
+    status: textoObrigatorio(req.body.status) || "Ativo",
+  };
+}
+
+function codigoRiscoIdentificado(numero: number) {
+  return `IR${String(numero).padStart(4, "0")}`;
+}
+
+function naturezaAnalise(req: AuthRequest) {
+  return textoObrigatorio(req.body.naturezaRisco) || textoObrigatorio(req.body.tipoRisco) || "Risco operacional";
+}
+
+export async function listarCatalogoRiscos(req: AuthRequest, res: Response) {
+  try {
+    const riscos = await prisma.riscoCatalogo.findMany({
+      where: {
+        unidade: req.unidadeAtiva,
+        status: req.query.todos === "true" ? undefined : "Ativo",
+      },
+      orderBy: [{ status: "asc" }, { numero: "asc" }],
+    });
+
+    return res.json(riscos);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar riscos identificados" });
+  }
+}
+
+export async function listarLocaisRisco(req: AuthRequest, res: Response) {
+  try {
+    const locais = await prisma.localTerminal.findMany({
+      where: {
+        unidade: req.unidadeAtiva,
+      },
+      orderBy: [{ areaSensivel: "desc" }, { nome: "asc" }],
+    });
+
+    return res.json(locais);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar locais da análise de risco" });
+  }
+}
+
+export async function criarCatalogoRisco(req: AuthRequest, res: Response) {
+  try {
+    const dados = dadosCatalogo(req);
+    if (!dados.nome || !dados.tipoRisco || !dados.descricaoRisco || !dados.possivelImpacto) {
+      return res.status(400).json({ error: "Preencha nome, tipo, descrição e impacto do risco." });
+    }
+
+    const risco = await prisma.$transaction(async (tx) => {
+      const ultimo = await tx.riscoCatalogo.findFirst({
+        where: { unidade: dados.unidade },
+        orderBy: { numero: "desc" },
+      });
+      const numero = (ultimo?.numero || 0) + 1;
+
+      return tx.riscoCatalogo.create({
+        data: {
+          ...dados,
+          numero,
+          codigo: codigoRiscoIdentificado(numero),
+          criadoPorId: req.usuarioId,
+        },
+      });
+    });
+
+    await registrarLog({
+      req,
+      acao: "Criação de risco identificado",
+      tipoRegistro: "RiscoCatalogo",
+      registroId: risco.id,
+      dadosNovos: risco,
+    });
+
+    return res.status(201).json(risco);
+  } catch (error: any) {
+    console.error(error);
+    if (error?.code === "P2002") return res.status(409).json({ error: "Já existe um risco identificado com este nome na unidade." });
+    return res.status(500).json({ error: "Erro ao criar risco identificado" });
+  }
+}
+
+export async function atualizarCatalogoRisco(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.riscoCatalogo.findFirst({ where: { id, unidade: req.unidadeAtiva } });
+    if (!anterior) return res.status(404).json({ error: "Risco identificado não encontrado" });
+
+    const dados = dadosCatalogo(req);
+    const risco = await prisma.riscoCatalogo.update({
+      where: { id },
+      data: dados,
+    });
+
+    await registrarLog({
+      req,
+      acao: "Atualização de risco identificado",
+      tipoRegistro: "RiscoCatalogo",
+      registroId: risco.id,
+      dadosAnteriores: anterior,
+      dadosNovos: risco,
+    });
+
+    return res.json(risco);
+  } catch (error: any) {
+    console.error(error);
+    if (error?.code === "P2002") return res.status(409).json({ error: "Já existe um risco identificado com este nome na unidade." });
+    return res.status(500).json({ error: "Erro ao atualizar risco identificado" });
+  }
+}
+
+export async function removerCatalogoRisco(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.riscoCatalogo.findFirst({ where: { id, unidade: req.unidadeAtiva } });
+    if (!anterior) return res.status(404).json({ error: "Risco identificado não encontrado" });
+
+    const risco = await prisma.riscoCatalogo.update({
+      where: { id },
+      data: { status: "Inativo" },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Inativação de risco identificado",
+      tipoRegistro: "RiscoCatalogo",
+      registroId: risco.id,
+      dadosAnteriores: anterior,
+      dadosNovos: risco,
+    });
+
+    return res.json(risco);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao inativar risco identificado" });
+  }
+}
+
+export async function excluirCatalogoRisco(req: AuthRequest, res: Response) {
+  try {
+    if (req.usuarioPerfil !== PERFIS.SUPER_ADMIN) {
+      return res.status(403).json({ error: "Apenas super admin pode excluir definitivamente riscos identificados." });
+    }
+
+    const id = Number(req.params.id);
+    const anterior = await prisma.riscoCatalogo.findFirst({ where: { id, unidade: req.unidadeAtiva } });
+    if (!anterior) return res.status(404).json({ error: "Risco identificado não encontrado" });
+
+    await prisma.$transaction(async (tx) => {
+      await tx.analiseRisco.updateMany({
+        where: { riscoCatalogoId: id },
+        data: { riscoCatalogoId: null },
+      });
+
+      await tx.riscoCatalogo.delete({ where: { id } });
+    });
+
+    await registrarLog({
+      req,
+      acao: "Exclusão definitiva de risco identificado",
+      tipoRegistro: "RiscoCatalogo",
+      registroId: id,
+      dadosAnteriores: anterior,
+    });
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir risco identificado" });
+  }
 }
 
 export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
@@ -150,6 +342,7 @@ async function resolverVinculos(req: AuthRequest) {
 
 function includeRisco() {
   return {
+    riscoCatalogo: true,
     responsavel: { select: { id: true, nome: true, apelido: true } },
     responsavelAcao: { select: { id: true, nome: true, apelido: true } },
     ocorrencia: { select: { id: true, codigo: true, assunto: true } },
@@ -189,11 +382,12 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         codigo,
         dataHora: new Date(req.body.dataHora),
         responsavelId: req.usuarioId!,
+        riscoCatalogoId: normalizarId(req.body.riscoCatalogoId),
         unidade: req.unidadeAtiva || req.body.unidade,
         setor: req.body.setor,
         local: req.body.local,
         tipoRisco: req.body.tipoRisco,
-        naturezaRisco: req.body.naturezaRisco,
+        naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,
         probabilidade: req.body.probabilidade,
@@ -252,10 +446,11 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
       data: {
         dataHora: new Date(req.body.dataHora),
         unidade: req.unidadeAtiva || anterior.unidade,
+        riscoCatalogoId: normalizarId(req.body.riscoCatalogoId),
         setor: req.body.setor,
         local: req.body.local,
         tipoRisco: req.body.tipoRisco,
-        naturezaRisco: req.body.naturezaRisco,
+        naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,
         probabilidade: req.body.probabilidade,
@@ -293,10 +488,14 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
 export async function gerarPdfRisco(req: AuthRequest, res: Response) {
   const risco = await prisma.analiseRisco.findFirst({
     where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
-    include: { responsavel: { select: { nome: true } } },
+    include: {
+      responsavel: { select: { nome: true } },
+      riscoCatalogo: { select: { nome: true } },
+    },
   });
 
   if (!risco) return res.status(404).json({ error: "Análise de risco não encontrada" });
-  return gerarRiscoPdf(res, risco);
+  const urlValidacao = `${req.protocol}://${req.get("host")}/api/riscos/${risco.id}/pdf`;
+  return gerarRiscoPdf(res, risco, urlValidacao);
 }
 

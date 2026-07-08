@@ -580,6 +580,7 @@ model AnaliseRisco {
   numero              Int
   ano                 Int
   codigo              String
+  riscoCatalogoId     Int?
   dataHora            DateTime
   responsavelId       Int
   unidade             String
@@ -606,12 +607,14 @@ model AnaliseRisco {
 
   responsavel     Usuario       @relation("RiscoResponsavel", fields: [responsavelId], references: [id])
   responsavelAcao Usuario?      @relation("RiscoResponsavelAcao", fields: [responsavelAcaoId], references: [id])
+  riscoCatalogo   RiscoCatalogo? @relation(fields: [riscoCatalogoId], references: [id], onDelete: SetNull)
   ocorrencia      Ocorrencia?   @relation(fields: [ocorrenciaId], references: [id], onDelete: SetNull)
   evento          Evento?       @relation(fields: [eventoId], references: [id], onDelete: SetNull)
   investigacao    Investigacao? @relation(fields: [investigacaoId], references: [id], onDelete: SetNull)
   fotos           FotoRisco[]
 
   @@unique([codigo, unidade])
+  @@index([riscoCatalogoId])
 }
 
 model FotoRisco {
@@ -624,6 +627,30 @@ model FotoRisco {
   createdAt      DateTime @default(now())
 
   analiseRisco AnaliseRisco @relation(fields: [analiseRiscoId], references: [id], onDelete: Cascade)
+}
+
+model RiscoCatalogo {
+  id                  Int      @id @default(autoincrement())
+  numero              Int
+  codigo              String
+  unidade             String
+  nome                String
+  tipoRisco           String
+  naturezaRisco       String
+  descricaoRisco      String
+  possivelImpacto     String
+  medidasPreventivas  String?
+  planoAcaoSugerido   String?
+  status              String   @default("Ativo")
+  criadoPorId         Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  analises AnaliseRisco[]
+
+  @@unique([codigo, unidade])
+  @@unique([nome, unidade])
+  @@index([unidade, status])
 }
 
 model AnaliseEstrategica {
