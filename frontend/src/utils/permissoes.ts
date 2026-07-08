@@ -3,6 +3,7 @@
   ADMINISTRADOR: "ADMINISTRADOR",
   ANALISTA: "ANALISTA",
   OPERADOR: "OPERADOR",
+  TECNICO_MANUTENCAO: "TECNICO_MANUTENCAO",
 };
 
 export type UsuarioLocal = {
@@ -54,6 +55,12 @@ export const podeGerenciarRiscos = () =>
 
 export const podeVerNaturezas = () =>
   temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA, PERFIS.OPERADOR]);
+
+export const podeAtenderManutencao = () =>
+  temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.TECNICO_MANUTENCAO]);
+
+export const somenteTecnicoManutencao = () =>
+  temPerfil([PERFIS.TECNICO_MANUTENCAO]);
 
 export function unidadesPermitidasUsuario() {
   const usuario = usuarioAtual();

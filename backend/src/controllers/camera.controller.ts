@@ -209,7 +209,7 @@ function enviarCsv(res: Response, nome: string, linhas: unknown[][]) {
   return res.send(`\uFEFF${csv}`);
 }
 
-async function registrarMudancaStatus(params: {
+export async function registrarMudancaStatus(params: {
   cameraId: number;
   unidade: string;
   statusAnterior?: string;
@@ -256,7 +256,7 @@ async function registrarMudancaStatus(params: {
     return;
   }
 
-  if (params.statusNovo === STATUS_CONECTADA && camera.status === STATUS_DESCONECTADA) {
+  if (params.statusNovo === STATUS_CONECTADA && (camera.status === STATUS_DESCONECTADA || camera.desconectadaDesde)) {
     const eventoAberto = await prisma.cameraEventoStatus.findFirst({
       where: {
         cameraId: params.cameraId,

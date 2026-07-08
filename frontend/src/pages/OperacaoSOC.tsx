@@ -1,8 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  Activity,
-  AlertTriangle,
-  BookOpen,
   ClipboardCheck,
   FileDown,
   Pencil,
@@ -347,7 +344,7 @@ export default function OperacaoSOC() {
 
   async function salvarPassagem(formOverride = form) {
     if (formOverride.statusPostoGocil === "Incompleto" && !formOverride.observacaoPostoGocil.trim()) {
-      alert("Informe as observações do Posto Gocil.");
+      alert("Informe as observações do posto Vigilante.");
       return;
     }
     if (formOverride.statusPostoScanner === "Incompleto" && !formOverride.observacaoPostoScanner.trim()) {
@@ -768,14 +765,14 @@ export default function OperacaoSOC() {
         <div className="mt-6 grid gap-4 md:grid-cols-2">
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
             <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-              Status do Posto Gocil
+              Status posto Vigilante
               <select value={form.statusPostoGocil} onChange={(e) => setForm((atual) => ({ ...atual, statusPostoGocil: e.target.value }))} disabled={!podeEditarPassagem} className="mt-2 w-full rounded-xl border border-slate-300 bg-white p-3 font-normal dark:border-slate-700 dark:bg-slate-950 dark:text-white">
                 <option>Completo</option>
                 <option>Incompleto</option>
               </select>
             </label>
             {form.statusPostoGocil === "Incompleto" && (
-              <textarea value={form.observacaoPostoGocil} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoGocil: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="Observações obrigatórias do Posto Gocil" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+              <textarea value={form.observacaoPostoGocil} onChange={(e) => setForm((atual) => ({ ...atual, observacaoPostoGocil: e.target.value }))} disabled={!podeEditarPassagem} required placeholder="Observações obrigatórias do posto Vigilante" rows={4} className="mt-3 w-full rounded-xl border border-slate-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
             )}
           </div>
           <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-800">
@@ -880,48 +877,6 @@ export default function OperacaoSOC() {
           </div>
         )}
       </section>
-
-      <div className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2">
-            <BookOpen className="text-emerald-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Livro eletrônico de ocorrências</h2>
-          </div>
-          <div className="max-h-[430px] space-y-3 overflow-auto pr-2">
-            {dados.livroEletronico.map((item, index) => (
-              <div key={`${item.tipo}-${index}`} className="rounded-xl border border-slate-100 p-3 text-sm dark:border-slate-800">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{item.tipo}</span>
-                  <span className="text-xs text-slate-500">{new Date(item.data).toLocaleString("pt-BR")}</span>
-                </div>
-                <p className="mt-2 font-bold text-slate-900 dark:text-white">{item.titulo}</p>
-                <p className="mt-1 text-slate-500 dark:text-slate-400">{item.detalhe}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-4 flex items-center gap-2">
-            <AlertTriangle className="text-amber-600" size={20} />
-            <h2 className="font-bold text-slate-900 dark:text-white">Governança operacional</h2>
-          </div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {Object.entries(dados.indicadoresMensais).map(([chave, valor]) => (
-              <div key={chave} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
-                <p className="text-xs uppercase text-slate-500">{chave}</p>
-                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{valor}</p>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
-            <p className="mb-2 flex items-center gap-2 font-bold text-blue-900 dark:text-blue-100"><Activity size={16} /> Relatórios automáticos preparados</p>
-            <ul className="space-y-1 text-sm text-blue-800 dark:text-blue-100">
-              {dados.relatoriosExecutivosAutomaticos.map((item) => <li key={item}>{item}</li>)}
-            </ul>
-          </div>
-        </div>
-      </div>
 
       <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-4 flex items-center gap-2">

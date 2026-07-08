@@ -14,7 +14,7 @@ import {
   listarIndisponibilidadesCamera,
   registrarIndisponibilidadeCamera,
 } from "../controllers/camera.controller";
-import { acessoAnalise, acessoRelatorios, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { acessoAnalise, acessoCftvOperacional, acessoRelatorios, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
 
@@ -27,9 +27,9 @@ router.put("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), atualizarC
 router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), excluirCamera);
 router.get("/dashboard", autenticarUsuario, autorizarPerfis(acessoRelatorios), dashboardCameras);
 router.get("/:cameraId/checklists", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarChecklistCamera);
-router.post("/:cameraId/checklists", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarChecklistCamera);
+router.post("/:cameraId/checklists", autenticarUsuario, autorizarPerfis(acessoCftvOperacional), criarChecklistCamera);
 router.get("/:cameraId/indisponibilidades", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarIndisponibilidadesCamera);
-router.post("/:cameraId/indisponibilidades", autenticarUsuario, autorizarPerfis(acessoRelatorios), registrarIndisponibilidadeCamera);
+router.post("/:cameraId/indisponibilidades", autenticarUsuario, autorizarPerfis(acessoCftvOperacional), registrarIndisponibilidadeCamera);
 router.put("/:cameraId/indisponibilidades/:eventoId", autenticarUsuario, autorizarPerfis(acessoTotal), atualizarIndisponibilidadeCamera);
 
 export default router;

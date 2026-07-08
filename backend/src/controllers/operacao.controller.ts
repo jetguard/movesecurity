@@ -824,10 +824,10 @@ export async function gerarPdfPassagemTurno(req: AuthRequest, res: Response) {
 
     section("Status dos postos");
     const yStatus = doc.y;
-    summaryBox(36, yStatus, 255, "Posto Gocil", passagem.statusPostoGocil);
+    summaryBox(36, yStatus, 255, "Posto Vigilante", passagem.statusPostoGocil);
     summaryBox(304, yStatus, 255, "Posto Scanner", passagem.statusPostoScanner);
     doc.y = yStatus + 50;
-    if (passagem.statusPostoGocil === "Incompleto") paragraph(`Observações do Posto Gocil:\n${passagem.observacaoPostoGocil || "Não informado"}`);
+    if (passagem.statusPostoGocil === "Incompleto") paragraph(`Observações do Posto Vigilante:\n${passagem.observacaoPostoGocil || "Não informado"}`);
     if (passagem.statusPostoScanner === "Incompleto") paragraph(`Observações do Posto Scanner:\n${passagem.observacaoPostoScanner || "Não informado"}`);
 
     if (!rondas.length) {

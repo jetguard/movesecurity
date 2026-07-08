@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { Link, Outlet } from "react-router-dom";
+import { Link, Navigate, Outlet, useLocation } from "react-router-dom";
 import { useMemo } from "react";
 import type { FormEvent, MouseEvent } from "react";
 import {
@@ -36,6 +36,7 @@ import {
   Lightbulb,
   Lock,
   KeyRound,
+  Wrench,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -45,6 +46,7 @@ import {
   podeTrocarAmbiente,
   podeVerNaturezas,
   podeVerLogs,
+  somenteTecnicoManutencao,
   unidadesPermitidasUsuario,
   usuarioAtual,
 } from "../utils/permissoes";
@@ -53,6 +55,7 @@ const LIMITE_INATIVIDADE_MS = 5 * 60 * 1000;
 const CHAVE_ULTIMA_ATIVIDADE = "jetguardUltimaAtividade";
 
 export default function AdminLayout() {
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
@@ -83,6 +86,8 @@ export default function AdminLayout() {
   const [erroDesbloqueio, setErroDesbloqueio] = useState("");
   const [desbloqueando, setDesbloqueando] = useState(false);
   const usuario = usuarioAtual();
+  const tecnicoManutencao = somenteTecnicoManutencao();
+  const rotaTecnicoPermitida = location.pathname.startsWith("/cameras") || location.pathname.startsWith("/ordens-servico");
   const unidadesDisponiveis = useMemo(() => unidadesPermitidasUsuario(), []);
   const unidadeSalva = sessionStorage.getItem("unidadeAtiva");
   const unidadeInicial =
@@ -369,6 +374,10 @@ export default function AdminLayout() {
   const menuToggle = `ml-auto ${mostrarTextoMenu ? "max-w-8 opacity-100" : "max-w-0 overflow-hidden opacity-0"}`;
   const submenuClass = `ml-6 flex flex-col gap-2 overflow-hidden border-l border-slate-800 pl-4 ${mostrarTextoMenu ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"}`;
 
+  if (tecnicoManutencao && !rotaTecnicoPermitida) {
+    return <Navigate to="/cameras" replace />;
+  }
+
   return (
     <div className="min-h-screen bg-slate-100">
       {mobileMenuOpen && (
@@ -420,24 +429,28 @@ export default function AdminLayout() {
           onClick={fecharMenuMobileAoNavegar}
           className="mt-6 flex flex-col gap-2 px-2 pb-6 sm:px-3"
         >
-          <Link to="/" className={item}>
-            <LayoutDashboard size={20} className="shrink-0" />
-            <span className={menuText}>Dashboard</span>
-          </Link>
+          {!tecnicoManutencao && (
+            <Link to="/" className={item}>
+              <LayoutDashboard size={20} className="shrink-0" />
+              <span className={menuText}>Dashboard</span>
+            </Link>
+          )}
 
-          <button
-            onClick={() => setRelatoriosOpen(!relatoriosOpen)}
-            className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
-          >
-            <div className="flex items-center gap-3">
-              <FolderOpen size={20} className="shrink-0" />
-              <span className={menuText}>Relatórios</span>
-            </div>
-            <span className={menuToggle}>{relatoriosOpen ? "-" : "+"}</span>
-          </button>
+          {!tecnicoManutencao && (
+            <>
+              <button
+                onClick={() => setRelatoriosOpen(!relatoriosOpen)}
+                className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+              >
+                <div className="flex items-center gap-3">
+                  <FolderOpen size={20} className="shrink-0" />
+                  <span className={menuText}>Relatórios</span>
+                </div>
+                <span className={menuToggle}>{relatoriosOpen ? "-" : "+"}</span>
+              </button>
 
-          {relatoriosOpen && (
-            <div className={submenuClass}>
+              {relatoriosOpen && (
+                <div className={submenuClass}>
               <Link to="/ocorrencias" className={subItem}>
                 <FileText size={16} />
                 Ocorrências
@@ -468,7 +481,9 @@ export default function AdminLayout() {
                 <FileText size={16} />
                 Relatos de Campo
               </Link>
-            </div>
+                </div>
+              )}
+            </>
           )}
 
           <button
@@ -488,38 +503,46 @@ export default function AdminLayout() {
                 <Video size={16} />
                 Câmeras CFTV
               </Link>
-              <Link to="/planejamento" className={subItem}>
-                <Columns3 size={16} />
-                Quadro de Tarefas
+              <Link to="/ordens-servico" className={subItem}>
+                <Wrench size={16} />
+                Ordens de Serviço
               </Link>
-              <Link to="/tarefas" className={subItem}>
-                <CheckCircle2 size={16} />
-                Minhas Tarefas
-              </Link>
-              <Link to="/quadra-seguranca" className={subItem}>
-                <PackageSearch size={16} />
-                Quadra de Segurança
-              </Link>
-              <Link to="/mapa-operacional" className={subItem}>
-                <MapPinned size={16} />
-                Mapa Operacional
-              </Link>
-              <Link to="/notificacoes" className={subItem}>
-                <Bell size={16} />
-                Notificações
-              </Link>
-              <Link to="/alertas-operacionais" className={subItem}>
-                <ShieldAlert size={16} />
-                Alertas Operacionais
-              </Link>
-              <Link to="/pendencias" className={subItem}>
-                <ListChecks size={16} />
-                Pendências
-              </Link>
-              <Link to="/evidencias" className={subItem}>
-                <Paperclip size={16} />
-                Evidências
-              </Link>
+              {!tecnicoManutencao && (
+                <>
+                  <Link to="/planejamento" className={subItem}>
+                    <Columns3 size={16} />
+                    Quadro de Tarefas
+                  </Link>
+                  <Link to="/tarefas" className={subItem}>
+                    <CheckCircle2 size={16} />
+                    Minhas Tarefas
+                  </Link>
+                  <Link to="/quadra-seguranca" className={subItem}>
+                    <PackageSearch size={16} />
+                    Quadra de Segurança
+                  </Link>
+                  <Link to="/mapa-operacional" className={subItem}>
+                    <MapPinned size={16} />
+                    Mapa Operacional
+                  </Link>
+                  <Link to="/notificacoes" className={subItem}>
+                    <Bell size={16} />
+                    Notificações
+                  </Link>
+                  <Link to="/alertas-operacionais" className={subItem}>
+                    <ShieldAlert size={16} />
+                    Alertas Operacionais
+                  </Link>
+                  <Link to="/pendencias" className={subItem}>
+                    <ListChecks size={16} />
+                    Pendências
+                  </Link>
+                  <Link to="/evidencias" className={subItem}>
+                    <Paperclip size={16} />
+                    Evidências
+                  </Link>
+                </>
+              )}
             </div>
           )}
 

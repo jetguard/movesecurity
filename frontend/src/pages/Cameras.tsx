@@ -1,9 +1,9 @@
-import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { Activity, AlertTriangle, Camera, ClipboardCheck, FileText, History, Pencil, Radio, ShieldCheck, Trash2, Wifi, WifiOff, X } from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Activity, AlertTriangle, Camera, ChevronDown, ClipboardCheck, FileText, History, Pencil, Radio, ShieldCheck, Trash2, Wifi, WifiOff, Wrench, X } from "lucide-react";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
-import { podeAdministrar, podeAnalisar, podeSuperAdmin } from "../utils/permissoes";
+import { podeAdministrar, podeAnalisar, podeSuperAdmin, somenteTecnicoManutencao } from "../utils/permissoes";
 
 type CameraItem = {
   id: number;
@@ -298,6 +298,7 @@ export default function Cameras() {
   const [cameras, setCameras] = useState<CameraItem[]>([]);
   const [dashboard, setDashboard] = useState<DashboardCameras | null>(null);
   const [formAberto, setFormAberto] = useState(false);
+  const [estatisticasAbertas, setEstatisticasAbertas] = useState(false);
   const [cameraEditando, setCameraEditando] = useState<CameraItem | null>(null);
   const [cameraChecklist, setCameraChecklist] = useState<CameraItem | null>(null);
   const [cameraHistorico, setCameraHistorico] = useState<CameraItem | null>(null);
@@ -306,6 +307,9 @@ export default function Cameras() {
   const [statusFiltroCamera, setStatusFiltroCamera] = useState("");
   const [camerasSelecionadas, setCamerasSelecionadas] = useState<number[]>([]);
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
+  const [modalOrdemServico, setModalOrdemServico] = useState<(Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> & Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>) | null>(null);
+  const resolverOrdemServico = useRef<((abrir: boolean) => void) | null>(null);
+  const tecnicoSomenteLeitura = somenteTecnicoManutencao();
   const [indisponibilidades, setIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
   const [timelineChecklists, setTimelineChecklists] = useState<CameraChecklistHistorico[]>([]);
   const [timelineIndisponibilidades, setTimelineIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
@@ -450,7 +454,6 @@ export default function Cameras() {
     setCameraEditando(null);
     setForm(cameraInicial);
     setFormAberto(true);
-    setTimeout(() => document.getElementById("form-camera")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }
 
   function editarCamera(camera: CameraItem) {
@@ -471,16 +474,59 @@ export default function Cameras() {
       observacoesTecnicas: camera.observacoesTecnicas || "",
     });
     setFormAberto(true);
-    setTimeout(() => document.getElementById("form-camera")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  async function confirmarAberturaOrdemServico(camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> & Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>) {
+    return new Promise<boolean>((resolve) => {
+      resolverOrdemServico.current = resolve;
+      setModalOrdemServico(camera);
+    });
+  }
+
+  async function criarOrdemServicoCamera(camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera">) {
+    try {
+      const resposta = await api.post("/ordens-servico", {
+        cameraId: camera.id,
+        descricao: "Camera marcada como desconectada pelo operador.",
+      });
+
+    alert(resposta.data?.existente
+      ? "Já existe uma ordem de serviço em aberto para esta câmera."
+      : "Ordem de serviço aberta para manutenção.");
+    } catch (error: any) {
+      alert(error?.response?.data?.error || "Nao foi possivel abrir a ordem de servico.");
+      throw error;
+    }
+  }
+
+  async function perguntarAbrirOrdemServico(camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> & Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>) {
+    const confirmar = await confirmarAberturaOrdemServico(camera);
+    if (!confirmar) return;
+    await criarOrdemServicoCamera(camera);
+  }
+
+  function responderModalOrdemServico(abrir: boolean) {
+    resolverOrdemServico.current?.(abrir);
+    resolverOrdemServico.current = null;
+    setModalOrdemServico(null);
   }
 
   async function salvarCamera(e: React.FormEvent) {
     e.preventDefault();
+    let cameraSalva: CameraItem | null = null;
     if (cameraEditando) {
-      await api.put(`/cameras/${cameraEditando.id}`, form);
+      const resposta = await api.put(`/cameras/${cameraEditando.id}`, form);
+      cameraSalva = resposta.data;
     } else {
-      await api.post("/cameras", form);
+      const resposta = await api.post("/cameras", form);
+      cameraSalva = resposta.data;
     }
+
+    const mudouParaDesconectada = form.status === "Desconectada" && cameraEditando?.status !== "Desconectada";
+    if (cameraSalva && mudouParaDesconectada) {
+      await perguntarAbrirOrdemServico(cameraSalva);
+    }
+
     setFormAberto(false);
     setCameraEditando(null);
     setForm(cameraInicial);
@@ -613,9 +659,19 @@ export default function Cameras() {
       return;
     }
 
-    await api.post(`/cameras/${cameraChecklist.id}/checklists`, checklist);
+    const resposta = await api.post(`/cameras/${cameraChecklist.id}/checklists`, checklist);
+    const mudouParaDesconectada = checklist.statusAtual === "Desconectada" && cameraChecklist.status !== "Desconectada";
+    const cameraAtualizada = resposta.data?.camera ? { ...cameraChecklist, ...resposta.data.camera } : { ...cameraChecklist, status: checklist.statusAtual };
+    const cameraDoChecklist = cameraAtualizada;
+    setCameras((atuais) =>
+      atuais.map((camera) => (camera.id === cameraChecklist.id ? { ...camera, ...cameraAtualizada } : camera)),
+    );
+    await carregar();
     setCameraChecklist(null);
     setChecklist(checklistInicial);
+    if (mudouParaDesconectada) {
+      await perguntarAbrirOrdemServico(cameraDoChecklist);
+    }
     await carregar();
   }
 
@@ -701,7 +757,25 @@ export default function Cameras() {
         </div>
 
         {dashboard && (
-          <div className="space-y-6 p-5 sm:p-6">
+          <div className="border-t border-slate-800">
+            <button
+              type="button"
+              onClick={() => setEstatisticasAbertas((aberto) => !aberto)}
+              className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-slate-900/70 sm:px-6"
+              aria-expanded={estatisticasAbertas}
+            >
+              <div>
+                <h2 className="text-base font-black text-slate-100">Estatísticas CFTV</h2>
+                <p className="mt-1 text-xs text-slate-400">Indicadores, mapas, rankings, gráficos e timeline operacional.</p>
+              </div>
+              <span className="flex items-center gap-3 rounded-full border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-cyan-200">
+                {estatisticasAbertas ? "Ocultar" : "Mostrar"}
+                <ChevronDown size={16} className={`transition ${estatisticasAbertas ? "rotate-180" : ""}`} />
+              </span>
+            </button>
+
+            {estatisticasAbertas && (
+              <div className="space-y-6 border-t border-slate-800 p-5 sm:p-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <CardSoc titulo="Câmeras cadastradas" valor={dashboard.total} subtitulo="Inventário ativo da unidade" icon={Camera} tom="text-white" />
               <CardSoc titulo="Online" valor={dashboard.online} subtitulo={`${dashboard.disponibilidade}% de disponibilidade`} icon={Wifi} tom="text-emerald-300" />
@@ -725,7 +799,15 @@ export default function Cameras() {
                 </div>
                 <div className="mt-4 grid max-h-[310px] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
                   {dashboard.mapaOperacional.map((item) => (
-                    <button key={item.id} onClick={() => editarCamera(cameras.find((c) => c.id === item.id)!)} className={`rounded-xl border p-3 text-left transition hover:-translate-y-0.5 ${item.status === "Conectada" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}>
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        if (!tecnicoSomenteLeitura) {
+                          editarCamera(cameras.find((c) => c.id === item.id)!);
+                        }
+                      }}
+                      className={`rounded-xl border p-3 text-left transition ${tecnicoSomenteLeitura ? "cursor-default" : "hover:-translate-y-0.5"} ${item.status === "Conectada" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}
+                    >
                       <div className="flex items-center justify-between">
                         <strong className="text-sm text-slate-100">Câmera {item.numeroCamera}</strong>
                         <span className={`h-2.5 w-2.5 rounded-full ${item.status === "Conectada" ? "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,.7)]" : "bg-red-400 shadow-[0_0_14px_rgba(248,113,113,.7)]"}`} />
@@ -788,11 +870,15 @@ export default function Cameras() {
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
               <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950 p-5">
                 <h2 className="font-bold text-slate-100">Ranking de instabilidade</h2>
-                {dashboard.instabilidadePorCamera.map(([nome, valor]) => <Barra key={nome} nome={nome} valor={valor} maximo={maxFalhas} cor="bg-red-400" />)}
+                <div className="max-h-[230px] space-y-4 overflow-y-auto pr-2 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
+                  {dashboard.instabilidadePorCamera.map(([nome, valor]) => <Barra key={nome} nome={nome} valor={valor} maximo={maxFalhas} cor="bg-red-400" />)}
+                </div>
               </div>
               <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950 p-5">
                 <h2 className="font-bold text-slate-100">Áreas mais críticas</h2>
-                {dashboard.falhasPorArea.map(([nome, valor]) => <Barra key={nome} nome={nome} valor={valor} maximo={maxAreas} cor="bg-amber-400" />)}
+                <div className="max-h-[230px] space-y-4 overflow-y-auto pr-2 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
+                  {dashboard.falhasPorArea.map(([nome, valor]) => <Barra key={nome} nome={nome} valor={valor} maximo={maxAreas} cor="bg-amber-400" />)}
+                </div>
               </div>
               <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
                 <h2 className="font-bold text-slate-100">Comparativos técnicos</h2>
@@ -857,12 +943,15 @@ export default function Cameras() {
                 </div>
               </div>
             </div>
+              </div>
+            )}
           </div>
         )}
       </section>
 
       {formAberto && (
-        <form id="form-camera" onSubmit={salvarCamera} className="rounded-2xl bg-white p-5 shadow">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <form id="form-camera" onSubmit={salvarCamera} className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold text-slate-900">{cameraEditando ? "Editar câmera" : "Cadastrar câmera"}</h2>
@@ -871,50 +960,75 @@ export default function Cameras() {
             <button type="button" onClick={() => setFormAberto(false)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
           </div>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <input className="rounded-lg border p-3" placeholder="Nº da câmera. Ex: CF001" value={form.numeroCamera} onChange={(e) => campo("numeroCamera", e.target.value.toUpperCase())} required />
-            <input className="rounded-lg border p-3" placeholder="Nome da camera. Ex: Gate 1 - Entrada" value={form.nomeCamera} onChange={(e) => campo("nomeCamera", e.target.value)} />
-            <input className="rounded-lg border p-3" placeholder="Nº do servidor. Ex: SJJ-1" value={form.numeroServidor} onChange={(e) => campo("numeroServidor", e.target.value.toUpperCase())} required />
-            <select className="rounded-lg border p-3" value={form.tipoSistema} onChange={(e) => campo("tipoSistema", e.target.value)} required>
-              <option value="">Selecione o tipo de sistema</option>
-              <option>DIGIFORT</option>
-            </select>
-            <select className="rounded-lg border p-3" value={form.status} onChange={(e) => campo("status", e.target.value)} required>
-              <option value="">Selecione o status atual</option>
-              <option>Conectada</option>
-              <option>Desconectada</option>
-            </select>
-            <select className="rounded-lg border p-3" value={form.tecnologia} onChange={(e) => campo("tecnologia", e.target.value)} required>
-              <option value="">Selecione a tecnologia</option>
-              <option>Analógica</option>
-              <option>Digital</option>
-            </select>
-            <select className="rounded-lg border p-3" value={form.tipoCamera} onChange={(e) => campo("tipoCamera", e.target.value)} required>
-              <option value="">Selecione o tipo da câmera</option>
-              <option>Speed Dome</option>
-              <option>Fixa</option>
-              <option>Bullet</option>
-              <option>PTZ</option>
-            </select>
-            <input className="rounded-lg border p-3" placeholder="Local instalado" value={form.localInstalado} onChange={(e) => campo("localInstalado", e.target.value)} required />
-            <input className="rounded-lg border p-3" placeholder="Área monitorada" value={form.areaMonitorada} onChange={(e) => campo("areaMonitorada", e.target.value)} required />
-            <select className="rounded-lg border p-3" value={form.infravermelho} onChange={(e) => campo("infravermelho", e.target.value)} required>
-              <option value="">Possui infravermelho?</option>
-              <option>Sim</option>
-              <option>Não</option>
-            </select>
-            <select className="rounded-lg border p-3" value={form.monitoramento} onChange={(e) => campo("monitoramento", e.target.value)} required>
-              <option value="">Selecione o monitoramento</option>
-              <option>Ativo</option>
-              <option>Inativo</option>
-            </select>
             <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Última manutenção da câmera</span>
-              <input type="date" className="w-full rounded-lg border p-3" value={form.ultimaManutencao} onChange={(e) => campo("ultimaManutencao", e.target.value)} />
+              <span>Nº da câmera</span>
+              <input className="w-full rounded-lg border p-3" placeholder="Ex: CF001" value={form.numeroCamera} onChange={(e) => campo("numeroCamera", e.target.value.toUpperCase())} required />
             </label>
-            <textarea className="rounded-lg border p-3 md:col-span-3" placeholder="Observações técnicas" value={form.observacoesTecnicas} onChange={(e) => campo("observacoesTecnicas", e.target.value)} />
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Nome da câmera</span>
+              <input className="w-full rounded-lg border p-3" placeholder="Ex: Gate 1 - Entrada" value={form.nomeCamera} onChange={(e) => campo("nomeCamera", e.target.value)} />
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Nº do servidor</span>
+              <input className="w-full rounded-lg border p-3" placeholder="Ex: SJJ-1" value={form.numeroServidor} onChange={(e) => campo("numeroServidor", e.target.value.toUpperCase())} required />
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Tipo de sistema</span>
+              <select className="w-full rounded-lg border p-3" value={form.tipoSistema} onChange={(e) => campo("tipoSistema", e.target.value)} required>
+                <option value="">Selecione</option>
+                <option>DIGIFORT</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Tecnologia</span>
+              <select className="w-full rounded-lg border p-3" value={form.tecnologia} onChange={(e) => campo("tecnologia", e.target.value)} required>
+                <option value="">Selecione</option>
+                <option>Analógica</option>
+                <option>Digital</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Tipo da câmera</span>
+              <select className="w-full rounded-lg border p-3" value={form.tipoCamera} onChange={(e) => campo("tipoCamera", e.target.value)} required>
+                <option value="">Selecione</option>
+                <option>Speed Dome</option>
+                <option>Fixa</option>
+                <option>Bullet</option>
+                <option>PTZ</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Local instalado</span>
+              <input className="w-full rounded-lg border p-3" placeholder="Ex: Portão principal" value={form.localInstalado} onChange={(e) => campo("localInstalado", e.target.value)} required />
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Área monitorada</span>
+              <input className="w-full rounded-lg border p-3" placeholder="Ex: Gate 1" value={form.areaMonitorada} onChange={(e) => campo("areaMonitorada", e.target.value)} required />
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Infravermelho</span>
+              <select className="w-full rounded-lg border p-3" value={form.infravermelho} onChange={(e) => campo("infravermelho", e.target.value)} required>
+                <option value="">Selecione</option>
+                <option>Sim</option>
+                <option>Não</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700">
+              <span>Monitoramento</span>
+              <select className="w-full rounded-lg border p-3" value={form.monitoramento} onChange={(e) => campo("monitoramento", e.target.value)} required>
+                <option value="">Selecione</option>
+                <option>Ativo</option>
+                <option>Inativo</option>
+              </select>
+            </label>
+            <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-3">
+              <span>Observações técnicas</span>
+              <textarea className="w-full rounded-lg border p-3" placeholder="Informações técnicas, localização detalhada ou observações relevantes" value={form.observacoesTecnicas} onChange={(e) => campo("observacoesTecnicas", e.target.value)} />
+            </label>
           </div>
           <button className="mt-5 rounded-lg bg-blue-600 px-5 py-3 font-bold text-white">Salvar câmera</button>
-        </form>
+          </form>
+        </div>
       )}
 
       <section className="rounded-2xl bg-white p-5 shadow">
@@ -1069,12 +1183,14 @@ export default function Cameras() {
                           classe="border-red-200 bg-red-50 text-red-700 hover:border-red-400 hover:bg-red-100"
                         />
                       )}
-                      <BotaoAcaoCamera
-                        titulo="Abrir checklist"
-                        onClick={() => abrirChecklist(camera)}
-                        icon={ClipboardCheck}
-                        classe="border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400 hover:bg-blue-100"
-                      />
+                      {!tecnicoSomenteLeitura && (
+                        <BotaoAcaoCamera
+                          titulo="Abrir checklist"
+                          onClick={() => abrirChecklist(camera)}
+                          icon={ClipboardCheck}
+                          classe="border-blue-200 bg-blue-50 text-blue-700 hover:border-blue-400 hover:bg-blue-100"
+                        />
+                      )}
                       <BotaoAcaoCamera
                         titulo="Historico de indisponibilidade"
                         onClick={() => abrirHistoricoIndisponibilidade(camera)}
@@ -1391,6 +1507,67 @@ export default function Cameras() {
             </div>
             <button className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-bold text-white">Salvar checklist</button>
           </form>
+        </div>
+      )}
+
+      {modalOrdemServico && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/85 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-sky-400/30 bg-slate-950 shadow-2xl"
+          >
+            <div className="border-b border-white/10 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-5">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/30">
+                  <AlertTriangle size={26} />
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Câmera desconectada</p>
+                  <h2 className="mt-2 text-2xl font-black text-white">Abrir ordem de serviço?</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-300">
+                    A câmera <strong className="text-white">{modalOrdemServico.numeroCamera}</strong>
+                    {modalOrdemServico.nomeCamera ? ` - ${modalOrdemServico.nomeCamera}` : ""} foi marcada como desconectada.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">Área</span>
+                  <p className="mt-1 font-bold text-white">{modalOrdemServico.areaMonitorada || "Não informada"}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">Local</span>
+                  <p className="mt-1 font-bold text-white">{modalOrdemServico.localInstalado || "Não informado"}</p>
+                </div>
+              </div>
+
+              <p className="text-sm leading-6 text-slate-300">
+                Se abrir a OS, o chamado ficará disponível para o perfil Técnico/Manutenção tratar a ocorrência.
+              </p>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_1.35fr]">
+                <button
+                  type="button"
+                  onClick={() => responderModalOrdemServico(false)}
+                  className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-black text-slate-200 transition hover:border-slate-500 hover:bg-white/5"
+                >
+                  Não abrir agora
+                </button>
+                <button
+                  type="button"
+                  onClick={() => responderModalOrdemServico(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-sky-500 px-4 py-3 text-sm font-black text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-400"
+                >
+                  <Wrench size={18} />
+                  Sim, abrir OS
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

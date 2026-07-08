@@ -50,6 +50,7 @@ const Mencoes = lazyWithReload(() => import("./pages/Mencoes"));
 const Tarefas = lazyWithReload(() => import("./pages/Tarefas"));
 const Historico = lazyWithReload(() => import("./pages/Historico"));
 const Cameras = lazyWithReload(() => import("./pages/Cameras"));
+const OrdensServico = lazyWithReload(() => import("./pages/OrdensServico"));
 const Configuracoes = lazyWithReload(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
 const GestaoPatrimonialAvancada = lazyWithReload(
@@ -126,6 +127,20 @@ export default function App() {
               element={<Navigate to="/documentos" replace />}
             />
             <Route path="cameras" element={<Cameras />} />
+            <Route
+              path="ordens-servico"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.TECNICO_MANUTENCAO,
+                  ]}
+                >
+                  <OrdensServico />
+                </ProtectedRoute>
+              }
+            />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
             <Route
               path="relatorio-diario"

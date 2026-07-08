@@ -46,6 +46,8 @@ model Usuario {
   checklistsResponsavel        ChecklistInspecao[]
   camerasCadastradas           CameraMonitoramento[]          @relation("CameraCriador")
   cameraChecklists             CameraChecklistOperacional[]   @relation("CameraChecklistResponsavel")
+  ordensServicoAbertas         OrdemServicoCamera[]           @relation("OrdemServicoAbertaPor")
+  ordensServicoAtendidas       OrdemServicoCamera[]           @relation("OrdemServicoAtendidaPor")
   notificacoesLidas            NotificacaoLida[]
   mencoesRecebidas             Mencao[]                       @relation("MencaoUsuario")
   mencoesCriadas               Mencao[]                       @relation("MencaoAutor")
@@ -857,8 +859,44 @@ model CameraMonitoramento {
   cadastradoPor Usuario?                     @relation("CameraCriador", fields: [cadastradoPorId], references: [id])
   checklists    CameraChecklistOperacional[]
   eventos       CameraEventoStatus[]
+  ordensServico OrdemServicoCamera[]
 
   @@unique([numeroCamera, unidade])
+}
+
+model OrdemServicoCamera {
+  id                       Int      @id @default(autoincrement())
+  numero                   Int
+  ano                      Int
+  codigo                   String
+  cameraId                 Int
+  unidade                  String   @default("GJA-T1")
+  status                   String   @default("EM_ABERTO")
+  origem                   String   @default("CAMERA_DESCONECTADA")
+  descricao                String?
+  abertaPorId              Int?
+  atendidoPorId            Int?
+  tratativa                String?
+  houveDano                Boolean  @default(false)
+  descricaoDano            String?
+  requerTrocaCamera        Boolean  @default(false)
+  requerCompra             Boolean  @default(false)
+  itensNecessarios         String?
+  observacoesTecnicas      String?
+  desconectadaEm           DateTime?
+  atendimentoIniciadoEm    DateTime?
+  concluidoEm              DateTime?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  camera      CameraMonitoramento @relation(fields: [cameraId], references: [id], onDelete: Cascade)
+  abertaPor   Usuario?            @relation("OrdemServicoAbertaPor", fields: [abertaPorId], references: [id])
+  atendidoPor Usuario?            @relation("OrdemServicoAtendidaPor", fields: [atendidoPorId], references: [id])
+
+  @@index([cameraId, status])
+  @@index([unidade, status])
+  @@unique([codigo, unidade])
+  @@unique([numero, ano, unidade])
 }
 
 model CameraChecklistOperacional {

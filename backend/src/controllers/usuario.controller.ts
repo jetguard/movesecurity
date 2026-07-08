@@ -44,10 +44,17 @@ function normalizarPerfil(perfil: string) {
     Administrador: "ADMINISTRADOR",
     Analista: "ANALISTA",
     Operador: "OPERADOR",
+    "Técnico/Manutenção": "TECNICO_MANUTENCAO",
+    "Tecnico/Manutencao": "TECNICO_MANUTENCAO",
+    "Técnico Manutenção": "TECNICO_MANUTENCAO",
+    "Tecnico Manutencao": "TECNICO_MANUTENCAO",
+    TECNICO: "TECNICO_MANUTENCAO",
+    MANUTENCAO: "TECNICO_MANUTENCAO",
     SUPER_ADMIN: "SUPER_ADMIN",
     ADMINISTRADOR: "ADMINISTRADOR",
     ANALISTA: "ANALISTA",
     OPERADOR: "OPERADOR",
+    TECNICO_MANUTENCAO: "TECNICO_MANUTENCAO",
   };
 
   return mapa[perfil] || perfil;
