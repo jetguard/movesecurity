@@ -1,17 +1,65 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
-import { AuthRequest, PERFIS } from "../middlewares/auth";
+import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { gerarRiscoPdf } from "../services/riscoPdf.service";
 
 const valores = { Baixa: 1, Média: 2, Alta: 3, Crítica: 4 } as Record<string, number>;
+const niveisNumericos = ["Baixa", "Baixa", "Média", "Alta", "Crítica", "Crítica"];
 
 function calcularNivel(probabilidade: string, severidade: string) {
   const score = (valores[probabilidade] || 1) * (valores[severidade] || 1);
-  if (score <= 3) return "Baixo";
-  if (score <= 7) return "Moderado";
-  if (score <= 11) return "Alto";
+  return calcularNivelPorResultado(score);
+}
+
+function numeroEscala(valor: unknown) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return null;
+  return Math.min(Math.max(Math.trunc(numero), 1), 5);
+}
+
+function calcularNivelPorResultado(resultado: number) {
+  if (resultado <= 5) return "Baixo";
+  if (resultado <= 10) return "Moderado";
+  if (resultado <= 15) return "Alto";
   return "Crítico";
+}
+
+function calcularClassificacao(req: AuthRequest) {
+  const probabilidadeValor = numeroEscala(req.body.probabilidadeValor) || valores[req.body.probabilidade] || 1;
+  const impactoValor = numeroEscala(req.body.impactoValor) || valores[req.body.severidade] || 1;
+  const resultadoRisco = probabilidadeValor * impactoValor;
+  const nivelRisco = calcularNivelPorResultado(resultadoRisco);
+
+  return {
+    probabilidadeValor,
+    impactoValor,
+    resultadoRisco,
+    nivelRisco,
+    probabilidadeTexto: req.body.probabilidade || niveisNumericos[probabilidadeValor] || "Baixa",
+    impactoTexto: req.body.severidade || niveisNumericos[impactoValor] || "Baixa",
+  };
+}
+
+function calcularReavaliacao(req: AuthRequest) {
+  const novaProbabilidade = numeroEscala(req.body.novaProbabilidade);
+  const novoImpacto = numeroEscala(req.body.novoImpacto);
+  if (!novaProbabilidade || !novoImpacto) {
+    return {
+      novaProbabilidade: null,
+      novoImpacto: null,
+      novoResultado: null,
+      novoNivelRisco: null,
+    };
+  }
+
+  const novoResultado = novaProbabilidade * novoImpacto;
+  return {
+    novaProbabilidade,
+    novoImpacto,
+    novoResultado,
+    novoNivelRisco: calcularNivelPorResultado(novoResultado),
+  };
 }
 
 function normalizarId(valor: unknown) {
@@ -28,14 +76,19 @@ function textoObrigatorio(valor: unknown) {
 }
 
 function dadosCatalogo(req: AuthRequest) {
-  const nome = textoObrigatorio(req.body.nome);
-  const tipoRisco = textoObrigatorio(req.body.tipoRisco);
+  const nome = textoObrigatorio(req.body.nome || req.body.tituloRisco);
+  const tipoRisco = textoObrigatorio(req.body.tipoRisco || req.body.categoriaRisco);
 
   return {
     unidade: req.unidadeAtiva || req.body.unidade,
+    local: textoObrigatorio(req.body.local) || null,
+    area: textoObrigatorio(req.body.area) || null,
     nome,
     tipoRisco,
+    grauRisco: textoObrigatorio(req.body.grauRisco) || "Média",
     naturezaRisco: textoObrigatorio(req.body.naturezaRisco) || tipoRisco || "Risco operacional",
+    origemRisco: textoObrigatorio(req.body.origemRisco) || null,
+    responsavelNome: textoObrigatorio(req.body.responsavelNome || req.body.responsavel) || null,
     descricaoRisco: textoObrigatorio(req.body.descricaoRisco),
     possivelImpacto: textoObrigatorio(req.body.possivelImpacto),
     medidasPreventivas: textoObrigatorio(req.body.medidasPreventivas) || null,
@@ -44,8 +97,8 @@ function dadosCatalogo(req: AuthRequest) {
   };
 }
 
-function codigoRiscoIdentificado(numero: number) {
-  return `IR${String(numero).padStart(4, "0")}`;
+function codigoRiscoIdentificado(numero: number, ano: number) {
+  return `RISCO-${String(numero).padStart(4, "0")}/${ano}`;
 }
 
 function naturezaAnalise(req: AuthRequest) {
@@ -93,8 +146,9 @@ export async function criarCatalogoRisco(req: AuthRequest, res: Response) {
     }
 
     const risco = await prisma.$transaction(async (tx) => {
+      const ano = new Date().getFullYear();
       const ultimo = await tx.riscoCatalogo.findFirst({
-        where: { unidade: dados.unidade },
+        where: { unidade: dados.unidade, ano },
         orderBy: { numero: "desc" },
       });
       const numero = (ultimo?.numero || 0) + 1;
@@ -102,8 +156,9 @@ export async function criarCatalogoRisco(req: AuthRequest, res: Response) {
       return tx.riscoCatalogo.create({
         data: {
           ...dados,
+          ano,
           numero,
-          codigo: codigoRiscoIdentificado(numero),
+          codigo: codigoRiscoIdentificado(numero, ano),
           criadoPorId: req.usuarioId,
         },
       });
@@ -183,32 +238,7 @@ export async function removerCatalogoRisco(req: AuthRequest, res: Response) {
 
 export async function excluirCatalogoRisco(req: AuthRequest, res: Response) {
   try {
-    if (req.usuarioPerfil !== PERFIS.SUPER_ADMIN) {
-      return res.status(403).json({ error: "Apenas super admin pode excluir definitivamente riscos identificados." });
-    }
-
-    const id = Number(req.params.id);
-    const anterior = await prisma.riscoCatalogo.findFirst({ where: { id, unidade: req.unidadeAtiva } });
-    if (!anterior) return res.status(404).json({ error: "Risco identificado não encontrado" });
-
-    await prisma.$transaction(async (tx) => {
-      await tx.analiseRisco.updateMany({
-        where: { riscoCatalogoId: id },
-        data: { riscoCatalogoId: null },
-      });
-
-      await tx.riscoCatalogo.delete({ where: { id } });
-    });
-
-    await registrarLog({
-      req,
-      acao: "Exclusão definitiva de risco identificado",
-      tipoRegistro: "RiscoCatalogo",
-      registroId: id,
-      dadosAnteriores: anterior,
-    });
-
-    return res.json({ ok: true });
+    return res.status(405).json({ error: "Exclusão definitiva não é permitida. Use inativação, anulação ou encerramento." });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao excluir risco identificado" });
@@ -372,7 +402,8 @@ export async function criarRisco(req: AuthRequest, res: Response) {
     });
     const numero = ultimo ? ultimo.numero + 1 : 1;
     const codigo = `AR${String(numero).padStart(3, "0")}/${ano}`;
-    const nivelRisco = calcularNivel(req.body.probabilidade, req.body.severidade);
+    const classificacao = calcularClassificacao(req);
+    const reavaliacao = calcularReavaliacao(req);
     const vinculos = await resolverVinculos(req);
 
     const risco = await prisma.analiseRisco.create({
@@ -386,22 +417,48 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         unidade: req.unidadeAtiva || req.body.unidade,
         setor: req.body.setor,
         local: req.body.local,
+        area: textoObrigatorio(req.body.area) || null,
         tipoRisco: req.body.tipoRisco,
+        tituloRisco: textoObrigatorio(req.body.tituloRisco) || null,
+        origemRisco: textoObrigatorio(req.body.origemRisco) || null,
         naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,
-        probabilidade: req.body.probabilidade,
-        severidade: req.body.severidade,
-        nivelRisco,
+        causaProvavel: textoObrigatorio(req.body.causaProvavel) || null,
+        consequencia: textoObrigatorio(req.body.consequencia) || null,
+        pessoasAfetadas: textoObrigatorio(req.body.pessoasAfetadas) || null,
+        controlesExistentes: textoObrigatorio(req.body.controlesExistentes) || null,
+        probabilidade: classificacao.probabilidadeTexto,
+        severidade: classificacao.impactoTexto,
+        probabilidadeValor: classificacao.probabilidadeValor,
+        impactoValor: classificacao.impactoValor,
+        resultadoRisco: classificacao.resultadoRisco,
+        nivelRisco: classificacao.nivelRisco,
+        nivelAceitacao: textoObrigatorio(req.body.nivelAceitacao) || null,
+        tratamentoRisco: textoObrigatorio(req.body.tratamentoRisco) || null,
         medidasPreventivas: req.body.medidasPreventivas,
         planoAcao: req.body.planoAcao,
+        acaoProposta: textoObrigatorio(req.body.acaoProposta || req.body.planoAcao) || null,
         responsavelAcaoId: normalizarId(req.body.responsavelAcaoId),
         responsavelAcaoNome: req.body.responsavelAcaoNome,
         prazo: new Date(req.body.prazo),
-        status: req.body.status || "Pendente",
+        custoEstimado: textoObrigatorio(req.body.custoEstimado) || null,
+        prioridade: textoObrigatorio(req.body.prioridade) || null,
+        statusAcao: textoObrigatorio(req.body.statusAcao) || null,
+        observacoes: textoObrigatorio(req.body.observacoes) || null,
+        novaProbabilidade: reavaliacao.novaProbabilidade,
+        novoImpacto: reavaliacao.novoImpacto,
+        novoResultado: reavaliacao.novoResultado,
+        novoNivelRisco: reavaliacao.novoNivelRisco,
+        observacaoReavaliacao: textoObrigatorio(req.body.observacaoReavaliacao) || null,
+        dataReavaliacao: req.body.dataReavaliacao ? new Date(req.body.dataReavaliacao) : null,
+        responsavelReavaliacao: textoObrigatorio(req.body.responsavelReavaliacao) || null,
+        status: req.body.status || "Aberto",
         ocorrenciaId: vinculos.ocorrenciaId,
         eventoId: vinculos.eventoId,
         investigacaoId: vinculos.investigacaoId,
+        anulado: String(req.body.status || "").toLowerCase() === "anulado",
+        motivoAnulacao: textoObrigatorio(req.body.motivoAnulacao) || null,
         fotos: {
           create: arquivos.map((arquivo) => ({
             nomeOriginal: arquivo.originalname,
@@ -439,7 +496,8 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
 
     if (!anterior) return res.status(404).json({ error: "Análise de risco não encontrada" });
 
-    const nivelRisco = calcularNivel(req.body.probabilidade, req.body.severidade);
+    const classificacao = calcularClassificacao(req);
+    const reavaliacao = calcularReavaliacao(req);
     const vinculos = await resolverVinculos(req);
     const risco = await prisma.analiseRisco.update({
       where: { id: Number(id) },
@@ -449,22 +507,48 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
         riscoCatalogoId: normalizarId(req.body.riscoCatalogoId),
         setor: req.body.setor,
         local: req.body.local,
+        area: textoObrigatorio(req.body.area) || null,
         tipoRisco: req.body.tipoRisco,
+        tituloRisco: textoObrigatorio(req.body.tituloRisco) || null,
+        origemRisco: textoObrigatorio(req.body.origemRisco) || null,
         naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,
-        probabilidade: req.body.probabilidade,
-        severidade: req.body.severidade,
-        nivelRisco,
+        causaProvavel: textoObrigatorio(req.body.causaProvavel) || null,
+        consequencia: textoObrigatorio(req.body.consequencia) || null,
+        pessoasAfetadas: textoObrigatorio(req.body.pessoasAfetadas) || null,
+        controlesExistentes: textoObrigatorio(req.body.controlesExistentes) || null,
+        probabilidade: classificacao.probabilidadeTexto,
+        severidade: classificacao.impactoTexto,
+        probabilidadeValor: classificacao.probabilidadeValor,
+        impactoValor: classificacao.impactoValor,
+        resultadoRisco: classificacao.resultadoRisco,
+        nivelRisco: classificacao.nivelRisco,
+        nivelAceitacao: textoObrigatorio(req.body.nivelAceitacao) || null,
+        tratamentoRisco: textoObrigatorio(req.body.tratamentoRisco) || null,
         medidasPreventivas: req.body.medidasPreventivas,
         planoAcao: req.body.planoAcao,
+        acaoProposta: textoObrigatorio(req.body.acaoProposta || req.body.planoAcao) || null,
         responsavelAcaoId: normalizarId(req.body.responsavelAcaoId),
         responsavelAcaoNome: req.body.responsavelAcaoNome,
         prazo: new Date(req.body.prazo),
+        custoEstimado: textoObrigatorio(req.body.custoEstimado) || null,
+        prioridade: textoObrigatorio(req.body.prioridade) || null,
+        statusAcao: textoObrigatorio(req.body.statusAcao) || null,
+        observacoes: textoObrigatorio(req.body.observacoes) || null,
+        novaProbabilidade: reavaliacao.novaProbabilidade,
+        novoImpacto: reavaliacao.novoImpacto,
+        novoResultado: reavaliacao.novoResultado,
+        novoNivelRisco: reavaliacao.novoNivelRisco,
+        observacaoReavaliacao: textoObrigatorio(req.body.observacaoReavaliacao) || null,
+        dataReavaliacao: req.body.dataReavaliacao ? new Date(req.body.dataReavaliacao) : null,
+        responsavelReavaliacao: textoObrigatorio(req.body.responsavelReavaliacao) || null,
         status: req.body.status,
         ocorrenciaId: vinculos.ocorrenciaId,
         eventoId: vinculos.eventoId,
         investigacaoId: vinculos.investigacaoId,
+        anulado: String(req.body.status || "").toLowerCase() === "anulado",
+        motivoAnulacao: textoObrigatorio(req.body.motivoAnulacao) || null,
       },
       include: includeRisco(),
     });

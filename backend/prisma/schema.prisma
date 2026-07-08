@@ -586,22 +586,48 @@ model AnaliseRisco {
   unidade             String
   setor               String
   local               String
+  area                String?
   tipoRisco           String
   naturezaRisco       String
+  tituloRisco         String?
+  origemRisco         String?
   descricaoRisco      String
   possivelImpacto     String
+  causaProvavel       String?
+  consequencia        String?
+  pessoasAfetadas     String?
+  controlesExistentes String?
   probabilidade       String
   severidade          String
+  probabilidadeValor  Int?
+  impactoValor        Int?
+  resultadoRisco      Int?
   nivelRisco          String
+  nivelAceitacao      String?
+  tratamentoRisco     String?
   medidasPreventivas  String
   planoAcao           String
+  acaoProposta        String?
   responsavelAcaoId   Int?
   responsavelAcaoNome String?
   prazo               DateTime
+  custoEstimado       String?
+  prioridade          String?
+  statusAcao          String?
+  observacoes         String?
+  novaProbabilidade   Int?
+  novoImpacto         Int?
+  novoResultado       Int?
+  novoNivelRisco      String?
+  observacaoReavaliacao String?
+  dataReavaliacao     DateTime?
+  responsavelReavaliacao String?
   status              String   @default("Pendente")
   ocorrenciaId        Int?
   eventoId            Int?
   investigacaoId      Int?
+  anulado             Boolean  @default(false)
+  motivoAnulacao      String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
@@ -632,11 +658,17 @@ model FotoRisco {
 model RiscoCatalogo {
   id                  Int      @id @default(autoincrement())
   numero              Int
+  ano                 Int      @default(2026)
   codigo              String
   unidade             String
+  local               String?
+  area                String?
   nome                String
   tipoRisco           String
+  grauRisco           String   @default("Média")
   naturezaRisco       String
+  origemRisco         String?
+  responsavelNome     String?
   descricaoRisco      String
   possivelImpacto     String
   medidasPreventivas  String?

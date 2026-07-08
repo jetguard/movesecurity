@@ -14,7 +14,7 @@ import {
   listarRiscos,
   removerCatalogoRisco,
 } from "../controllers/risco.controller";
-import { acessoAnalise, autenticarUsuario, autorizarPerfis, PERFIS } from "../middlewares/auth";
+import { acessoAnalise, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 import { uploadLimits } from "../config/security";
 
 const router = Router();
@@ -46,7 +46,7 @@ router.get("/catalogo", autenticarUsuario, autorizarPerfis(acessoAnalise), lista
 router.get("/locais", autenticarUsuario, autorizarPerfis(acessoAnalise), listarLocaisRisco);
 router.post("/catalogo", autenticarUsuario, autorizarPerfis(acessoAnalise), criarCatalogoRisco);
 router.put("/catalogo/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), atualizarCatalogoRisco);
-router.delete("/catalogo/:id/permanente", autenticarUsuario, autorizarPerfis([PERFIS.SUPER_ADMIN]), excluirCatalogoRisco);
+router.delete("/catalogo/:id/permanente", autenticarUsuario, autorizarPerfis(acessoAnalise), excluirCatalogoRisco);
 router.delete("/catalogo/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), removerCatalogoRisco);
 router.get("/vinculo", autenticarUsuario, autorizarPerfis(acessoAnalise), buscarVinculoRisco);
 router.post("/", autenticarUsuario, autorizarPerfis(acessoAnalise), upload.array("fotos"), criarRisco);

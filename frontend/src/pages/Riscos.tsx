@@ -1,21 +1,26 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "../services/api";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
-import { podeSuperAdmin } from "../utils/permissoes";
 
 type RiscoCatalogo = {
   id: number;
   numero: number;
+  ano?: number;
   codigo: string;
-  nome: string;
   unidade: string;
+  local?: string | null;
+  area?: string | null;
+  nome: string;
   tipoRisco: string;
-  naturezaRisco: string;
+  grauRisco: string;
+  origemRisco?: string | null;
+  responsavelNome?: string | null;
   descricaoRisco: string;
   possivelImpacto: string;
   medidasPreventivas?: string | null;
   planoAcaoSugerido?: string | null;
   status: string;
+  createdAt?: string;
 };
 
 type Risco = {
@@ -27,18 +32,45 @@ type Risco = {
   unidade: string;
   setor: string;
   local: string;
+  area?: string | null;
   tipoRisco: string;
-  naturezaRisco: string;
+  tituloRisco?: string | null;
+  origemRisco?: string | null;
   descricaoRisco: string;
   possivelImpacto: string;
+  causaProvavel?: string | null;
+  consequencia?: string | null;
+  pessoasAfetadas?: string | null;
+  controlesExistentes?: string | null;
   probabilidade: string;
   severidade: string;
+  probabilidadeValor?: number | null;
+  impactoValor?: number | null;
+  resultadoRisco?: number | null;
   nivelRisco: string;
+  nivelAceitacao?: string | null;
+  tratamentoRisco?: string | null;
   medidasPreventivas: string;
   planoAcao: string;
-  responsavelAcaoNome?: string;
+  acaoProposta?: string | null;
+  responsavelAcaoNome?: string | null;
   prazo: string;
+  custoEstimado?: string | null;
+  prioridade?: string | null;
+  statusAcao?: string | null;
+  observacoes?: string | null;
+  novaProbabilidade?: number | null;
+  novoImpacto?: number | null;
+  novoResultado?: number | null;
+  novoNivelRisco?: string | null;
+  observacaoReavaliacao?: string | null;
+  dataReavaliacao?: string | null;
+  responsavelReavaliacao?: string | null;
   status: string;
+  anulado?: boolean;
+  motivoAnulacao?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type LocalTerminal = {
@@ -65,10 +97,24 @@ type DadosVinculo = {
   investigacaoCodigo?: string | null;
 };
 
-const tipos = ["Patrimonial", "Operacional", "Segurança Física", "Logístico", "Acesso indevido", "Furto", "Roubo", "Vandalismo", "Incêndio", "Acidente", "Compliance", "Outros"];
+const abas = [
+  "Dashboard de Riscos",
+  "Riscos Identificados",
+  "Nova Análise",
+  "Plano de Tratamento",
+  "Reavaliações",
+] as const;
+type Aba = (typeof abas)[number];
+
+const categorias = ["Patrimonial", "Operacional", "Segurança do Trabalho", "Ambiental", "TI", "Compliance", "Logística"];
 const unidades = ["GJA-T1", "GJA-T2", "ITAJAÍ-SC", "SUAPE-T1", "SUAPE-T2", "ANHANGUERA"];
-const niveis = ["Baixa", "Média", "Alta", "Crítica"];
-const statusPlano = ["Pendente", "Em andamento", "Concluído", "Atrasado"];
+const statusRisco = ["Aberto", "Em análise", "Em tratamento", "Aguardando ação", "Concluído", "Reavaliado", "Encerrado", "Anulado"];
+const niveis = ["Baixo", "Moderado", "Alto", "Crítico"];
+const aceitacoes = ["Aceito", "Aceito com monitoramento", "Não aceito"];
+const tratamentos = ["Eliminar", "Reduzir", "Transferir", "Aceitar"];
+const prioridades = ["Baixa", "Média", "Alta", "Urgente"];
+const statusAcao = ["Pendente", "Em andamento", "Concluída", "Atrasada", "Cancelada"];
+const origens = ["Inspeção", "Ocorrência", "Investigação", "CFTV", "Auditoria", "Checklist", "Análise operacional", "Outro"];
 const setores = ["Operacional", "Segurança Patrimonial", "CFTV", "Portaria", "Gate", "Armazém", "Pátio", "Administrativo", "Manutenção", "TI", "Compliance", "Outro"];
 
 const riscoVazio = {
@@ -76,18 +122,40 @@ const riscoVazio = {
   unidade: "GJA-T1",
   setor: "",
   local: "",
+  area: "",
   riscoCatalogoId: "",
   tipoRisco: "Patrimonial",
+  tituloRisco: "",
+  origemRisco: "Inspeção",
   naturezaRisco: "",
   descricaoRisco: "",
   possivelImpacto: "",
+  causaProvavel: "",
+  consequencia: "",
+  pessoasAfetadas: "",
+  controlesExistentes: "",
+  probabilidadeValor: "1",
+  impactoValor: "1",
   probabilidade: "Baixa",
   severidade: "Baixa",
+  nivelAceitacao: "Aceito",
+  tratamentoRisco: "Reduzir",
   medidasPreventivas: "",
   planoAcao: "",
+  acaoProposta: "",
   responsavelAcaoNome: "",
   prazo: "",
-  status: "Pendente",
+  custoEstimado: "",
+  prioridade: "Média",
+  statusAcao: "Pendente",
+  observacoes: "",
+  novaProbabilidade: "",
+  novoImpacto: "",
+  observacaoReavaliacao: "",
+  dataReavaliacao: "",
+  responsavelReavaliacao: "",
+  status: "Aberto",
+  motivoAnulacao: "",
   ocorrenciaId: "",
   eventoId: "",
   investigacaoId: "",
@@ -95,22 +163,33 @@ const riscoVazio = {
 
 const catalogoVazio = {
   id: 0,
+  unidade: "GJA-T1",
+  local: "",
+  area: "",
   nome: "",
   tipoRisco: "Patrimonial",
-  naturezaRisco: "",
+  grauRisco: "Moderado",
+  origemRisco: "Inspeção",
+  responsavelNome: "",
   descricaoRisco: "",
   possivelImpacto: "",
   medidasPreventivas: "",
   planoAcaoSugerido: "",
-  status: "Ativo",
+  status: "Aberto",
 };
 
-function calcularNivel(probabilidade: string, severidade: string) {
-  const peso: Record<string, number> = { Baixa: 1, Média: 2, Alta: 3, Crítica: 4 };
-  const score = (peso[probabilidade] || 1) * (peso[severidade] || 1);
-  if (score <= 3) return "Baixo";
-  if (score <= 7) return "Moderado";
-  if (score <= 11) return "Alto";
+function escalaParaTexto(valor: string | number) {
+  const numero = Number(valor);
+  if (numero <= 1) return "Baixa";
+  if (numero === 2) return "Média";
+  if (numero === 3 || numero === 4) return "Alta";
+  return "Crítica";
+}
+
+function calcularNivelResultado(resultado: number) {
+  if (resultado <= 5) return "Baixo";
+  if (resultado <= 10) return "Moderado";
+  if (resultado <= 15) return "Alto";
   return "Crítico";
 }
 
@@ -119,14 +198,6 @@ function corNivel(nivel: string) {
   if (nivel === "Alto") return "border-orange-200 bg-orange-50 text-orange-700";
   if (nivel === "Moderado") return "border-amber-200 bg-amber-50 text-amber-700";
   return "border-emerald-200 bg-emerald-50 text-emerald-700";
-}
-
-function contarPor<T>(itens: T[], chave: (item: T) => string) {
-  return itens.reduce<Record<string, number>>((acc, item) => {
-    const nome = chave(item) || "Não informado";
-    acc[nome] = (acc[nome] || 0) + 1;
-    return acc;
-  }, {});
 }
 
 function campoClasse() {
@@ -142,18 +213,57 @@ function Label({ texto, children, className = "" }: { texto: string; children: R
   );
 }
 
+function dataCurta(valor?: string | null) {
+  if (!valor) return "-";
+  const data = new Date(valor);
+  if (Number.isNaN(data.getTime())) return "-";
+  return data.toLocaleDateString("pt-BR");
+}
+
+function mascaraReais(valor: string) {
+  const digitos = valor.replace(/\D/g, "");
+  const numero = Number(digitos || "0") / 100;
+  return numero.toLocaleString("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function contarPor<T>(itens: T[], chave: (item: T) => string | undefined | null) {
+  return itens.reduce<Record<string, number>>((acc, item) => {
+    const nome = chave(item) || "Não informado";
+    acc[nome] = (acc[nome] || 0) + 1;
+    return acc;
+  }, {});
+}
+
+function mediaDiasTratamento(riscos: Risco[]) {
+  const concluidos = riscos.filter((risco) => ["Concluído", "Reavaliado", "Encerrado"].includes(risco.status) && risco.createdAt && risco.updatedAt);
+  if (!concluidos.length) return 0;
+  const total = concluidos.reduce((acc, risco) => {
+    const inicio = new Date(risco.createdAt || "").getTime();
+    const fim = new Date(risco.updatedAt || "").getTime();
+    return acc + Math.max(0, fim - inicio) / 86400000;
+  }, 0);
+  return Math.round(total / concluidos.length);
+}
+
 export default function Riscos() {
+  const [aba, setAba] = useState<Aba>("Dashboard de Riscos");
   const [riscos, setRiscos] = useState<Risco[]>([]);
   const [catalogo, setCatalogo] = useState<RiscoCatalogo[]>([]);
   const [form, setForm] = useState({ ...riscoVazio });
   const [catalogoForm, setCatalogoForm] = useState({ ...catalogoVazio });
   const [fotos, setFotos] = useState<File[]>([]);
-  const [abrirFormulario, setAbrirFormulario] = useState(false);
-  const [abrirCatalogo, setAbrirCatalogo] = useState(false);
   const [editando, setEditando] = useState<Risco | null>(null);
   const [editandoCatalogoId, setEditandoCatalogoId] = useState<number | null>(null);
+  const [abrirCadastroCatalogo, setAbrirCadastroCatalogo] = useState(false);
   const [filtroUnidade, setFiltroUnidade] = useState("");
+  const [filtroLocal, setFiltroLocal] = useState("");
+  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [filtroNivel, setFiltroNivel] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
+  const [filtroResponsavel, setFiltroResponsavel] = useState("");
   const [locais, setLocais] = useState<LocalTerminal[]>([]);
   const [erroLocais, setErroLocais] = useState("");
   const [buscandoVinculo, setBuscandoVinculo] = useState(false);
@@ -166,8 +276,8 @@ export default function Riscos() {
       api.get("/riscos"),
       api.get("/riscos/catalogo", { params: { todos: true } }).catch(() => ({ data: [] })),
     ]);
-    setRiscos(riscosResponse.data);
-    setCatalogo(catalogoResponse.data);
+    setRiscos(Array.isArray(riscosResponse.data) ? riscosResponse.data : []);
+    setCatalogo(Array.isArray(catalogoResponse.data) ? catalogoResponse.data : []);
   }
 
   async function carregarLocaisRisco() {
@@ -192,122 +302,131 @@ export default function Riscos() {
     carregarLocaisRisco();
   }, []);
 
-  function rolarParaFormulario() {
-    window.setTimeout(() => formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  }
+  const resultadoInicial = Number(form.probabilidadeValor || 1) * Number(form.impactoValor || 1);
+  const nivelInicial = calcularNivelResultado(resultadoInicial);
+  const resultadoResidual = form.novaProbabilidade && form.novoImpacto ? Number(form.novaProbabilidade) * Number(form.novoImpacto) : 0;
+  const nivelResidual = resultadoResidual ? calcularNivelResultado(resultadoResidual) : "";
+  const riscosAtivosCatalogo = catalogo.filter((item) => item.status !== "Inativo" && item.status !== "Anulado");
 
-  const nivelCalculado = calcularNivel(form.probabilidade, form.severidade);
-  const riscosFiltrados = riscos.filter((risco) => (!filtroUnidade || risco.unidade === filtroUnidade) && (!filtroStatus || risco.status === filtroStatus));
-  const riscosCatalogoAtivos = catalogo.filter((item) => item.status === "Ativo");
-  const usuarioSuperAdmin = podeSuperAdmin();
+  const riscosFiltrados = riscos.filter((risco) => {
+    return (
+      (!filtroUnidade || risco.unidade === filtroUnidade) &&
+      (!filtroLocal || risco.local === filtroLocal) &&
+      (!filtroCategoria || risco.tipoRisco === filtroCategoria) &&
+      (!filtroNivel || risco.nivelRisco === filtroNivel) &&
+      (!filtroStatus || risco.status === filtroStatus) &&
+      (!filtroResponsavel || (risco.responsavelAcaoNome || "").toLowerCase().includes(filtroResponsavel.toLowerCase()))
+    );
+  });
 
   const indicadores = useMemo(() => {
     const hoje = new Date();
     return {
-      abertos: riscosFiltrados.filter((r) => r.status !== "Concluído").length,
+      total: riscosFiltrados.length,
       criticos: riscosFiltrados.filter((r) => r.nivelRisco === "Crítico").length,
-      concluidos: riscosFiltrados.filter((r) => r.status === "Concluído").length,
-      atrasados: riscosFiltrados.filter((r) => r.status !== "Concluído" && r.prazo && new Date(r.prazo) < hoje).length,
+      altos: riscosFiltrados.filter((r) => r.nivelRisco === "Alto").length,
+      moderados: riscosFiltrados.filter((r) => r.nivelRisco === "Moderado").length,
+      baixos: riscosFiltrados.filter((r) => r.nivelRisco === "Baixo").length,
+      vencidos: riscosFiltrados.filter((r) => !["Concluído", "Reavaliado", "Encerrado", "Anulado"].includes(r.status) && r.prazo && new Date(r.prazo) < hoje).length,
+      tempoMedio: mediaDiasTratamento(riscosFiltrados),
     };
   }, [riscosFiltrados]);
 
-  function novoRisco() {
-    setForm({ ...riscoVazio, dataHora: new Date().toISOString().slice(0, 16) });
-    setEditando(null);
-    setVinculoEncontrado(null);
-    setFotos([]);
-    setAbrirFormulario(true);
-    rolarParaFormulario();
+  const distribuicaoCategoria = Object.entries(contarPor(riscosFiltrados, (r) => r.tipoRisco));
+  const distribuicaoUnidade = Object.entries(contarPor(riscosFiltrados, (r) => r.unidade));
+  const distribuicaoLocal = Object.entries(contarPor(riscosFiltrados, (r) => r.local));
+  const distribuicaoResponsavel = Object.entries(contarPor(riscosFiltrados, (r) => r.responsavelAcaoNome));
+  const evolucaoMensal = Object.entries(contarPor(riscosFiltrados, (r) => {
+    const data = new Date(r.dataHora);
+    return Number.isNaN(data.getTime()) ? "Sem data" : `${String(data.getMonth() + 1).padStart(2, "0")}/${data.getFullYear()}`;
+  }));
+
+  function campo(nome: string, valor: string) {
+    if (nome === "riscoCatalogoId") {
+      const riscoSelecionado = catalogo.find((item) => item.id === Number(valor));
+      setForm((atual) => ({
+        ...atual,
+        riscoCatalogoId: valor,
+        unidade: riscoSelecionado?.unidade || atual.unidade,
+        local: riscoSelecionado?.local || atual.local,
+        area: riscoSelecionado?.area || atual.area,
+        tipoRisco: riscoSelecionado?.tipoRisco || atual.tipoRisco,
+        tituloRisco: riscoSelecionado?.nome || atual.tituloRisco,
+        origemRisco: riscoSelecionado?.origemRisco || atual.origemRisco,
+        descricaoRisco: riscoSelecionado?.descricaoRisco || atual.descricaoRisco,
+        possivelImpacto: riscoSelecionado?.possivelImpacto || atual.possivelImpacto,
+        medidasPreventivas: riscoSelecionado?.medidasPreventivas || atual.medidasPreventivas,
+        planoAcao: riscoSelecionado?.planoAcaoSugerido || atual.planoAcao,
+      }));
+      return;
+    }
+
+    setForm((atual) => ({ ...atual, [nome]: nome === "custoEstimado" ? mascaraReais(valor) : valor }));
   }
 
-  function editarRisco(risco: Risco) {
+  function campoCatalogo(nome: string, valor: string) {
+    setCatalogoForm((atual) => ({ ...atual, [nome]: valor }));
+  }
+
+  function novaAnalise() {
+    setForm({ ...riscoVazio, dataHora: new Date().toISOString().slice(0, 16) });
+    setEditando(null);
+    setFotos([]);
+    setVinculoEncontrado(null);
+    setAba("Nova Análise");
+    window.setTimeout(() => formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+  }
+
+  function editarAnalise(risco: Risco) {
     setEditando(risco);
     setForm({
       ...riscoVazio,
       ...risco,
       riscoCatalogoId: risco.riscoCatalogoId ? String(risco.riscoCatalogoId) : "",
+      area: risco.area || "",
+      tituloRisco: risco.tituloRisco || risco.riscoCatalogo?.nome || "",
+      origemRisco: risco.origemRisco || "Inspeção",
+      causaProvavel: risco.causaProvavel || "",
+      consequencia: risco.consequencia || "",
+      pessoasAfetadas: risco.pessoasAfetadas || "",
+      controlesExistentes: risco.controlesExistentes || "",
+      probabilidadeValor: String(risco.probabilidadeValor || 1),
+      impactoValor: String(risco.impactoValor || 1),
+      nivelAceitacao: risco.nivelAceitacao || "Aceito",
+      tratamentoRisco: risco.tratamentoRisco || "Reduzir",
+      acaoProposta: risco.acaoProposta || risco.planoAcao || "",
+      responsavelAcaoNome: risco.responsavelAcaoNome || "",
+      medidasPreventivas: risco.medidasPreventivas || "",
+      planoAcao: risco.planoAcao || "",
+      custoEstimado: risco.custoEstimado || "",
+      prioridade: risco.prioridade || "Média",
+      statusAcao: risco.statusAcao || "Pendente",
+      observacoes: risco.observacoes || "",
+      novaProbabilidade: risco.novaProbabilidade ? String(risco.novaProbabilidade) : "",
+      novoImpacto: risco.novoImpacto ? String(risco.novoImpacto) : "",
+      observacaoReavaliacao: risco.observacaoReavaliacao || "",
+      dataReavaliacao: risco.dataReavaliacao ? risco.dataReavaliacao.slice(0, 16) : "",
+      responsavelReavaliacao: risco.responsavelReavaliacao || "",
+      motivoAnulacao: risco.motivoAnulacao || "",
       dataHora: risco.dataHora.slice(0, 16),
-      prazo: risco.prazo.slice(0, 16),
+      prazo: risco.prazo ? risco.prazo.slice(0, 16) : "",
     });
     setFotos([]);
     setVinculoEncontrado(null);
-    setAbrirFormulario(true);
-    rolarParaFormulario();
-  }
-
-  function aplicarRiscoCatalogo(id: string) {
-    const riscoSelecionado = catalogo.find((item) => item.id === Number(id));
-    setForm((atual) => ({
-      ...atual,
-      riscoCatalogoId: id,
-      tipoRisco: riscoSelecionado?.tipoRisco || atual.tipoRisco,
-      naturezaRisco: riscoSelecionado?.naturezaRisco || atual.naturezaRisco,
-      descricaoRisco: riscoSelecionado?.descricaoRisco || atual.descricaoRisco,
-      possivelImpacto: riscoSelecionado?.possivelImpacto || atual.possivelImpacto,
-      medidasPreventivas: riscoSelecionado?.medidasPreventivas || atual.medidasPreventivas,
-      planoAcao: riscoSelecionado?.planoAcaoSugerido || atual.planoAcao,
-    }));
-  }
-
-  function campo(nome: string, valor: string) {
-    if (nome === "riscoCatalogoId") return aplicarRiscoCatalogo(valor);
-
-    setForm((atual) => {
-      const proximo = { ...atual, [nome]: valor };
-      return proximo;
-    });
-  }
-
-  function campoCatalogo(nome: string, valor: string) {
-    setCatalogoForm((atual) => {
-      const proximo = { ...atual, [nome]: valor };
-      return proximo;
-    });
-  }
-
-  async function salvarRisco(e: FormEvent) {
-    e.preventDefault();
-    const formData = new FormData();
-    Object.entries(form).forEach(([chave, valor]) => formData.append(chave, String(valor || "")));
-    fotos.forEach((foto) => formData.append("fotos", foto));
-
-    if (editando) {
-      await api.put(`/riscos/${editando.id}`, form);
-    } else {
-      await api.post("/riscos", formData, { headers: { "Content-Type": "multipart/form-data" } });
-    }
-
-    setAbrirFormulario(false);
-    carregarRiscos();
-  }
-
-  async function salvarCatalogo(e: FormEvent) {
-    e.preventDefault();
-    const payload = {
-      ...catalogoForm,
-      naturezaRisco: catalogoForm.tipoRisco,
-    };
-
-    try {
-      if (editandoCatalogoId) await api.put(`/riscos/catalogo/${editandoCatalogoId}`, payload);
-      else await api.post("/riscos/catalogo", payload);
-
-      setCatalogoForm({ ...catalogoVazio });
-      setEditandoCatalogoId(null);
-      setAbrirCatalogo(false);
-      carregarRiscos();
-    } catch (error: unknown) {
-      const apiError = error as { response?: { data?: { error?: string } } };
-      alert(apiError.response?.data?.error || "Erro ao salvar risco identificado.");
-    }
+    setAba("Nova Análise");
   }
 
   function editarCatalogo(item: RiscoCatalogo) {
     setCatalogoForm({
       id: item.id,
+      unidade: item.unidade,
+      local: item.local || "",
+      area: item.area || "",
       nome: item.nome,
       tipoRisco: item.tipoRisco,
-      naturezaRisco: item.naturezaRisco,
+      grauRisco: item.grauRisco || "Moderado",
+      origemRisco: item.origemRisco || "Inspeção",
+      responsavelNome: item.responsavelNome || "",
       descricaoRisco: item.descricaoRisco,
       possivelImpacto: item.possivelImpacto,
       medidasPreventivas: item.medidasPreventivas || "",
@@ -315,37 +434,66 @@ export default function Riscos() {
       status: item.status,
     });
     setEditandoCatalogoId(item.id);
-    setAbrirCatalogo(true);
+    setAbrirCadastroCatalogo(true);
+    setAba("Riscos Identificados");
+  }
+
+  async function salvarCatalogo(e: FormEvent) {
+    e.preventDefault();
+    const payload = {
+      ...catalogoForm,
+      naturezaRisco: catalogoForm.tipoRisco,
+      possivelImpacto: catalogoForm.possivelImpacto || catalogoForm.descricaoRisco,
+    };
+
+    try {
+      if (editandoCatalogoId) await api.put(`/riscos/catalogo/${editandoCatalogoId}`, payload);
+      else await api.post("/riscos/catalogo", payload);
+      setCatalogoForm({ ...catalogoVazio });
+      setEditandoCatalogoId(null);
+      setAbrirCadastroCatalogo(false);
+      carregarRiscos();
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      alert(apiError.response?.data?.error || "Erro ao salvar risco identificado.");
+    }
   }
 
   async function inativarCatalogo(id: number) {
-    if (!confirm("Inativar este risco identificado?")) return;
+    if (!confirm("Inativar este risco identificado? O registro será preservado para auditoria.")) return;
     await api.delete(`/riscos/catalogo/${id}`);
     carregarRiscos();
   }
 
-  async function excluirCatalogo(id: number) {
-    if (!confirm("Excluir definitivamente este risco identificado? Esta ação fica registrada em auditoria.")) return;
-    try {
-      await api.delete(`/riscos/catalogo/${id}/permanente`);
-      carregarRiscos();
-    } catch (error: unknown) {
-      const apiError = error as { response?: { data?: { error?: string } } };
-      alert(apiError.response?.data?.error || "Erro ao excluir risco identificado.");
-    }
-  }
+  async function salvarRisco(e: FormEvent) {
+    e.preventDefault();
+    const payload = {
+      ...form,
+      probabilidade: escalaParaTexto(form.probabilidadeValor),
+      severidade: escalaParaTexto(form.impactoValor),
+      nivelRisco: nivelInicial,
+      resultadoRisco: resultadoInicial,
+      novoResultado: resultadoResidual || "",
+      novoNivelRisco: nivelResidual,
+      possivelImpacto: form.consequencia || form.possivelImpacto || form.descricaoRisco,
+      planoAcao: form.acaoProposta || form.planoAcao || "Acao nao informada",
+      medidasPreventivas: form.controlesExistentes || form.medidasPreventivas || "Nao informado",
+    };
 
-  function aplicarDadosVinculo(dados: DadosVinculo) {
-    setForm((atual) => ({
-      ...atual,
-      local: dados.local || atual.local,
-      naturezaRisco: [dados.natureza, dados.subNatureza].filter(Boolean).join(" / ") || atual.naturezaRisco,
-      ocorrenciaId: dados.ocorrenciaCodigo || (dados.ocorrenciaId ? String(dados.ocorrenciaId) : atual.ocorrenciaId),
-      eventoId: dados.eventoCodigo || (dados.eventoId ? String(dados.eventoId) : atual.eventoId),
-      investigacaoId: dados.investigacaoCodigo || (dados.investigacaoId ? String(dados.investigacaoId) : atual.investigacaoId),
-      descricaoRisco: atual.descricaoRisco || [`Risco vinculado ao ${dados.origem.toLowerCase()} ${dados.codigo}.`, dados.assunto ? `Assunto: ${dados.assunto}` : "", dados.local ? `Local: ${dados.local}` : ""].filter(Boolean).join("\n"),
-    }));
-    setVinculoEncontrado(dados);
+    if (editando) {
+      await api.put(`/riscos/${editando.id}`, payload);
+    } else {
+      const formData = new FormData();
+      Object.entries(payload).forEach(([chave, valor]) => formData.append(chave, String(valor || "")));
+      fotos.forEach((foto) => formData.append("fotos", foto));
+      await api.post("/riscos", formData, { headers: { "Content-Type": "multipart/form-data" } });
+    }
+
+    setForm({ ...riscoVazio, dataHora: new Date().toISOString().slice(0, 16) });
+    setEditando(null);
+    setFotos([]);
+    setAba("Plano de Tratamento");
+    carregarRiscos();
   }
 
   async function buscarDadosVinculados() {
@@ -353,16 +501,24 @@ export default function Riscos() {
     if (form.investigacaoId) params.investigacaoCodigo = form.investigacaoId;
     else if (form.ocorrenciaId) params.ocorrenciaCodigo = form.ocorrenciaId;
     else if (form.eventoId) params.eventoCodigo = form.eventoId;
-
     if (!Object.keys(params).length) return;
 
     setBuscandoVinculo(true);
     try {
       const response = await api.get("/riscos/vinculo", { params });
-      aplicarDadosVinculo(response.data);
+      const dados = response.data as DadosVinculo;
+      setForm((atual) => ({
+        ...atual,
+        local: dados.local || atual.local,
+        origemRisco: dados.origem || atual.origemRisco,
+        ocorrenciaId: dados.ocorrenciaCodigo || (dados.ocorrenciaId ? String(dados.ocorrenciaId) : atual.ocorrenciaId),
+        eventoId: dados.eventoCodigo || (dados.eventoId ? String(dados.eventoId) : atual.eventoId),
+        investigacaoId: dados.investigacaoCodigo || (dados.investigacaoId ? String(dados.investigacaoId) : atual.investigacaoId),
+        descricaoRisco: atual.descricaoRisco || [`Risco vinculado ao ${dados.origem.toLowerCase()} ${dados.codigo}.`, dados.assunto ? `Assunto: ${dados.assunto}` : ""].filter(Boolean).join("\n"),
+      }));
+      setVinculoEncontrado(dados);
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { error?: string } } };
-      setVinculoEncontrado(null);
       alert(apiError.response?.data?.error || "Não foi possível localizar o relatório vinculado.");
     } finally {
       setBuscandoVinculo(false);
@@ -385,278 +541,387 @@ export default function Riscos() {
     setPdfLightbox(null);
   }
 
-  const porUnidade = Object.entries(contarPor(riscosFiltrados, (r) => r.unidade));
-  const porTipo = Object.entries(contarPor(riscosFiltrados, (r) => r.tipoRisco));
+  function PainelIndicador({ titulo, valor, destaque = "" }: { titulo: string; valor: string | number; destaque?: string }) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <p className="text-xs font-bold uppercase text-slate-400">{titulo}</p>
+        <p className={`mt-1 text-2xl font-bold ${destaque}`}>{valor}</p>
+      </div>
+    );
+  }
+
+  function Ranking({ titulo, dados }: { titulo: string; dados: Array<[string, number]> }) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="mb-3 font-bold text-slate-900 dark:text-white">{titulo}</h3>
+        <div className="max-h-48 space-y-3 overflow-y-auto pr-1">
+          {dados.slice(0, 12).map(([nome, total]) => (
+            <div key={nome}>
+              <div className="flex justify-between text-sm text-slate-700 dark:text-slate-200"><span>{nome}</span><strong>{total}</strong></div>
+              <div className="mt-1 h-2 rounded bg-slate-100 dark:bg-slate-800"><div className="h-2 rounded bg-blue-600" style={{ width: `${Math.min(total * 14, 100)}%` }} /></div>
+            </div>
+          ))}
+          {!dados.length && <p className="text-sm text-slate-500">Sem dados para exibir.</p>}
+        </div>
+      </div>
+    );
+  }
+
+  function DashboardRiscos() {
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+          <PainelIndicador titulo="Total" valor={indicadores.total} />
+          <PainelIndicador titulo="Críticos" valor={indicadores.criticos} destaque="text-red-600" />
+          <PainelIndicador titulo="Altos" valor={indicadores.altos} destaque="text-orange-600" />
+          <PainelIndicador titulo="Moderados" valor={indicadores.moderados} destaque="text-amber-600" />
+          <PainelIndicador titulo="Baixos" valor={indicadores.baixos} destaque="text-emerald-600" />
+          <PainelIndicador titulo="Vencidos" valor={indicadores.vencidos} destaque="text-rose-600" />
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 bg-white p-4 xl:col-span-2 dark:border-slate-800 dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900 dark:text-white">Matriz de risco 5x5</h3>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Probabilidade x Impacto</span>
+            </div>
+            <div className="grid grid-cols-5 gap-2">
+              {[1, 2, 3, 4, 5].map((prob) => [1, 2, 3, 4, 5].map((impacto) => {
+                const resultado = prob * impacto;
+                const nivel = calcularNivelResultado(resultado);
+                const total = riscosFiltrados.filter((r) => Number(r.probabilidadeValor || 1) === prob && Number(r.impactoValor || 1) === impacto).length;
+                return (
+                  <div key={`${prob}-${impacto}`} className={`rounded-lg border p-3 text-center ${corNivel(nivel)}`}>
+                    <p className="text-xs font-bold">{prob} x {impacto}</p>
+                    <p className="text-lg font-black">{total}</p>
+                    <p className="text-[11px] font-semibold">{nivel}</p>
+                  </div>
+                );
+              }))}
+            </div>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+            <h3 className="mb-3 font-bold text-slate-900 dark:text-white">Tempo médio de tratamento</h3>
+            <p className="text-4xl font-black text-blue-600">{indicadores.tempoMedio} dias</p>
+            <p className="mt-2 text-sm text-slate-500">Cálculo baseado em riscos concluídos, reavaliados ou encerrados.</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
+          <Ranking titulo="Riscos por categoria" dados={distribuicaoCategoria} />
+          <Ranking titulo="Riscos por unidade" dados={distribuicaoUnidade} />
+          <Ranking titulo="Riscos por local" dados={distribuicaoLocal} />
+          <Ranking titulo="Riscos por responsável" dados={distribuicaoResponsavel} />
+          <Ranking titulo="Evolução mensal" dados={evolucaoMensal} />
+        </div>
+      </div>
+    );
+  }
+
+  function TabelaAnalises({ modo }: { modo: "geral" | "plano" | "reavaliacao" }) {
+    const dados = modo === "reavaliacao" ? riscosFiltrados.filter((r) => r.novoResultado || r.status === "Reavaliado") : riscosFiltrados;
+    return (
+      <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{modo === "plano" ? "Plano de tratamento" : modo === "reavaliacao" ? "Reavaliações registradas" : "Análises de riscos cadastradas"}</h2>
+            <p className="text-sm text-slate-500">{dados.length} registros encontrados.</p>
+          </div>
+        </div>
+        <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+          <div className="max-h-[560px] overflow-y-auto">
+            <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+              <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                <tr>
+                  <th className="px-3 py-3">Código</th>
+                  <th className="px-3 py-3">Risco</th>
+                  <th className="px-3 py-3">Local</th>
+                  <th className="px-3 py-3">Antes</th>
+                  {modo === "reavaliacao" && <th className="px-3 py-3">Depois</th>}
+                  <th className="px-3 py-3">Status</th>
+                  <th className="px-3 py-3 text-right">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
+                {dados.map((risco) => (
+                  <tr key={risco.id} className="align-top transition-colors hover:bg-slate-800/35 dark:hover:bg-slate-800/45">
+                    <td className="whitespace-nowrap px-3 py-3 font-bold text-slate-900 dark:text-white">{risco.codigo}</td>
+                    <td className="px-3 py-3">
+                      <p className="font-bold text-slate-900 dark:text-white">{risco.tituloRisco || risco.riscoCatalogo?.nome || risco.tipoRisco}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-slate-500">{risco.descricaoRisco}</p>
+                    </td>
+                    <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{risco.unidade}<br /><span className="text-xs">{risco.local}</span></td>
+                    <td className="whitespace-nowrap px-3 py-3">
+                      <span className={`rounded-full border px-2 py-1 text-xs font-bold ${corNivel(risco.nivelRisco)}`}>{risco.resultadoRisco || "-"} | {risco.nivelRisco}</span>
+                    </td>
+                    {modo === "reavaliacao" && (
+                      <td className="whitespace-nowrap px-3 py-3">
+                        <span className={`rounded-full border px-2 py-1 text-xs font-bold ${corNivel(risco.novoNivelRisco || "Baixo")}`}>{risco.novoResultado || "-"} | {risco.novoNivelRisco || "-"}</span>
+                      </td>
+                    )}
+                    <td className="whitespace-nowrap px-3 py-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-300">{risco.status}</span></td>
+                    <td className="px-3 py-3">
+                      <div className="flex flex-wrap justify-end gap-2">
+                        <button onClick={() => editarAnalise(risco)} className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">Editar</button>
+                        <button onClick={() => abrirPdf(risco.id)} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-bold text-white">PDF</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!dados.length && (
+                  <tr>
+                    <td colSpan={modo === "reavaliacao" ? 7 : 6} className="px-3 py-6 text-center text-sm text-slate-500">Nenhum registro encontrado.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function CadastroRiscosIdentificados() {
+    return (
+      <div className="space-y-4">
+        <section className="rounded-lg border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+          <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white">Cadastro do risco identificado</h2>
+              <p className="text-sm text-slate-500">Abra a sanfona para cadastrar ou editar a base de riscos.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setCatalogoForm({ ...catalogoVazio });
+                setEditandoCatalogoId(null);
+                setAbrirCadastroCatalogo(true);
+              }}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700"
+            >
+              Cadastrar risco identificado
+            </button>
+          </div>
+          {abrirCadastroCatalogo && (
+            <form onSubmit={salvarCatalogo} className="border-t border-slate-200 p-5 dark:border-slate-800">
+              <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{editandoCatalogoId ? "Editar risco identificado" : "Novo risco identificado"}</h3>
+                  <p className="text-sm text-slate-500">Código automático no padrão RISCO-0001/2026.</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+                <Label texto="Data do cadastro"><input className={campoClasse()} value={new Date().toLocaleDateString("pt-BR")} disabled /></Label>
+                <Label texto="Unidade"><select className={campoClasse()} value={catalogoForm.unidade} onChange={(e) => campoCatalogo("unidade", e.target.value)}>{unidades.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Local"><select className={campoClasse()} value={catalogoForm.local} onChange={(e) => campoCatalogo("local", e.target.value)}><option value="">Selecione</option>{locais.map((local) => <option key={local.id} value={local.nome}>{local.nome}</option>)}</select></Label>
+                <Label texto="Área"><input className={campoClasse()} value={catalogoForm.area} onChange={(e) => campoCatalogo("area", e.target.value)} placeholder="Ex.: Portaria, pátio, gate" /></Label>
+                <Label texto="Categoria do risco"><select className={campoClasse()} value={catalogoForm.tipoRisco} onChange={(e) => campoCatalogo("tipoRisco", e.target.value)}>{categorias.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Título do risco" className="lg:col-span-2"><input className={campoClasse()} value={catalogoForm.nome} onChange={(e) => campoCatalogo("nome", e.target.value)} required /></Label>
+                <Label texto="Origem do risco"><select className={campoClasse()} value={catalogoForm.origemRisco} onChange={(e) => campoCatalogo("origemRisco", e.target.value)}>{origens.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Responsável"><input className={campoClasse()} value={catalogoForm.responsavelNome} onChange={(e) => campoCatalogo("responsavelNome", e.target.value)} /></Label>
+                <Label texto="Status"><select className={campoClasse()} value={catalogoForm.status} onChange={(e) => campoCatalogo("status", e.target.value)}>{statusRisco.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Grau inicial"><select className={campoClasse()} value={catalogoForm.grauRisco} onChange={(e) => campoCatalogo("grauRisco", e.target.value)}>{niveis.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Descrição do risco identificado" className="lg:col-span-4"><textarea className={campoClasse()} rows={3} value={catalogoForm.descricaoRisco} onChange={(e) => campoCatalogo("descricaoRisco", e.target.value)} required /></Label>
+                <Label texto="Possível impacto" className="lg:col-span-4"><textarea className={campoClasse()} rows={3} value={catalogoForm.possivelImpacto} onChange={(e) => campoCatalogo("possivelImpacto", e.target.value)} required /></Label>
+                <Label texto="Controles ou medidas existentes" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={catalogoForm.medidasPreventivas} onChange={(e) => campoCatalogo("medidasPreventivas", e.target.value)} /></Label>
+                <Label texto="Plano sugerido" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={catalogoForm.planoAcaoSugerido} onChange={(e) => campoCatalogo("planoAcaoSugerido", e.target.value)} /></Label>
+              </div>
+              <div className="mt-5 flex flex-wrap justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCatalogoForm({ ...catalogoVazio });
+                    setEditandoCatalogoId(null);
+                    setAbrirCadastroCatalogo(false);
+                  }}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200"
+                >
+                  Cancelar
+                </button>
+                <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Salvar risco identificado</button>
+              </div>
+            </form>
+          )}
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Riscos identificados cadastrados</h2>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{catalogo.length} registros</span>
+          </div>
+          <div className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-800">
+            <div className="max-h-[560px] overflow-y-auto">
+              <table className="min-w-full divide-y divide-slate-200 text-sm dark:divide-slate-800">
+                <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                  <tr>
+                    <th className="px-3 py-3">Código</th>
+                    <th className="px-3 py-3">Título</th>
+                    <th className="px-3 py-3">Categoria</th>
+                    <th className="px-3 py-3">Local</th>
+                    <th className="px-3 py-3">Status</th>
+                    <th className="px-3 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-800 dark:bg-slate-900">
+                  {catalogo.map((item) => (
+                    <tr key={item.id} className="align-top transition-colors hover:bg-slate-800/35 dark:hover:bg-slate-800/45">
+                      <td className="whitespace-nowrap px-3 py-3 font-bold text-slate-900 dark:text-white">{item.codigo}</td>
+                      <td className="px-3 py-3"><p className="font-bold text-slate-900 dark:text-white">{item.nome}</p><p className="text-xs text-slate-500">{dataCurta(item.createdAt)}</p></td>
+                      <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{item.tipoRisco}</td>
+                      <td className="px-3 py-3 text-slate-600 dark:text-slate-300">{item.local || "-"}<br /><span className="text-xs">{item.area || ""}</span></td>
+                      <td className="px-3 py-3"><span className={`rounded-full border px-2 py-1 text-xs font-bold ${corNivel(item.grauRisco || "Baixo")}`}>{item.status}</span></td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <button onClick={() => editarCatalogo(item)} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-bold text-white dark:bg-slate-700">Editar</button>
+                          {item.status !== "Inativo" && <button onClick={() => inativarCatalogo(item.id)} className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200">Inativar</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
+  function FormularioAnalise() {
+    return (
+      <form ref={formularioRef} onSubmit={salvarRisco} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editando ? `Editar ${editando.codigo}` : "Nova análise de risco"}</h2>
+            <p className="text-sm text-slate-500">Fluxo: identificação, análise, classificação, plano, acompanhamento e reavaliação.</p>
+          </div>
+          <div className={`rounded-lg border px-4 py-2 text-sm font-bold ${corNivel(nivelInicial)}`}>Resultado {resultadoInicial} | {nivelInicial}</div>
+        </div>
+
+        <div className="space-y-6">
+          <section>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">1. Identificação</h3>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              <Label texto="Risco identificado" className="lg:col-span-2"><select className={campoClasse()} value={form.riscoCatalogoId} onChange={(e) => campo("riscoCatalogoId", e.target.value)}><option value="">Análise avulsa</option>{riscosAtivosCatalogo.map((item) => <option key={item.id} value={item.id}>{item.codigo} - {item.nome}</option>)}</select></Label>
+              <Label texto="Data da análise"><input type="datetime-local" className={campoClasse()} value={form.dataHora} onChange={(e) => campo("dataHora", e.target.value)} required /></Label>
+              <Label texto="Status"><select className={campoClasse()} value={form.status} onChange={(e) => campo("status", e.target.value)}>{statusRisco.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Unidade"><select className={campoClasse()} value={form.unidade} onChange={(e) => campo("unidade", e.target.value)}>{unidades.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Local"><select className={campoClasse()} value={form.local} onChange={(e) => campo("local", e.target.value)} required><option value="">{locais.length ? "Selecione" : "Nenhum local carregado"}</option>{locais.map((local) => <option key={local.id} value={local.nome}>{local.nome}{local.areaSensivel ? " - ÁREA SENSÍVEL" : ""}</option>)}</select>{erroLocais && <button type="button" onClick={carregarLocaisRisco} className="text-xs font-bold text-blue-600">Recarregar locais</button>}</Label>
+              <Label texto="Área"><input className={campoClasse()} value={form.area} onChange={(e) => campo("area", e.target.value)} /></Label>
+              <Label texto="Categoria"><select className={campoClasse()} value={form.tipoRisco} onChange={(e) => campo("tipoRisco", e.target.value)}>{categorias.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Título do risco" className="lg:col-span-2"><input className={campoClasse()} value={form.tituloRisco} onChange={(e) => campo("tituloRisco", e.target.value)} required /></Label>
+              <Label texto="Origem"><select className={campoClasse()} value={form.origemRisco} onChange={(e) => campo("origemRisco", e.target.value)}>{origens.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Setor"><select className={campoClasse()} value={form.setor} onChange={(e) => campo("setor", e.target.value)} required><option value="">Selecione</option>{setores.map((item) => <option key={item}>{item}</option>)}</select></Label>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">2. Análise do risco</h3>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <Label texto="O que pode acontecer?" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.descricaoRisco} onChange={(e) => campo("descricaoRisco", e.target.value)} required /></Label>
+              <Label texto="Causa provável"><textarea className={campoClasse()} rows={3} value={form.causaProvavel} onChange={(e) => campo("causaProvavel", e.target.value)} /></Label>
+              <Label texto="Consequência"><textarea className={campoClasse()} rows={3} value={form.consequencia} onChange={(e) => campo("consequencia", e.target.value)} /></Label>
+              <Label texto="Pessoas ou áreas afetadas"><textarea className={campoClasse()} rows={3} value={form.pessoasAfetadas} onChange={(e) => campo("pessoasAfetadas", e.target.value)} /></Label>
+              <Label texto="Controles existentes"><textarea className={campoClasse()} rows={3} value={form.controlesExistentes} onChange={(e) => campo("controlesExistentes", e.target.value)} /></Label>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">3. Classificação automática</h3>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+              <Label texto="Probabilidade (1 a 5)"><select className={campoClasse()} value={form.probabilidadeValor} onChange={(e) => campo("probabilidadeValor", e.target.value)}>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
+              <Label texto="Impacto (1 a 5)"><select className={campoClasse()} value={form.impactoValor} onChange={(e) => campo("impactoValor", e.target.value)}>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
+              <Label texto="Resultado"><input className={campoClasse()} value={resultadoInicial} disabled /></Label>
+              <Label texto="Nível"><input className={campoClasse()} value={nivelInicial} disabled /></Label>
+              <Label texto="Aceitação"><select className={campoClasse()} value={form.nivelAceitacao} onChange={(e) => campo("nivelAceitacao", e.target.value)}>{aceitacoes.map((item) => <option key={item}>{item}</option>)}</select></Label>
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">4. Plano de tratamento e acompanhamento</h3>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              <Label texto="Tratamento"><select className={campoClasse()} value={form.tratamentoRisco} onChange={(e) => campo("tratamentoRisco", e.target.value)}>{tratamentos.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Responsável pela ação"><input className={campoClasse()} value={form.responsavelAcaoNome} onChange={(e) => campo("responsavelAcaoNome", e.target.value)} required /></Label>
+              <Label texto="Prazo"><input type="datetime-local" className={campoClasse()} value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} required /></Label>
+              <Label texto="Custo estimado"><input inputMode="decimal" className={campoClasse()} value={form.custoEstimado} onChange={(e) => campo("custoEstimado", e.target.value)} placeholder="0,00" /></Label>
+              <Label texto="Prioridade"><select className={campoClasse()} value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>{prioridades.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Status da ação"><select className={campoClasse()} value={form.statusAcao} onChange={(e) => campo("statusAcao", e.target.value)}>{statusAcao.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Ação proposta" className="lg:col-span-2"><input className={campoClasse()} value={form.acaoProposta} onChange={(e) => campo("acaoProposta", e.target.value)} required /></Label>
+              <Label texto="Observações" className="lg:col-span-3"><textarea className={campoClasse()} rows={3} value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} /></Label>
+              {!editando && <Label texto="Evidências anexadas"><input type="file" multiple accept="image/*" className={campoClasse()} onChange={(e) => setFotos(Array.from(e.target.files || []))} /></Label>}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">5. Reavaliação</h3>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
+              <Label texto="Nova probabilidade"><select className={campoClasse()} value={form.novaProbabilidade} onChange={(e) => campo("novaProbabilidade", e.target.value)}><option value="">Não reavaliado</option>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
+              <Label texto="Novo impacto"><select className={campoClasse()} value={form.novoImpacto} onChange={(e) => campo("novoImpacto", e.target.value)}><option value="">Não reavaliado</option>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
+              <Label texto="Novo resultado"><input className={campoClasse()} value={resultadoResidual || ""} disabled /></Label>
+              <Label texto="Novo nível"><input className={campoClasse()} value={nivelResidual} disabled /></Label>
+              <Label texto="Data da reavaliação"><input type="datetime-local" className={campoClasse()} value={form.dataReavaliacao} onChange={(e) => campo("dataReavaliacao", e.target.value)} /></Label>
+              <Label texto="Responsável"><input className={campoClasse()} value={form.responsavelReavaliacao} onChange={(e) => campo("responsavelReavaliacao", e.target.value)} /></Label>
+              <Label texto="Observação da reavaliação" className="lg:col-span-4"><textarea className={campoClasse()} rows={3} value={form.observacaoReavaliacao} onChange={(e) => campo("observacaoReavaliacao", e.target.value)} /></Label>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950 lg:col-span-2">
+                <p className="font-bold text-slate-900 dark:text-white">Comparação</p>
+                <p className="mt-2 text-slate-600 dark:text-slate-300">Antes: P{form.probabilidadeValor} x I{form.impactoValor} = {resultadoInicial} | {nivelInicial}</p>
+                <p className="text-slate-600 dark:text-slate-300">Depois: {resultadoResidual ? `P${form.novaProbabilidade} x I${form.novoImpacto} = ${resultadoResidual} | ${nivelResidual}` : "Não reavaliado"}</p>
+              </div>
+              {form.status === "Anulado" && <Label texto="Motivo da anulação" className="lg:col-span-6"><textarea className={campoClasse()} rows={2} value={form.motivoAnulacao} onChange={(e) => campo("motivoAnulacao", e.target.value)} /></Label>}
+            </div>
+          </section>
+
+          <section>
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Integrações futuras</h3>
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+              <Label texto="Ocorrência vinculada"><input className={campoClasse()} placeholder="Ex.: 0001/2026" value={form.ocorrenciaId} onBlur={buscarDadosVinculados} onChange={(e) => campo("ocorrenciaId", e.target.value.toUpperCase())} /></Label>
+              <Label texto="Investigação vinculada"><input className={campoClasse()} placeholder="Ex.: RI003/2026" value={form.investigacaoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("investigacaoId", e.target.value.toUpperCase())} /></Label>
+              <Label texto="Evento vinculado"><input className={campoClasse()} placeholder="Ex.: 0005/2026" value={form.eventoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("eventoId", e.target.value.toUpperCase())} /></Label>
+              <div className="flex items-end"><button type="button" onClick={buscarDadosVinculados} disabled={buscandoVinculo || (!form.ocorrenciaId && !form.eventoId && !form.investigacaoId)} className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:bg-slate-300">{buscandoVinculo ? "Buscando..." : "Buscar vínculo"}</button></div>
+            </div>
+            {vinculoEncontrado && <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>{vinculoEncontrado.origem} {vinculoEncontrado.codigo}</strong> - {vinculoEncontrado.titulo}</div>}
+          </section>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700">Salvar análise de risco</button>
+          <button type="button" onClick={() => { setForm({ ...riscoVazio, dataHora: new Date().toISOString().slice(0, 16) }); setEditando(null); }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200">Limpar</button>
+        </div>
+      </form>
+    );
+  }
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-600">Governança operacional</p>
-          <h1 className="text-3xl font-bold text-slate-900">Análise de Riscos</h1>
-          <p className="mt-1 text-slate-500">Cadastre riscos identificados, avalie probabilidade e impacto, e acompanhe planos de ação.</p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Análise de Risco</h1>
+          <p className="mt-1 text-slate-500">Cadastre, classifique, trate, acompanhe e reavalie riscos operacionais.</p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => { setCatalogoForm({ ...catalogoVazio }); setEditandoCatalogoId(null); setAbrirCatalogo(true); }} className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700 hover:bg-blue-100">Cadastrar risco</button>
-          <button onClick={novoRisco} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Nova análise</button>
-        </div>
+        <button onClick={novaAnalise} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Nova análise</button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-4"><p className="text-xs font-bold uppercase text-slate-400">Abertos</p><p className="mt-1 text-2xl font-bold">{indicadores.abertos}</p></div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4"><p className="text-xs font-bold uppercase text-slate-400">Críticos</p><p className="mt-1 text-2xl font-bold text-red-600">{indicadores.criticos}</p></div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4"><p className="text-xs font-bold uppercase text-slate-400">Concluídos</p><p className="mt-1 text-2xl font-bold text-emerald-600">{indicadores.concluidos}</p></div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4"><p className="text-xs font-bold uppercase text-slate-400">Vencidos</p><p className="mt-1 text-2xl font-bold text-amber-600">{indicadores.atrasados}</p></div>
+      <div className="flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-900">
+        {abas.map((item) => (
+          <button key={item} onClick={() => setAba(item)} className={`rounded-md px-3 py-2 text-sm font-bold transition ${aba === item ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"}`}>{item}</button>
+        ))}
       </div>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Riscos identificados</h2>
-            <p className="text-sm text-slate-500">Base padronizada usada dentro do formulário de análise.</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{catalogo.length} cadastrados</span>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{riscosCatalogoAtivos.length} ativos</span>
-          </div>
-        </div>
-        <div className="overflow-hidden rounded-lg border border-slate-200">
-          <div className="max-h-[520px] overflow-y-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-3 py-3">Código</th>
-                  <th className="px-3 py-3">Risco identificado</th>
-                  <th className="px-3 py-3">Tipo</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {catalogo.map((item) => (
-                  <tr key={item.id} className="align-top transition-colors hover:bg-slate-800/35 dark:hover:bg-slate-800/45">
-                    <td className="whitespace-nowrap px-3 py-3 font-bold text-slate-900">{item.codigo}</td>
-                    <td className="px-3 py-3">
-                      <p className="font-bold text-slate-900">{item.nome}</p>
-                      <p className="mt-1 line-clamp-2 text-xs text-slate-500">{item.descricaoRisco}</p>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-slate-600">{item.tipoRisco}</td>
-                    <td className="whitespace-nowrap px-3 py-3">
-                      <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.status === "Ativo" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{item.status}</span>
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button onClick={() => editarCatalogo(item)} className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">Editar</button>
-                        {item.status === "Ativo" && <button onClick={() => inativarCatalogo(item.id)} className="rounded-md border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-600">Inativar</button>}
-                        {usuarioSuperAdmin && <button onClick={() => excluirCatalogo(item.id)} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-bold text-white">Excluir</button>}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!catalogo.length && (
-                  <tr>
-                    <td colSpan={5} className="px-3 py-6 text-center text-sm text-slate-500">Nenhum risco identificado cadastrado.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {abrirCatalogo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-sm">
-          <form onSubmit={salvarCatalogo} className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-xl border border-slate-700 bg-slate-900 p-5 shadow-2xl">
-          <div className="mb-5 flex items-start justify-between gap-3 border-b border-slate-800 pb-4">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-300">{editandoCatalogoId ? "Edição" : "Novo cadastro"}</p>
-              <h2 className="mt-1 text-xl font-bold text-white">{editandoCatalogoId ? "Editar risco identificado" : "Cadastrar risco identificado"}</h2>
-              <p className="mt-1 text-sm text-slate-400">O código será gerado automaticamente no padrão IR0001.</p>
-            </div>
-            <button type="button" onClick={() => setAbrirCatalogo(false)} className="rounded-lg border border-slate-700 px-3 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800">Fechar</button>
-          </div>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <Label texto="Nome do risco identificado" className="lg:col-span-2"><input className={campoClasse()} value={catalogoForm.nome} onChange={(e) => campoCatalogo("nome", e.target.value)} required /></Label>
-              <Label texto="Tipo do risco"><select className={campoClasse()} value={catalogoForm.tipoRisco} onChange={(e) => campoCatalogo("tipoRisco", e.target.value)} required>{tipos.map((tipo) => <option key={tipo}>{tipo}</option>)}</select></Label>
-              <Label texto="Status"><select className={campoClasse()} value={catalogoForm.status} onChange={(e) => campoCatalogo("status", e.target.value)}><option>Ativo</option><option>Inativo</option></select></Label>
-            <Label texto="Descrição do risco" className="lg:col-span-3"><textarea className={campoClasse()} rows={3} value={catalogoForm.descricaoRisco} onChange={(e) => campoCatalogo("descricaoRisco", e.target.value)} required /></Label>
-            <Label texto="Impacto possível" className="lg:col-span-3"><textarea className={campoClasse()} rows={3} value={catalogoForm.possivelImpacto} onChange={(e) => campoCatalogo("possivelImpacto", e.target.value)} required /></Label>
-            <Label texto="Medidas preventivas sugeridas" className="lg:col-span-3"><textarea className={campoClasse()} rows={3} value={catalogoForm.medidasPreventivas} onChange={(e) => campoCatalogo("medidasPreventivas", e.target.value)} /></Label>
-            <Label texto="Plano de ação sugerido" className="lg:col-span-3"><textarea className={campoClasse()} rows={3} value={catalogoForm.planoAcaoSugerido} onChange={(e) => campoCatalogo("planoAcaoSugerido", e.target.value)} /></Label>
-          </div>
-          <div className="mt-5 flex justify-end gap-3 border-t border-slate-800 pt-4">
-            <button type="button" onClick={() => setAbrirCatalogo(false)} className="rounded-lg border border-slate-700 px-4 py-2 text-sm font-bold text-slate-300 hover:bg-slate-800">Cancelar</button>
-            <button className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-500">Salvar risco identificado</button>
-          </div>
-          </form>
-        </div>
-      )}
-
-      <div className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-white p-4 md:grid-cols-2">
-        <Label texto="Filtrar por unidade"><select value={filtroUnidade} onChange={(e) => setFiltroUnidade(e.target.value)} className={campoClasse()}><option value="">Todas as unidades</option>{unidades.map((u) => <option key={u} value={u}>{u}</option>)}</select></Label>
-        <Label texto="Filtrar por status"><select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={campoClasse()}><option value="">Todos os status</option>{statusPlano.map((s) => <option key={s}>{s}</option>)}</select></Label>
+      <div className="grid grid-cols-1 gap-3 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 md:grid-cols-3 xl:grid-cols-6">
+        <Label texto="Unidade"><select value={filtroUnidade} onChange={(e) => setFiltroUnidade(e.target.value)} className={campoClasse()}><option value="">Todas</option>{unidades.map((u) => <option key={u}>{u}</option>)}</select></Label>
+        <Label texto="Local"><select value={filtroLocal} onChange={(e) => setFiltroLocal(e.target.value)} className={campoClasse()}><option value="">Todos</option>{locais.map((local) => <option key={local.id} value={local.nome}>{local.nome}</option>)}</select></Label>
+        <Label texto="Categoria"><select value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} className={campoClasse()}><option value="">Todas</option>{categorias.map((item) => <option key={item}>{item}</option>)}</select></Label>
+        <Label texto="Nível"><select value={filtroNivel} onChange={(e) => setFiltroNivel(e.target.value)} className={campoClasse()}><option value="">Todos</option>{niveis.map((item) => <option key={item}>{item}</option>)}</select></Label>
+        <Label texto="Status"><select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className={campoClasse()}><option value="">Todos</option>{statusRisco.map((item) => <option key={item}>{item}</option>)}</select></Label>
+        <Label texto="Responsável"><input value={filtroResponsavel} onChange={(e) => setFiltroResponsavel(e.target.value)} className={campoClasse()} placeholder="Buscar" /></Label>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-4 xl:col-span-2">
-          <h2 className="mb-3 font-bold text-slate-900">Mapa de calor</h2>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {niveis.map((prob) => niveis.map((sev) => {
-              const nivel = calcularNivel(prob, sev);
-              const total = riscosFiltrados.filter((r) => r.probabilidade === prob && r.severidade === sev).length;
-              return <div key={`${prob}-${sev}`} className={`rounded-lg border p-3 text-center ${corNivel(nivel)}`}><p className="text-xs font-semibold">{prob} / {sev}</p><p className="text-xl font-bold">{total}</p></div>;
-            }))}
-          </div>
-        </div>
-        <div className="rounded-lg border border-slate-200 bg-white p-4">
-          <h2 className="mb-3 font-bold text-slate-900">Distribuição</h2>
-          <div className="space-y-3">
-            {[...porUnidade, ...porTipo].slice(0, 8).map(([nome, total]) => <div key={nome}><div className="flex justify-between text-sm"><span>{nome}</span><strong>{total}</strong></div><div className="h-2 rounded bg-slate-100"><div className="h-2 rounded bg-blue-600" style={{ width: `${Math.min(total * 16, 100)}%` }} /></div></div>)}
-          </div>
-        </div>
-      </div>
-
-      {abrirFormulario && (
-        <form ref={formularioRef} onSubmit={salvarRisco} className="scroll-mt-28 rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">{editando ? `Editar ${editando.codigo}` : "Nova análise de risco"}</h2>
-              <p className="text-sm text-slate-500">Selecione o risco identificado e registre a avaliação operacional.</p>
-            </div>
-            <div className={`rounded-lg border px-4 py-2 text-sm font-bold ${corNivel(nivelCalculado)}`}>Nível calculado: {nivelCalculado}</div>
-          </div>
-
-          <div className="space-y-5">
-            <section>
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Identificação</h3>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <Label texto="Data e hora da análise"><input type="datetime-local" className={campoClasse()} value={form.dataHora} onChange={(e) => campo("dataHora", e.target.value)} required /></Label>
-                <Label texto="Unidade"><select className={campoClasse()} value={form.unidade} onChange={(e) => campo("unidade", e.target.value)} required>{unidades.map((u) => <option key={u}>{u}</option>)}</select></Label>
-                <Label texto="Setor"><select className={campoClasse()} value={form.setor} onChange={(e) => campo("setor", e.target.value)} required><option value="">Selecione</option>{setores.map((setor) => <option key={setor}>{setor}</option>)}</select></Label>
-                <Label texto="Local">
-                  <select className={campoClasse()} value={form.local} onChange={(e) => campo("local", e.target.value)} required>
-                    <option value="">{locais.length ? "Selecione" : "Nenhum local carregado"}</option>
-                    {locais.map((local) => <option key={local.id} value={local.nome}>{local.nome}{local.areaSensivel ? " - ÁREA SENSÍVEL" : ""}</option>)}
-                  </select>
-                  {(erroLocais || !locais.length) && (
-                    <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-                      <span>{erroLocais || "Nenhum local foi retornado pela API."}</span>
-                      <button type="button" onClick={carregarLocaisRisco} className="font-bold text-blue-700 dark:text-blue-300">Recarregar</button>
-                    </div>
-                  )}
-                </Label>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Risco apontado</h3>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <Label texto="Risco identificado cadastrado" className="lg:col-span-2">
-                  <select className={campoClasse()} value={form.riscoCatalogoId} onChange={(e) => campo("riscoCatalogoId", e.target.value)}>
-                    <option value="">Selecionar da base de riscos</option>
-                    {riscosCatalogoAtivos.map((item) => <option key={item.id} value={item.id}>{item.codigo} - {item.nome}</option>)}
-                  </select>
-                </Label>
-                <Label texto="Tipo do risco" className="lg:col-span-2"><select className={campoClasse()} value={form.tipoRisco} onChange={(e) => campo("tipoRisco", e.target.value)} required>{tipos.map((t) => <option key={t}>{t}</option>)}</select></Label>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Classificação</h3>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <Label texto="Probabilidade"><select className={campoClasse()} value={form.probabilidade} onChange={(e) => campo("probabilidade", e.target.value)} required>{niveis.map((n) => <option key={n}>{n}</option>)}</select></Label>
-                <Label texto="Impacto / severidade"><select className={campoClasse()} value={form.severidade} onChange={(e) => campo("severidade", e.target.value)} required>{niveis.map((n) => <option key={n}>{n}</option>)}</select></Label>
-                <Label texto="Status do plano"><select className={campoClasse()} value={form.status} onChange={(e) => campo("status", e.target.value)} required>{statusPlano.map((s) => <option key={s}>{s}</option>)}</select></Label>
-                <Label texto="Prazo da tratativa"><input type="datetime-local" className={campoClasse()} value={form.prazo} onChange={(e) => campo("prazo", e.target.value)} required /></Label>
-              </div>
-            </section>
-
-            <section>
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Vínculo com relatório</h3>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-                <Label texto="Ocorrência vinculada"><input className={campoClasse()} placeholder="Ex.: 0001/2026" value={form.ocorrenciaId} onBlur={buscarDadosVinculados} onChange={(e) => campo("ocorrenciaId", e.target.value.toUpperCase())} /></Label>
-                <Label texto="Evento vinculado"><input className={campoClasse()} placeholder="Ex.: 0005/2026" value={form.eventoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("eventoId", e.target.value.toUpperCase())} /></Label>
-                <Label texto="Investigação vinculada"><input className={campoClasse()} placeholder="Ex.: RI003/2026" value={form.investigacaoId} onBlur={buscarDadosVinculados} onChange={(e) => campo("investigacaoId", e.target.value.toUpperCase())} /></Label>
-                <div className="flex items-end">
-                  <button type="button" onClick={buscarDadosVinculados} disabled={buscandoVinculo || (!form.ocorrenciaId && !form.eventoId && !form.investigacaoId)} className="w-full rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800 disabled:bg-slate-300">{buscandoVinculo ? "Buscando..." : "Buscar vínculo"}</button>
-                </div>
-              </div>
-              {vinculoEncontrado && <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>{vinculoEncontrado.origem} {vinculoEncontrado.codigo}</strong> - {vinculoEncontrado.titulo}</div>}
-            </section>
-
-            <section>
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">Tratativa</h3>
-              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                <Label texto="Descrição do risco" className="lg:col-span-2"><textarea className={campoClasse()} rows={4} value={form.descricaoRisco} onChange={(e) => campo("descricaoRisco", e.target.value)} required /></Label>
-                <Label texto="Possível impacto" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.possivelImpacto} onChange={(e) => campo("possivelImpacto", e.target.value)} required /></Label>
-                <Label texto="Medidas preventivas"><textarea className={campoClasse()} rows={3} value={form.medidasPreventivas} onChange={(e) => campo("medidasPreventivas", e.target.value)} required /></Label>
-                <Label texto="Plano de ação"><textarea className={campoClasse()} rows={3} value={form.planoAcao} onChange={(e) => campo("planoAcao", e.target.value)} required /></Label>
-                <Label texto="Responsável pela ação"><input className={campoClasse()} value={form.responsavelAcaoNome} onChange={(e) => campo("responsavelAcaoNome", e.target.value)} required /></Label>
-                {!editando && <Label texto="Evidências fotográficas"><input type="file" multiple accept="image/*" className={campoClasse()} onChange={(e) => setFotos(Array.from(e.target.files || []))} /></Label>}
-              </div>
-            </section>
-          </div>
-
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <button className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700">Salvar análise</button>
-            <button type="button" onClick={() => setAbrirFormulario(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-600">Cancelar</button>
-          </div>
-        </form>
-      )}
-
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Análises de riscos cadastradas</h2>
-            <p className="text-sm text-slate-500">Registros gerados a partir dos riscos identificados e planos de ação.</p>
-          </div>
-          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{riscosFiltrados.length} registros</span>
-        </div>
-        <div className="overflow-hidden rounded-lg border border-slate-200">
-          <div className="max-h-[560px] overflow-y-auto">
-            <table className="min-w-full divide-y divide-slate-200 text-sm">
-              <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-3 py-3">Código</th>
-                  <th className="px-3 py-3">Risco</th>
-                  <th className="px-3 py-3">Unidade / local</th>
-                  <th className="px-3 py-3">Nível</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3 text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {riscosFiltrados.map((risco) => (
-                  <tr key={risco.id} className="align-top transition-colors hover:bg-slate-800/35 dark:hover:bg-slate-800/45">
-                    <td className="whitespace-nowrap px-3 py-3 font-bold text-slate-900">{risco.codigo}</td>
-                    <td className="px-3 py-3">
-                      <p className="font-bold text-slate-900">{risco.riscoCatalogo?.nome || risco.tipoRisco}</p>
-                      <p className="mt-1 line-clamp-2 text-xs text-slate-500">{risco.descricaoRisco}</p>
-                    </td>
-                    <td className="px-3 py-3 text-slate-600">
-                      <p className="font-semibold text-slate-800">{risco.unidade}</p>
-                      <p className="text-xs text-slate-500">{risco.local || "Local não informado"}</p>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3"><span className={`rounded-full border px-2 py-1 text-xs font-bold ${corNivel(risco.nivelRisco)}`}>{risco.nivelRisco}</span></td>
-                    <td className="whitespace-nowrap px-3 py-3"><span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700">{risco.status}</span></td>
-                    <td className="px-3 py-3">
-                      <div className="flex flex-wrap justify-end gap-2">
-                        <button onClick={() => editarRisco(risco)} className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-bold text-white">Editar</button>
-                        <button onClick={() => abrirPdf(risco.id)} className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-bold text-white">PDF</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!riscosFiltrados.length && (
-                  <tr>
-                    <td colSpan={6} className="px-3 py-6 text-center text-sm text-slate-500">Nenhuma análise de risco cadastrada.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      {aba === "Dashboard de Riscos" && DashboardRiscos()}
+      {aba === "Riscos Identificados" && CadastroRiscosIdentificados()}
+      {aba === "Nova Análise" && FormularioAnalise()}
+      {aba === "Plano de Tratamento" && TabelaAnalises({ modo: "plano" })}
+      {aba === "Reavaliações" && TabelaAnalises({ modo: "reavaliacao" })}
 
       {pdfLightbox && <PdfLightbox url={pdfLightbox.url} titulo={pdfLightbox.titulo} nomeArquivo={pdfLightbox.nomeArquivo} onClose={fecharPdfLightbox} />}
     </div>

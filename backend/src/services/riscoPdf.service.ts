@@ -14,17 +14,41 @@ type RiscoPdf = {
   unidade: string;
   setor: string;
   local: string;
+  area?: string | null;
   tipoRisco: string;
+  tituloRisco?: string | null;
+  origemRisco?: string | null;
   naturezaRisco: string;
   descricaoRisco: string;
   possivelImpacto: string;
+  causaProvavel?: string | null;
+  consequencia?: string | null;
+  pessoasAfetadas?: string | null;
+  controlesExistentes?: string | null;
   probabilidade: string;
   severidade: string;
+  probabilidadeValor?: number | null;
+  impactoValor?: number | null;
+  resultadoRisco?: number | null;
   nivelRisco: string;
+  nivelAceitacao?: string | null;
+  tratamentoRisco?: string | null;
   medidasPreventivas: string;
   planoAcao: string;
+  acaoProposta?: string | null;
   responsavelAcaoNome?: string | null;
   prazo: Date;
+  custoEstimado?: string | null;
+  prioridade?: string | null;
+  statusAcao?: string | null;
+  observacoes?: string | null;
+  novaProbabilidade?: number | null;
+  novoImpacto?: number | null;
+  novoResultado?: number | null;
+  novoNivelRisco?: string | null;
+  observacaoReavaliacao?: string | null;
+  dataReavaliacao?: Date | null;
+  responsavelReavaliacao?: string | null;
   status: string;
   responsavel: { nome: string };
   riscoCatalogo?: { nome: string } | null;
@@ -174,8 +198,8 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
   doc.pipe(res);
 
   desenharCabecalhoPadrao(doc, {
-    titulo: "Análise de Risco Operacional",
-    subtitulo: risco.riscoCatalogo?.nome || `${risco.tipoRisco} | ${risco.naturezaRisco}`,
+    titulo: "Análise de Risco",
+    subtitulo: risco.tituloRisco || risco.riscoCatalogo?.nome || `${risco.tipoRisco} | ${risco.naturezaRisco}`,
     codigo: risco.codigo,
     unidade: risco.unidade,
     emitidoEm: new Date(),
@@ -189,34 +213,68 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
   ]);
   linhaCampos(doc, [
     { rotulo: "Unidade", valor: risco.unidade, width: 160 },
-    { rotulo: "Setor", valor: risco.setor, width: 165 },
-    { rotulo: "Local", valor: risco.local, width: 162 },
+    { rotulo: "Local", valor: risco.local, width: 165 },
+    { rotulo: "Área", valor: risco.area, width: 162 },
   ]);
 
   secao(doc, "Risco identificado");
   linhaCampos(doc, [
-    { rotulo: "Risco cadastrado", valor: risco.riscoCatalogo?.nome || "Análise avulsa", width: 245 },
-    { rotulo: "Tipo", valor: risco.tipoRisco, width: 245 },
+    { rotulo: "Título", valor: risco.tituloRisco || risco.riscoCatalogo?.nome || "Análise avulsa", width: 245 },
+    { rotulo: "Categoria", valor: risco.tipoRisco, width: 120 },
+    { rotulo: "Origem", valor: risco.origemRisco, width: 125 },
   ]);
   linhaCampos(doc, [
-    { rotulo: "Natureza", valor: risco.naturezaRisco, width: 245 },
-    { rotulo: "Prazo da tratativa", valor: formatarData(risco.prazo), width: 245 },
+    { rotulo: "Setor", valor: risco.setor, width: 160 },
+    { rotulo: "Status", valor: risco.status, width: 165 },
+    { rotulo: "Prazo da tratativa", valor: formatarData(risco.prazo), width: 162 },
   ]);
 
   secao(doc, "Classificação");
   resumoClassificacao(doc, risco);
+  linhaCampos(doc, [
+    { rotulo: "Probabilidade inicial", valor: risco.probabilidadeValor, width: 120 },
+    { rotulo: "Impacto inicial", valor: risco.impactoValor, width: 120 },
+    { rotulo: "Resultado inicial", valor: risco.resultadoRisco, width: 120 },
+    { rotulo: "Aceitação", valor: risco.nivelAceitacao, width: 125 },
+  ]);
 
-  secao(doc, "Descrição e impacto");
-  blocoTexto(doc, "Descrição do risco", risco.descricaoRisco);
-  blocoTexto(doc, "Possível impacto", risco.possivelImpacto);
+  secao(doc, "Análise do risco");
+  blocoTexto(doc, "O que pode acontecer?", risco.descricaoRisco);
+  blocoTexto(doc, "Causa provável", risco.causaProvavel);
+  blocoTexto(doc, "Consequência", risco.consequencia || risco.possivelImpacto);
+  blocoTexto(doc, "Pessoas ou áreas afetadas", risco.pessoasAfetadas);
+  blocoTexto(doc, "Controles existentes", risco.controlesExistentes);
 
-  secao(doc, "Controles e plano de ação");
+  secao(doc, "Plano de tratamento");
+  linhaCampos(doc, [
+    { rotulo: "Tratamento", valor: risco.tratamentoRisco, width: 120 },
+    { rotulo: "Prioridade", valor: risco.prioridade, width: 120 },
+    { rotulo: "Status da ação", valor: risco.statusAcao, width: 120 },
+    { rotulo: "Custo estimado", valor: risco.custoEstimado, width: 125 },
+  ]);
+  blocoTexto(doc, "Ação proposta", risco.acaoProposta || risco.planoAcao);
   blocoTexto(doc, "Medidas preventivas", risco.medidasPreventivas);
   blocoTexto(doc, "Plano de ação", risco.planoAcao);
   linhaCampos(doc, [
     { rotulo: "Responsável pela ação", valor: risco.responsavelAcaoNome, width: 245 },
     { rotulo: "Prazo final", valor: formatarData(risco.prazo), width: 245 },
   ]);
+  blocoTexto(doc, "Observações", risco.observacoes);
+
+  if (risco.novoResultado || risco.observacaoReavaliacao) {
+    secao(doc, "Reavaliação do risco");
+    linhaCampos(doc, [
+      { rotulo: "Probabilidade residual", valor: risco.novaProbabilidade, width: 120 },
+      { rotulo: "Impacto residual", valor: risco.novoImpacto, width: 120 },
+      { rotulo: "Resultado residual", valor: risco.novoResultado, width: 120 },
+      { rotulo: "Nível residual", valor: risco.novoNivelRisco, width: 125, destaque: corNivel(risco.novoNivelRisco || "") },
+    ]);
+    linhaCampos(doc, [
+      { rotulo: "Data da reavaliação", valor: formatarData(risco.dataReavaliacao), width: 245 },
+      { rotulo: "Responsável", valor: risco.responsavelReavaliacao, width: 245 },
+    ]);
+    blocoTexto(doc, "Observação da reavaliação", risco.observacaoReavaliacao);
+  }
 
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i += 1) {
