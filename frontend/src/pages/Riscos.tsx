@@ -112,6 +112,28 @@ const statusRisco = ["Aberto", "Em análise", "Em tratamento", "Aguardando açã
 const niveis = ["Baixo", "Moderado", "Alto", "Crítico"];
 const aceitacoes = ["Aceito", "Aceito com monitoramento", "Não aceito"];
 const tratamentos = ["Eliminar", "Reduzir", "Transferir", "Aceitar"];
+const orientacoesTratamento: Record<string, { titulo: string; descricao: string; exemplos: string[] }> = {
+  Eliminar: {
+    titulo: "Remover a causa do risco",
+    descricao: "Use quando a ação proposta elimina ou praticamente elimina a condição que gera o risco.",
+    exemplos: ["Bloquear um acesso sem controle", "Interditar uma escada sem guarda-corpo", "Remover uma condição insegura da operação"],
+  },
+  Reduzir: {
+    titulo: "Diminuir probabilidade ou impacto",
+    descricao: "Use quando o risco continuará existindo, mas será reduzido por controles, procedimentos ou reforços operacionais.",
+    exemplos: ["Instalar câmeras e iluminação", "Aumentar rondas", "Treinar equipes ou criar procedimento operacional"],
+  },
+  Transferir: {
+    titulo: "Transferir parte da responsabilidade",
+    descricao: "Use quando parte da consequência financeira ou operacional será transferida para contrato, seguro ou empresa especializada.",
+    exemplos: ["Contratar seguro patrimonial", "Ter manutenção terceirizada", "Contratar vigilância especializada"],
+  },
+  Aceitar: {
+    titulo: "Conviver com o risco monitorado",
+    descricao: "Use quando o risco é baixo, inevitável ou quando o custo de tratamento é desproporcional ao impacto esperado.",
+    exemplos: ["Oscilação temporária de internet", "Atrasos em dias de chuva", "Risco baixo mantido em monitoramento"],
+  },
+};
 const prioridades = ["Baixa", "Média", "Alta", "Urgente"];
 const statusAcao = ["Pendente", "Em andamento", "Concluída", "Atrasada", "Cancelada"];
 const origens = ["Inspeção", "Ocorrência", "Investigação", "CFTV", "Auditoria", "Checklist", "Análise operacional", "Outro"];
@@ -849,6 +871,21 @@ export default function Riscos() {
               <Label texto="Ação proposta" className="lg:col-span-2"><input className={campoClasse()} value={form.acaoProposta} onChange={(e) => campo("acaoProposta", e.target.value)} required /></Label>
               <Label texto="Observações" className="lg:col-span-3"><textarea className={campoClasse()} rows={3} value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} /></Label>
               {!editando && <Label texto="Evidências anexadas"><input type="file" multiple accept="image/*" className={campoClasse()} onChange={(e) => setFotos(Array.from(e.target.files || []))} /></Label>}
+              <div className="lg:col-span-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300">Orientação do tratamento</p>
+                    <h4 className="mt-1 text-base font-bold">{form.tratamentoRisco}: {orientacoesTratamento[form.tratamentoRisco]?.titulo}</h4>
+                    <p className="mt-1 text-blue-900/80 dark:text-blue-100/80">{orientacoesTratamento[form.tratamentoRisco]?.descricao}</p>
+                  </div>
+                  <span className="rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-bold text-blue-700 dark:border-blue-800 dark:bg-slate-950 dark:text-blue-200">ISO 31000</span>
+                </div>
+                <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-3">
+                  {(orientacoesTratamento[form.tratamentoRisco]?.exemplos || []).map((exemplo) => (
+                    <div key={exemplo} className="rounded-md border border-blue-100 bg-white/80 p-2 font-semibold text-blue-900 dark:border-blue-900/60 dark:bg-slate-950/60 dark:text-blue-100">{exemplo}</div>
+                  ))}
+                </div>
+              </div>
             </div>
           </section>
 
