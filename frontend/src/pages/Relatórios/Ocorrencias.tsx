@@ -268,7 +268,7 @@ export default function Ocorrencias() {
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
-  const [imagemAnexoPreview, setImagemAnexoPreview] = useState<{ url: string; titulo: string } | null>(null);
+  const [imagemAnexoPreview, setImagemAnexoPreview] = useState<{ imagens: Anexo[]; indice: number } | null>(null);
   const [ocorrenciaAnaliseModal, setOcorrenciaAnaliseModal] = useState<Ocorrencia | null>(null);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [locais, setLocais] = useState<LocalCadastro[]>([]);
@@ -458,14 +458,35 @@ export default function Ocorrencias() {
     return arquivo.tipo.startsWith("image/");
   }
 
-  function visualizarImagemAnexo(arquivo: Anexo) {
-    setImagemAnexoPreview({ url: urlAnexo(arquivo), titulo: "Evidência fotográfica" });
+  function visualizarImagemAnexo(arquivo: Anexo, anexosOrigem?: Anexo[]) {
+    const imagens = (anexosOrigem || anexosExistentes).filter(anexoEhImagem);
+    const indice = Math.max(
+      0,
+      imagens.findIndex((item) => item.id === arquivo.id)
+    );
+    setImagemAnexoPreview({ imagens: imagens.length ? imagens : [arquivo], indice });
+  }
+
+  function navegarImagemAnexo(direcao: number) {
+    setImagemAnexoPreview((galeria) => {
+      if (!galeria) return galeria;
+      const total = galeria.imagens.length;
+      return {
+        ...galeria,
+        indice: (galeria.indice + direcao + total) % total,
+      };
+    });
+  }
+
+  function selecionarImagemAnexo(indice: number) {
+    setImagemAnexoPreview((galeria) => (galeria ? { ...galeria, indice } : galeria));
   }
 
   const subNaturezasDisponiveis =
     naturezas.find((item) => item.nome === natureza)?.subNaturezas || [];
   const localSelecionado = locais.find((item) => item.nome === local);
   const naturezaImpactoOperacional = ehImpactoOperacionalExterno(natureza);
+  const imagemAtualPreview = imagemAnexoPreview?.imagens[imagemAnexoPreview.indice] || null;
 
   function alternarImpacto(campo: "operacoesImpactadas" | "tratativas", opcao: string) {
     setImpactoOperacional((atual) => ({
@@ -1646,7 +1667,7 @@ export default function Ocorrencias() {
                       return (
                         <div key={arquivo.id} className="overflow-hidden rounded-xl border bg-white shadow-sm">
                           {isImagem ? (
-                            <button type="button" onClick={() => visualizarImagemAnexo(arquivo)} className="block w-full">
+                            <button type="button" onClick={() => visualizarImagemAnexo(arquivo, anexosExistentes)} className="block w-full">
                               <img src={url} alt={arquivo.nomeOriginal} className="h-32 w-full object-cover" />
                             </button>
                           ) : (
@@ -1660,7 +1681,7 @@ export default function Ocorrencias() {
                             {isImagem ? (
                               <button
                                 type="button"
-                                onClick={() => visualizarImagemAnexo(arquivo)}
+                                onClick={() => visualizarImagemAnexo(arquivo, anexosExistentes)}
                                 className="block w-full rounded-lg bg-slate-900 py-2 text-center text-xs text-white"
                               >
                                 Visualizar
@@ -1845,7 +1866,7 @@ export default function Ocorrencias() {
                           <AtSign size={17} />
                         </button>
                         {ocorrencia.anexos?.some(anexoEhImagem) && (
-                          <button type="button" onClick={() => visualizarImagemAnexo(ocorrencia.anexos!.find(anexoEhImagem)!)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500/20 dark:text-emerald-200" title="Visualizar imagem anexada">
+                          <button type="button" onClick={() => visualizarImagemAnexo(ocorrencia.anexos!.find(anexoEhImagem)!, ocorrencia.anexos)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500/20 dark:text-emerald-200" title="Visualizar imagem anexada">
                             <FileUp size={17} />
                           </button>
                         )}
@@ -2212,7 +2233,7 @@ export default function Ocorrencias() {
                   return (
                     <div key={arquivo.id} className="overflow-hidden rounded-lg border bg-white">
                       {isImagem ? (
-                        <button type="button" onClick={() => visualizarImagemAnexo(arquivo)} className="block w-full">
+                        <button type="button" onClick={() => visualizarImagemAnexo(arquivo, ocorrenciaVisualizando.anexos)} className="block w-full">
                           <img src={url} alt={arquivo.nomeOriginal} className="h-40 w-full object-cover" />
                         </button>
                       ) : (
@@ -2223,7 +2244,7 @@ export default function Ocorrencias() {
                       <div className="space-y-2 p-3">
                         {!isImagem && <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>}
                         {isImagem ? (
-                          <button type="button" onClick={() => visualizarImagemAnexo(arquivo)} className="block w-full rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                          <button type="button" onClick={() => visualizarImagemAnexo(arquivo, ocorrenciaVisualizando.anexos)} className="block w-full rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
                             Visualizar
                           </button>
                         ) : (
@@ -2334,26 +2355,74 @@ export default function Ocorrencias() {
         />
       )}
 
-      {imagemAnexoPreview && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4">
-          <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+      {imagemAnexoPreview && imagemAtualPreview && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm">
+          <div className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-slate-900/90 px-5 py-4">
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Visualização do anexo</p>
-                <h3 className="truncate text-base font-bold text-slate-900">{imagemAnexoPreview.titulo}</h3>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-300">Galeria de evidências</p>
+                <h3 className="truncate text-lg font-bold text-white">Evidência fotográfica</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setImagemAnexoPreview(null)}
-                className="rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200"
-                aria-label="Fechar visualização"
-              >
-                <X size={18} />
-              </button>
+              <div className="flex items-center gap-3">
+                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-slate-200">
+                  {imagemAnexoPreview.indice + 1} / {imagemAnexoPreview.imagens.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setImagemAnexoPreview(null)}
+                  className="rounded-full bg-white/10 p-2 text-slate-100 transition hover:bg-white/20"
+                  aria-label="Fechar galeria"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
-            <div className="flex max-h-[78vh] items-center justify-center bg-slate-950 p-4">
-              <img src={imagemAnexoPreview.url} alt={imagemAnexoPreview.titulo} className="max-h-[72vh] max-w-full rounded-lg object-contain" />
+
+            <div className="relative flex min-h-[52vh] flex-1 items-center justify-center bg-black p-4">
+              {imagemAnexoPreview.imagens.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => navegarImagemAnexo(-1)}
+                    className="absolute left-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 text-2xl font-bold text-white shadow-lg transition hover:bg-white/20"
+                    aria-label="Imagem anterior"
+                  >
+                    {"<"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navegarImagemAnexo(1)}
+                    className="absolute right-4 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-white/10 text-2xl font-bold text-white shadow-lg transition hover:bg-white/20"
+                    aria-label="Próxima imagem"
+                  >
+                    {">"}
+                  </button>
+                </>
+              )}
+              <img src={urlAnexo(imagemAtualPreview)} alt="Evidência fotográfica" className="max-h-[68vh] max-w-full rounded-xl object-contain shadow-2xl" />
             </div>
+
+            {imagemAnexoPreview.imagens.length > 1 && (
+              <div className="border-t border-white/10 bg-slate-900/95 p-3">
+                <div className="flex gap-3 overflow-x-auto pb-1">
+                  {imagemAnexoPreview.imagens.map((imagem, indice) => (
+                    <button
+                      key={imagem.id}
+                      type="button"
+                      onClick={() => selecionarImagemAnexo(indice)}
+                      className={`h-20 w-28 flex-none overflow-hidden rounded-xl border transition ${
+                        indice === imagemAnexoPreview.indice
+                          ? "border-emerald-300 ring-2 ring-emerald-300/30"
+                          : "border-white/10 opacity-70 hover:opacity-100"
+                      }`}
+                      aria-label={`Visualizar evidência ${indice + 1}`}
+                    >
+                      <img src={urlAnexo(imagem)} alt="Miniatura da evidência" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
