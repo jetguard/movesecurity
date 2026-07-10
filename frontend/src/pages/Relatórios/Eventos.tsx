@@ -383,7 +383,7 @@ export default function Eventos() {
   }
 
   function visualizarImagemAnexo(arquivo: Anexo) {
-    setImagemAnexoPreview({ url: urlAnexo(arquivo), titulo: arquivo.nomeOriginal });
+    setImagemAnexoPreview({ url: urlAnexo(arquivo), titulo: "Evidência fotográfica" });
   }
 
   const subNaturezasDisponiveis =
@@ -1052,9 +1052,11 @@ export default function Eventos() {
                           )}
 
                           <div className="p-2 space-y-2">
-                            <p className="text-xs text-gray-600 break-all">
-                              {arquivo.nomeOriginal}
-                            </p>
+                            {!isImagem && (
+                              <p className="text-xs text-gray-600 break-all">
+                                {arquivo.nomeOriginal}
+                              </p>
+                            )}
 
                             {isImagem ? (
                               <button
@@ -1423,7 +1425,7 @@ export default function Eventos() {
                         </div>
                       )}
                       <div className="space-y-2 p-3">
-                        <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>
+                        {!isImagem && <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>}
                         {isImagem ? (
                           <button type="button" onClick={() => visualizarImagemAnexo(arquivo)} className="block w-full rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
                             Visualizar

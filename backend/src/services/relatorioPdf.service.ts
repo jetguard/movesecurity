@@ -1103,7 +1103,7 @@ function escreverEvidenciasAnexadas(
   const alturaCelula = 118;
   const gapX = 20;
   const gapY = 12;
-  const imagemAltura = 84;
+  const imagemAltura = alturaCelula - 16;
 
   imagens.forEach((anexo, index) => {
     if (index % porPagina === 0) {
@@ -1141,16 +1141,6 @@ function escreverEvidenciasAnexadas(
         align: "center",
       });
     }
-
-    doc
-      .font("Helvetica")
-      .fontSize(7.3)
-      .fillColor("#334155")
-      .text(textoPdf(anexo.nomeOriginal), x + 8, y + 96, {
-        width: larguraCelula - 16,
-        height: 14,
-        ellipsis: true,
-      });
 
     if (posicao === porPagina - 1 || index === imagens.length - 1) {
       doc.y = y + alturaCelula + 14;
