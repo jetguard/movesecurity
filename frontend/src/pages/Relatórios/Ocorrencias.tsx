@@ -253,6 +253,7 @@ export default function Ocorrencias() {
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
   const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
+  const [imagemAnexoPreview, setImagemAnexoPreview] = useState<{ url: string; titulo: string } | null>(null);
   const [ocorrenciaAnaliseModal, setOcorrenciaAnaliseModal] = useState<Ocorrencia | null>(null);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [locais, setLocais] = useState<LocalCadastro[]>([]);
@@ -432,6 +433,18 @@ export default function Ocorrencias() {
   function fecharPdfLightbox() {
     if (pdfLightbox?.url) URL.revokeObjectURL(pdfLightbox.url);
     setPdfLightbox(null);
+  }
+
+  function urlAnexo(arquivo: Anexo) {
+    return `/${arquivo.caminho.replaceAll("\\", "/")}`;
+  }
+
+  function anexoEhImagem(arquivo: Anexo) {
+    return arquivo.tipo.startsWith("image/");
+  }
+
+  function visualizarImagemAnexo(arquivo: Anexo) {
+    setImagemAnexoPreview({ url: urlAnexo(arquivo), titulo: arquivo.nomeOriginal });
   }
 
   const subNaturezasDisponiveis =
@@ -1595,28 +1608,50 @@ export default function Ocorrencias() {
               {anexosExistentes.length > 0 && (
                 <div className="bg-white border rounded-lg p-4">
                   <p className="font-semibold mb-4">Anexos já enviados</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {anexosExistentes.map((arquivo) => (
-                      <div key={arquivo.id} className="border rounded-xl p-3 bg-gray-50">
-                        <p className="text-sm break-all mb-3">{arquivo.nomeOriginal}</p>
-                        <div className="flex gap-2">
-                          <a
-                            href={`/${arquivo.caminho.replaceAll("\\", "/")}`}
-                            target="_blank"
-                            className="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs"
-                          >
-                            Visualizar
-                          </a>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {anexosExistentes.map((arquivo) => {
+                      const url = urlAnexo(arquivo);
+                      const isImagem = anexoEhImagem(arquivo);
+
+                      return (
+                        <div key={arquivo.id} className="overflow-hidden rounded-xl border bg-white shadow-sm">
+                          {isImagem ? (
+                            <button type="button" onClick={() => visualizarImagemAnexo(arquivo)} className="block w-full">
+                              <img src={url} alt={arquivo.nomeOriginal} className="h-32 w-full object-cover" />
+                            </button>
+                          ) : (
+                            <div className="flex h-32 items-center justify-center bg-slate-100 text-sm font-bold text-slate-600">
+                              ARQUIVO
+                            </div>
+                          )}
+
+                          <div className="space-y-2 p-2">
+                            <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>
+                            {isImagem ? (
+                              <button
+                                type="button"
+                                onClick={() => visualizarImagemAnexo(arquivo)}
+                                className="block w-full rounded-lg bg-slate-900 py-2 text-center text-xs text-white"
+                              >
+                                Visualizar
+                              </button>
+                            ) : (
+                              <a href={url} target="_blank" rel="noreferrer" className="block rounded-lg bg-slate-900 py-2 text-center text-xs text-white">
+                                Abrir arquivo
+                              </a>
+                            )}
+                          </div>
+
                           <button
                             type="button"
                             onClick={() => removerAnexoExistente(arquivo.id)}
-                            className="bg-red-600 text-white px-3 py-2 rounded-lg text-xs"
+                            className="w-full bg-red-600 py-2 text-xs text-white hover:bg-red-700"
                           >
                             Remover
                           </button>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -2136,15 +2171,15 @@ export default function Ocorrencias() {
               )}
               <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {ocorrenciaVisualizando.anexos?.map((arquivo) => {
-                  const url = `/${arquivo.caminho.replaceAll("\\", "/")}`;
-                  const isImagem = arquivo.tipo.startsWith("image/");
+                  const url = urlAnexo(arquivo);
+                  const isImagem = anexoEhImagem(arquivo);
 
                   return (
                     <div key={arquivo.id} className="overflow-hidden rounded-lg border bg-white">
                       {isImagem ? (
-                        <a href={url} target="_blank" rel="noreferrer">
+                        <button type="button" onClick={() => visualizarImagemAnexo(arquivo)} className="block w-full">
                           <img src={url} alt={arquivo.nomeOriginal} className="h-40 w-full object-cover" />
-                        </a>
+                        </button>
                       ) : (
                         <div className="flex h-40 items-center justify-center bg-slate-100 text-sm font-bold text-slate-600">
                           ARQUIVO
@@ -2152,9 +2187,15 @@ export default function Ocorrencias() {
                       )}
                       <div className="space-y-2 p-3">
                         <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>
-                        <a href={url} target="_blank" rel="noreferrer" className="block rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
-                          Abrir anexo
-                        </a>
+                        {isImagem ? (
+                          <button type="button" onClick={() => visualizarImagemAnexo(arquivo)} className="block w-full rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                            Visualizar
+                          </button>
+                        ) : (
+                          <a href={url} target="_blank" rel="noreferrer" className="block rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                            Abrir arquivo
+                          </a>
+                        )}
                       </div>
                     </div>
                   );
@@ -2256,6 +2297,30 @@ export default function Ocorrencias() {
           nomeArquivo={pdfLightbox.nomeArquivo}
           onClose={fecharPdfLightbox}
         />
+      )}
+
+      {imagemAnexoPreview && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 p-4">
+          <div className="relative w-full max-w-5xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-3 border-b px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Visualização do anexo</p>
+                <h3 className="truncate text-base font-bold text-slate-900">{imagemAnexoPreview.titulo}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setImagemAnexoPreview(null)}
+                className="rounded-full bg-slate-100 p-2 text-slate-600 transition hover:bg-slate-200"
+                aria-label="Fechar visualização"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex max-h-[78vh] items-center justify-center bg-slate-950 p-4">
+              <img src={imagemAnexoPreview.url} alt={imagemAnexoPreview.titulo} className="max-h-[72vh] max-w-full rounded-lg object-contain" />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

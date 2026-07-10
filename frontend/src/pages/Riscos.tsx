@@ -1,4 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { api } from "../services/api";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 
@@ -270,6 +284,21 @@ function mediaDiasTratamento(riscos: Risco[]) {
   return Math.round(total / concluidos.length);
 }
 
+const coresNivel: Record<string, string> = {
+  Baixo: "#10b981",
+  Moderado: "#f59e0b",
+  Alto: "#f97316",
+  Crítico: "#ef4444",
+};
+const coresGrafico = ["#2563eb", "#0f766e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#84cc16", "#f97316"];
+
+function paraGrafico(dados: Array<[string, number]>, limite = 8) {
+  return dados
+    .map(([nome, valor]) => ({ nome, valor }))
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, limite);
+}
+
 export default function Riscos() {
   const [aba, setAba] = useState<Aba>("Dashboard de Riscos");
   const [riscos, setRiscos] = useState<Risco[]>([]);
@@ -362,6 +391,27 @@ export default function Riscos() {
     const data = new Date(r.dataHora);
     return Number.isNaN(data.getTime()) ? "Sem data" : `${String(data.getMonth() + 1).padStart(2, "0")}/${data.getFullYear()}`;
   }));
+  const graficoNivel = niveis.map((nivel) => ({ nome: nivel, valor: riscosFiltrados.filter((r) => r.nivelRisco === nivel).length }));
+  const graficoStatus = paraGrafico(Object.entries(contarPor(riscosFiltrados, (r) => r.status)), 10);
+  const graficoCategoria = paraGrafico(distribuicaoCategoria, 7);
+  const graficoTratamento = tratamentos.map((tratamento) => ({ nome: tratamento, valor: riscosFiltrados.filter((r) => r.tratamentoRisco === tratamento).length }));
+  const graficoEvolucao = evolucaoMensal
+    .map(([mes, total]) => ({ mes, total }))
+    .sort((a, b) => {
+      const [mesA, anoA] = a.mes.split("/").map(Number);
+      const [mesB, anoB] = b.mes.split("/").map(Number);
+      if (!anoA || !anoB) return a.mes.localeCompare(b.mes);
+      return anoA === anoB ? mesA - mesB : anoA - anoB;
+    });
+  const graficoAntesDepois = niveis.map((nivel) => ({
+    nome: nivel,
+    inicial: riscosFiltrados.filter((r) => r.nivelRisco === nivel).length,
+    residual: riscosFiltrados.filter((r) => r.novoNivelRisco === nivel).length,
+  }));
+  const riscosVencidosPorResponsavel = Object.entries(contarPor(
+    riscosFiltrados.filter((r) => !["Concluído", "Reavaliado", "Encerrado", "Anulado"].includes(r.status) && r.prazo && new Date(r.prazo) < new Date()),
+    (r) => r.responsavelAcaoNome,
+  ));
 
   function campo(nome: string, valor: string) {
     if (nome === "riscoCatalogoId") {
@@ -589,6 +639,100 @@ export default function Riscos() {
     );
   }
 
+  function GraficoRosca({ titulo, dados, cores = coresGrafico }: { titulo: string; dados: Array<{ nome: string; valor: number }>; cores?: string[] }) {
+    const total = dados.reduce((acc, item) => acc + item.valor, 0);
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h3 className="font-bold text-slate-900 dark:text-white">{titulo}</h3>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{total} riscos</span>
+        </div>
+        <div className="h-64">
+          {total ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Tooltip />
+                <Pie data={dados} dataKey="valor" nameKey="nome" innerRadius={54} outerRadius={86} paddingAngle={3}>
+                  {dados.map((item, index) => <Cell key={item.nome} fill={cores[index % cores.length]} />)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          ) : <p className="text-sm text-slate-500">Sem dados para exibir.</p>}
+        </div>
+        <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+          {dados.map((item, index) => (
+            <div key={item.nome} className="flex items-center justify-between gap-2 rounded-md bg-slate-50 px-2 py-1.5 dark:bg-slate-950">
+              <span className="flex min-w-0 items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: cores[index % cores.length] }} /><span className="truncate">{item.nome}</span></span>
+              <strong>{item.valor}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function GraficoBarras({ titulo, dados, cor = "#2563eb" }: { titulo: string; dados: Array<{ nome: string; valor: number }>; cor?: string }) {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="mb-3 font-bold text-slate-900 dark:text-white">{titulo}</h3>
+        <div className="h-64">
+          {dados.some((item) => item.valor > 0) ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dados} layout="vertical" margin={{ top: 8, right: 18, left: 12, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="rgba(148, 163, 184, 0.22)" />
+                <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8" }} />
+                <YAxis dataKey="nome" type="category" width={112} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8" }} />
+                <Tooltip />
+                <Bar dataKey="valor" name="Quantidade" fill={cor} radius={[0, 8, 8, 0]} barSize={18} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <p className="text-sm text-slate-500">Sem dados para exibir.</p>}
+        </div>
+      </div>
+    );
+  }
+
+  function GraficoEvolucao() {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 lg:col-span-2 dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="mb-3 font-bold text-slate-900 dark:text-white">Evolução mensal dos riscos</h3>
+        <div className="h-64">
+          {graficoEvolucao.length ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={graficoEvolucao} margin={{ top: 10, right: 24, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.22)" />
+                <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8" }} />
+                <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8" }} />
+                <Tooltip />
+                <Line type="monotone" dataKey="total" name="Riscos" stroke="#2563eb" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : <p className="text-sm text-slate-500">Sem dados para exibir.</p>}
+        </div>
+      </div>
+    );
+  }
+
+  function GraficoAntesDepois() {
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-4 lg:col-span-2 dark:border-slate-800 dark:bg-slate-900">
+        <h3 className="mb-3 font-bold text-slate-900 dark:text-white">Antes x depois da reavaliação</h3>
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={graficoAntesDepois} margin={{ top: 10, right: 24, left: 0, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.22)" />
+              <XAxis dataKey="nome" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8" }} />
+              <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: "#94a3b8" }} />
+              <Tooltip />
+              <Bar dataKey="inicial" name="Inicial" fill="#ef4444" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="residual" name="Residual" fill="#10b981" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    );
+  }
+
   function DashboardRiscos() {
     return (
       <div className="space-y-4">
@@ -629,12 +773,35 @@ export default function Riscos() {
           </div>
         </div>
 
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Indicadores analíticos</h2>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Distribuição do risco</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+            <GraficoRosca titulo="Riscos por nível" dados={graficoNivel} cores={niveis.map((nivel) => coresNivel[nivel])} />
+            <GraficoBarras titulo="Riscos por status" dados={graficoStatus} cor="#0f766e" />
+            <GraficoBarras titulo="Riscos por categoria" dados={graficoCategoria} cor="#2563eb" />
+            <GraficoRosca titulo="Tratamento adotado" dados={graficoTratamento} cores={["#ef4444", "#2563eb", "#8b5cf6", "#10b981"]} />
+          </div>
+        </div>
+
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Acompanhamento</h2>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Prazos, evolução e reincidência</span>
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+            <GraficoEvolucao />
+            <GraficoAntesDepois />
+            <Ranking titulo="Ranking de locais com mais riscos" dados={distribuicaoLocal} />
+            <Ranking titulo="Ações vencidas por responsável" dados={riscosVencidosPorResponsavel} />
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3">
-          <Ranking titulo="Riscos por categoria" dados={distribuicaoCategoria} />
           <Ranking titulo="Riscos por unidade" dados={distribuicaoUnidade} />
-          <Ranking titulo="Riscos por local" dados={distribuicaoLocal} />
           <Ranking titulo="Riscos por responsável" dados={distribuicaoResponsavel} />
-          <Ranking titulo="Evolução mensal" dados={evolucaoMensal} />
         </div>
       </div>
     );

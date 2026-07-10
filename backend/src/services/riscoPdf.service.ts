@@ -100,6 +100,129 @@ function corNivel(nivel: string) {
   return "#059669";
 }
 
+function nivelPeso(nivel?: string | null) {
+  if (nivel === "Crítico") return 4;
+  if (nivel === "Alto") return 3;
+  if (nivel === "Moderado") return 2;
+  if (nivel === "Baixo") return 1;
+  return 0;
+}
+
+function diasEntre(inicio?: Date | string | null, fim?: Date | string | null) {
+  if (!inicio || !fim) return null;
+  const dataInicio = inicio instanceof Date ? inicio : new Date(inicio);
+  const dataFim = fim instanceof Date ? fim : new Date(fim);
+  if (Number.isNaN(dataInicio.getTime()) || Number.isNaN(dataFim.getTime())) return null;
+  return Math.round((dataFim.getTime() - dataInicio.getTime()) / 86400000);
+}
+
+function pluralDias(dias: number) {
+  return `${Math.abs(dias)} ${Math.abs(dias) === 1 ? "dia" : "dias"}`;
+}
+
+function diagnosticoPrazo(risco: RiscoPdf) {
+  const dias = diasEntre(new Date(), risco.prazo);
+  if (dias === null) return "Prazo não informado para conclusão da tratativa.";
+  if (["Concluído", "Reavaliado", "Encerrado"].includes(risco.status)) {
+    return `Tratativa registrada com status ${risco.status}. O prazo final definido para controle foi ${formatarData(risco.prazo)}.`;
+  }
+  if (dias < 0) return `A tratativa está vencida há ${pluralDias(dias)}. Recomenda-se priorização imediata e registro formal da causa do atraso.`;
+  if (dias === 0) return "A tratativa vence hoje. Recomenda-se acompanhamento no mesmo turno operacional.";
+  if (dias <= 3) return `A tratativa vence em ${pluralDias(dias)}. Recomenda-se acompanhamento diário até a execução da ação proposta.`;
+  return `A tratativa possui ${pluralDias(dias)} restantes até o prazo final, permitindo acompanhamento programado sem perda de controle.`;
+}
+
+function diagnosticoNivel(risco: RiscoPdf) {
+  if (risco.nivelRisco === "Crítico") {
+    return "O risco foi classificado como CRÍTICO, exigindo atenção prioritária da gestão, definição clara de responsável e acompanhamento até a redução do nível residual.";
+  }
+  if (risco.nivelRisco === "Alto") {
+    return "O risco foi classificado como ALTO, indicando exposição relevante à operação e necessidade de plano de tratamento com prazo e evidências de execução.";
+  }
+  if (risco.nivelRisco === "Moderado") {
+    return "O risco foi classificado como MODERADO, recomendando controle formal, monitoramento periódico e validação da efetividade das medidas propostas.";
+  }
+  return "O risco foi classificado como BAIXO, podendo ser aceito ou monitorado, desde que a decisão permaneça documentada e revisada em ciclos futuros.";
+}
+
+function diagnosticoTratamento(risco: RiscoPdf) {
+  const tratamento = risco.tratamentoRisco || "Não informado";
+  if (tratamento === "Eliminar") {
+    return "A estratégia de tratamento indicada é eliminar a causa do risco. A ação deve remover a condição geradora ou interditar o cenário até que o risco deixe de existir de forma operacionalmente verificável.";
+  }
+  if (tratamento === "Reduzir") {
+    return "A estratégia de tratamento indicada é reduzir o risco. O foco deve ser diminuir a probabilidade ou o impacto por meio de controles, tecnologia, procedimento, treinamento ou reforço operacional.";
+  }
+  if (tratamento === "Transferir") {
+    return "A estratégia de tratamento indicada é transferir parte da exposição. Recomenda-se formalizar responsabilidade contratual, seguro, SLA ou escopo de terceiros envolvidos.";
+  }
+  if (tratamento === "Aceitar") {
+    return "A estratégia indicada é aceitar o risco. Essa decisão deve ser justificada, aprovada e mantida sob monitoramento, especialmente se houver mudança no contexto operacional.";
+  }
+  return "A estratégia de tratamento ainda não foi informada. Recomenda-se definir se o risco será eliminado, reduzido, transferido ou aceito.";
+}
+
+function diagnosticoReavaliacao(risco: RiscoPdf) {
+  if (!risco.novoResultado || !risco.novoNivelRisco) {
+    return "Ainda não há reavaliação residual registrada. Após a execução do plano de tratamento, recomenda-se nova medição de probabilidade e impacto para comprovar a efetividade da ação.";
+  }
+
+  const inicial = risco.resultadoRisco || 0;
+  const residual = risco.novoResultado || 0;
+  const diferenca = inicial - residual;
+  const reducaoPercentual = inicial > 0 ? Math.round((diferenca / inicial) * 100) : 0;
+  const pesoInicial = nivelPeso(risco.nivelRisco);
+  const pesoResidual = nivelPeso(risco.novoNivelRisco);
+
+  if (diferenca > 0 && pesoResidual < pesoInicial) {
+    return `A reavaliação demonstra redução efetiva do risco: o resultado passou de ${inicial} (${risco.nivelRisco}) para ${residual} (${risco.novoNivelRisco}), representando redução aproximada de ${reducaoPercentual}% na exposição calculada.`;
+  }
+  if (diferenca > 0) {
+    return `A reavaliação reduziu o resultado de ${inicial} para ${residual}, porém o nível residual permanece em ${risco.novoNivelRisco}. Recomenda-se manter acompanhamento até nova redução de exposição.`;
+  }
+  if (diferenca === 0) {
+    return `A reavaliação manteve o resultado em ${residual}. Não foi evidenciada redução quantitativa do risco, sendo recomendável revisar a efetividade das ações propostas.`;
+  }
+  return `A reavaliação elevou o resultado de ${inicial} para ${residual}. O cenário residual exige revisão imediata do plano de tratamento e reclassificação da prioridade.`;
+}
+
+function parecerExecutivo(risco: RiscoPdf) {
+  const titulo = texto(risco.tituloRisco || risco.riscoCatalogo?.nome || risco.tipoRisco);
+  const resultado = risco.resultadoRisco || (Number(risco.probabilidadeValor || 1) * Number(risco.impactoValor || 1));
+  const prazo = diagnosticoPrazo(risco);
+
+  return [
+    `A presente análise avalia o risco "${titulo}" na unidade ${texto(risco.unidade)}, local ${texto(risco.local)}, área ${texto(risco.area)}.`,
+    `A classificação inicial resultou em ${resultado} ponto(s), nível ${texto(risco.nivelRisco)}, considerando probabilidade ${texto(risco.probabilidadeValor || risco.probabilidade)} e impacto ${texto(risco.impactoValor || risco.severidade)}.`,
+    diagnosticoNivel(risco),
+    diagnosticoTratamento(risco),
+    prazo,
+    diagnosticoReavaliacao(risco),
+  ].join("\n\n");
+}
+
+function recomendacoesDiretoria(risco: RiscoPdf) {
+  const recomendacoes = [
+    `Manter responsável formal pela ação: ${texto(risco.responsavelAcaoNome)}.`,
+    `Exigir evidências objetivas de execução do plano até ${formatarData(risco.prazo)}.`,
+    "Registrar nova reavaliação após a conclusão da ação para medir o risco residual.",
+  ];
+
+  if (["Crítico", "Alto"].includes(risco.nivelRisco)) {
+    recomendacoes.unshift("Tratar o risco como prioridade gerencial até que o nível residual seja reduzido ou formalmente aceito.");
+  }
+
+  if (risco.nivelAceitacao === "Não aceito") {
+    recomendacoes.push("Como o risco foi marcado como não aceito, a permanência do cenário deve ser submetida à gestão responsável.");
+  }
+
+  if (!risco.novoResultado) {
+    recomendacoes.push("Programar reavaliação obrigatória após execução, evitando encerramento sem comprovação de efetividade.");
+  }
+
+  return recomendacoes;
+}
+
 function campo(
   doc: PDFKit.PDFDocument,
   rotulo: string,
@@ -168,6 +291,83 @@ function blocoTexto(doc: PDFKit.PDFDocument, rotulo: string, conteudo?: string |
   doc.y = y + altura + 10;
 }
 
+function blocoAnalitico(doc: PDFKit.PDFDocument, rotulo: string, conteudo: string, cor = pdfTheme.accent) {
+  const valor = texto(conteudo);
+  const textoWidth = larguraConteudo - 34;
+  const alturaTexto = doc.font("Helvetica").fontSize(9.6).heightOfString(valor, {
+    width: textoWidth,
+    lineGap: 3,
+    align: "justify",
+  });
+  const altura = Math.max(92, alturaTexto + 44);
+
+  garantirEspaco(doc, altura + 12);
+  const y = doc.y;
+
+  doc.roundedRect(margemX, y, larguraConteudo, altura, 8).fillColor("#f8fafc").fill().strokeColor("#bfdbfe").lineWidth(0.9).stroke();
+  doc.rect(margemX, y, 5, altura).fill(cor);
+  doc.fillColor(cor).font("Helvetica-Bold").fontSize(8).text(rotulo.toUpperCase(), margemX + 16, y + 11, {
+    width: textoWidth,
+    height: 11,
+    ellipsis: true,
+  });
+  doc.fillColor(pdfTheme.primary).font("Helvetica").fontSize(9.6).text(valor, margemX + 16, y + 30, {
+    width: textoWidth,
+    lineGap: 3,
+    align: "justify",
+  });
+
+  doc.y = y + altura + 12;
+}
+
+function listaRecomendacoes(doc: PDFKit.PDFDocument, titulo: string, itens: string[]) {
+  const linhas = itens.filter(Boolean);
+  const alturaTexto = linhas.reduce((acc, item) => acc + doc.font("Helvetica").fontSize(9.2).heightOfString(item, { width: larguraConteudo - 50, lineGap: 2 }), 0);
+  const altura = Math.max(78, alturaTexto + 38 + linhas.length * 8);
+
+  garantirEspaco(doc, altura + 10);
+  const y = doc.y;
+  doc.roundedRect(margemX, y, larguraConteudo, altura, 8).fillColor("#ffffff").fill().strokeColor(pdfTheme.line).lineWidth(0.8).stroke();
+  doc.fillColor(pdfTheme.accent).font("Helvetica-Bold").fontSize(8).text(titulo.toUpperCase(), margemX + 12, y + 10, { width: larguraConteudo - 24 });
+
+  let cursorY = y + 30;
+  linhas.forEach((item, index) => {
+    doc.circle(margemX + 17, cursorY + 5, 2.4).fillColor(pdfTheme.accent).fill();
+    doc.fillColor(pdfTheme.primary).font("Helvetica").fontSize(9.2).text(`${index + 1}. ${item}`, margemX + 28, cursorY, {
+      width: larguraConteudo - 44,
+      lineGap: 2,
+      align: "justify",
+    });
+    cursorY += doc.heightOfString(`${index + 1}. ${item}`, { width: larguraConteudo - 44, lineGap: 2 }) + 7;
+  });
+
+  doc.y = y + altura + 10;
+}
+
+function comparativoResidual(doc: PDFKit.PDFDocument, risco: RiscoPdf) {
+  garantirEspaco(doc, 160);
+  const y = doc.y;
+  const inicial = risco.resultadoRisco || (Number(risco.probabilidadeValor || 1) * Number(risco.impactoValor || 1));
+  const residual = risco.novoResultado || 0;
+  const delta = residual ? inicial - residual : null;
+  const deltaTexto = delta === null ? "Pendente" : `${delta > 0 ? "-" : "+"}${Math.abs(delta)} ponto(s)`;
+
+  doc.roundedRect(margemX, y, larguraConteudo, 142, 8).fillColor("#ffffff").fill().strokeColor(pdfTheme.line).lineWidth(0.8).stroke();
+  doc.fillColor(pdfTheme.primary).font("Helvetica-Bold").fontSize(10).text("Comparativo de exposição", margemX + 12, y + 12, { width: larguraConteudo - 24 });
+
+  campo(doc, "Antes", `P${texto(risco.probabilidadeValor)} x I${texto(risco.impactoValor)}`, margemX + 12, y + 36, 110);
+  campo(doc, "Resultado inicial", inicial, margemX + 134, y + 36, 110, corNivel(risco.nivelRisco));
+  campo(doc, "Nível inicial", risco.nivelRisco, margemX + 256, y + 36, 110, corNivel(risco.nivelRisco));
+  campo(doc, "Variação", deltaTexto, margemX + 378, y + 36, 120, delta && delta > 0 ? "#059669" : delta && delta < 0 ? "#dc2626" : pdfTheme.primary);
+
+  campo(doc, "Depois", risco.novoResultado ? `P${texto(risco.novaProbabilidade)} x I${texto(risco.novoImpacto)}` : "Pendente", margemX + 12, y + 86, 110);
+  campo(doc, "Resultado residual", risco.novoResultado || "Pendente", margemX + 134, y + 86, 110, risco.novoNivelRisco ? corNivel(risco.novoNivelRisco) : pdfTheme.primary);
+  campo(doc, "Nível residual", risco.novoNivelRisco || "Pendente", margemX + 256, y + 86, 110, risco.novoNivelRisco ? corNivel(risco.novoNivelRisco) : pdfTheme.primary);
+  campo(doc, "Reavaliado em", risco.dataReavaliacao ? formatarData(risco.dataReavaliacao) : "Pendente", margemX + 378, y + 86, 120);
+
+  doc.y = y + 154;
+}
+
 function resumoClassificacao(doc: PDFKit.PDFDocument, risco: RiscoPdf) {
   garantirEspaco(doc, 92);
   const y = doc.y;
@@ -192,6 +392,8 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
   });
   const nomeArquivo = `analise-risco-${risco.codigo}`.replace(/[^\w.-]+/g, "-").replace("/", "-");
   const qrCode = urlValidacao ? await criarQrCodeValidacao(urlValidacao) : null;
+  const diasPlanejados = diasEntre(risco.dataHora, risco.prazo);
+  const janelaTratamento = diasPlanejados === null ? "Não informado" : `${pluralDias(diasPlanejados)} planejado(s)`;
 
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", `inline; filename=${nomeArquivo}.pdf`);
@@ -204,6 +406,9 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
     unidade: risco.unidade,
     emitidoEm: new Date(),
   });
+
+  secao(doc, "Sumário executivo");
+  blocoAnalitico(doc, "Parecer técnico para diretoria", parecerExecutivo(risco), corNivel(risco.nivelRisco));
 
   secao(doc, "Dados da análise");
   linhaCampos(doc, [
@@ -237,6 +442,7 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
     { rotulo: "Resultado inicial", valor: risco.resultadoRisco, width: 120 },
     { rotulo: "Aceitação", valor: risco.nivelAceitacao, width: 125 },
   ]);
+  comparativoResidual(doc, risco);
 
   secao(doc, "Análise do risco");
   blocoTexto(doc, "O que pode acontecer?", risco.descricaoRisco);
@@ -253,11 +459,11 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
     { rotulo: "Custo estimado", valor: risco.custoEstimado, width: 125 },
   ]);
   blocoTexto(doc, "Ação proposta", risco.acaoProposta || risco.planoAcao);
-  blocoTexto(doc, "Medidas preventivas", risco.medidasPreventivas);
-  blocoTexto(doc, "Plano de ação", risco.planoAcao);
+  blocoTexto(doc, "Controles e medidas de apoio", risco.controlesExistentes || risco.medidasPreventivas);
   linhaCampos(doc, [
-    { rotulo: "Responsável pela ação", valor: risco.responsavelAcaoNome, width: 245 },
-    { rotulo: "Prazo final", valor: formatarData(risco.prazo), width: 245 },
+    { rotulo: "Responsável pela ação", valor: risco.responsavelAcaoNome, width: 160 },
+    { rotulo: "Prazo final", valor: formatarData(risco.prazo), width: 165 },
+    { rotulo: "Janela planejada", valor: janelaTratamento, width: 162 },
   ]);
   blocoTexto(doc, "Observações", risco.observacoes);
 
@@ -275,6 +481,9 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
     ]);
     blocoTexto(doc, "Observação da reavaliação", risco.observacaoReavaliacao);
   }
+
+  secao(doc, "Recomendações executivas");
+  listaRecomendacoes(doc, "Encaminhamentos recomendados", recomendacoesDiretoria(risco));
 
   const range = doc.bufferedPageRange();
   for (let i = range.start; i < range.start + range.count; i += 1) {
