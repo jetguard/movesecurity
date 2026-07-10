@@ -192,6 +192,21 @@ function normalizarPlacaFila(valor: string) {
   return valor.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);
 }
 
+function mascararCpf(valor: string) {
+  return valor
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function mascararPlaca(valor: string) {
+  const limpa = valor.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);
+  if (limpa.length <= 3) return limpa;
+  return `${limpa.slice(0, 3)}-${limpa.slice(3)}`;
+}
+
 function calcularTempoEsperaFila(impacto: ImpactoOperacional) {
   if (!impacto.dataHoraIdentificacaoUltimoVeiculo || !impacto.dataHoraChegadaBalanca) return "Aguardando horários";
 
@@ -478,11 +493,25 @@ export default function Ocorrencias() {
     valor: string | boolean
   ) {
     const lista = [...envolvidos];
+    const atual = lista[index] || { ...envolvidoVazio };
+    let valorTratado = valor;
+
+    if (campo === "documento" && typeof valor === "string" && atual.tipoDocumento === "CPF") {
+      valorTratado = mascararCpf(valor);
+    }
+
+    if ((campo === "placa" || campo === "reboque") && typeof valor === "string") {
+      valorTratado = mascararPlaca(valor);
+    }
 
     lista[index] = {
-      ...lista[index],
-      [campo]: valor,
+      ...atual,
+      [campo]: valorTratado,
     };
+
+    if (campo === "tipoDocumento" && valor === "CPF") {
+      lista[index].documento = mascararCpf(lista[index].documento);
+    }
 
     setEnvolvidos(lista);
   }
@@ -1420,7 +1449,8 @@ export default function Ocorrencias() {
 
                       <input
                         className="w-full border rounded-lg p-3"
-                        placeholder="Documento"
+                        placeholder={envolvido.tipoDocumento === "CPF" ? "000.000.000-00" : "Documento"}
+                        inputMode={envolvido.tipoDocumento === "CPF" ? "numeric" : "text"}
                         value={envolvido.documento}
                         onChange={(e) =>
                           atualizarEnvolvido(index, "documento", e.target.value)
@@ -1457,7 +1487,7 @@ export default function Ocorrencias() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <input
                           className="w-full border rounded-lg p-3"
-                          placeholder="Placa"
+                          placeholder="AAA-1234 ou AAA-1A34"
                           value={envolvido.placa}
                           onChange={(e) =>
                             atualizarEnvolvido(index, "placa", e.target.value)
@@ -1466,7 +1496,7 @@ export default function Ocorrencias() {
 
                         <input
                           className="w-full border rounded-lg p-3"
-                          placeholder="Reboque"
+                          placeholder="AAA-1234 ou AAA-1A34"
                           value={envolvido.reboque}
                           onChange={(e) =>
                             atualizarEnvolvido(index, "reboque", e.target.value)
@@ -1814,6 +1844,11 @@ export default function Ocorrencias() {
                         <button type="button" onClick={() => setOcorrenciaMencao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-500/10 text-indigo-600 transition hover:-translate-y-0.5 hover:bg-indigo-500/20 dark:text-indigo-200" title="Mencionar usuário">
                           <AtSign size={17} />
                         </button>
+                        {ocorrencia.anexos?.some(anexoEhImagem) && (
+                          <button type="button" onClick={() => visualizarImagemAnexo(ocorrencia.anexos!.find(anexoEhImagem)!)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500/20 dark:text-emerald-200" title="Visualizar imagem anexada">
+                            <FileUp size={17} />
+                          </button>
+                        )}
                         <button type="button" onClick={() => editarOcorrencia(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-blue-600 transition hover:-translate-y-0.5 hover:bg-blue-500/20 dark:text-blue-200" title="Editar relatório">
                           <Edit3 size={17} />
                         </button>

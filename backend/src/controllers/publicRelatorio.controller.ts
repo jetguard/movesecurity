@@ -34,6 +34,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         where: { id },
         include: {
           envolvidos: true,
+          anexos: true,
           investigacao: {
             include: {
               responsavel: { select: { nome: true } },
@@ -87,6 +88,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
           relatoSeguranca: ocorrencia.relatoSeguranca,
           acoesTomadas: ocorrencia.acoesTomadas,
           envolvidos: ocorrencia.envolvidos,
+          anexos: ocorrencia.anexos,
           investigacao: ocorrencia.investigacao,
           analise: ocorrencia.analise,
           assinaturaAprovacao,
@@ -101,6 +103,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
       where: { id },
       include: {
         envolvidos: true,
+        anexos: true,
         analise: {
           include: {
             responsavel: { select: { nome: true } },
@@ -148,6 +151,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         relatoSeguranca: evento.relatoSeguranca,
         acoesTomadas: evento.acoesTomadas,
         envolvidos: evento.envolvidos,
+        anexos: evento.anexos,
         analise: evento.analise,
         assinaturaAprovacao,
       },

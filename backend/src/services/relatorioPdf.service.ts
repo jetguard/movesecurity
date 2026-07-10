@@ -1,4 +1,5 @@
 ﻿import crypto from "crypto";
+import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
@@ -31,6 +32,12 @@ type RelatorioPdf = {
   acoesTomadas?: string | null;
   impactoOperacional?: string | null;
   envolvidos?: EnvolvidoPdf[];
+  anexos?: {
+    id: number;
+    nomeOriginal: string;
+    caminho: string;
+    tipo: string;
+  }[];
   investigacao?: {
     codigo?: string | null;
     numeroOcorrencia?: string | null;
@@ -1076,6 +1083,81 @@ function escreverAssinaturaAprovacao(
   doc.y = y + 106;
 }
 
+function caminhoArquivoAnexo(caminho: string) {
+  return path.isAbsolute(caminho) ? caminho : path.resolve(process.cwd(), caminho);
+}
+
+function escreverEvidenciasAnexadas(
+  doc: PDFKit.PDFDocument,
+  relatorio: RelatorioPdf,
+  usuario: UsuarioAssinatura,
+  qrCode: string,
+  token: string
+) {
+  const imagens = (relatorio.anexos || []).filter((anexo) => anexo.tipo?.startsWith("image/") && fs.existsSync(caminhoArquivoAnexo(anexo.caminho)));
+  if (!imagens.length) return;
+
+  const porPagina = 12;
+  const colunas = 3;
+  const larguraCelula = 157;
+  const alturaCelula = 118;
+  const gapX = 20;
+  const gapY = 12;
+  const imagemAltura = 84;
+
+  imagens.forEach((anexo, index) => {
+    if (index % porPagina === 0) {
+      novaPagina(doc, relatorio, usuario, qrCode, token);
+      escreverTituloSecao(doc, "Evidências fotográficas");
+      doc
+        .font("Helvetica")
+        .fontSize(8.5)
+        .fillColor("#64748b")
+        .text("Fotos anexadas ao documento, organizadas em quadrantes padronizados para apresentação e conferência.", page.left, doc.y + 2, {
+          width: contentWidth,
+        });
+      doc.y += 26;
+    }
+
+    const posicao = index % porPagina;
+    const coluna = posicao % colunas;
+    const linha = Math.floor(posicao / colunas);
+    const x = page.left + coluna * (larguraCelula + gapX);
+    const y = doc.y + linha * (alturaCelula + gapY);
+    const caminho = caminhoArquivoAnexo(anexo.caminho);
+
+    doc.roundedRect(x, y, larguraCelula, alturaCelula, 8).fillColor("#ffffff").fill().strokeColor("#dbe4f0").lineWidth(0.8).stroke();
+    doc.roundedRect(x + 8, y + 8, larguraCelula - 16, imagemAltura, 6).fillColor("#f1f5f9").fill();
+
+    try {
+      doc.image(caminho, x + 8, y + 8, {
+        fit: [larguraCelula - 16, imagemAltura],
+        align: "center",
+        valign: "center",
+      });
+    } catch {
+      doc.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text("Imagem indisponível", x + 12, y + 42, {
+        width: larguraCelula - 24,
+        align: "center",
+      });
+    }
+
+    doc
+      .font("Helvetica")
+      .fontSize(7.3)
+      .fillColor("#334155")
+      .text(textoPdf(anexo.nomeOriginal), x + 8, y + 96, {
+        width: larguraCelula - 16,
+        height: 14,
+        ellipsis: true,
+      });
+
+    if (posicao === porPagina - 1 || index === imagens.length - 1) {
+      doc.y = y + alturaCelula + 14;
+    }
+  });
+}
+
 export async function gerarRelatorioPdf(
   res: Response,
   relatorio: RelatorioPdf,
@@ -1118,6 +1200,7 @@ export async function gerarRelatorioPdf(
   escreverInvestigacao(doc, relatorio, usuario, qrCode, token);
   escreverAnalisesRisco(doc, relatorio, usuario, qrCode, token);
   escreverAnalisesEstrategicas(doc, relatorio, usuario, qrCode, token);
+  escreverEvidenciasAnexadas(doc, relatorio, usuario, qrCode, token);
   escreverAssinaturaAprovacao(doc, relatorio, usuario, qrCode, token);
 
   const range = doc.bufferedPageRange();

@@ -506,6 +506,7 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
         acoesTomadas: evento.acoesTomadas,
         impactoOperacional: evento.impactoOperacional,
         envolvidos: evento.envolvidos,
+        anexos: evento.anexos,
         analise: evento.analise,
         assinaturaAprovacao,
       },

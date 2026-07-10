@@ -543,6 +543,7 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
         acoesTomadas: ocorrencia.acoesTomadas,
         impactoOperacional: ocorrencia.impactoOperacional,
         envolvidos: ocorrencia.envolvidos,
+        anexos: ocorrencia.anexos,
         investigacao: ocorrencia.investigacao,
         analise: ocorrencia.analise,
         riscos,
