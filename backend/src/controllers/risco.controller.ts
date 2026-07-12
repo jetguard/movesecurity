@@ -4,30 +4,54 @@ import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { gerarRiscoPdf } from "../services/riscoPdf.service";
 
-const valores = { Baixa: 1, Média: 2, Alta: 3, Crítica: 4 } as Record<string, number>;
-const niveisNumericos = ["Baixa", "Baixa", "Média", "Alta", "Crítica", "Crítica"];
+const valores = { "Muito Baixa": 1, Baixa: 3, Moderada: 5, Alta: 7, "Muito Alta": 9 } as Record<string, number>;
+const impactos = { "Muito Baixo": 0.5, Baixo: 1, Moderado: 2, Alto: 4, "Muito Alto": 8 } as Record<string, number>;
 
 function calcularNivel(probabilidade: string, severidade: string) {
   const score = (valores[probabilidade] || 1) * (valores[severidade] || 1);
   return calcularNivelPorResultado(score);
 }
 
-function numeroEscala(valor: unknown) {
+function numeroProbabilidade(valor: unknown) {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return null;
-  return Math.min(Math.max(Math.trunc(numero), 1), 5);
+  const permitidos = [1, 3, 5, 7, 9];
+  return permitidos.includes(numero) ? numero : Math.min(Math.max(Math.trunc(numero), 1), 9);
+}
+
+function numeroImpacto(valor: unknown) {
+  const numero = Number(String(valor).replace(",", "."));
+  if (!Number.isFinite(numero)) return null;
+  const permitidos = [0.5, 1, 2, 4, 8];
+  return permitidos.includes(numero) ? numero : Math.min(Math.max(numero, 0.5), 8);
+}
+
+function textoProbabilidade(valor: number) {
+  if (valor <= 1) return "Muito Baixa";
+  if (valor <= 3) return "Baixa";
+  if (valor <= 5) return "Moderada";
+  if (valor <= 7) return "Alta";
+  return "Muito Alta";
+}
+
+function textoImpacto(valor: number) {
+  if (valor <= 0.5) return "Muito Baixo";
+  if (valor <= 1) return "Baixo";
+  if (valor <= 2) return "Moderado";
+  if (valor <= 4) return "Alto";
+  return "Muito Alto";
 }
 
 function calcularNivelPorResultado(resultado: number) {
-  if (resultado <= 5) return "Baixo";
-  if (resultado <= 10) return "Moderado";
-  if (resultado <= 15) return "Alto";
+  if (resultado <= 8) return "Baixo";
+  if (resultado <= 20) return "Moderado";
+  if (resultado <= 40) return "Alto";
   return "Crítico";
 }
 
 function calcularClassificacao(req: AuthRequest) {
-  const probabilidadeValor = numeroEscala(req.body.probabilidadeValor) || valores[req.body.probabilidade] || 1;
-  const impactoValor = numeroEscala(req.body.impactoValor) || valores[req.body.severidade] || 1;
+  const probabilidadeValor = numeroProbabilidade(req.body.probabilidadeValor) || valores[req.body.probabilidade] || 1;
+  const impactoValor = numeroImpacto(req.body.impactoValor) || impactos[req.body.severidade] || 1;
   const resultadoRisco = probabilidadeValor * impactoValor;
   const nivelRisco = calcularNivelPorResultado(resultadoRisco);
 
@@ -36,14 +60,14 @@ function calcularClassificacao(req: AuthRequest) {
     impactoValor,
     resultadoRisco,
     nivelRisco,
-    probabilidadeTexto: req.body.probabilidade || niveisNumericos[probabilidadeValor] || "Baixa",
-    impactoTexto: req.body.severidade || niveisNumericos[impactoValor] || "Baixa",
+    probabilidadeTexto: req.body.probabilidade || textoProbabilidade(probabilidadeValor),
+    impactoTexto: req.body.severidade || textoImpacto(impactoValor),
   };
 }
 
 function calcularReavaliacao(req: AuthRequest) {
-  const novaProbabilidade = numeroEscala(req.body.novaProbabilidade);
-  const novoImpacto = numeroEscala(req.body.novoImpacto);
+  const novaProbabilidade = numeroProbabilidade(req.body.novaProbabilidade);
+  const novoImpacto = numeroImpacto(req.body.novoImpacto);
   if (!novaProbabilidade || !novoImpacto) {
     return {
       novaProbabilidade: null,
@@ -88,6 +112,11 @@ function dadosCatalogo(req: AuthRequest) {
     grauRisco: textoObrigatorio(req.body.grauRisco) || "Média",
     naturezaRisco: textoObrigatorio(req.body.naturezaRisco) || tipoRisco || "Risco operacional",
     origemRisco: textoObrigatorio(req.body.origemRisco) || null,
+    fonteRisco: textoObrigatorio(req.body.fonteRisco) || null,
+    fatorRisco: textoObrigatorio(req.body.fatorRisco) || null,
+    fragilidade: textoObrigatorio(req.body.fragilidade) || null,
+    eventoIncerteza: textoObrigatorio(req.body.eventoIncerteza) || null,
+    objetivoImpactado: textoObrigatorio(req.body.objetivoImpactado) || null,
     responsavelNome: textoObrigatorio(req.body.responsavelNome || req.body.responsavel) || null,
     descricaoRisco: textoObrigatorio(req.body.descricaoRisco),
     possivelImpacto: textoObrigatorio(req.body.possivelImpacto),
@@ -421,6 +450,17 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         tipoRisco: req.body.tipoRisco,
         tituloRisco: textoObrigatorio(req.body.tituloRisco) || null,
         origemRisco: textoObrigatorio(req.body.origemRisco) || null,
+        fonteRisco: textoObrigatorio(req.body.fonteRisco) || null,
+        fatorRisco: textoObrigatorio(req.body.fatorRisco) || null,
+        fragilidade: textoObrigatorio(req.body.fragilidade) || null,
+        eventoIncerteza: textoObrigatorio(req.body.eventoIncerteza) || null,
+        objetivoImpactado: textoObrigatorio(req.body.objetivoImpactado) || null,
+        eficaciaControles: textoObrigatorio(req.body.eficaciaControles) || null,
+        criteriosAvaliacao: textoObrigatorio(req.body.criteriosAvaliacao) || null,
+        controlesInternos: textoObrigatorio(req.body.controlesInternos) || null,
+        atividadesControle: textoObrigatorio(req.body.atividadesControle) || null,
+        monitoramento: textoObrigatorio(req.body.monitoramento) || null,
+        comunicacaoConsulta: textoObrigatorio(req.body.comunicacaoConsulta) || null,
         naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,
@@ -511,6 +551,17 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
         tipoRisco: req.body.tipoRisco,
         tituloRisco: textoObrigatorio(req.body.tituloRisco) || null,
         origemRisco: textoObrigatorio(req.body.origemRisco) || null,
+        fonteRisco: textoObrigatorio(req.body.fonteRisco) || null,
+        fatorRisco: textoObrigatorio(req.body.fatorRisco) || null,
+        fragilidade: textoObrigatorio(req.body.fragilidade) || null,
+        eventoIncerteza: textoObrigatorio(req.body.eventoIncerteza) || null,
+        objetivoImpactado: textoObrigatorio(req.body.objetivoImpactado) || null,
+        eficaciaControles: textoObrigatorio(req.body.eficaciaControles) || null,
+        criteriosAvaliacao: textoObrigatorio(req.body.criteriosAvaliacao) || null,
+        controlesInternos: textoObrigatorio(req.body.controlesInternos) || null,
+        atividadesControle: textoObrigatorio(req.body.atividadesControle) || null,
+        monitoramento: textoObrigatorio(req.body.monitoramento) || null,
+        comunicacaoConsulta: textoObrigatorio(req.body.comunicacaoConsulta) || null,
         naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,

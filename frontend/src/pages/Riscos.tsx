@@ -28,6 +28,11 @@ type RiscoCatalogo = {
   tipoRisco: string;
   grauRisco: string;
   origemRisco?: string | null;
+  fonteRisco?: string | null;
+  fatorRisco?: string | null;
+  fragilidade?: string | null;
+  eventoIncerteza?: string | null;
+  objetivoImpactado?: string | null;
   responsavelNome?: string | null;
   descricaoRisco: string;
   possivelImpacto: string;
@@ -50,6 +55,17 @@ type Risco = {
   tipoRisco: string;
   tituloRisco?: string | null;
   origemRisco?: string | null;
+  fonteRisco?: string | null;
+  fatorRisco?: string | null;
+  fragilidade?: string | null;
+  eventoIncerteza?: string | null;
+  objetivoImpactado?: string | null;
+  eficaciaControles?: string | null;
+  criteriosAvaliacao?: string | null;
+  controlesInternos?: string | null;
+  atividadesControle?: string | null;
+  monitoramento?: string | null;
+  comunicacaoConsulta?: string | null;
   descricaoRisco: string;
   possivelImpacto: string;
   causaProvavel?: string | null;
@@ -120,37 +136,53 @@ const abas = [
 ] as const;
 type Aba = (typeof abas)[number];
 
-const categorias = ["Patrimonial", "Operacional", "Segurança do Trabalho", "Ambiental", "TI", "Compliance", "Logística"];
+const categorias = ["Operacional", "Imagem / reputação", "Legal", "Integridade", "Financeiro / orçamentário", "Patrimonial", "Segurança do Trabalho", "Ambiental", "TI", "Compliance", "Logística"];
 const unidades = ["GJA-T1", "GJA-T2", "ITAJAÍ-SC", "SUAPE-T1", "SUAPE-T2", "ANHANGUERA"];
 const statusRisco = ["Aberto", "Em análise", "Em tratamento", "Aguardando ação", "Concluído", "Reavaliado", "Encerrado", "Anulado"];
 const niveis = ["Baixo", "Moderado", "Alto", "Crítico"];
 const aceitacoes = ["Aceito", "Aceito com monitoramento", "Não aceito"];
-const tratamentos = ["Eliminar", "Reduzir", "Transferir", "Aceitar"];
+const tratamentos = ["Evitar", "Compartilhar", "Mitigar", "Aceitar"];
+const fontesRisco = ["Pessoas", "Processos", "Sistemas", "Tecnologia", "Infraestrutura", "Eventos externos"];
+const metodosIdentificacao = ["Ishikawa", "Bow Tie", "Inspeção", "Ocorrência", "Investigação", "CFTV", "Auditoria", "Checklist", "Análise operacional", "Outro"];
+const escalasProbabilidade = [
+  { label: "Muito Baixa", valor: 1, descricao: "Evento excepcional, sem indicação imediata de ocorrência." },
+  { label: "Baixa", valor: 3, descricao: "Possibilidade remota no contexto atual." },
+  { label: "Moderada", valor: 5, descricao: "Possibilidade mediana de ocorrência." },
+  { label: "Alta", valor: 7, descricao: "Possibilidade significativa de ocorrência." },
+  { label: "Muito Alta", valor: 9, descricao: "Possibilidade concreta e inequívoca de ocorrência." },
+];
+const escalasImpacto = [
+  { label: "Muito Baixo", valor: 0.5, descricao: "Impacto inexistente ou incidental." },
+  { label: "Baixo", valor: 1, descricao: "Impacto pequeno nos objetivos, imagem ou orçamento." },
+  { label: "Moderado", valor: 2, descricao: "Impacta moderadamente os objetivos, imagem ou orçamento." },
+  { label: "Alto", valor: 4, descricao: "Impacta fortemente os objetivos, imagem ou orçamento." },
+  { label: "Muito Alto", valor: 8, descricao: "Impacto extremo ou fatal aos objetivos, imagem ou orçamento." },
+];
 const orientacoesTratamento: Record<string, { titulo: string; descricao: string; exemplos: string[] }> = {
-  Eliminar: {
-    titulo: "Remover a causa do risco",
-    descricao: "Use quando a ação proposta elimina ou praticamente elimina a condição que gera o risco.",
+  Evitar: {
+    titulo: "Descontinuar a atividade ou eliminar o evento de risco",
+    descricao: "Use quando nenhuma resposta razoável reduz a exposição a nível aceitável, exigindo remoção da causa ou interrupção do cenário.",
     exemplos: ["Bloquear um acesso sem controle", "Interditar uma escada sem guarda-corpo", "Remover uma condição insegura da operação"],
   },
-  Reduzir: {
+  Mitigar: {
     titulo: "Diminuir probabilidade ou impacto",
-    descricao: "Use quando o risco continuará existindo, mas será reduzido por controles, procedimentos ou reforços operacionais.",
+    descricao: "Resposta mais comum: criar ou reforçar controles internos para reduzir a probabilidade, o impacto ou ambos.",
     exemplos: ["Instalar câmeras e iluminação", "Aumentar rondas", "Treinar equipes ou criar procedimento operacional"],
   },
-  Transferir: {
-    titulo: "Transferir parte da responsabilidade",
-    descricao: "Use quando parte da consequência financeira ou operacional será transferida para contrato, seguro ou empresa especializada.",
+  Compartilhar: {
+    titulo: "Compartilhar ou transferir parte do risco",
+    descricao: "Use quando parte da exposição será compartilhada com terceiros, contratos, seguros ou fornecedores especializados.",
     exemplos: ["Contratar seguro patrimonial", "Ter manutenção terceirizada", "Contratar vigilância especializada"],
   },
   Aceitar: {
-    titulo: "Conviver com o risco monitorado",
-    descricao: "Use quando o risco é baixo, inevitável ou quando o custo de tratamento é desproporcional ao impacto esperado.",
+    titulo: "Conviver com o risco dentro do apetite",
+    descricao: "Use quando o risco já está em nível aceitável, sem novas medidas imediatas, mas com monitoramento documentado.",
     exemplos: ["Oscilação temporária de internet", "Atrasos em dias de chuva", "Risco baixo mantido em monitoramento"],
   },
 };
 const prioridades = ["Baixa", "Média", "Alta", "Urgente"];
 const statusAcao = ["Pendente", "Em andamento", "Concluída", "Atrasada", "Cancelada"];
-const origens = ["Inspeção", "Ocorrência", "Investigação", "CFTV", "Auditoria", "Checklist", "Análise operacional", "Outro"];
+const origens = metodosIdentificacao;
 const setores = ["Operacional", "Segurança Patrimonial", "CFTV", "Portaria", "Gate", "Armazém", "Pátio", "Administrativo", "Manutenção", "TI", "Compliance", "Outro"];
 
 const riscoVazio = {
@@ -163,6 +195,17 @@ const riscoVazio = {
   tipoRisco: "Patrimonial",
   tituloRisco: "",
   origemRisco: "Inspeção",
+  fonteRisco: "Processos",
+  fatorRisco: "",
+  fragilidade: "",
+  eventoIncerteza: "",
+  objetivoImpactado: "",
+  eficaciaControles: "Parcialmente eficaz",
+  criteriosAvaliacao: "",
+  controlesInternos: "",
+  atividadesControle: "",
+  monitoramento: "",
+  comunicacaoConsulta: "",
   naturezaRisco: "",
   descricaoRisco: "",
   possivelImpacto: "",
@@ -172,10 +215,10 @@ const riscoVazio = {
   controlesExistentes: "",
   probabilidadeValor: "1",
   impactoValor: "1",
-  probabilidade: "Baixa",
-  severidade: "Baixa",
+  probabilidade: "Muito Baixa",
+  severidade: "Baixo",
   nivelAceitacao: "Aceito",
-  tratamentoRisco: "Reduzir",
+  tratamentoRisco: "Mitigar",
   medidasPreventivas: "",
   planoAcao: "",
   acaoProposta: "",
@@ -206,6 +249,11 @@ const catalogoVazio = {
   tipoRisco: "Patrimonial",
   grauRisco: "Moderado",
   origemRisco: "Inspeção",
+  fonteRisco: "Processos",
+  fatorRisco: "",
+  fragilidade: "",
+  eventoIncerteza: "",
+  objetivoImpactado: "",
   responsavelNome: "",
   descricaoRisco: "",
   possivelImpacto: "",
@@ -214,19 +262,36 @@ const catalogoVazio = {
   status: "Aberto",
 };
 
-function escalaParaTexto(valor: string | number) {
+function probabilidadeParaTexto(valor: string | number) {
   const numero = Number(valor);
-  if (numero <= 1) return "Baixa";
-  if (numero === 2) return "Média";
-  if (numero === 3 || numero === 4) return "Alta";
-  return "Crítica";
+  return escalasProbabilidade.find((item) => item.valor === numero)?.label || "Muito Baixa";
+}
+
+function impactoParaTexto(valor: string | number) {
+  const numero = Number(valor);
+  return escalasImpacto.find((item) => item.valor === numero)?.label || "Baixo";
 }
 
 function calcularNivelResultado(resultado: number) {
-  if (resultado <= 5) return "Baixo";
-  if (resultado <= 10) return "Moderado";
-  if (resultado <= 15) return "Alto";
+  if (resultado <= 8) return "Baixo";
+  if (resultado <= 20) return "Moderado";
+  if (resultado <= 40) return "Alto";
   return "Crítico";
+}
+
+function apetitePorNivel(nivel: string) {
+  if (nivel === "Crítico" || nivel === "Alto") return "Não aceito";
+  if (nivel === "Moderado") return "Aceito com monitoramento";
+  return "Aceito";
+}
+
+function textoDescricaoRisco(causa: string, evento: string, consequencia: string, objetivo: string) {
+  return [
+    causa ? `Devido a ${causa}` : "Devido às causas/fontes informadas",
+    evento ? `poderá acontecer ${evento}` : "poderá ocorrer a incerteza descrita",
+    consequencia ? `o que poderá levar a ${consequencia}` : "com possibilidade de consequência operacional",
+    objetivo ? `impactando ${objetivo}.` : "impactando os objetivos da operação.",
+  ].join(", ");
 }
 
 function corNivel(nivel: string) {
@@ -425,6 +490,11 @@ export default function Riscos() {
         tipoRisco: riscoSelecionado?.tipoRisco || atual.tipoRisco,
         tituloRisco: riscoSelecionado?.nome || atual.tituloRisco,
         origemRisco: riscoSelecionado?.origemRisco || atual.origemRisco,
+        fonteRisco: riscoSelecionado?.fonteRisco || atual.fonteRisco,
+        fatorRisco: riscoSelecionado?.fatorRisco || atual.fatorRisco,
+        fragilidade: riscoSelecionado?.fragilidade || atual.fragilidade,
+        eventoIncerteza: riscoSelecionado?.eventoIncerteza || atual.eventoIncerteza,
+        objetivoImpactado: riscoSelecionado?.objetivoImpactado || atual.objetivoImpactado,
         descricaoRisco: riscoSelecionado?.descricaoRisco || atual.descricaoRisco,
         possivelImpacto: riscoSelecionado?.possivelImpacto || atual.possivelImpacto,
         medidasPreventivas: riscoSelecionado?.medidasPreventivas || atual.medidasPreventivas,
@@ -433,7 +503,18 @@ export default function Riscos() {
       return;
     }
 
-    setForm((atual) => ({ ...atual, [nome]: nome === "custoEstimado" ? mascaraReais(valor) : valor }));
+    setForm((atual) => {
+      const proximo = { ...atual, [nome]: nome === "custoEstimado" ? mascaraReais(valor) : valor };
+      if (["fatorRisco", "fragilidade", "eventoIncerteza", "consequencia", "objetivoImpactado"].includes(nome)) {
+        const causa = [proximo.fatorRisco, proximo.fragilidade].filter(Boolean).join(" / ");
+        proximo.descricaoRisco = textoDescricaoRisco(causa, proximo.eventoIncerteza, proximo.consequencia, proximo.objetivoImpactado);
+      }
+      if (["probabilidadeValor", "impactoValor"].includes(nome)) {
+        const resultado = Number(proximo.probabilidadeValor || 1) * Number(proximo.impactoValor || 1);
+        proximo.nivelAceitacao = apetitePorNivel(calcularNivelResultado(resultado));
+      }
+      return proximo;
+    });
   }
 
   function campoCatalogo(nome: string, valor: string) {
@@ -458,6 +539,17 @@ export default function Riscos() {
       area: risco.area || "",
       tituloRisco: risco.tituloRisco || risco.riscoCatalogo?.nome || "",
       origemRisco: risco.origemRisco || "Inspeção",
+      fonteRisco: risco.fonteRisco || risco.riscoCatalogo?.fonteRisco || "Processos",
+      fatorRisco: risco.fatorRisco || risco.riscoCatalogo?.fatorRisco || "",
+      fragilidade: risco.fragilidade || risco.riscoCatalogo?.fragilidade || "",
+      eventoIncerteza: risco.eventoIncerteza || risco.riscoCatalogo?.eventoIncerteza || "",
+      objetivoImpactado: risco.objetivoImpactado || risco.riscoCatalogo?.objetivoImpactado || "",
+      eficaciaControles: risco.eficaciaControles || "Parcialmente eficaz",
+      criteriosAvaliacao: risco.criteriosAvaliacao || "",
+      controlesInternos: risco.controlesInternos || "",
+      atividadesControle: risco.atividadesControle || "",
+      monitoramento: risco.monitoramento || "",
+      comunicacaoConsulta: risco.comunicacaoConsulta || "",
       causaProvavel: risco.causaProvavel || "",
       consequencia: risco.consequencia || "",
       pessoasAfetadas: risco.pessoasAfetadas || "",
@@ -498,6 +590,11 @@ export default function Riscos() {
       tipoRisco: item.tipoRisco,
       grauRisco: item.grauRisco || "Moderado",
       origemRisco: item.origemRisco || "Inspeção",
+      fonteRisco: item.fonteRisco || "Processos",
+      fatorRisco: item.fatorRisco || "",
+      fragilidade: item.fragilidade || "",
+      eventoIncerteza: item.eventoIncerteza || "",
+      objetivoImpactado: item.objetivoImpactado || "",
       responsavelNome: item.responsavelNome || "",
       descricaoRisco: item.descricaoRisco,
       possivelImpacto: item.possivelImpacto,
@@ -541,15 +638,16 @@ export default function Riscos() {
     e.preventDefault();
     const payload = {
       ...form,
-      probabilidade: escalaParaTexto(form.probabilidadeValor),
-      severidade: escalaParaTexto(form.impactoValor),
+      probabilidade: probabilidadeParaTexto(form.probabilidadeValor),
+      severidade: impactoParaTexto(form.impactoValor),
       nivelRisco: nivelInicial,
       resultadoRisco: resultadoInicial,
       novoResultado: resultadoResidual || "",
       novoNivelRisco: nivelResidual,
+      nivelAceitacao: form.nivelAceitacao || apetitePorNivel(nivelInicial),
       possivelImpacto: form.consequencia || form.possivelImpacto || form.descricaoRisco,
       planoAcao: form.acaoProposta || form.planoAcao || "Acao nao informada",
-      medidasPreventivas: form.controlesExistentes || form.medidasPreventivas || "Nao informado",
+      medidasPreventivas: form.controlesInternos || form.controlesExistentes || form.medidasPreventivas || "Nao informado",
     };
 
     if (editando) {
@@ -907,9 +1005,14 @@ export default function Riscos() {
                 <Label texto="Categoria do risco"><select className={campoClasse()} value={catalogoForm.tipoRisco} onChange={(e) => campoCatalogo("tipoRisco", e.target.value)}>{categorias.map((item) => <option key={item}>{item}</option>)}</select></Label>
                 <Label texto="Título do risco" className="lg:col-span-2"><input className={campoClasse()} value={catalogoForm.nome} onChange={(e) => campoCatalogo("nome", e.target.value)} required /></Label>
                 <Label texto="Origem do risco"><select className={campoClasse()} value={catalogoForm.origemRisco} onChange={(e) => campoCatalogo("origemRisco", e.target.value)}>{origens.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Fonte / fator de risco"><select className={campoClasse()} value={catalogoForm.fonteRisco} onChange={(e) => campoCatalogo("fonteRisco", e.target.value)}>{fontesRisco.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Causa / fator específico"><input className={campoClasse()} value={catalogoForm.fatorRisco} onChange={(e) => campoCatalogo("fatorRisco", e.target.value)} placeholder="Ex.: baixa aderência ao procedimento" /></Label>
+                <Label texto="Fragilidade"><input className={campoClasse()} value={catalogoForm.fragilidade} onChange={(e) => campoCatalogo("fragilidade", e.target.value)} placeholder="Ex.: processo imaturo, sistema obsoleto" /></Label>
+                <Label texto="Objetivo impactado"><input className={campoClasse()} value={catalogoForm.objetivoImpactado} onChange={(e) => campoCatalogo("objetivoImpactado", e.target.value)} placeholder="Ex.: continuidade operacional" /></Label>
                 <Label texto="Responsável"><input className={campoClasse()} value={catalogoForm.responsavelNome} onChange={(e) => campoCatalogo("responsavelNome", e.target.value)} /></Label>
                 <Label texto="Status"><select className={campoClasse()} value={catalogoForm.status} onChange={(e) => campoCatalogo("status", e.target.value)}>{statusRisco.map((item) => <option key={item}>{item}</option>)}</select></Label>
                 <Label texto="Grau inicial"><select className={campoClasse()} value={catalogoForm.grauRisco} onChange={(e) => campoCatalogo("grauRisco", e.target.value)}>{niveis.map((item) => <option key={item}>{item}</option>)}</select></Label>
+                <Label texto="Evento / incerteza" className="lg:col-span-2"><input className={campoClasse()} value={catalogoForm.eventoIncerteza} onChange={(e) => campoCatalogo("eventoIncerteza", e.target.value)} placeholder="Ex.: acesso indevido de pessoa não autorizada" /></Label>
                 <Label texto="Descrição do risco identificado" className="lg:col-span-4"><textarea className={campoClasse()} rows={3} value={catalogoForm.descricaoRisco} onChange={(e) => campoCatalogo("descricaoRisco", e.target.value)} required /></Label>
                 <Label texto="Possível impacto" className="lg:col-span-4"><textarea className={campoClasse()} rows={3} value={catalogoForm.possivelImpacto} onChange={(e) => campoCatalogo("possivelImpacto", e.target.value)} required /></Label>
                 <Label texto="Controles ou medidas existentes" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={catalogoForm.medidasPreventivas} onChange={(e) => campoCatalogo("medidasPreventivas", e.target.value)} /></Label>
@@ -1001,28 +1104,46 @@ export default function Riscos() {
               <Label texto="Título do risco" className="lg:col-span-2"><input className={campoClasse()} value={form.tituloRisco} onChange={(e) => campo("tituloRisco", e.target.value)} required /></Label>
               <Label texto="Origem"><select className={campoClasse()} value={form.origemRisco} onChange={(e) => campo("origemRisco", e.target.value)}>{origens.map((item) => <option key={item}>{item}</option>)}</select></Label>
               <Label texto="Setor"><select className={campoClasse()} value={form.setor} onChange={(e) => campo("setor", e.target.value)} required><option value="">Selecione</option>{setores.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Fonte / fator de risco"><select className={campoClasse()} value={form.fonteRisco} onChange={(e) => campo("fonteRisco", e.target.value)}>{fontesRisco.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Causa / fator específico"><input className={campoClasse()} value={form.fatorRisco} onChange={(e) => campo("fatorRisco", e.target.value)} placeholder="Ex.: falha de processo, pessoa, sistema" /></Label>
+              <Label texto="Fragilidade"><input className={campoClasse()} value={form.fragilidade} onChange={(e) => campo("fragilidade", e.target.value)} placeholder="Ex.: baixa capacitação, rotina inexistente" /></Label>
+              <Label texto="Objetivo impactado"><input className={campoClasse()} value={form.objetivoImpactado} onChange={(e) => campo("objetivoImpactado", e.target.value)} placeholder="Ex.: continuidade operacional" /></Label>
             </div>
           </section>
 
           <section>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">2. Análise do risco</h3>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <Label texto="O que pode acontecer?" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.descricaoRisco} onChange={(e) => campo("descricaoRisco", e.target.value)} required /></Label>
+              <Label texto="Evento / incerteza" className="lg:col-span-2"><input className={campoClasse()} value={form.eventoIncerteza} onChange={(e) => campo("eventoIncerteza", e.target.value)} placeholder="Ex.: invasão, falha operacional, indisponibilidade, perda" /></Label>
+              <Label texto="Descrição técnica automática" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.descricaoRisco} onChange={(e) => campo("descricaoRisco", e.target.value)} required /></Label>
               <Label texto="Causa provável"><textarea className={campoClasse()} rows={3} value={form.causaProvavel} onChange={(e) => campo("causaProvavel", e.target.value)} /></Label>
               <Label texto="Consequência"><textarea className={campoClasse()} rows={3} value={form.consequencia} onChange={(e) => campo("consequencia", e.target.value)} /></Label>
               <Label texto="Pessoas ou áreas afetadas"><textarea className={campoClasse()} rows={3} value={form.pessoasAfetadas} onChange={(e) => campo("pessoasAfetadas", e.target.value)} /></Label>
               <Label texto="Controles existentes"><textarea className={campoClasse()} rows={3} value={form.controlesExistentes} onChange={(e) => campo("controlesExistentes", e.target.value)} /></Label>
+              <Label texto="Eficácia dos controles"><select className={campoClasse()} value={form.eficaciaControles} onChange={(e) => campo("eficaciaControles", e.target.value)}>{["Eficaz", "Parcialmente eficaz", "Ineficaz", "Não existente"].map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <Label texto="Critério de avaliação"><input className={campoClasse()} value={form.criteriosAvaliacao} onChange={(e) => campo("criteriosAvaliacao", e.target.value)} placeholder="Ex.: apetite, norma, contrato, SLA" /></Label>
             </div>
           </section>
 
           <section>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">3. Classificação automática</h3>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-              <Label texto="Probabilidade (1 a 5)"><select className={campoClasse()} value={form.probabilidadeValor} onChange={(e) => campo("probabilidadeValor", e.target.value)}>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
-              <Label texto="Impacto (1 a 5)"><select className={campoClasse()} value={form.impactoValor} onChange={(e) => campo("impactoValor", e.target.value)}>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
+              <Label texto="Probabilidade"><select className={campoClasse()} value={form.probabilidadeValor} onChange={(e) => campo("probabilidadeValor", e.target.value)}>{escalasProbabilidade.map((item) => <option key={item.valor} value={item.valor}>{item.label} - {item.valor}</option>)}</select></Label>
+              <Label texto="Impacto"><select className={campoClasse()} value={form.impactoValor} onChange={(e) => campo("impactoValor", e.target.value)}>{escalasImpacto.map((item) => <option key={item.valor} value={item.valor}>{item.label} - {item.valor}</option>)}</select></Label>
               <Label texto="Resultado"><input className={campoClasse()} value={resultadoInicial} disabled /></Label>
               <Label texto="Nível"><input className={campoClasse()} value={nivelInicial} disabled /></Label>
               <Label texto="Aceitação"><select className={campoClasse()} value={form.nivelAceitacao} onChange={(e) => campo("nivelAceitacao", e.target.value)}>{aceitacoes.map((item) => <option key={item}>{item}</option>)}</select></Label>
+              <div className="lg:col-span-5 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                  <strong>Probabilidade:</strong> {escalasProbabilidade.find((item) => String(item.valor) === String(form.probabilidadeValor))?.descricao}
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300">
+                  <strong>Impacto:</strong> {escalasImpacto.find((item) => String(item.valor) === String(form.impactoValor))?.descricao}
+                </div>
+              </div>
+              <div className={`lg:col-span-5 rounded-lg border p-4 text-sm font-semibold ${corNivel(nivelInicial)}`}>
+                Apetite a risco sugerido: {apetitePorNivel(nivelInicial)}. {nivelInicial === "Crítico" || nivelInicial === "Alto" ? "Risco em zona vermelha, priorizar tratamento." : nivelInicial === "Moderado" ? "Risco em zona amarela, manter observação e reavaliação." : "Risco em zona verde, aceitável com registro e monitoramento proporcional."}
+              </div>
             </div>
           </section>
 
@@ -1036,6 +1157,10 @@ export default function Riscos() {
               <Label texto="Prioridade"><select className={campoClasse()} value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>{prioridades.map((item) => <option key={item}>{item}</option>)}</select></Label>
               <Label texto="Status da ação"><select className={campoClasse()} value={form.statusAcao} onChange={(e) => campo("statusAcao", e.target.value)}>{statusAcao.map((item) => <option key={item}>{item}</option>)}</select></Label>
               <Label texto="Ação proposta" className="lg:col-span-2"><input className={campoClasse()} value={form.acaoProposta} onChange={(e) => campo("acaoProposta", e.target.value)} required /></Label>
+              <Label texto="Controles internos propostos" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.controlesInternos} onChange={(e) => campo("controlesInternos", e.target.value)} placeholder="Regras, protocolos, rotinas, aprovações, controles físicos..." /></Label>
+              <Label texto="Atividades de controle" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.atividadesControle} onChange={(e) => campo("atividadesControle", e.target.value)} placeholder="Revisões, autorizações, segregação, verificações, treinamento..." /></Label>
+              <Label texto="Monitoramento" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.monitoramento} onChange={(e) => campo("monitoramento", e.target.value)} placeholder="Como será verificada a efetividade do controle" /></Label>
+              <Label texto="Comunicação e consulta" className="lg:col-span-2"><textarea className={campoClasse()} rows={3} value={form.comunicacaoConsulta} onChange={(e) => campo("comunicacaoConsulta", e.target.value)} placeholder="Áreas consultadas, decisões, ciência e retorno das partes interessadas" /></Label>
               <Label texto="Observações" className="lg:col-span-3"><textarea className={campoClasse()} rows={3} value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} /></Label>
               {!editando && <Label texto="Evidências anexadas"><input type="file" multiple accept="image/*" className={campoClasse()} onChange={(e) => setFotos(Array.from(e.target.files || []))} /></Label>}
               <div className="lg:col-span-4 rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950 dark:border-blue-900/70 dark:bg-blue-950/30 dark:text-blue-100">
@@ -1059,8 +1184,8 @@ export default function Riscos() {
           <section>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">5. Reavaliação</h3>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-6">
-              <Label texto="Nova probabilidade"><select className={campoClasse()} value={form.novaProbabilidade} onChange={(e) => campo("novaProbabilidade", e.target.value)}><option value="">Não reavaliado</option>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
-              <Label texto="Novo impacto"><select className={campoClasse()} value={form.novoImpacto} onChange={(e) => campo("novoImpacto", e.target.value)}><option value="">Não reavaliado</option>{[1, 2, 3, 4, 5].map((item) => <option key={item} value={item}>{item}</option>)}</select></Label>
+              <Label texto="Nova probabilidade"><select className={campoClasse()} value={form.novaProbabilidade} onChange={(e) => campo("novaProbabilidade", e.target.value)}><option value="">Não reavaliado</option>{escalasProbabilidade.map((item) => <option key={item.valor} value={item.valor}>{item.label} - {item.valor}</option>)}</select></Label>
+              <Label texto="Novo impacto"><select className={campoClasse()} value={form.novoImpacto} onChange={(e) => campo("novoImpacto", e.target.value)}><option value="">Não reavaliado</option>{escalasImpacto.map((item) => <option key={item.valor} value={item.valor}>{item.label} - {item.valor}</option>)}</select></Label>
               <Label texto="Novo resultado"><input className={campoClasse()} value={resultadoResidual || ""} disabled /></Label>
               <Label texto="Novo nível"><input className={campoClasse()} value={nivelResidual} disabled /></Label>
               <Label texto="Data da reavaliação"><input type="datetime-local" className={campoClasse()} value={form.dataReavaliacao} onChange={(e) => campo("dataReavaliacao", e.target.value)} /></Label>

@@ -19,6 +19,17 @@ type RiscoPdf = {
   tituloRisco?: string | null;
   origemRisco?: string | null;
   naturezaRisco: string;
+  fonteRisco?: string | null;
+  fatorRisco?: string | null;
+  fragilidade?: string | null;
+  eventoIncerteza?: string | null;
+  objetivoImpactado?: string | null;
+  eficaciaControles?: string | null;
+  criteriosAvaliacao?: string | null;
+  controlesInternos?: string | null;
+  atividadesControle?: string | null;
+  monitoramento?: string | null;
+  comunicacaoConsulta?: string | null;
   descricaoRisco: string;
   possivelImpacto: string;
   causaProvavel?: string | null;
@@ -445,11 +456,19 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
   comparativoResidual(doc, risco);
 
   secao(doc, "Análise do risco");
+  linhaCampos(doc, [
+    { rotulo: "Fonte / fator", valor: risco.fonteRisco, width: 120 },
+    { rotulo: "Objetivo impactado", valor: risco.objetivoImpactado, width: 165 },
+    { rotulo: "Eficácia dos controles", valor: risco.eficaciaControles, width: 162 },
+  ]);
+  blocoTexto(doc, "Fator específico / fragilidade", [risco.fatorRisco, risco.fragilidade].filter(Boolean).join(" | "));
+  blocoTexto(doc, "Evento / incerteza", risco.eventoIncerteza);
   blocoTexto(doc, "O que pode acontecer?", risco.descricaoRisco);
   blocoTexto(doc, "Causa provável", risco.causaProvavel);
   blocoTexto(doc, "Consequência", risco.consequencia || risco.possivelImpacto);
   blocoTexto(doc, "Pessoas ou áreas afetadas", risco.pessoasAfetadas);
   blocoTexto(doc, "Controles existentes", risco.controlesExistentes);
+  blocoTexto(doc, "Critério de avaliação", risco.criteriosAvaliacao);
 
   secao(doc, "Plano de tratamento");
   linhaCampos(doc, [
@@ -459,7 +478,10 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
     { rotulo: "Custo estimado", valor: risco.custoEstimado, width: 125 },
   ]);
   blocoTexto(doc, "Ação proposta", risco.acaoProposta || risco.planoAcao);
-  blocoTexto(doc, "Controles e medidas de apoio", risco.controlesExistentes || risco.medidasPreventivas);
+  blocoTexto(doc, "Controles internos propostos", risco.controlesInternos || risco.controlesExistentes || risco.medidasPreventivas);
+  blocoTexto(doc, "Atividades de controle", risco.atividadesControle);
+  blocoTexto(doc, "Monitoramento", risco.monitoramento);
+  blocoTexto(doc, "Comunicação e consulta", risco.comunicacaoConsulta);
   linhaCampos(doc, [
     { rotulo: "Responsável pela ação", valor: risco.responsavelAcaoNome, width: 160 },
     { rotulo: "Prazo final", valor: formatarData(risco.prazo), width: 165 },

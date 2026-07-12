@@ -18,13 +18,10 @@ import {
   Search,
   Settings,
   ShieldAlert,
-  ShieldCheck,
   ListChecks,
   CheckCircle2,
   Paperclip,
   ClipboardCheck,
-  Target,
-  Grid3X3,
   Users,
   Video,
   Menu,
@@ -563,29 +560,9 @@ export default function AdminLayout() {
 
               {gestaoAvancadaOpen && (
                 <div className={submenuClass}>
-                  <Link to="/gestao-patrimonial" className={subItem}>
-                    <MapPinned size={16} />
-                    Gestão Patrimonial
-                  </Link>
                   <Link to="/riscos" className={subItem}>
                     <ShieldAlert size={16} />
-                    Análise de Risco
-                  </Link>
-                  <Link to="/analises-estrategicas" className={subItem}>
-                    <ShieldCheck size={16} />
-                    Análises Estratégicas
-                  </Link>
-                  <Link to="/inteligencia" className={subItem}>
-                    <BrainCircuit size={16} />
-                    Inteligência
-                  </Link>
-                  <Link to="/matriz-risco" className={subItem}>
-                    <Grid3X3 size={16} />
-                    Metodologia 5x5
-                  </Link>
-                  <Link to="/planos-acao" className={subItem}>
-                    <Target size={16} />
-                    Planos de Ação
+                    Análise de Riscos
                   </Link>
                   <Link to="/checklists" className={subItem}>
                     <ClipboardCheck size={16} />
@@ -694,16 +671,10 @@ export default function AdminLayout() {
                     </Link>
                   )}
                   {podeAdministrar() && (
-                    <>
-                      <Link to="/atualizacoes" className={subItem}>
-                        <ScrollText size={16} />
-                        Atualizações
-                      </Link>
-                      <Link to="/integridade" className={subItem}>
-                        <ShieldCheck size={16} />
-                        Integridade
-                      </Link>
-                    </>
+                    <Link to="/atualizacoes" className={subItem}>
+                      <ScrollText size={16} />
+                      Atualizações
+                    </Link>
                   )}
                   {podeVerNaturezas() && (
                     <Link to="/sugestoes-melhoria" className={subItem}>

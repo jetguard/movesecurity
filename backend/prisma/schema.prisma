@@ -591,6 +591,17 @@ model AnaliseRisco {
   naturezaRisco       String
   tituloRisco         String?
   origemRisco         String?
+  fonteRisco          String?
+  fatorRisco          String?
+  fragilidade         String?
+  eventoIncerteza     String?
+  objetivoImpactado   String?
+  eficaciaControles   String?
+  criteriosAvaliacao  String?
+  controlesInternos   String?
+  atividadesControle  String?
+  monitoramento       String?
+  comunicacaoConsulta String?
   descricaoRisco      String
   possivelImpacto     String
   causaProvavel       String?
@@ -600,8 +611,8 @@ model AnaliseRisco {
   probabilidade       String
   severidade          String
   probabilidadeValor  Int?
-  impactoValor        Int?
-  resultadoRisco      Int?
+  impactoValor        Float?
+  resultadoRisco      Float?
   nivelRisco          String
   nivelAceitacao      String?
   tratamentoRisco     String?
@@ -616,8 +627,8 @@ model AnaliseRisco {
   statusAcao          String?
   observacoes         String?
   novaProbabilidade   Int?
-  novoImpacto         Int?
-  novoResultado       Int?
+  novoImpacto         Float?
+  novoResultado       Float?
   novoNivelRisco      String?
   observacaoReavaliacao String?
   dataReavaliacao     DateTime?
@@ -668,6 +679,11 @@ model RiscoCatalogo {
   grauRisco           String   @default("Média")
   naturezaRisco       String
   origemRisco         String?
+  fonteRisco          String?
+  fatorRisco          String?
+  fragilidade         String?
+  eventoIncerteza     String?
+  objetivoImpactado   String?
   responsavelNome     String?
   descricaoRisco      String
   possivelImpacto     String

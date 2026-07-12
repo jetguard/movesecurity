@@ -30,9 +30,6 @@ const MeusDados = lazyWithReload(() => import("./pages/MeusDados"));
 const Logs = lazyWithReload(() => import("./pages/Logs"));
 const Usuarios = lazyWithReload(() => import("./pages/Usuarios"));
 const Riscos = lazyWithReload(() => import("./pages/Riscos"));
-const AnalisesEstrategicas = lazyWithReload(
-  () => import("./pages/AnalisesEstrategicas"),
-);
 const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
 const Pendencias = lazyWithReload(() => import("./pages/Pendencias"));
 const Notificacoes = lazyWithReload(() => import("./pages/Notificacoes"));
@@ -40,11 +37,6 @@ const AlertasOperacionais = lazyWithReload(
   () => import("./pages/AlertasOperacionais"),
 );
 const Timeline = lazyWithReload(() => import("./pages/Timeline"));
-const InteligenciaOperacional = lazyWithReload(
-  () => import("./pages/InteligenciaOperacional"),
-);
-const PlanosAcao = lazyWithReload(() => import("./pages/PlanosAcao"));
-const MatrizRisco = lazyWithReload(() => import("./pages/MatrizRisco"));
 const Checklists = lazyWithReload(() => import("./pages/Checklists"));
 const Mencoes = lazyWithReload(() => import("./pages/Mencoes"));
 const Tarefas = lazyWithReload(() => import("./pages/Tarefas"));
@@ -53,9 +45,6 @@ const Cameras = lazyWithReload(() => import("./pages/Cameras"));
 const OrdensServico = lazyWithReload(() => import("./pages/OrdensServico"));
 const Configuracoes = lazyWithReload(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
-const GestaoPatrimonialAvancada = lazyWithReload(
-  () => import("./pages/GestaoPatrimonialAvancada"),
-);
 const Governanca = lazyWithReload(() => import("./pages/Governanca"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazyWithReload(() => import("./pages/QuadraSeguranca"));
@@ -64,9 +53,6 @@ const RelatosCampo = lazyWithReload(() => import("./pages/RelatosCampo"));
 const MapaOperacional = lazyWithReload(() => import("./pages/MapaOperacional"));
 const AtualizacoesSistema = lazyWithReload(
   () => import("./pages/AtualizacoesSistema"),
-);
-const IntegridadeSistema = lazyWithReload(
-  () => import("./pages/IntegridadeSistema"),
 );
 const SugestoesMelhoria = lazyWithReload(
   () => import("./pages/SugestoesMelhoria"),
@@ -156,35 +142,9 @@ export default function App() {
             <Route path="mapa-operacional" element={<MapaOperacional />} />
             <Route path="planejamento" element={<Planejamento />} />
             <Route path="quadra-seguranca" element={<QuadraSeguranca />} />
-            <Route
-              path="gestao-patrimonial"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <GestaoPatrimonialAvancada />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="gestao-patrimonial" element={<Navigate to="/riscos" replace />} />
             <Route path="historico/:tipo/:id" element={<Historico />} />
-            <Route
-              path="inteligencia"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <InteligenciaOperacional />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="inteligencia" element={<Navigate to="/riscos" replace />} />
             <Route
               path="aprovacoes"
               element={
@@ -199,34 +159,8 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="planos-acao"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <PlanosAcao />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="matriz-risco"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <MatrizRisco />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="planos-acao" element={<Navigate to="/riscos" replace />} />
+            <Route path="matriz-risco" element={<Navigate to="/riscos" replace />} />
             <Route
               path="checklists"
               element={
@@ -255,20 +189,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="analises-estrategicas"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <AnalisesEstrategicas />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="analises-estrategicas" element={<Navigate to="/riscos" replace />} />
             <Route
               path="naturezas"
               element={
@@ -329,16 +250,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="integridade"
-              element={
-                <ProtectedRoute
-                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
-                >
-                  <IntegridadeSistema />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="integridade" element={<Navigate to="/governanca" replace />} />
             <Route
               path="sessoes"
               element={
