@@ -435,13 +435,13 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
 
   secao(doc, "Risco identificado");
   linhaCampos(doc, [
-    { rotulo: "Título", valor: risco.tituloRisco || risco.riscoCatalogo?.nome || "Análise avulsa", width: 245 },
+    { rotulo: "Título", valor: risco.tituloRisco || risco.riscoCatalogo?.nome || "Risco identificado", width: 245 },
     { rotulo: "Categoria", valor: risco.tipoRisco, width: 120 },
-    { rotulo: "Origem", valor: risco.origemRisco, width: 125 },
+    { rotulo: "Status", valor: risco.status, width: 125 },
   ]);
   linhaCampos(doc, [
     { rotulo: "Setor", valor: risco.setor, width: 160 },
-    { rotulo: "Status", valor: risco.status, width: 165 },
+    { rotulo: "Local", valor: risco.local, width: 165 },
     { rotulo: "Prazo da tratativa", valor: formatarData(risco.prazo), width: 162 },
   ]);
 
@@ -450,25 +450,22 @@ export async function gerarRiscoPdf(res: Response, risco: RiscoPdf, urlValidacao
   linhaCampos(doc, [
     { rotulo: "Probabilidade inicial", valor: risco.probabilidadeValor, width: 120 },
     { rotulo: "Impacto inicial", valor: risco.impactoValor, width: 120 },
-    { rotulo: "Resultado inicial", valor: risco.resultadoRisco, width: 120 },
+    { rotulo: "Pontuação inicial", valor: risco.resultadoRisco, width: 120 },
     { rotulo: "Aceitação", valor: risco.nivelAceitacao, width: 125 },
   ]);
   comparativoResidual(doc, risco);
 
   secao(doc, "Análise do risco");
   linhaCampos(doc, [
-    { rotulo: "Fonte / fator", valor: risco.fonteRisco, width: 120 },
-    { rotulo: "Objetivo impactado", valor: risco.objetivoImpactado, width: 165 },
-    { rotulo: "Eficácia dos controles", valor: risco.eficaciaControles, width: 162 },
+    { rotulo: "Eficácia dos controles", valor: risco.eficaciaControles, width: 160 },
+    { rotulo: "Nível inicial", valor: risco.nivelRisco, width: 165 },
+    { rotulo: "Nível residual", valor: risco.novoNivelRisco || "Não reavaliado", width: 162 },
   ]);
-  blocoTexto(doc, "Fator específico / fragilidade", [risco.fatorRisco, risco.fragilidade].filter(Boolean).join(" | "));
-  blocoTexto(doc, "Evento / incerteza", risco.eventoIncerteza);
   blocoTexto(doc, "O que pode acontecer?", risco.descricaoRisco);
-  blocoTexto(doc, "Causa provável", risco.causaProvavel);
   blocoTexto(doc, "Consequência", risco.consequencia || risco.possivelImpacto);
   blocoTexto(doc, "Pessoas ou áreas afetadas", risco.pessoasAfetadas);
   blocoTexto(doc, "Controles existentes", risco.controlesExistentes);
-  blocoTexto(doc, "Critério de avaliação", risco.criteriosAvaliacao);
+  blocoTexto(doc, "Justificativa da análise", risco.criteriosAvaliacao);
 
   secao(doc, "Plano de tratamento");
   linhaCampos(doc, [

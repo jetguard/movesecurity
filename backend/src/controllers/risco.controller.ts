@@ -4,48 +4,43 @@ import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { gerarRiscoPdf } from "../services/riscoPdf.service";
 
-const valores = { "Muito Baixa": 1, Baixa: 3, Moderada: 5, Alta: 7, "Muito Alta": 9 } as Record<string, number>;
-const impactos = { "Muito Baixo": 0.5, Baixo: 1, Moderado: 2, Alto: 4, "Muito Alto": 8 } as Record<string, number>;
-
-function calcularNivel(probabilidade: string, severidade: string) {
-  const score = (valores[probabilidade] || 1) * (valores[severidade] || 1);
-  return calcularNivelPorResultado(score);
-}
+const valores = { "Muito Baixa": 1, Baixa: 2, Média: 3, Media: 3, Moderada: 3, Alta: 4, "Muito Alta": 5 } as Record<string, number>;
+const impactos = { Insignificante: 1, Baixo: 2, Moderado: 3, Alto: 4, Crítico: 5, Critico: 5 } as Record<string, number>;
 
 function numeroProbabilidade(valor: unknown) {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return null;
-  const permitidos = [1, 3, 5, 7, 9];
-  return permitidos.includes(numero) ? numero : Math.min(Math.max(Math.trunc(numero), 1), 9);
+  const permitidos = [1, 2, 3, 4, 5];
+  return permitidos.includes(numero) ? numero : Math.min(Math.max(Math.trunc(numero), 1), 5);
 }
 
 function numeroImpacto(valor: unknown) {
   const numero = Number(String(valor).replace(",", "."));
   if (!Number.isFinite(numero)) return null;
-  const permitidos = [0.5, 1, 2, 4, 8];
-  return permitidos.includes(numero) ? numero : Math.min(Math.max(numero, 0.5), 8);
+  const permitidos = [1, 2, 3, 4, 5];
+  return permitidos.includes(numero) ? numero : Math.min(Math.max(Math.trunc(numero), 1), 5);
 }
 
 function textoProbabilidade(valor: number) {
   if (valor <= 1) return "Muito Baixa";
-  if (valor <= 3) return "Baixa";
-  if (valor <= 5) return "Moderada";
-  if (valor <= 7) return "Alta";
+  if (valor <= 2) return "Baixa";
+  if (valor <= 3) return "Média";
+  if (valor <= 4) return "Alta";
   return "Muito Alta";
 }
 
 function textoImpacto(valor: number) {
-  if (valor <= 0.5) return "Muito Baixo";
-  if (valor <= 1) return "Baixo";
-  if (valor <= 2) return "Moderado";
+  if (valor <= 1) return "Insignificante";
+  if (valor <= 2) return "Baixo";
+  if (valor <= 3) return "Moderado";
   if (valor <= 4) return "Alto";
-  return "Muito Alto";
+  return "Crítico";
 }
 
 function calcularNivelPorResultado(resultado: number) {
-  if (resultado <= 8) return "Baixo";
-  if (resultado <= 20) return "Moderado";
-  if (resultado <= 40) return "Alto";
+  if (resultado <= 5) return "Baixo";
+  if (resultado <= 10) return "Moderado";
+  if (resultado <= 15) return "Alto";
   return "Crítico";
 }
 
@@ -86,6 +81,19 @@ function calcularReavaliacao(req: AuthRequest) {
   };
 }
 
+function validarAnalise(req: AuthRequest) {
+  if (!numeroProbabilidade(req.body.probabilidadeValor) && !valores[req.body.probabilidade]) {
+    return "Informe a probabilidade da análise.";
+  }
+  if (!numeroImpacto(req.body.impactoValor) && !impactos[req.body.severidade]) {
+    return "Informe o impacto da análise.";
+  }
+  if (!textoObrigatorio(req.body.criteriosAvaliacao)) {
+    return "Informe a justificativa da análise.";
+  }
+  return null;
+}
+
 function normalizarId(valor: unknown) {
   const numero = Number(valor);
   return Number.isFinite(numero) && numero > 0 ? numero : null;
@@ -106,17 +114,17 @@ function dadosCatalogo(req: AuthRequest) {
   return {
     unidade: req.unidadeAtiva || req.body.unidade,
     local: textoObrigatorio(req.body.local) || null,
-    area: textoObrigatorio(req.body.area) || null,
+    area: null,
     nome,
     tipoRisco,
-    grauRisco: textoObrigatorio(req.body.grauRisco) || "Média",
+    grauRisco: "Não analisado",
     naturezaRisco: textoObrigatorio(req.body.naturezaRisco) || tipoRisco || "Risco operacional",
-    origemRisco: textoObrigatorio(req.body.origemRisco) || null,
-    fonteRisco: textoObrigatorio(req.body.fonteRisco) || null,
-    fatorRisco: textoObrigatorio(req.body.fatorRisco) || null,
-    fragilidade: textoObrigatorio(req.body.fragilidade) || null,
-    eventoIncerteza: textoObrigatorio(req.body.eventoIncerteza) || null,
-    objetivoImpactado: textoObrigatorio(req.body.objetivoImpactado) || null,
+    origemRisco: null,
+    fonteRisco: null,
+    fatorRisco: null,
+    fragilidade: null,
+    eventoIncerteza: null,
+    objetivoImpactado: null,
     responsavelNome: textoObrigatorio(req.body.responsavelNome || req.body.responsavel) || null,
     descricaoRisco: textoObrigatorio(req.body.descricaoRisco),
     possivelImpacto: textoObrigatorio(req.body.possivelImpacto),
@@ -447,6 +455,8 @@ export async function criarRisco(req: AuthRequest, res: Response) {
     if (!riscoIdentificado) {
       return res.status(404).json({ error: "Risco identificado não encontrado para a unidade ativa." });
     }
+    const erroValidacao = validarAnalise(req);
+    if (erroValidacao) return res.status(400).json({ error: erroValidacao });
 
     const risco = await prisma.analiseRisco.create({
       data: {
@@ -459,15 +469,15 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         unidade: req.unidadeAtiva || req.body.unidade,
         setor: req.body.setor,
         local: req.body.local,
-        area: textoObrigatorio(req.body.area) || null,
+        area: null,
         tipoRisco: req.body.tipoRisco,
         tituloRisco: textoObrigatorio(req.body.tituloRisco) || null,
-        origemRisco: textoObrigatorio(req.body.origemRisco) || null,
-        fonteRisco: textoObrigatorio(req.body.fonteRisco) || null,
-        fatorRisco: textoObrigatorio(req.body.fatorRisco) || null,
-        fragilidade: textoObrigatorio(req.body.fragilidade) || null,
-        eventoIncerteza: textoObrigatorio(req.body.eventoIncerteza) || null,
-        objetivoImpactado: textoObrigatorio(req.body.objetivoImpactado) || null,
+        origemRisco: null,
+        fonteRisco: null,
+        fatorRisco: null,
+        fragilidade: null,
+        eventoIncerteza: null,
+        objetivoImpactado: null,
         eficaciaControles: textoObrigatorio(req.body.eficaciaControles) || null,
         criteriosAvaliacao: textoObrigatorio(req.body.criteriosAvaliacao) || null,
         controlesInternos: textoObrigatorio(req.body.controlesInternos) || null,
@@ -565,6 +575,8 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
     if (!riscoIdentificado) {
       return res.status(404).json({ error: "Risco identificado não encontrado para a unidade ativa." });
     }
+    const erroValidacao = validarAnalise(req);
+    if (erroValidacao) return res.status(400).json({ error: erroValidacao });
 
     const risco = await prisma.analiseRisco.update({
       where: { id: Number(id) },
@@ -574,15 +586,15 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
         riscoCatalogoId,
         setor: req.body.setor,
         local: req.body.local,
-        area: textoObrigatorio(req.body.area) || null,
+        area: null,
         tipoRisco: req.body.tipoRisco,
         tituloRisco: textoObrigatorio(req.body.tituloRisco) || null,
-        origemRisco: textoObrigatorio(req.body.origemRisco) || null,
-        fonteRisco: textoObrigatorio(req.body.fonteRisco) || null,
-        fatorRisco: textoObrigatorio(req.body.fatorRisco) || null,
-        fragilidade: textoObrigatorio(req.body.fragilidade) || null,
-        eventoIncerteza: textoObrigatorio(req.body.eventoIncerteza) || null,
-        objetivoImpactado: textoObrigatorio(req.body.objetivoImpactado) || null,
+        origemRisco: null,
+        fonteRisco: null,
+        fatorRisco: null,
+        fragilidade: null,
+        eventoIncerteza: null,
+        objetivoImpactado: null,
         eficaciaControles: textoObrigatorio(req.body.eficaciaControles) || null,
         criteriosAvaliacao: textoObrigatorio(req.body.criteriosAvaliacao) || null,
         controlesInternos: textoObrigatorio(req.body.controlesInternos) || null,
