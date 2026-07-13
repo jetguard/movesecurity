@@ -701,6 +701,57 @@ model RiscoCatalogo {
   @@index([unidade, status])
 }
 
+model AprOperacional {
+  id                    Int      @id @default(autoincrement())
+  numero                Int
+  ano                   Int
+  codigo                String
+  unidade               String
+  local                 String
+  area                  String?
+  atividade             String
+  descricaoAtividade    String
+  dataPrevista          DateTime?
+  responsavelAtividade  String
+  equipeEnvolvida       String?
+  empresaTerceira       String?
+  riscosIds             String?
+  perigos               String
+  controlesObrigatorios String
+  episNecessarios       String?
+  permissoesNecessarias String?
+  nivelRisco            String   @default("Moderado")
+  status                String   @default("Rascunho")
+  criadoPorId           Int?
+  criadoPorNome         String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  aprovacoes AprAprovacao[]
+
+  @@unique([codigo, unidade])
+  @@index([unidade, status])
+  @@index([local, dataPrevista])
+}
+
+model AprAprovacao {
+  id           Int       @id @default(autoincrement())
+  aprId        Int
+  usuarioId    Int?
+  usuarioNome  String
+  perfilAcesso String?
+  decisao      String    @default("Pendente")
+  observacao   String?
+  decididoEm   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  apr AprOperacional @relation(fields: [aprId], references: [id], onDelete: Cascade)
+
+  @@index([aprId, decisao])
+  @@index([usuarioId, decisao])
+}
+
 model AnaliseEstrategica {
   id              Int       @id @default(autoincrement())
   numero          Int

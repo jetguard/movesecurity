@@ -10,6 +10,7 @@ import {
   AtSign,
   BrainCircuit,
   FileText,
+  FileCheck2,
   FileBarChart,
   FolderOpen,
   LayoutDashboard,
@@ -563,6 +564,10 @@ export default function AdminLayout() {
                   <Link to="/riscos" className={subItem}>
                     <ShieldAlert size={16} />
                     Análise de Riscos
+                  </Link>
+                  <Link to="/aprs" className={subItem}>
+                    <FileCheck2 size={16} />
+                    APR Operacional
                   </Link>
                   <Link to="/checklists" className={subItem}>
                     <ClipboardCheck size={16} />
