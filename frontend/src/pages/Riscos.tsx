@@ -636,6 +636,13 @@ export default function Riscos() {
 
   async function salvarRisco(e: FormEvent) {
     e.preventDefault();
+    if (!form.riscoCatalogoId) {
+      alert("Selecione um risco identificado antes de iniciar a análise.");
+      setAba("Nova Análise");
+      window.setTimeout(() => formularioRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 60);
+      return;
+    }
+
     const payload = {
       ...form,
       probabilidade: probabilidadeParaTexto(form.probabilidadeValor),
@@ -1080,6 +1087,8 @@ export default function Riscos() {
   }
 
   function FormularioAnalise() {
+    const analiseBloqueada = !editando && !form.riscoCatalogoId;
+
     return (
       <form ref={formularioRef} onSubmit={salvarRisco} className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
@@ -1089,12 +1098,18 @@ export default function Riscos() {
           </div>
           <div className={`rounded-lg border px-4 py-2 text-sm font-bold ${corNivel(nivelInicial)}`}>Resultado {resultadoInicial} | {nivelInicial}</div>
         </div>
+        {analiseBloqueada && (
+          <div className="mb-5 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/30 dark:text-amber-100">
+            Selecione um risco identificado para liberar os campos de análise. O sistema não permite análise avulsa para manter rastreabilidade e histórico.
+          </div>
+        )}
 
         <div className="space-y-6">
           <section>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">1. Identificação</h3>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-              <Label texto="Risco identificado" className="lg:col-span-2"><select className={campoClasse()} value={form.riscoCatalogoId} onChange={(e) => campo("riscoCatalogoId", e.target.value)}><option value="">Análise avulsa</option>{riscosAtivosCatalogo.map((item) => <option key={item.id} value={item.id}>{item.codigo} - {item.nome}</option>)}</select></Label>
+              <Label texto="Risco identificado" className="lg:col-span-2"><select className={campoClasse()} value={form.riscoCatalogoId} onChange={(e) => campo("riscoCatalogoId", e.target.value)} required><option value="">Selecione um risco identificado</option>{riscosAtivosCatalogo.map((item) => <option key={item.id} value={item.id}>{item.codigo} - {item.nome}</option>)}</select></Label>
+              <fieldset disabled={analiseBloqueada} className="contents">
               <Label texto="Data da análise"><input type="datetime-local" className={campoClasse()} value={form.dataHora} onChange={(e) => campo("dataHora", e.target.value)} required /></Label>
               <Label texto="Status"><select className={campoClasse()} value={form.status} onChange={(e) => campo("status", e.target.value)}>{statusRisco.map((item) => <option key={item}>{item}</option>)}</select></Label>
               <Label texto="Unidade"><select className={campoClasse()} value={form.unidade} onChange={(e) => campo("unidade", e.target.value)}>{unidades.map((item) => <option key={item}>{item}</option>)}</select></Label>
@@ -1108,9 +1123,11 @@ export default function Riscos() {
               <Label texto="Causa / fator específico"><input className={campoClasse()} value={form.fatorRisco} onChange={(e) => campo("fatorRisco", e.target.value)} placeholder="Ex.: falha de processo, pessoa, sistema" /></Label>
               <Label texto="Fragilidade"><input className={campoClasse()} value={form.fragilidade} onChange={(e) => campo("fragilidade", e.target.value)} placeholder="Ex.: baixa capacitação, rotina inexistente" /></Label>
               <Label texto="Objetivo impactado"><input className={campoClasse()} value={form.objetivoImpactado} onChange={(e) => campo("objetivoImpactado", e.target.value)} placeholder="Ex.: continuidade operacional" /></Label>
+              </fieldset>
             </div>
           </section>
 
+          <fieldset disabled={analiseBloqueada} className={`space-y-6 ${analiseBloqueada ? "opacity-50" : ""}`}>
           <section>
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-slate-500">2. Análise do risco</h3>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -1210,10 +1227,11 @@ export default function Riscos() {
             </div>
             {vinculoEncontrado && <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-900"><strong>{vinculoEncontrado.origem} {vinculoEncontrado.codigo}</strong> - {vinculoEncontrado.titulo}</div>}
           </section>
+          </fieldset>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-3">
-          <button className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700">Salvar análise de risco</button>
+          <button disabled={analiseBloqueada} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-bold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:bg-slate-300 dark:disabled:bg-slate-700">Salvar análise de risco</button>
           <button type="button" onClick={() => { setForm({ ...riscoVazio, dataHora: new Date().toISOString().slice(0, 16) }); setEditando(null); }} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200">Limpar</button>
         </div>
       </form>

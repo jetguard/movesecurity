@@ -434,6 +434,19 @@ export async function criarRisco(req: AuthRequest, res: Response) {
     const classificacao = calcularClassificacao(req);
     const reavaliacao = calcularReavaliacao(req);
     const vinculos = await resolverVinculos(req);
+    const riscoCatalogoId = normalizarId(req.body.riscoCatalogoId);
+
+    if (!riscoCatalogoId) {
+      return res.status(400).json({ error: "Selecione um risco identificado antes de criar a análise." });
+    }
+
+    const riscoIdentificado = await prisma.riscoCatalogo.findFirst({
+      where: { id: riscoCatalogoId, unidade: req.unidadeAtiva },
+    });
+
+    if (!riscoIdentificado) {
+      return res.status(404).json({ error: "Risco identificado não encontrado para a unidade ativa." });
+    }
 
     const risco = await prisma.analiseRisco.create({
       data: {
@@ -442,7 +455,7 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         codigo,
         dataHora: new Date(req.body.dataHora),
         responsavelId: req.usuarioId!,
-        riscoCatalogoId: normalizarId(req.body.riscoCatalogoId),
+        riscoCatalogoId,
         unidade: req.unidadeAtiva || req.body.unidade,
         setor: req.body.setor,
         local: req.body.local,
@@ -539,12 +552,26 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
     const classificacao = calcularClassificacao(req);
     const reavaliacao = calcularReavaliacao(req);
     const vinculos = await resolverVinculos(req);
+    const riscoCatalogoId = normalizarId(req.body.riscoCatalogoId);
+
+    if (!riscoCatalogoId) {
+      return res.status(400).json({ error: "A análise precisa permanecer vinculada a um risco identificado." });
+    }
+
+    const riscoIdentificado = await prisma.riscoCatalogo.findFirst({
+      where: { id: riscoCatalogoId, unidade: req.unidadeAtiva },
+    });
+
+    if (!riscoIdentificado) {
+      return res.status(404).json({ error: "Risco identificado não encontrado para a unidade ativa." });
+    }
+
     const risco = await prisma.analiseRisco.update({
       where: { id: Number(id) },
       data: {
         dataHora: new Date(req.body.dataHora),
         unidade: req.unidadeAtiva || anterior.unidade,
-        riscoCatalogoId: normalizarId(req.body.riscoCatalogoId),
+        riscoCatalogoId,
         setor: req.body.setor,
         local: req.body.local,
         area: textoObrigatorio(req.body.area) || null,
