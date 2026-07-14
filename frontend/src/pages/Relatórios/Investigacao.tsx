@@ -160,47 +160,62 @@ export default function Investigacao() {
 
           <fieldset disabled={!permitirEdicao} className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <input
-                className="w-full border rounded-lg p-3"
-                value={`R.I. ${numeroInvestigacao(investigacaoEditando)}`}
-                readOnly
-              />
-
-              <select
-                className="w-full border rounded-lg p-3"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="Em Análise">Em Análise</option>
-                <option value="Concluído">Concluído</option>
-              </select>
-
-              {permitirEdicao ? (
-                <select
-                  className="w-full border rounded-lg p-3"
-                  value={local}
-                  onChange={(e) => setLocal(e.target.value)}
-                >
-                  <option value="">Selecione o local investigado</option>
-                  {locais.map((item) => (
-                    <option key={item.id} value={item.nome}>
-                      {item.nome}{item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
-                    </option>
-                  ))}
-                </select>
-              ) : (
+              <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                Número da investigação
                 <input
-                  className="w-full border rounded-lg p-3"
-                  value={local}
+                  className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                  value={`R.I. ${numeroInvestigacao(investigacaoEditando)}`}
                   readOnly
                 />
+              </label>
+
+              <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                Status da investigação
+                <select
+                  className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                >
+                  <option value="Em Análise">Em Análise</option>
+                  <option value="Concluído">Concluído</option>
+                </select>
+              </label>
+
+              {permitirEdicao ? (
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Local investigado
+                  <select
+                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                    value={local}
+                    onChange={(e) => setLocal(e.target.value)}
+                  >
+                    <option value="">Selecione o local investigado</option>
+                    {locais.map((item) => (
+                      <option key={item.id} value={item.nome}>
+                        {item.nome}{item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Local investigado
+                  <input
+                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                    value={local}
+                    readOnly
+                  />
+                </label>
               )}
 
-              <input
-                className="w-full border rounded-lg p-3"
-                value={`${investigacaoEditando.natureza} / ${investigacaoEditando.subNatureza}`}
-                readOnly
-              />
+              <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                Natureza / subnatureza
+                <input
+                  className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                  value={`${investigacaoEditando.natureza} / ${investigacaoEditando.subNatureza}`}
+                  readOnly
+                />
+              </label>
             </div>
 
             {localSelecionado?.areaSensivel && (
@@ -210,7 +225,7 @@ export default function Investigacao() {
             )}
 
             <div className="space-y-2">
-              <h3 className="font-bold">Descrição da Investigação</h3>
+              <h3 className="text-xs font-normal text-slate-500 dark:text-slate-400">Descrição da investigação</h3>
               {permitirEdicao ? (
                 <LexicalEditor
                   value={descricaoInvestigacao}
@@ -224,7 +239,7 @@ export default function Investigacao() {
             </div>
 
             <div className="space-y-2">
-              <h3 className="font-bold">Conclusão dos Fatos</h3>
+              <h3 className="text-xs font-normal text-slate-500 dark:text-slate-400">Conclusão dos fatos</h3>
               {permitirEdicao ? (
                 <LexicalEditor value={conclusaoFatos} onChange={setConclusaoFatos} />
               ) : (

@@ -775,27 +775,33 @@ export default function Eventos() {
           {etapaFormulario === 1 && (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  className="w-full border rounded-lg p-3"
-                  placeholder="Assunto"
-                  value={assunto}
-                  onChange={(e) => setAssunto(e.target.value)}
-                  required
-                />
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Assunto
+                  <input
+                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                    placeholder="Assunto"
+                    value={assunto}
+                    onChange={(e) => setAssunto(e.target.value)}
+                    required
+                  />
+                </label>
 
-                <select
-                  className="w-full border rounded-lg p-3"
-                  value={local}
-                  onChange={(e) => setLocal(e.target.value)}
-                  required
-                >
-                  <option value="">Selecione o local do evento</option>
-                  {locais.map((item) => (
-                    <option key={item.id} value={item.nome}>
-                      {item.nome}{item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
-                    </option>
-                  ))}
-                </select>
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Local do evento
+                  <select
+                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                    value={local}
+                    onChange={(e) => setLocal(e.target.value)}
+                    required
+                  >
+                    <option value="">Selecione o local do evento</option>
+                    {locais.map((item) => (
+                      <option key={item.id} value={item.nome}>
+                        {item.nome}{item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
 
                 {localSelecionado?.areaSensivel && (
                   <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 md:col-span-2">
@@ -803,55 +809,64 @@ export default function Eventos() {
                   </div>
                 )}
 
-                <select
-                  className="w-full border rounded-lg p-3"
-                  value={natureza}
-                  onChange={(e) => {
-                    setNatureza(e.target.value);
-                    setSubNatureza("");
-                    if (!ehImpactoOperacionalExterno(e.target.value)) setImpactoOperacional(impactoOperacionalVazio());
-                  }}
-                  required
-                >
-                  <option value="">Selecione a natureza</option>
-                  {naturezas.map((item) => (
-                    <option key={item.id} value={item.nome}>
-                      {item.nome}
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  className="w-full border rounded-lg p-3"
-                  value={subNatureza}
-                  onChange={(e) => setSubNatureza(e.target.value)}
-                  required
-                  disabled={!natureza}
-                >
-                  <option value="">Selecione a subnatureza</option>
-                  {subNaturezasDisponiveis.map((item) => (
-                    <option key={item.id} value={item.nome}>
-                      {item.nome}
-                    </option>
-                  ))}
-                </select>
-
-                <label className="space-y-1">
-                  {naturezaImpactoOperacional && <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Data e hora de início do impacto</span>}
-                  <input className="w-full border rounded-lg p-3" type="datetime-local" value={dataEvento} onChange={(e) => setDataEvento(e.target.value)} required />
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Natureza
+                  <select
+                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                    value={natureza}
+                    onChange={(e) => {
+                      setNatureza(e.target.value);
+                      setSubNatureza("");
+                      if (!ehImpactoOperacionalExterno(e.target.value)) setImpactoOperacional(impactoOperacionalVazio());
+                    }}
+                    required
+                  >
+                    <option value="">Selecione a natureza</option>
+                    {naturezas.map((item) => (
+                      <option key={item.id} value={item.nome}>
+                        {item.nome}
+                      </option>
+                    ))}
+                  </select>
                 </label>
 
-                <input
-                  className="w-full border rounded-lg p-3"
-                  type="number"
-                  min={1}
-                  value={quantidadeEnvolvidos}
-                  onChange={(e) =>
-                    alterarQuantidadeEnvolvidos(Number(e.target.value))
-                  }
-                  placeholder="Quantidade de envolvidos"
-                  required
-                />
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Subnatureza
+                  <select
+                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                    value={subNatureza}
+                    onChange={(e) => setSubNatureza(e.target.value)}
+                    required
+                    disabled={!natureza}
+                  >
+                    <option value="">Selecione a subnatureza</option>
+                    {subNaturezasDisponiveis.map((item) => (
+                      <option key={item.id} value={item.nome}>
+                        {item.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  {naturezaImpactoOperacional ? "Data e hora de início do impacto" : "Data e hora do evento"}
+                  <input className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100" type="datetime-local" value={dataEvento} onChange={(e) => setDataEvento(e.target.value)} required />
+                </label>
+
+                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  Quantidade de envolvidos
+                  <input
+                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                    type="number"
+                    min={1}
+                    value={quantidadeEnvolvidos}
+                    onChange={(e) =>
+                      alterarQuantidadeEnvolvidos(Number(e.target.value))
+                    }
+                    placeholder="Quantidade de envolvidos"
+                    required
+                  />
+                </label>
               </div>
 
               {naturezaImpactoOperacional && (
@@ -890,72 +905,87 @@ export default function Eventos() {
                       Dados do {index + 1}º envolvido
                     </h3>
 
-                    <select
-                      className="w-full border rounded-lg p-3"
-                      value={envolvido.tipoEnvolvimento}
-                      onChange={(e) =>
-                        atualizarEnvolvido(
-                          index,
-                          "tipoEnvolvimento",
-                          e.target.value
-                        )
-                      }
-                    >
-                      <option value="Condutor">Condutor</option>
-                      <option value="Informante">Informante</option>
-                      <option value="Solicitante">Solicitante</option>
-                      <option value="Testemunha">Testemunha</option>
-                      <option value="Vítima">Vítima</option>
-                    </select>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input
-                        className="w-full border rounded-lg p-3"
-                        placeholder="Nome do envolvido"
-                        value={envolvido.nome}
-                        onChange={(e) =>
-                          atualizarEnvolvido(index, "nome", e.target.value)
-                        }
-                        required
-                      />
-
+                    <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                      Tipo de envolvimento
                       <select
-                        className="w-full border rounded-lg p-3"
-                        value={envolvido.tipoDocumento}
+                        className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                        value={envolvido.tipoEnvolvimento}
                         onChange={(e) =>
                           atualizarEnvolvido(
                             index,
-                            "tipoDocumento",
+                            "tipoEnvolvimento",
                             e.target.value
                           )
                         }
                       >
-                        <option value="CPF">CPF</option>
-                        <option value="RG">RG</option>
-                        <option value="RE">R.E</option>
-                        <option value="CNH">CNH</option>
-                        <option value="PASSAPORTE">Passaporte</option>
+                        <option value="Condutor">Condutor</option>
+                        <option value="Informante">Informante</option>
+                        <option value="Solicitante">Solicitante</option>
+                        <option value="Testemunha">Testemunha</option>
+                        <option value="Vítima">Vítima</option>
                       </select>
+                    </label>
 
-                      <input
-                        className="w-full border rounded-lg p-3"
-                        placeholder={envolvido.tipoDocumento === "CPF" ? "000.000.000-00" : "Documento"}
-                        inputMode={envolvido.tipoDocumento === "CPF" ? "numeric" : "text"}
-                        value={envolvido.documento}
-                        onChange={(e) =>
-                          atualizarEnvolvido(index, "documento", e.target.value)
-                        }
-                        required
-                      />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                        Nome do envolvido
+                        <input
+                          className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                          placeholder="Nome do envolvido"
+                          value={envolvido.nome}
+                          onChange={(e) =>
+                            atualizarEnvolvido(index, "nome", e.target.value)
+                          }
+                          required
+                        />
+                      </label>
 
-                      <input
-                        className="w-full border rounded-lg p-3"
-                        placeholder="Empresa"
-                        value={envolvido.empresa}
-                        onChange={(e) =>
-                          atualizarEnvolvido(index, "empresa", e.target.value)
-                        }
-                      />
+                      <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                        Tipo de documento
+                        <select
+                          className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                          value={envolvido.tipoDocumento}
+                          onChange={(e) =>
+                            atualizarEnvolvido(
+                              index,
+                              "tipoDocumento",
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="CPF">CPF</option>
+                          <option value="RG">RG</option>
+                          <option value="RE">R.E</option>
+                          <option value="CNH">CNH</option>
+                          <option value="PASSAPORTE">Passaporte</option>
+                        </select>
+                      </label>
+
+                      <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                        Documento
+                        <input
+                          className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                          placeholder={envolvido.tipoDocumento === "CPF" ? "000.000.000-00" : "Documento"}
+                          inputMode={envolvido.tipoDocumento === "CPF" ? "numeric" : "text"}
+                          value={envolvido.documento}
+                          onChange={(e) =>
+                            atualizarEnvolvido(index, "documento", e.target.value)
+                          }
+                          required
+                        />
+                      </label>
+
+                      <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                        Empresa
+                        <input
+                          className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                          placeholder="Empresa"
+                          value={envolvido.empresa}
+                          onChange={(e) =>
+                            atualizarEnvolvido(index, "empresa", e.target.value)
+                          }
+                        />
+                      </label>
                     </div>
 
                     <label className="flex items-center gap-2">
@@ -975,35 +1005,44 @@ export default function Eventos() {
 
                     {envolvido.possuiVeiculo && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <input
-                          className="w-full border rounded-lg p-3"
-                          placeholder="AAA-1234 ou AAA-1A34"
-                          value={envolvido.placa}
-                          onChange={(e) =>
-                            atualizarEnvolvido(index, "placa", e.target.value)
-                          }
-                        />
+                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                          Placa do veículo
+                          <input
+                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                            placeholder="AAA-1234 ou AAA-1A34"
+                            value={envolvido.placa}
+                            onChange={(e) =>
+                              atualizarEnvolvido(index, "placa", e.target.value)
+                            }
+                          />
+                        </label>
 
-                        <input
-                          className="w-full border rounded-lg p-3"
-                          placeholder="AAA-1234 ou AAA-1A34"
-                          value={envolvido.reboque}
-                          onChange={(e) =>
-                            atualizarEnvolvido(index, "reboque", e.target.value)
-                          }
-                        />
+                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                          Placa do reboque
+                          <input
+                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                            placeholder="AAA-1234 ou AAA-1A34"
+                            value={envolvido.reboque}
+                            onChange={(e) =>
+                              atualizarEnvolvido(index, "reboque", e.target.value)
+                            }
+                          />
+                        </label>
                       </div>
                     )}
 
-                    <textarea
-                      className="w-full border rounded-lg p-3 min-h-[120px]"
-                      placeholder="Relato deste envolvido"
-                      value={envolvido.relato}
-                      onChange={(e) =>
-                        atualizarEnvolvido(index, "relato", e.target.value)
-                      }
-                      required
-                    />
+                    <label className="block space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                      Relato do envolvido
+                      <textarea
+                        className="w-full border rounded-lg p-3 min-h-[120px] text-sm text-slate-900 dark:text-slate-100"
+                        placeholder="Relato deste envolvido"
+                        value={envolvido.relato}
+                        onChange={(e) =>
+                          atualizarEnvolvido(index, "relato", e.target.value)
+                        }
+                        required
+                      />
+                    </label>
                   </div>
                 ))}
               </div>
