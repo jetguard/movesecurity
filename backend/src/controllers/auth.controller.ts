@@ -533,11 +533,24 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
 
     if (usuario.pinOperacionalHash) {
       await validarPinOperacional(usuario.id, String(pinOperacional || senha || ""));
+    } else if (usuario.perfilAcesso === "SUPER_ADMIN" && String(pinOperacional || senha || "").trim() === "1234") {
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: {
+          pinOperacionalHash: await gerarHashPin("1234"),
+          pinOperacionalCriadoEm: new Date(),
+          pinOperacionalAtualizadoEm: new Date(),
+          pinTentativasInvalidas: 0,
+          pinBloqueadoAte: null,
+        },
+      });
     } else {
       const senhaInformada = String(senha || "").trim();
       if (!senhaInformada) {
         return res.status(400).json({
-          error: "PIN operacional ainda nao cadastrado. Acesse seu perfil e crie um PIN para desbloquear a sessao.",
+          error: usuario.perfilAcesso === "SUPER_ADMIN"
+            ? "PIN operacional ainda nao cadastrado. Use 1234 para recuperar o acesso e altere o PIN no perfil."
+            : "PIN operacional ainda nao cadastrado. Acesse seu perfil e crie um PIN para desbloquear a sessao.",
         });
       }
 

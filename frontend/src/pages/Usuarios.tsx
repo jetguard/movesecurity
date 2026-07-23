@@ -201,10 +201,10 @@ export default function Usuarios() {
   async function resetarPin(usuario?: Usuario | null) {
     const alvo = usuario || editando;
     if (!alvo) return;
-    if (!confirm(`Deseja resetar o PIN operacional de ${alvo.nome}? O usuário deverá cadastrar um novo PIN no perfil.`)) return;
+    if (!confirm(`Deseja restaurar o PIN operacional de ${alvo.nome} para 1234? O usuário deverá alterar o PIN no perfil depois do acesso.`)) return;
 
     await api.put(`/usuarios/${alvo.id}/pin/reset`);
-    alert("PIN operacional resetado com sucesso.");
+    alert("PIN operacional restaurado para 1234.");
     carregarUsuarios();
   }
 
@@ -318,10 +318,10 @@ export default function Usuarios() {
             <div className="rounded-lg border bg-amber-50 p-4">
               <p className="font-semibold mb-2">PIN operacional</p>
               <p className="mb-3 text-sm text-slate-600">
-                Status atual: {editando.possuiPinOperacional ? "PIN cadastrado" : "PIN pendente"}. O reset remove o PIN atual e libera o cadastro de um novo PIN pelo usuário no perfil.
+                Status atual: {editando.possuiPinOperacional ? "PIN cadastrado" : "PIN pendente"}. A restauração define o PIN temporário 1234 para recuperação de acesso.
               </p>
               <button type="button" onClick={() => resetarPin(editando)} className="rounded-lg bg-amber-700 px-4 py-2 text-white">
-                Resetar PIN
+                Restaurar PIN para 1234
               </button>
             </div>
           )}
@@ -384,7 +384,7 @@ export default function Usuarios() {
                 <td className="p-3">
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => editarUsuario(usuario)} className="rounded bg-blue-600 px-3 py-1 text-white">Editar</button>
-                    {superAdmin && <button onClick={() => resetarPin(usuario)} className="rounded bg-slate-700 px-3 py-1 text-white">Resetar PIN</button>}
+                    {superAdmin && <button onClick={() => resetarPin(usuario)} className="rounded bg-slate-700 px-3 py-1 text-white">PIN 1234</button>}
                     {usuario.perfilAcesso !== "SUPER_ADMIN" && (
                       <>
                         <button onClick={() => alterarStatus(usuario, usuario.statusUsuario === "ATIVO" ? "BLOQUEADO" : "ATIVO")} className="rounded bg-amber-600 px-3 py-1 text-white">

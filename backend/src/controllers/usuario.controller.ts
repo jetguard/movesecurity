@@ -329,9 +329,9 @@ export async function resetarPinUsuario(req: AuthRequest, res: Response) {
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
       data: {
-        pinOperacionalHash: null,
-        pinOperacionalCriadoEm: null,
-        pinOperacionalAtualizadoEm: null,
+        pinOperacionalHash: await gerarHashPin("1234"),
+        pinOperacionalCriadoEm: usuarioAnterior.pinOperacionalCriadoEm || new Date(),
+        pinOperacionalAtualizadoEm: new Date(),
         pinTentativasInvalidas: 0,
         pinBloqueadoAte: null,
       },
@@ -351,13 +351,14 @@ export async function resetarPinUsuario(req: AuthRequest, res: Response) {
       dadosNovos: {
         id: usuario.id,
         email: usuario.email,
-        possuiPinOperacional: false,
+        possuiPinOperacional: true,
+        pinTemporario: true,
         resetadoEm: new Date().toISOString(),
       },
     });
 
     return res.json({
-      mensagem: "PIN operacional resetado. O usuario devera cadastrar um novo PIN no perfil.",
+      mensagem: "PIN operacional restaurado para 1234. O usuario devera alterar o PIN no perfil.",
       usuario: formatarUsuario(usuario),
     });
   } catch (error) {
