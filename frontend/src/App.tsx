@@ -63,6 +63,12 @@ const APIsOpenAI = lazyWithReload(() => import("./pages/APIsOpenAI"));
 const RelatorioDiarioExecutivo = lazyWithReload(
   () => import("./pages/RelatorioDiarioExecutivo"),
 );
+const TreinamentoTerminalPublico = lazyWithReload(
+  () => import("./pages/TreinamentoTerminalPublico"),
+);
+const TreinamentosTerminal = lazyWithReload(
+  () => import("./pages/TreinamentosTerminal"),
+);
 
 function CarregandoPagina() {
   return <SkeletonPage />;
@@ -75,6 +81,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
+          <Route path="/treinamento-terminal" element={<TreinamentoTerminalPublico />} />
           <Route
             path="/alterar-senha"
             element={
@@ -129,6 +136,20 @@ export default function App() {
               }
             />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
+            <Route
+              path="treinamentos-terminal"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <TreinamentosTerminal />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="relatorio-diario"
               element={
