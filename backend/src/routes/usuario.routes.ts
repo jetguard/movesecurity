@@ -10,6 +10,7 @@ import {
   listarUsuarios,
   redefinirSenhaUsuario,
   resetarDispositivoUsuario,
+  resetarPinUsuario,
   atualizarPinOperacional,
   atualizarUsuario,
 } from "../controllers/usuario.controller";
@@ -53,6 +54,7 @@ router.put("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), atualizarUsu
 router.put("/:id/status", autenticarUsuario, autorizarPerfis(acessoTotal), alterarStatusUsuario);
 router.put("/:id/senha", autenticarUsuario, autorizarPerfis(acessoTotal), redefinirSenhaUsuario);
 router.put("/:id/dispositivo/reset", autenticarUsuario, autorizarPerfis(acessoTotal), resetarDispositivoUsuario);
+router.put("/:id/pin/reset", autenticarUsuario, autorizarPerfis(["SUPER_ADMIN"]), resetarPinUsuario);
 router.delete("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirUsuario);
 
 export default router;

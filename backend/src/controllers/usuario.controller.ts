@@ -23,6 +23,7 @@ const selectUsuario = {
   statusUsuario: true,
   deveAlterarSenha: true,
   senhaAlteradaEm: true,
+  pinOperacionalHash: true,
   pinOperacionalCriadoEm: true,
   pinOperacionalAtualizadoEm: true,
   ultimoAcesso: true,
@@ -34,7 +35,8 @@ function formatarUsuario(usuario: any) {
   return {
     ...usuario,
     unidadesPermitidas: normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade),
-    possuiPinOperacional: Boolean(usuario.pinOperacionalCriadoEm || usuario.pinOperacionalAtualizadoEm),
+    pinOperacionalHash: undefined,
+    possuiPinOperacional: Boolean(usuario.pinOperacionalHash || usuario.pinOperacionalCriadoEm || usuario.pinOperacionalAtualizadoEm),
   };
 }
 
@@ -305,6 +307,62 @@ export async function resetarDispositivoUsuario(req: AuthRequest, res: Response)
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao resetar dispositivo" });
+  }
+}
+
+export async function resetarPinUsuario(req: AuthRequest, res: Response) {
+  try {
+    if (req.usuarioPerfil !== "SUPER_ADMIN") {
+      return res.status(403).json({ error: "Somente Super Admin pode resetar PIN operacional." });
+    }
+
+    const { id } = req.params;
+    const usuarioAnterior = await prisma.usuario.findUnique({
+      where: { id: Number(id) },
+      select: selectUsuario,
+    });
+
+    if (!usuarioAnterior) {
+      return res.status(404).json({ error: "Usuario nao encontrado" });
+    }
+
+    const usuario = await prisma.usuario.update({
+      where: { id: Number(id) },
+      data: {
+        pinOperacionalHash: null,
+        pinOperacionalCriadoEm: null,
+        pinOperacionalAtualizadoEm: null,
+        pinTentativasInvalidas: 0,
+        pinBloqueadoAte: null,
+      },
+      select: selectUsuario,
+    });
+
+    await registrarLog({
+      req,
+      acao: "Reset de PIN operacional",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosAnteriores: {
+        id: usuarioAnterior.id,
+        email: usuarioAnterior.email,
+        possuiPinOperacional: Boolean(usuarioAnterior.pinOperacionalCriadoEm || usuarioAnterior.pinOperacionalAtualizadoEm),
+      },
+      dadosNovos: {
+        id: usuario.id,
+        email: usuario.email,
+        possuiPinOperacional: false,
+        resetadoEm: new Date().toISOString(),
+      },
+    });
+
+    return res.json({
+      mensagem: "PIN operacional resetado. O usuario devera cadastrar um novo PIN no perfil.",
+      usuario: formatarUsuario(usuario),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao resetar PIN operacional" });
   }
 }
 

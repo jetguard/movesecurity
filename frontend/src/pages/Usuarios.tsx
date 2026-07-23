@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
+import { podeSuperAdmin } from "../utils/permissoes";
 
 type Usuario = {
   id: number;
@@ -14,6 +15,7 @@ type Usuario = {
   empresa?: string;
   perfilAcesso: string;
   statusUsuario: string;
+  possuiPinOperacional?: boolean;
   ultimoAcesso?: string | null;
 };
 
@@ -52,6 +54,7 @@ export default function Usuarios() {
   const [filtroStatus, setFiltroStatus] = useState("");
   const [senhaReset, setSenhaReset] = useState("");
   const [confirmarReset, setConfirmarReset] = useState("");
+  const superAdmin = podeSuperAdmin();
 
   async function carregarUsuarios() {
     const response = await api.get("/usuarios");
@@ -195,6 +198,16 @@ export default function Usuarios() {
     alert("Dispositivo resetado. O próximo login do usuário vinculará o novo computador.");
   }
 
+  async function resetarPin(usuario?: Usuario | null) {
+    const alvo = usuario || editando;
+    if (!alvo) return;
+    if (!confirm(`Deseja resetar o PIN operacional de ${alvo.nome}? O usuário deverá cadastrar um novo PIN no perfil.`)) return;
+
+    await api.put(`/usuarios/${alvo.id}/pin/reset`);
+    alert("PIN operacional resetado com sucesso.");
+    carregarUsuarios();
+  }
+
   async function excluirUsuario(usuario: Usuario) {
     if (!confirm(`Deseja excluir o usuário ${usuario.nome}?`)) return;
     await api.delete(`/usuarios/${usuario.id}`);
@@ -301,6 +314,18 @@ export default function Usuarios() {
             </div>
           )}
 
+          {editando && superAdmin && (
+            <div className="rounded-lg border bg-amber-50 p-4">
+              <p className="font-semibold mb-2">PIN operacional</p>
+              <p className="mb-3 text-sm text-slate-600">
+                Status atual: {editando.possuiPinOperacional ? "PIN cadastrado" : "PIN pendente"}. O reset remove o PIN atual e libera o cadastro de um novo PIN pelo usuário no perfil.
+              </p>
+              <button type="button" onClick={() => resetarPin(editando)} className="rounded-lg bg-amber-700 px-4 py-2 text-white">
+                Resetar PIN
+              </button>
+            </div>
+          )}
+
           {editando && ["OPERADOR", "ANALISTA", "TECNICO_MANUTENCAO"].includes(editando.perfilAcesso) && (
             <div className="rounded-lg border bg-blue-50 p-4">
               <p className="font-semibold mb-2">Dispositivo autorizado</p>
@@ -333,6 +358,7 @@ export default function Usuarios() {
               <th className="p-3">Unidade</th>
               <th className="p-3">Perfil</th>
               <th className="p-3">Status</th>
+              <th className="p-3">PIN</th>
               <th className="p-3">Último acesso</th>
               <th className="p-3">Ações</th>
             </tr>
@@ -349,10 +375,16 @@ export default function Usuarios() {
                 <td className="p-3">{usuario.unidadesPermitidas?.join(", ") || usuario.unidade}</td>
                 <td className="p-3">{usuario.perfilAcesso}</td>
                 <td className="p-3">{usuario.statusUsuario}</td>
+                <td className="p-3">
+                  <span className={`rounded-full px-2 py-1 text-xs font-semibold ${usuario.possuiPinOperacional ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {usuario.possuiPinOperacional ? "Cadastrado" : "Pendente"}
+                  </span>
+                </td>
                 <td className="p-3">{usuario.ultimoAcesso ? new Date(usuario.ultimoAcesso).toLocaleString() : "Nunca"}</td>
                 <td className="p-3">
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => editarUsuario(usuario)} className="rounded bg-blue-600 px-3 py-1 text-white">Editar</button>
+                    {superAdmin && <button onClick={() => resetarPin(usuario)} className="rounded bg-slate-700 px-3 py-1 text-white">Resetar PIN</button>}
                     {usuario.perfilAcesso !== "SUPER_ADMIN" && (
                       <>
                         <button onClick={() => alterarStatus(usuario, usuario.statusUsuario === "ATIVO" ? "BLOQUEADO" : "ATIVO")} className="rounded bg-amber-600 px-3 py-1 text-white">
