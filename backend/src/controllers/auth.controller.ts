@@ -534,7 +534,14 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
     if (usuario.pinOperacionalHash) {
       await validarPinOperacional(usuario.id, String(pinOperacional || senha || ""));
     } else {
-      const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
+      const senhaInformada = String(senha || "").trim();
+      if (!senhaInformada) {
+        return res.status(400).json({
+          error: "PIN operacional ainda nao cadastrado. Acesse seu perfil e crie um PIN para desbloquear a sessao.",
+        });
+      }
+
+      const senhaCorreta = await bcrypt.compare(senhaInformada, usuario.senha);
       if (!senhaCorreta) {
         return res.status(400).json({ error: "Senha invalida." });
       }
