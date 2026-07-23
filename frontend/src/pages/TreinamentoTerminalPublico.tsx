@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, FileText, Pause, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, FileText, Maximize2, Pause, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
 
 type Config = {
   titulo: string;
@@ -189,6 +189,12 @@ export default function TreinamentoTerminalPublico() {
     }
   }
 
+  function abrirTelaCheia() {
+    const video = videoRef.current;
+    if (!video) return;
+    video.requestFullscreen?.().catch(() => setMensagem("Nao foi possivel abrir o video em tela cheia."));
+  }
+
   function finalizarVideo() {
     maiorTempoRef.current = Math.max(maiorTempoRef.current, videoRef.current?.duration || tempoAtual);
     setTocando(false);
@@ -257,18 +263,18 @@ export default function TreinamentoTerminalPublico() {
 
   return (
     <main className="min-h-screen bg-slate-950 text-white">
-      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-8 sm:px-6 lg:px-8">
-        <div className="mb-8 flex items-center justify-between gap-4">
+      <section className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
+        <div className="mb-5 flex items-center justify-between gap-4 sm:mb-8">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-300">JetGuard Movecta</p>
-            <h1 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Treinamento de acesso ao terminal</h1>
+            <p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-300">Movecta</p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Treinamento de acesso ao terminal</h1>
           </div>
-          <ShieldCheck className="h-10 w-10 text-blue-300" />
+          <ShieldCheck className="h-9 w-9 shrink-0 text-blue-300 sm:h-10 sm:w-10" />
         </div>
 
-        <div className="mb-6 grid gap-3 sm:grid-cols-4">
+        <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-4 sm:gap-3">
           {["Orientacoes", "Dados", "Video", "Declaracao"].map((item, index) => (
-            <div key={item} className={`rounded-xl border px-4 py-3 text-sm font-bold ${etapa >= index ? "border-blue-400/50 bg-blue-500/15 text-blue-100" : "border-slate-800 bg-slate-900 text-slate-500"}`}>
+            <div key={item} className={`rounded-xl border px-3 py-2 text-xs font-bold sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "border-blue-400/50 bg-blue-500/15 text-blue-100" : "border-slate-800 bg-slate-900 text-slate-500"}`}>
               {index + 1}. {item}
             </div>
           ))}
@@ -277,19 +283,19 @@ export default function TreinamentoTerminalPublico() {
         {mensagem && <div className="mb-5 rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-100">{mensagem}</div>}
 
         {etapa === 0 && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-2xl sm:p-6">
             <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-300">{config?.portaria || "Portaria de acesso"}</p>
-            <h2 className="mt-3 text-2xl font-black">Antes de iniciar</h2>
+            <h2 className="mt-3 text-xl font-black sm:text-2xl">Antes de iniciar</h2>
             <div className="mt-5 grid gap-4">
               {(config?.resumo || []).map((texto) => (
                 <p key={texto} className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm leading-6 text-slate-300">{texto}</p>
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => setPortariaAberta(true)} className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100">
+              <button onClick={() => setPortariaAberta(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100 sm:w-auto">
                 <FileText size={18} /> Ver Portaria
               </button>
-              <button onClick={() => setEtapa(1)} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500">
+              <button onClick={() => setEtapa(1)} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 sm:w-auto">
                 Entendi, avancar
               </button>
             </div>
@@ -297,8 +303,8 @@ export default function TreinamentoTerminalPublico() {
         )}
 
         {etapa === 1 && (
-          <form onSubmit={iniciar} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl">
-            <h2 className="text-2xl font-black">Identificacao do participante</h2>
+          <form onSubmit={iniciar} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-2xl sm:p-6">
+            <h2 className="text-xl font-black sm:text-2xl">Identificacao do participante</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className={labelClasse()}>Nome completo<input className={`${campoClasse()} mt-2`} value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required /></label>
               <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} required /></label>
@@ -309,10 +315,10 @@ export default function TreinamentoTerminalPublico() {
               <label className={labelClasse()}>Telefone / WhatsApp<input className={`${campoClasse()} mt-2`} value={form.telefone} onChange={(e) => alterar("telefone", e.target.value)} required /></label>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(0)} className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100">
+              <button type="button" onClick={() => voltarPara(0)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100 sm:w-auto">
                 <ArrowLeft size={18} /> Voltar para orientacoes
               </button>
-              <button disabled={carregando} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:opacity-60">
+              <button disabled={carregando} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:opacity-60 sm:w-auto">
                 {carregando ? "Verificando..." : "Avancar para o video"}
               </button>
             </div>
@@ -320,10 +326,10 @@ export default function TreinamentoTerminalPublico() {
         )}
 
         {etapa === 2 && treinamento && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl">
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-black">Video obrigatorio</h2>
+                <h2 className="text-xl font-black sm:text-2xl">Video obrigatorio</h2>
                 <p className="mt-1 text-sm text-slate-400">O video nao pode ser acelerado nem avancado manualmente.</p>
               </div>
               <div className="rounded-xl border border-slate-700 bg-slate-950 px-4 py-3 text-sm font-bold text-slate-200">
@@ -349,20 +355,23 @@ export default function TreinamentoTerminalPublico() {
               <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(100, ((tempoAtual || 0) / Math.max(1, duracao || 1)) * 100)}%` }} />
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(1)} className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100">
+              <button type="button" onClick={() => voltarPara(1)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100 sm:w-auto">
                 <ArrowLeft size={18} /> Voltar para dados
               </button>
-              <button onClick={alternarVideo} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500">
+              <button onClick={alternarVideo} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 sm:w-auto">
                 {tocando ? <Pause size={18} /> : <Play size={18} />}
                 {tocando ? "Pausar" : "Continuar"}
+              </button>
+              <button type="button" onClick={abrirTelaCheia} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-5 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20 sm:w-auto">
+                <Maximize2 size={18} /> Tela cheia
               </button>
             </div>
           </div>
         )}
 
         {etapa === 3 && treinamento && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-6 shadow-2xl">
-            <h2 className="text-2xl font-black">Declaracao e assinatura</h2>
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-2xl sm:p-6">
+            <h2 className="text-xl font-black sm:text-2xl">Declaracao e assinatura</h2>
             <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm text-slate-300">
               <input type="checkbox" className="mt-1 h-5 w-5 accent-blue-600" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
               <span>Declaro que assisti integralmente ao video, compreendi as orientacoes apresentadas e estou ciente das regras de acesso, seguranca e conduta aplicaveis ao terminal.</span>
@@ -377,10 +386,10 @@ export default function TreinamentoTerminalPublico() {
               <canvas ref={canvasRef} width={900} height={220} className="h-48 w-full touch-none rounded-xl bg-slate-900 ring-1 ring-slate-800" onPointerDown={iniciarAssinatura} onPointerMove={desenhar} onPointerUp={() => setAssinando(false)} onPointerLeave={() => setAssinando(false)} />
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(2)} className="inline-flex items-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100">
+              <button type="button" onClick={() => voltarPara(2)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-blue-100 sm:w-auto">
                 <ArrowLeft size={18} /> Voltar para video
               </button>
-              <button disabled={carregando} onClick={concluir} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:opacity-60">
+              <button disabled={carregando} onClick={concluir} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:opacity-60 sm:w-auto">
                 <FileCheck2 size={18} /> Emitir certificado
               </button>
             </div>

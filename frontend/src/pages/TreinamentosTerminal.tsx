@@ -29,21 +29,25 @@ function data(valor?: string | null) {
   return valor ? new Date(valor).toLocaleString("pt-BR") : "-";
 }
 
+function estaConcluido(status?: string | null) {
+  return String(status || "").toLowerCase().startsWith("conclu");
+}
+
 function progresso(item: Treinamento) {
-  if (item.status === "Concluído") return 100;
+  if (estaConcluido(item.status)) return 100;
   if (!item.duracaoSegundos) return 0;
   return Math.min(99, Math.round((item.progressoSegundos / item.duracaoSegundos) * 100));
 }
 
 function classeStatus(status: string) {
-  if (status === "Concluído") return "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+  if (estaConcluido(status)) return "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
   return "border-blue-400/40 bg-blue-500/10 text-blue-700 dark:text-blue-200";
 }
 
 const cardsIndicadores: Array<[string, keyof ReturnType<typeof criarIndicadores>, LucideIcon]> = [
   ["Total", "total", Award],
   ["Em andamento", "andamento", Clock3],
-  ["Concluídos", "concluidos", CheckCircle2],
+  ["Concluidos", "concluidos", CheckCircle2],
   ["Certificados", "certificados", Download],
 ];
 
@@ -51,7 +55,7 @@ function criarIndicadores(lista: Treinamento[]) {
   return {
     total: lista.length,
     andamento: lista.filter((item) => item.status === "Em andamento").length,
-    concluidos: lista.filter((item) => item.status === "Concluído").length,
+    concluidos: lista.filter((item) => estaConcluido(item.status)).length,
     certificados: lista.filter((item) => item.certificadoUrl).length,
   };
 }
@@ -79,7 +83,7 @@ export default function TreinamentosTerminal() {
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     return lista.filter((item) => {
-      const okStatus = status === "Todos" || item.status === status;
+      const okStatus = status === "Todos" || item.status === status || (status === "Concluido" && estaConcluido(item.status));
       const okBusca = !termo || [item.nomeCompleto, item.cpf, item.email, item.empresa, item.codigo].join(" ").toLowerCase().includes(termo);
       return okStatus && okBusca;
     });
@@ -92,11 +96,11 @@ export default function TreinamentosTerminal() {
       <section className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-600 dark:text-blue-300">Acesso ao terminal</p>
-          <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">Treinamentos públicos</h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Acompanhe participantes, progresso do vídeo, certificados e envio por e-mail.</p>
+          <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">Treinamentos publicos</h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Acompanhe participantes, progresso do video, certificados e envio por e-mail.</p>
         </div>
         <a href="/treinamento-terminal" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700">
-          <PlayCircle size={18} /> Abrir página pública
+          <PlayCircle size={18} /> Abrir pagina publica
         </a>
       </section>
 
@@ -121,7 +125,7 @@ export default function TreinamentosTerminal() {
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white">
             <option>Todos</option>
             <option>Em andamento</option>
-            <option>Concluído</option>
+            <option value="Concluido">Concluido</option>
           </select>
         </div>
 
@@ -134,7 +138,7 @@ export default function TreinamentosTerminal() {
                 <th className="px-4 py-3">Etapa</th>
                 <th className="px-4 py-3">Progresso</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Último acesso</th>
+                <th className="px-4 py-3">Ultimo acesso</th>
                 <th className="px-4 py-3">Certificado</th>
                 <th className="px-4 py-3 text-right">Acoes</th>
               </tr>
@@ -169,7 +173,7 @@ export default function TreinamentosTerminal() {
                         <Download size={14} /> PDF
                       </a>
                     ) : (
-                      <span className="text-xs text-slate-500">Não emitido</span>
+                      <span className="text-xs text-slate-500">Nao emitido</span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">

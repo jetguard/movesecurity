@@ -66,6 +66,9 @@ const RelatorioDiarioExecutivo = lazyWithReload(
 const TreinamentoTerminalPublico = lazyWithReload(
   () => import("./pages/TreinamentoTerminalPublico"),
 );
+const ValidarCertificadoTreinamento = lazyWithReload(
+  () => import("./pages/ValidarCertificadoTreinamento"),
+);
 const TreinamentosTerminal = lazyWithReload(
   () => import("./pages/TreinamentosTerminal"),
 );
@@ -82,6 +85,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
           <Route path="/treinamento-terminal" element={<TreinamentoTerminalPublico />} />
+          <Route path="/validar-certificado/:token" element={<ValidarCertificadoTreinamento />} />
           <Route
             path="/alterar-senha"
             element={

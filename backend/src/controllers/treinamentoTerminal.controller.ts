@@ -3,13 +3,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { Request, Response } from "express";
 import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
-import { desenharCabecalhoPadrao, desenharRodapeAssinaturaPadrao, pdfTheme } from "../services/documentoPdfBase.service";
+import { pdfAssets } from "../services/documentoPdfBase.service";
 import { enviarEmail } from "../services/email.service";
 
 const resumoPortaria = [
-  "A Portaria ALF/STS nº 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdição da Alfândega da Receita Federal do Brasil do Porto de Santos à conclusão do curso básico de conhecimentos aduaneiros previsto na Portaria Coana nº 185/2026.",
+  "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdicao da Alfandega da Receita Federal do Brasil do Porto de Santos a conclusao do curso basico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
 ];
 
 function limparCpf(cpf: string) {
@@ -28,12 +29,36 @@ function videoPadrao() {
   return process.env.TREINAMENTO_TERMINAL_VIDEO_URL || "/videos/treinamento-terminal.mp4";
 }
 
+function appPublicUrl() {
+  return String(process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.FRONTEND_URL || "https://movecta.jetguard.com.br").replace(/\/$/, "");
+}
+
+function urlValidacaoCertificado(token: string) {
+  return `${appPublicUrl()}/validar-certificado/${token}`;
+}
+
+function treinamentoConcluido(status?: string | null) {
+  return String(status || "").toLowerCase().startsWith("conclu");
+}
+
 function idade(data: Date) {
   const hoje = new Date();
   let anos = hoje.getFullYear() - data.getFullYear();
   const mes = hoje.getMonth() - data.getMonth();
   if (mes < 0 || (mes === 0 && hoje.getDate() < data.getDate())) anos -= 1;
   return anos;
+}
+
+function dataCurta(data: Date) {
+  return data.toLocaleDateString("pt-BR");
+}
+
+function dataPorExtenso(data: Date) {
+  return data.toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 async function proximoCodigo() {
@@ -52,51 +77,49 @@ function arquivoCertificado(token: string) {
   return path.join(pasta, `certificado-${token}.pdf`);
 }
 
-function escreverCampo(doc: PDFKit.PDFDocument, rotulo: string, valor: string, x: number, y: number, width = 240) {
-  doc.roundedRect(x, y, width, 46, 8).fill("#f8fafc").strokeColor("#dbe4f0").stroke();
-  doc.fillColor(pdfTheme.muted).fontSize(7).text(rotulo.toUpperCase(), x + 10, y + 9, { width: width - 20 });
-  doc.fillColor(pdfTheme.primary).fontSize(10).text(valor || "-", x + 10, y + 24, { width: width - 20, ellipsis: true });
+function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, largura: number, nome: string, cargo: string) {
+  doc.moveTo(x, y).lineTo(x + largura, y).strokeColor("#2f6bb2").lineWidth(1).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9).text(nome, x, y + 12, { width: largura, align: "center" });
+  doc.fillColor("#111827").font("Helvetica").fontSize(8).text(cargo, x, y + 27, { width: largura, align: "center" });
 }
 
 async function gerarCertificadoPdf(treinamento: any) {
   const destino = arquivoCertificado(treinamento.token);
-  const doc = new PDFDocument({ size: "A4", margin: 42, bufferPages: true, margins: { top: 130, left: 42, right: 42, bottom: 120 } });
+  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0, bufferPages: true });
   const stream = fs.createWriteStream(destino);
   doc.pipe(stream);
 
-  desenharCabecalhoPadrao(doc, {
-    titulo: "Certificado de treinamento",
-    subtitulo: "Acesso ao terminal - ciência operacional",
-    codigo: treinamento.codigo,
-    unidade: "Movecta",
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+  const concluidoEm = new Date(treinamento.concluidoEm || new Date());
+  const validacaoUrl = urlValidacaoCertificado(treinamento.token);
+  const qrCodeDataUrl = await QRCode.toDataURL(validacaoUrl, {
+    width: 220,
+    margin: 1,
+    color: { dark: "#0f172a", light: "#ffffff" },
+  });
+  const qrCode = Buffer.from(String(qrCodeDataUrl).split(",")[1], "base64");
+
+  doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
+  doc.rect(0, 0, pageWidth, 142).fill("#356bad");
+  doc.save();
+  doc.fillColor("#ffffff").path("M300 142 L430 30 C472 -8 534 15 536 78 L536 132 C536 139 542 144 548 138 L674 32 C720 -7 783 17 785 80 L785 142 Z").fill();
+  doc.restore();
+
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text("CERTIFICADO", 44, 58, { width: 270, lineBreak: false });
+  doc.fillColor("#dbeafe").font("Helvetica-Bold").fontSize(9).text(treinamento.codigo, pageWidth - 210, 38, { width: 166, align: "right" });
+
+  const textoPrincipal = `Certificamos que o(a) colaborador(a) ${treinamento.nomeCompleto} participou do programa Portas Abertas da Movecta S.A em ${dataCurta(concluidoEm)}.`;
+  doc.fillColor("#111827").font("Helvetica").fontSize(18).text(textoPrincipal, 178, 198, {
+    width: 500,
+    align: "center",
+    lineGap: 8,
   });
 
-  doc.fillColor(pdfTheme.primary).fontSize(20).text("Certificado de Conclusão", 42, doc.y, { width: 511, align: "center" });
-  doc.moveDown(0.8);
-  doc.fillColor("#334155").fontSize(11).text(
-    `Certificamos que ${treinamento.nomeCompleto} concluiu o treinamento público de acesso ao terminal, declarou ciência das orientações apresentadas e registrou assinatura eletrônica de conformidade.`,
-    62,
-    doc.y,
-    { width: 471, align: "center" }
-  );
-
-  const y = doc.y + 28;
-  escreverCampo(doc, "CPF", treinamento.cpf, 42, y);
-  escreverCampo(doc, "Empresa", treinamento.empresa, 313, y);
-  escreverCampo(doc, "Cargo/Função", treinamento.cargo, 42, y + 58);
-  escreverCampo(doc, "E-mail", treinamento.email, 313, y + 58);
-  escreverCampo(doc, "Concluído em", new Date(treinamento.concluidoEm || new Date()).toLocaleString("pt-BR"), 42, y + 116);
-  escreverCampo(doc, "Código do certificado", treinamento.codigo, 313, y + 116);
-
-  doc.y = y + 190;
-  doc.fillColor(pdfTheme.primary).fontSize(12).text("Declaração", 42, doc.y);
-  doc.moveDown(0.4);
-  doc.fillColor("#475569").fontSize(10).text(
-    "O participante declarou ter assistido integralmente ao conteúdo de orientação, compreendido as regras de acesso e assumido compromisso de cumprir as normas de segurança, controle e conduta aplicáveis ao terminal.",
-    42,
-    doc.y,
-    { width: 511, align: "justify" }
-  );
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(15).text(`Guaruja, ${dataPorExtenso(concluidoEm)}.`, 210, 295, {
+    width: 430,
+    align: "center",
+  });
 
   if (treinamento.assinaturaDataUrl) {
     const assinaturaBase64 = String(treinamento.assinaturaDataUrl).split(",")[1];
@@ -104,14 +127,29 @@ async function gerarCertificadoPdf(treinamento: any) {
       const buffer = Buffer.from(assinaturaBase64, "base64");
       const assinaturaPng = path.join(path.dirname(destino), `assinatura-${treinamento.token}.png`);
       fs.writeFileSync(assinaturaPng, buffer);
-      doc.roundedRect(142, doc.y + 20, 310, 86, 8).strokeColor("#dbe4f0").stroke();
-      doc.image(assinaturaPng, 160, doc.y + 32, { fit: [274, 50], align: "center" });
-      doc.fillColor(pdfTheme.muted).fontSize(8).text("Assinatura eletrônica do participante", 142, doc.y + 92, { width: 310, align: "center" });
+      doc.image(assinaturaPng, 176, 356, { fit: [240, 52], align: "center" });
       fs.rmSync(assinaturaPng, { force: true });
     }
   }
 
-  desenharRodapeAssinaturaPadrao(doc, { pagina: 1, totalPaginas: 1 });
+  desenharLinhaAssinatura(doc, 158, 415, 275, treinamento.nomeCompleto, "Participante");
+  desenharLinhaAssinatura(doc, 472, 415, 275, "Movecta S.A", "Responsavel pelo treinamento");
+
+  doc.image(qrCode, 680, 248, { width: 82, height: 82 });
+  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDACAO", 676, 336, { width: 90, align: "center" });
+  doc.fillColor("#64748b").font("Helvetica").fontSize(6.5).text("Aponte a camera para confirmar a autenticidade deste certificado na plataforma.", 664, 348, { width: 116, align: "center", lineGap: 1 });
+
+  doc.moveTo(206, 505).lineTo(580, 505).strokeColor("#86b91d").lineWidth(1).stroke();
+  doc.circle(206, 505, 3).fill("#86b91d");
+  doc.circle(580, 505, 3).fill("#86b91d");
+
+  if (fs.existsSync(pdfAssets.logo)) {
+    doc.image(pdfAssets.logo, 610, 488, { fit: [150, 46], align: "center" });
+  } else {
+    doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
+  }
+
+  doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validacao: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
@@ -142,7 +180,7 @@ function respostaPublica(treinamento: any) {
 export function configTreinamentoTerminal(req: Request, res: Response) {
   return res.json({
     titulo: "Treinamento de acesso ao terminal",
-    portaria: "Portaria ALF/STS nº 205, de 22 de junho de 2026",
+    portaria: "Portaria ALF/STS no 205, de 22 de junho de 2026",
     resumo: resumoPortaria,
     videoUrl: videoPadrao(),
   });
@@ -155,11 +193,11 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
     const dataNascimento = new Date(req.body.dataNascimento);
 
     if (!texto(req.body.nomeCompleto) || cpf.length !== 11 || !email || Number.isNaN(dataNascimento.getTime())) {
-      return res.status(400).json({ error: "Informe nome completo, CPF válido, e-mail e data de nascimento." });
+      return res.status(400).json({ error: "Informe nome completo, CPF valido, e-mail e data de nascimento." });
     }
 
     if (idade(dataNascimento) < 18) {
-      return res.status(400).json({ error: "O treinamento é recomendado apenas para maiores de 18 anos." });
+      return res.status(400).json({ error: "O treinamento e recomendado apenas para maiores de 18 anos." });
     }
 
     const existente = await prisma.treinamentoTerminal.findFirst({
@@ -202,8 +240,8 @@ export async function atualizarProgressoTreinamento(req: Request, res: Response)
   try {
     const token = String(req.params.token || "");
     const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
-    if (treinamento.status === "Concluído") return res.json({ treinamento: respostaPublica(treinamento) });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento nao encontrado." });
+    if (treinamentoConcluido(treinamento.status)) return res.json({ treinamento: respostaPublica(treinamento) });
 
     const progresso = Math.max(0, Math.floor(Number(req.body.progressoSegundos || 0)));
     const duracao = Math.max(treinamento.duracaoSegundos || 0, Math.floor(Number(req.body.duracaoSegundos || 0)));
@@ -231,11 +269,11 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
   try {
     const token = String(req.params.token || "");
     const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
-    if (!treinamento.videoConcluido) return res.status(400).json({ error: "Conclua o vídeo antes de emitir o certificado." });
-    if (!req.body.aceiteDeclaracao) return res.status(400).json({ error: "Confirme a declaração de ciência." });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento nao encontrado." });
+    if (!treinamento.videoConcluido) return res.status(400).json({ error: "Conclua o video antes de emitir o certificado." });
+    if (!req.body.aceiteDeclaracao) return res.status(400).json({ error: "Confirme a declaracao de ciencia." });
     if (!texto(req.body.assinaturaDataUrl).startsWith("data:image/png;base64,")) {
-      return res.status(400).json({ error: "Informe a assinatura eletrônica." });
+      return res.status(400).json({ error: "Informe a assinatura eletronica." });
     }
 
     let atualizado = await prisma.treinamentoTerminal.update({
@@ -244,7 +282,7 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
         aceiteDeclaracao: true,
         assinaturaDataUrl: texto(req.body.assinaturaDataUrl),
         etapa: "concluido",
-        status: "Concluído",
+        status: "Concluido",
         concluidoEm: treinamento.concluidoEm || new Date(),
         ultimoAcessoEm: new Date(),
       },
@@ -254,8 +292,8 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
     const email = await enviarEmail({
       to: atualizado.email,
       subject: `Certificado de treinamento - ${atualizado.codigo}`,
-      text: `Olá, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.`,
-      html: `<p>Olá, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.</p>`,
+      text: `Ola, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusao do treinamento de acesso ao terminal.`,
+      html: `<p>Ola, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusao do treinamento de acesso ao terminal.</p>`,
       attachments: [{ filename: `certificado-${atualizado.codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
     });
 
@@ -279,10 +317,30 @@ export async function baixarCertificadoTreinamento(req: Request, res: Response) 
   const token = String(req.params.token || "");
   const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
   if (!treinamento?.certificadoArquivo || !fs.existsSync(treinamento.certificadoArquivo)) {
-    return res.status(404).json({ error: "Certificado não encontrado." });
+    return res.status(404).json({ error: "Certificado nao encontrado." });
   }
 
   return res.download(treinamento.certificadoArquivo, `certificado-${treinamento.codigo.replace("/", "-")}.pdf`);
+}
+
+export async function validarCertificadoTreinamento(req: Request, res: Response) {
+  const token = String(req.params.token || "");
+  const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
+  if (!treinamento || !treinamentoConcluido(treinamento.status) || !treinamento.certificadoArquivo) {
+    return res.status(404).json({ error: "Certificado nao encontrado ou ainda nao emitido." });
+  }
+
+  return res.json({
+    valido: true,
+    codigo: treinamento.codigo,
+    nomeCompleto: treinamento.nomeCompleto,
+    cpf: treinamento.cpf,
+    empresa: treinamento.empresa,
+    cargo: treinamento.cargo,
+    email: treinamento.email,
+    concluidoEm: treinamento.concluidoEm,
+    certificadoUrl: `/api/public/treinamento-terminal/${treinamento.token}/certificado`,
+  });
 }
 
 export async function listarTreinamentosTerminal(req: AuthRequest, res: Response) {
@@ -301,10 +359,10 @@ export async function listarTreinamentosTerminal(req: AuthRequest, res: Response
 export async function excluirTreinamentoTerminal(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento invalido." });
 
     const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { id } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento nao encontrado." });
 
     if (treinamento.certificadoArquivo && fs.existsSync(treinamento.certificadoArquivo)) {
       fs.rmSync(treinamento.certificadoArquivo, { force: true });
