@@ -174,21 +174,42 @@
   .dark .treinamento-terminal-publico {
     color: #07132f !important;
     color-scheme: light;
+    font-family:
+      "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
   }
 
   .treinamento-terminal-publico .terminal-panel,
   .dark .treinamento-terminal-publico .terminal-panel {
-    background-color: #ffffff !important;
-    border-color: #dbeafe !important;
+    background:
+      linear-gradient(180deg, rgb(255 255 255 / 0.96), rgb(248 251 255 / 0.96))
+        !important;
+    border-color: rgb(191 219 254 / 0.95) !important;
     color: #07132f !important;
-    box-shadow: 0 22px 55px rgb(15 23 42 / 0.16) !important;
+    box-shadow:
+      0 24px 60px rgb(15 23 42 / 0.15),
+      inset 0 1px 0 rgb(255 255 255 / 0.95) !important;
   }
 
   .treinamento-terminal-publico .terminal-label,
   .treinamento-terminal-publico label,
   .dark .treinamento-terminal-publico .terminal-label,
   .dark .treinamento-terminal-publico label {
-    color: #07132f !important;
+    color: #102a56 !important;
+  }
+
+  .treinamento-terminal-publico .terminal-label,
+  .dark .treinamento-terminal-publico .terminal-label {
+    letter-spacing: 0;
+    line-height: 1.2;
+    text-shadow: 0 1px 0 rgb(255 255 255 / 0.8);
+  }
+
+  .treinamento-terminal-publico .terminal-eyebrow,
+  .dark .treinamento-terminal-publico .terminal-eyebrow {
+    letter-spacing: 0;
   }
 
   .treinamento-terminal-publico .terminal-input,
@@ -200,8 +221,30 @@
   .dark .treinamento-terminal-publico textarea,
   .dark .treinamento-terminal-publico select {
     background-color: #ffffff !important;
-    border-color: #2563eb !important;
+    border-color: #9ec5fe !important;
     color: #07132f !important;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.9),
+      0 12px 26px rgb(15 23 42 / 0.07) !important;
+    font-family:
+      "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      sans-serif !important;
+    letter-spacing: 0 !important;
+    line-height: 1.35 !important;
+  }
+
+  .treinamento-terminal-publico .terminal-input:focus,
+  .treinamento-terminal-publico input:focus,
+  .treinamento-terminal-publico textarea:focus,
+  .treinamento-terminal-publico select:focus,
+  .dark .treinamento-terminal-publico .terminal-input:focus,
+  .dark .treinamento-terminal-publico input:focus,
+  .dark .treinamento-terminal-publico textarea:focus,
+  .dark .treinamento-terminal-publico select:focus {
+    border-color: #1d4ed8 !important;
+    box-shadow:
+      0 0 0 4px rgb(37 99 235 / 0.16),
+      0 16px 34px rgb(15 23 42 / 0.09) !important;
   }
 
   .treinamento-terminal-publico input::placeholder,
@@ -209,6 +252,17 @@
   .dark .treinamento-terminal-publico input::placeholder,
   .dark .treinamento-terminal-publico textarea::placeholder {
     color: #475569 !important;
+  }
+
+  .treinamento-terminal-publico input:-webkit-autofill,
+  .treinamento-terminal-publico input:-webkit-autofill:hover,
+  .treinamento-terminal-publico input:-webkit-autofill:focus,
+  .dark .treinamento-terminal-publico input:-webkit-autofill,
+  .dark .treinamento-terminal-publico input:-webkit-autofill:hover,
+  .dark .treinamento-terminal-publico input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+    -webkit-text-fill-color: #07132f !important;
+    caret-color: #07132f !important;
   }
 
   .treinamento-terminal-publico input[type="checkbox"],
@@ -225,9 +279,12 @@
 
   .treinamento-terminal-publico .terminal-info-card,
   .dark .treinamento-terminal-publico .terminal-info-card {
-    background-color: #ffffff !important;
-    border-color: #bfdbfe !important;
+    background-color: rgb(255 255 255 / 0.96) !important;
+    border-color: #9ec5fe !important;
     color: #07132f !important;
+    box-shadow:
+      0 12px 28px rgb(15 23 42 / 0.06),
+      inset 0 1px 0 rgb(255 255 255 / 0.9) !important;
   }
 
   .treinamento-terminal-publico .terminal-message,
@@ -242,6 +299,7 @@
     background-color: #1d4ed8 !important;
     border-color: #1d4ed8 !important;
     color: #ffffff !important;
+    box-shadow: 0 14px 28px rgb(29 78 216 / 0.24) !important;
   }
 
   .treinamento-terminal-publico .terminal-step-idle,
@@ -251,11 +309,19 @@
     color: #07132f !important;
   }
 
+  .treinamento-terminal-publico .terminal-step,
+  .dark .treinamento-terminal-publico .terminal-step {
+    letter-spacing: 0;
+   }
+
   .treinamento-terminal-publico .terminal-secondary-action,
   .dark .treinamento-terminal-publico .terminal-secondary-action {
     background-color: #ffffff !important;
     border-color: #1d4ed8 !important;
     color: #1e3a8a !important;
+    box-shadow:
+      0 12px 26px rgb(29 78 216 / 0.1),
+      inset 0 1px 0 rgb(255 255 255 / 0.95) !important;
   }
 
   .treinamento-terminal-publico .terminal-secondary-action:hover,
@@ -264,10 +330,43 @@
     color: #1d4ed8 !important;
   }
 
+  .treinamento-terminal-publico .terminal-primary-action,
+  .dark .treinamento-terminal-publico .terminal-primary-action {
+    background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
+    box-shadow:
+      0 16px 34px rgb(29 78 216 / 0.28),
+      inset 0 1px 0 rgb(255 255 255 / 0.25) !important;
+  }
+
+  .treinamento-terminal-publico .terminal-primary-action:hover,
+  .dark .treinamento-terminal-publico .terminal-primary-action:hover {
+    background: linear-gradient(180deg, #3b82f6, #2563eb) !important;
+  }
+
+  .treinamento-terminal-publico .terminal-success-action,
+  .dark .treinamento-terminal-publico .terminal-success-action {
+    background: linear-gradient(180deg, #059669, #047857) !important;
+    border-color: #047857 !important;
+    color: #ffffff !important;
+    box-shadow:
+      0 16px 34px rgb(4 120 87 / 0.24),
+      inset 0 1px 0 rgb(255 255 255 / 0.22) !important;
+  }
+
+  .treinamento-terminal-publico .terminal-success-action:hover,
+  .dark .treinamento-terminal-publico .terminal-success-action:hover {
+    background: linear-gradient(180deg, #10b981, #059669) !important;
+  }
+
   .treinamento-terminal-publico canvas,
   .dark .treinamento-terminal-publico canvas {
     background-color: #ffffff !important;
-    border: 1px solid #bfdbfe;
+    border: 1px solid #9ec5fe;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255),
+      0 12px 28px rgb(15 23 42 / 0.06);
   }
 
   .dark table {

@@ -40,11 +40,11 @@ const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
 
 function campoClasse() {
-  return "terminal-input w-full rounded-xl border px-4 py-3 text-sm font-bold outline-none transition focus:ring-2 focus:ring-blue-500/25";
+  return "terminal-input w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition";
 }
 
 function labelClasse() {
-  return "terminal-label block text-xs font-black uppercase tracking-[0.16em]";
+  return "terminal-label block text-sm font-extrabold";
 }
 
 function painelClasse(extra = "") {
@@ -53,6 +53,14 @@ function painelClasse(extra = "") {
 
 function botaoSecundarioClasse(extra = "") {
   return `terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto ${extra}`;
+}
+
+function botaoPrimarioClasse(extra = "") {
+  return `terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto ${extra}`;
+}
+
+function botaoSucessoClasse(extra = "") {
+  return `terminal-success-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto ${extra}`;
 }
 
 function apenasDigitos(valor: string) {
@@ -294,7 +302,7 @@ export default function TreinamentoTerminalPublico() {
       <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
         <div className="terminal-panel mb-5 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 shadow-xl sm:mb-8 sm:px-5 sm:py-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-700">Movecta</p>
+            <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Movecta</p>
             <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Treinamento de acesso ao terminal</h1>
           </div>
           <ShieldCheck className="h-9 w-9 shrink-0 text-blue-600 sm:h-10 sm:w-10" />
@@ -302,7 +310,7 @@ export default function TreinamentoTerminalPublico() {
 
         <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-4 sm:gap-3">
           {["Orientacoes", "Dados", "Video", "Declaracao"].map((item, index) => (
-            <div key={item} className={`rounded-xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "terminal-step-active" : "terminal-step-idle"}`}>
+            <div key={item} className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "terminal-step-active" : "terminal-step-idle"}`}>
               {index + 1}. {item}
             </div>
           ))}
@@ -312,7 +320,7 @@ export default function TreinamentoTerminalPublico() {
 
         {etapa === 0 && (
           <div className={painelClasse()}>
-            <p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-700">{config?.portaria || "Portaria de acesso"}</p>
+            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">{config?.portaria || "Portaria de acesso"}</p>
             <h2 className="mt-3 text-xl font-black sm:text-2xl">Antes de iniciar</h2>
             <div className="mt-5 grid gap-4">
               {(config?.resumo || []).map((texto) => (
@@ -323,7 +331,7 @@ export default function TreinamentoTerminalPublico() {
               <button onClick={() => setPortariaAberta(true)} className={botaoSecundarioClasse()}>
                 <FileText size={18} /> Ver Portaria
               </button>
-              <button onClick={() => setEtapa(1)} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 sm:w-auto">
+              <button onClick={() => setEtapa(1)} className={botaoPrimarioClasse()}>
                 Entendi, avancar
               </button>
             </div>
@@ -334,19 +342,19 @@ export default function TreinamentoTerminalPublico() {
           <form onSubmit={iniciar} className={painelClasse()}>
             <h2 className="text-xl font-black sm:text-2xl">Identificacao do participante</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <label className={labelClasse()}>Nome completo<input className={`${campoClasse()} mt-2`} value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required /></label>
-              <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} required /></label>
-              <label className={labelClasse()}>Data de nascimento<input className={`${campoClasse()} mt-2`} type="date" value={form.dataNascimento} onChange={(e) => alterar("dataNascimento", e.target.value)} required /></label>
-              <label className={labelClasse()}>Empresa<input className={`${campoClasse()} mt-2`} value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} required /></label>
-              <label className={labelClasse()}>Funcao/Cargo<input className={`${campoClasse()} mt-2`} value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} required /></label>
-              <label className={labelClasse()}>E-mail<input className={`${campoClasse()} mt-2`} type="email" value={form.email} onChange={(e) => alterar("email", e.target.value)} required /></label>
-              <label className={labelClasse()}>Telefone / WhatsApp<input className={`${campoClasse()} mt-2`} value={form.telefone} onChange={(e) => alterar("telefone", e.target.value)} required /></label>
+              <label className={labelClasse()}>Nome completo<input className={`${campoClasse()} mt-2.5`} value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required /></label>
+              <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2.5`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} required /></label>
+              <label className={labelClasse()}>Data de nascimento<input className={`${campoClasse()} mt-2.5`} type="date" value={form.dataNascimento} onChange={(e) => alterar("dataNascimento", e.target.value)} required /></label>
+              <label className={labelClasse()}>Empresa<input className={`${campoClasse()} mt-2.5`} value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} required /></label>
+              <label className={labelClasse()}>Funcao/Cargo<input className={`${campoClasse()} mt-2.5`} value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} required /></label>
+              <label className={labelClasse()}>E-mail<input className={`${campoClasse()} mt-2.5`} type="email" value={form.email} onChange={(e) => alterar("email", e.target.value)} required /></label>
+              <label className={labelClasse()}>Telefone / WhatsApp<input className={`${campoClasse()} mt-2.5`} value={form.telefone} onChange={(e) => alterar("telefone", e.target.value)} required /></label>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <button type="button" onClick={() => voltarPara(0)} className={botaoSecundarioClasse()}>
                 <ArrowLeft size={18} /> Voltar para orientacoes
               </button>
-              <button disabled={carregando} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:opacity-60 sm:w-auto">
+              <button disabled={carregando} className={botaoPrimarioClasse()}>
                 {carregando ? "Verificando..." : "Avancar para o video"}
               </button>
             </div>
@@ -386,7 +394,7 @@ export default function TreinamentoTerminalPublico() {
               <button type="button" onClick={() => voltarPara(1)} className={botaoSecundarioClasse()}>
                 <ArrowLeft size={18} /> Voltar para dados
               </button>
-              <button onClick={alternarVideo} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 sm:w-auto">
+              <button onClick={alternarVideo} className={botaoPrimarioClasse()}>
                 {tocando ? <Pause size={18} /> : <Play size={18} />}
                 {tocando ? "Pausar" : "Continuar"}
               </button>
@@ -406,7 +414,7 @@ export default function TreinamentoTerminalPublico() {
             </label>
             <div className="terminal-info-card mt-5 rounded-xl border p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="terminal-label text-xs font-black uppercase tracking-[0.16em]">Assinatura</p>
+                <p className="terminal-label text-sm font-extrabold">Assinatura</p>
                 <button type="button" onClick={limparAssinatura} className="terminal-secondary-action inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black">
                   <RotateCcw size={14} /> Limpar
                 </button>
@@ -417,7 +425,7 @@ export default function TreinamentoTerminalPublico() {
               <button type="button" onClick={() => voltarPara(2)} className={botaoSecundarioClasse()}>
                 <ArrowLeft size={18} /> Voltar para video
               </button>
-              <button disabled={carregando} onClick={concluir} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:opacity-60 sm:w-auto">
+              <button disabled={carregando} onClick={concluir} className={botaoSucessoClasse()}>
                 <FileCheck2 size={18} /> Emitir certificado
               </button>
             </div>
@@ -443,7 +451,7 @@ export default function TreinamentoTerminalPublico() {
           <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-5 py-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-300">Documento oficial</p>
+                <p className="text-xs font-bold uppercase text-blue-300">Documento oficial</p>
                 <h2 className="text-lg font-black text-white">Portaria ALF/STS 205/2026</h2>
               </div>
               <div className="flex items-center gap-2">
