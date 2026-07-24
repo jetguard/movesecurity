@@ -17,6 +17,22 @@ function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
 }
 
+function cpfValido(cpf: string) {
+  const digitos = limparCpf(cpf);
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+
+  const calcularDigito = (tamanho: number) => {
+    const soma = digitos
+      .slice(0, tamanho)
+      .split("")
+      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+
+  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+}
+
 function limparTelefone(valor: string) {
   return String(valor || "").replace(/[^\d+]/g, "");
 }
@@ -192,7 +208,7 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
     const email = texto(req.body.email).toLowerCase();
     const dataNascimento = new Date(req.body.dataNascimento);
 
-    if (!texto(req.body.nomeCompleto) || cpf.length !== 11 || !email || Number.isNaN(dataNascimento.getTime())) {
+    if (!texto(req.body.nomeCompleto) || !cpfValido(cpf) || !email || Number.isNaN(dataNascimento.getTime())) {
       return res.status(400).json({ error: "Informe nome completo, CPF valido, e-mail e data de nascimento." });
     }
 

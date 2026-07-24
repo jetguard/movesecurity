@@ -75,6 +75,22 @@ function mascararCpf(valor: string) {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
+function cpfValido(cpf: string) {
+  const digitos = apenasDigitos(cpf);
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+
+  const calcularDigito = (tamanho: number) => {
+    const soma = digitos
+      .slice(0, tamanho)
+      .split("")
+      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+
+  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+}
+
 function mascararTelefone(valor: string) {
   const digitos = apenasDigitos(valor).slice(0, 11);
   if (digitos.length <= 10) {
@@ -165,6 +181,10 @@ export default function TreinamentoTerminalPublico() {
 
   async function iniciar(event: FormEvent) {
     event.preventDefault();
+    if (!cpfValido(form.cpf)) {
+      setMensagem("Informe um CPF valido para continuar.");
+      return;
+    }
     setCarregando(true);
     setMensagem("");
     try {
@@ -343,7 +363,7 @@ export default function TreinamentoTerminalPublico() {
             <h2 className="text-xl font-black sm:text-2xl">Identificacao do participante</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className={labelClasse()}>Nome completo<input className={`${campoClasse()} mt-2.5`} value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required /></label>
-              <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2.5`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} required /></label>
+              <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2.5`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} inputMode="numeric" maxLength={14} aria-invalid={form.cpf.length === 14 && !cpfValido(form.cpf)} title="Digite um CPF valido" required /></label>
               <label className={labelClasse()}>Data de nascimento<input className={`${campoClasse()} mt-2.5`} type="date" value={form.dataNascimento} onChange={(e) => alterar("dataNascimento", e.target.value)} required /></label>
               <label className={labelClasse()}>Empresa<input className={`${campoClasse()} mt-2.5`} value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} required /></label>
               <label className={labelClasse()}>Funcao/Cargo<input className={`${campoClasse()} mt-2.5`} value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} required /></label>

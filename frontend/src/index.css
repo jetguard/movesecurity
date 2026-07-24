@@ -247,6 +247,14 @@
       0 16px 34px rgb(15 23 42 / 0.09) !important;
   }
 
+  .treinamento-terminal-publico input[aria-invalid="true"],
+  .dark .treinamento-terminal-publico input[aria-invalid="true"] {
+    border-color: #dc2626 !important;
+    box-shadow:
+      0 0 0 4px rgb(220 38 38 / 0.12),
+      0 14px 30px rgb(127 29 29 / 0.08) !important;
+  }
+
   .treinamento-terminal-publico input::placeholder,
   .treinamento-terminal-publico textarea::placeholder,
   .dark .treinamento-terminal-publico input::placeholder,
