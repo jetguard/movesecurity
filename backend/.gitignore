@@ -3,3 +3,13 @@ node_modules
 .env
 
 /src/generated/prisma
+
+# Local databases, generated clients and operational data
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+/prisma/dev.db
+/prisma/.generated/
+/uploads/
+/backups/

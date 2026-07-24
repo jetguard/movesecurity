@@ -3,35 +3,35 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Usuario {
-  id                 Int       @id @default(autoincrement())
-  nome               String
-  email              String    @unique
-  senha              String
-  apelido            String?
-  fotoPerfil         String?
-  re                 String?
-  setor              String?
-  cargo              String?
-  empresa            String?
-  equipe             String?
-  unidade            String?
-  unidadesPermitidas String?
-  perfilAcesso       String    @default("USUARIO")
-  statusUsuario      String    @default("ATIVO")
-  deveAlterarSenha   Boolean   @default(true)
-  senhaAlteradaEm    DateTime?
-  pinOperacionalHash String?
-  pinOperacionalCriadoEm DateTime?
+  id                         Int       @id @default(autoincrement())
+  nome                       String
+  email                      String    @unique
+  senha                      String
+  apelido                    String?
+  fotoPerfil                 String?
+  re                         String?
+  setor                      String?
+  cargo                      String?
+  empresa                    String?
+  equipe                     String?
+  unidade                    String?
+  unidadesPermitidas         String?
+  perfilAcesso               String    @default("USUARIO")
+  statusUsuario              String    @default("ATIVO")
+  deveAlterarSenha           Boolean   @default(true)
+  senhaAlteradaEm            DateTime?
+  pinOperacionalHash         String?
+  pinOperacionalCriadoEm     DateTime?
   pinOperacionalAtualizadoEm DateTime?
-  pinTentativasInvalidas Int @default(0)
-  pinBloqueadoAte   DateTime?
-  ultimoAcesso       DateTime?
-  createdAt          DateTime  @default(now())
+  pinTentativasInvalidas     Int       @default(0)
+  pinBloqueadoAte            DateTime?
+  ultimoAcesso               DateTime?
+  createdAt                  DateTime  @default(now())
 
   analisesOcorrenciaIniciadas  AnaliseOcorrencia[]            @relation("AnaliseOcorrenciaResponsavel")
   analisesOcorrenciaConcluidas AnaliseOcorrencia[]            @relation("AnaliseOcorrenciaConclusor")
@@ -74,58 +74,58 @@ model Usuario {
 }
 
 model TreinamentoTerminal {
-  id                    Int       @id @default(autoincrement())
-  token                 String    @unique
-  codigo                String    @unique
-  nomeCompleto          String
-  cpf                   String
-  dataNascimento        DateTime
-  empresa               String
-  cargo                 String
-  email                 String
-  telefone              String
-  etapa                 String    @default("video")
-  status                String    @default("Em andamento")
-  videoUrl              String?
-  progressoSegundos     Int       @default(0)
-  duracaoSegundos       Int       @default(0)
-  videoConcluido        Boolean   @default(false)
-  aceiteDeclaracao      Boolean   @default(false)
-  assinaturaDataUrl     String?
-  certificadoArquivo    String?
-  emailStatus           String?
-  emailEnviadoEm        DateTime?
-  concluidoEm           DateTime?
-  ultimoAcessoEm        DateTime  @default(now())
-  createdAt             DateTime  @default(now())
-  updatedAt             DateTime  @updatedAt
+  id                 Int       @id @default(autoincrement())
+  token              String    @unique
+  codigo             String    @unique
+  nomeCompleto       String
+  cpf                String
+  dataNascimento     DateTime
+  empresa            String
+  cargo              String
+  email              String
+  telefone           String
+  etapa              String    @default("video")
+  status             String    @default("Em andamento")
+  videoUrl           String?
+  progressoSegundos  Int       @default(0)
+  duracaoSegundos    Int       @default(0)
+  videoConcluido     Boolean   @default(false)
+  aceiteDeclaracao   Boolean   @default(false)
+  assinaturaDataUrl  String?
+  certificadoArquivo String?
+  emailStatus        String?
+  emailEnviadoEm     DateTime?
+  concluidoEm        DateTime?
+  ultimoAcessoEm     DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([cpf, email])
   @@index([status, updatedAt])
 }
 
 model SessaoUsuario {
-  id                  String    @id @default(cuid())
-  usuarioId           Int
-  tokenHash           String?   @unique
-  refreshTokenHash    String?   @unique
-  refreshExpiraEm     DateTime?
-  status              String    @default("ATIVA")
-  unidadeAtiva        String?
-  equipe              String?
-  perfilAcesso        String?
-  ipInicio            String?
-  ipUltimaAtividade   String?
-  navegador           String?
-  sistema             String?
-  iniciadaEm          DateTime  @default(now())
-  ultimaAtividadeEm   DateTime  @default(now())
-  encerradaEm         DateTime?
-  encerradaPor        String?
-  encerradaPorId      Int?
-  motivoEncerramento  String?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id                 String    @id @default(cuid())
+  usuarioId          Int
+  tokenHash          String?   @unique
+  refreshTokenHash   String?   @unique
+  refreshExpiraEm    DateTime?
+  status             String    @default("ATIVA")
+  unidadeAtiva       String?
+  equipe             String?
+  perfilAcesso       String?
+  ipInicio           String?
+  ipUltimaAtividade  String?
+  navegador          String?
+  sistema            String?
+  iniciadaEm         DateTime  @default(now())
+  ultimaAtividadeEm  DateTime  @default(now())
+  encerradaEm        DateTime?
+  encerradaPor       String?
+  encerradaPorId     Int?
+  motivoEncerramento String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -156,27 +156,27 @@ model SugestaoMelhoria {
 }
 
 model Ocorrencia {
-  id              Int       @id @default(autoincrement())
-  numero          Int
-  ano             Int
-  codigo          String
-  assunto         String
-  local           String
-  unidade         String    @default("GJA-T1")
-  natureza        String
-  subNatureza     String
-  status          String    @default("ABERTO")
-  dataOcorrencia  DateTime
-  relatoSeguranca String?
-  acoesTomadas    String?
+  id                 Int       @id @default(autoincrement())
+  numero             Int
+  ano                Int
+  codigo             String
+  assunto            String
+  local              String
+  unidade            String    @default("GJA-T1")
+  natureza           String
+  subNatureza        String
+  status             String    @default("ABERTO")
+  dataOcorrencia     DateTime
+  relatoSeguranca    String?
+  acoesTomadas       String?
   impactoOperacional String?
-  fluxoStatus     String    @default("Aguardando Revisao")
-  revisadoPorId   Int?
-  revisadoEm      DateTime?
-  aprovadoPorId   Int?
-  aprovadoEm      DateTime?
-  motivoDevolucao String?
-  createdAt       DateTime  @default(now())
+  fluxoStatus        String    @default("Aguardando Revisao")
+  revisadoPorId      Int?
+  revisadoEm         DateTime?
+  aprovadoPorId      Int?
+  aprovadoEm         DateTime?
+  motivoDevolucao    String?
+  createdAt          DateTime  @default(now())
 
   envolvidos   EnvolvidoOcorrencia[]
   anexos       AnexoOcorrencia[]
@@ -219,27 +219,27 @@ model AnexoOcorrencia {
 }
 
 model Evento {
-  id              Int       @id @default(autoincrement())
-  numero          Int
-  ano             Int
-  codigo          String
-  assunto         String
-  local           String
-  unidade         String    @default("GJA-T1")
-  natureza        String
-  subNatureza     String
-  status          String    @default("ABERTO")
-  dataEvento      DateTime
-  relatoSeguranca String?
-  acoesTomadas    String?
+  id                 Int       @id @default(autoincrement())
+  numero             Int
+  ano                Int
+  codigo             String
+  assunto            String
+  local              String
+  unidade            String    @default("GJA-T1")
+  natureza           String
+  subNatureza        String
+  status             String    @default("ABERTO")
+  dataEvento         DateTime
+  relatoSeguranca    String?
+  acoesTomadas       String?
   impactoOperacional String?
-  fluxoStatus     String    @default("Aguardando Revisao")
-  revisadoPorId   Int?
-  revisadoEm      DateTime?
-  aprovadoPorId   Int?
-  aprovadoEm      DateTime?
-  motivoDevolucao String?
-  createdAt       DateTime  @default(now())
+  fluxoStatus        String    @default("Aguardando Revisao")
+  revisadoPorId      Int?
+  revisadoEm         DateTime?
+  aprovadoPorId      Int?
+  aprovadoEm         DateTime?
+  motivoDevolucao    String?
+  createdAt          DateTime  @default(now())
 
   envolvidos EnvolvidoEvento[]
   anexos     AnexoEvento[]
@@ -281,28 +281,28 @@ model AnexoEvento {
 }
 
 model RelatoCampo {
-  id                  Int       @id @default(autoincrement())
-  token               String    @unique
-  status              String    @default("Link Gerado")
-  titulo              String?
-  setor               String?
-  local               String?
-  unidade             String    @default("GJA-T1")
-  responsavelColeta   String?
-  dataOcorrido        DateTime?
-  observacoes         String?
-  checklistColeta     String?
-  expiraEm            DateTime
-  enviadoEm           DateTime?
-  finalizadoEm        DateTime?
-  convertidoTipo      String?
+  id                   Int       @id @default(autoincrement())
+  token                String    @unique
+  status               String    @default("Link Gerado")
+  titulo               String?
+  setor                String?
+  local                String?
+  unidade              String    @default("GJA-T1")
+  responsavelColeta    String?
+  dataOcorrido         DateTime?
+  observacoes          String?
+  checklistColeta      String?
+  expiraEm             DateTime
+  enviadoEm            DateTime?
+  finalizadoEm         DateTime?
+  convertidoTipo       String?
   convertidoRegistroId Int?
-  convertidoCodigo    String?
-  geradoPorId         Int?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  convertidoCodigo     String?
+  geradoPorId          Int?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  geradoPor  Usuario?              @relation(fields: [geradoPorId], references: [id])
+  geradoPor  Usuario?               @relation(fields: [geradoPorId], references: [id])
   envolvidos EnvolvidoRelatoCampo[]
   anexos     AnexoRelatoCampo[]
 
@@ -319,7 +319,7 @@ model EnvolvidoRelatoCampo {
   tipoDocumento    String
   documento        String?
   empresa          String?
-  possuiVeiculo    Boolean @default(false)
+  possuiVeiculo    Boolean  @default(false)
   placa            String?
   reboque          String?
   relato           String
@@ -561,25 +561,25 @@ model LogAuditoria {
 }
 
 model AssinaturaDocumento {
-  id              Int       @id @default(autoincrement())
-  token           String    @unique
-  status          String    @default("VALIDA")
-  modulo          String
-  registroId      Int
-  codigoRegistro  String
-  unidade         String
-  acao            String
-  usuarioId       Int
-  usuarioNome     String
-  perfilAcesso    String?
-  ip              String?
-  sessaoId        String?
-  documentoHash   String
-  versao          Int       @default(1)
-  invalidadaEm    DateTime?
+  id                Int       @id @default(autoincrement())
+  token             String    @unique
+  status            String    @default("VALIDA")
+  modulo            String
+  registroId        Int
+  codigoRegistro    String
+  unidade           String
+  acao              String
+  usuarioId         Int
+  usuarioNome       String
+  perfilAcesso      String?
+  ip                String?
+  sessaoId          String?
+  documentoHash     String
+  versao            Int       @default(1)
+  invalidadaEm      DateTime?
   motivoInvalidacao String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   usuario Usuario @relation(fields: [usuarioId], references: [id])
 
@@ -607,78 +607,78 @@ model RascunhoFormulario {
 }
 
 model AnaliseRisco {
-  id                  Int      @id @default(autoincrement())
-  numero              Int
-  ano                 Int
-  codigo              String
-  riscoCatalogoId     Int?
-  dataHora            DateTime
-  responsavelId       Int
-  unidade             String
-  setor               String
-  local               String
-  area                String?
-  tipoRisco           String
-  naturezaRisco       String
-  tituloRisco         String?
-  origemRisco         String?
-  fonteRisco          String?
-  fatorRisco          String?
-  fragilidade         String?
-  eventoIncerteza     String?
-  objetivoImpactado   String?
-  eficaciaControles   String?
-  criteriosAvaliacao  String?
-  controlesInternos   String?
-  atividadesControle  String?
-  monitoramento       String?
-  comunicacaoConsulta String?
-  descricaoRisco      String
-  possivelImpacto     String
-  causaProvavel       String?
-  consequencia        String?
-  pessoasAfetadas     String?
-  controlesExistentes String?
-  probabilidade       String
-  severidade          String
-  probabilidadeValor  Int?
-  impactoValor        Float?
-  resultadoRisco      Float?
-  nivelRisco          String
-  nivelAceitacao      String?
-  tratamentoRisco     String?
-  medidasPreventivas  String
-  planoAcao           String
-  acaoProposta        String?
-  responsavelAcaoId   Int?
-  responsavelAcaoNome String?
-  prazo               DateTime
-  custoEstimado       String?
-  prioridade          String?
-  statusAcao          String?
-  observacoes         String?
-  novaProbabilidade   Int?
-  novoImpacto         Float?
-  novoResultado       Float?
-  novoNivelRisco      String?
-  observacaoReavaliacao String?
-  dataReavaliacao     DateTime?
+  id                     Int       @id @default(autoincrement())
+  numero                 Int
+  ano                    Int
+  codigo                 String
+  riscoCatalogoId        Int?
+  dataHora               DateTime
+  responsavelId          Int
+  unidade                String
+  setor                  String
+  local                  String
+  area                   String?
+  tipoRisco              String
+  naturezaRisco          String
+  tituloRisco            String?
+  origemRisco            String?
+  fonteRisco             String?
+  fatorRisco             String?
+  fragilidade            String?
+  eventoIncerteza        String?
+  objetivoImpactado      String?
+  eficaciaControles      String?
+  criteriosAvaliacao     String?
+  controlesInternos      String?
+  atividadesControle     String?
+  monitoramento          String?
+  comunicacaoConsulta    String?
+  descricaoRisco         String
+  possivelImpacto        String
+  causaProvavel          String?
+  consequencia           String?
+  pessoasAfetadas        String?
+  controlesExistentes    String?
+  probabilidade          String
+  severidade             String
+  probabilidadeValor     Int?
+  impactoValor           Float?
+  resultadoRisco         Float?
+  nivelRisco             String
+  nivelAceitacao         String?
+  tratamentoRisco        String?
+  medidasPreventivas     String
+  planoAcao              String
+  acaoProposta           String?
+  responsavelAcaoId      Int?
+  responsavelAcaoNome    String?
+  prazo                  DateTime
+  custoEstimado          String?
+  prioridade             String?
+  statusAcao             String?
+  observacoes            String?
+  novaProbabilidade      Int?
+  novoImpacto            Float?
+  novoResultado          Float?
+  novoNivelRisco         String?
+  observacaoReavaliacao  String?
+  dataReavaliacao        DateTime?
   responsavelReavaliacao String?
-  status              String   @default("Pendente")
-  ocorrenciaId        Int?
-  eventoId            Int?
-  investigacaoId      Int?
-  anulado             Boolean  @default(false)
-  motivoAnulacao      String?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  status                 String    @default("Pendente")
+  ocorrenciaId           Int?
+  eventoId               Int?
+  investigacaoId         Int?
+  anulado                Boolean   @default(false)
+  motivoAnulacao         String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  responsavel     Usuario       @relation("RiscoResponsavel", fields: [responsavelId], references: [id])
-  responsavelAcao Usuario?      @relation("RiscoResponsavelAcao", fields: [responsavelAcaoId], references: [id])
+  responsavel     Usuario        @relation("RiscoResponsavel", fields: [responsavelId], references: [id])
+  responsavelAcao Usuario?       @relation("RiscoResponsavelAcao", fields: [responsavelAcaoId], references: [id])
   riscoCatalogo   RiscoCatalogo? @relation(fields: [riscoCatalogoId], references: [id], onDelete: SetNull)
-  ocorrencia      Ocorrencia?   @relation(fields: [ocorrenciaId], references: [id], onDelete: SetNull)
-  evento          Evento?       @relation(fields: [eventoId], references: [id], onDelete: SetNull)
-  investigacao    Investigacao? @relation(fields: [investigacaoId], references: [id], onDelete: SetNull)
+  ocorrencia      Ocorrencia?    @relation(fields: [ocorrenciaId], references: [id], onDelete: SetNull)
+  evento          Evento?        @relation(fields: [eventoId], references: [id], onDelete: SetNull)
+  investigacao    Investigacao?  @relation(fields: [investigacaoId], references: [id], onDelete: SetNull)
   fotos           FotoRisco[]
 
   @@unique([codigo, unidade])
@@ -698,32 +698,32 @@ model FotoRisco {
 }
 
 model RiscoCatalogo {
-  id                  Int      @id @default(autoincrement())
-  numero              Int
-  ano                 Int      @default(2026)
-  codigo              String
-  unidade             String
-  local               String?
-  area                String?
-  nome                String
-  tipoRisco           String
-  grauRisco           String   @default("Média")
-  naturezaRisco       String
-  origemRisco         String?
-  fonteRisco          String?
-  fatorRisco          String?
-  fragilidade         String?
-  eventoIncerteza     String?
-  objetivoImpactado   String?
-  responsavelNome     String?
-  descricaoRisco      String
-  possivelImpacto     String
-  medidasPreventivas  String?
-  planoAcaoSugerido   String?
-  status              String   @default("Ativo")
-  criadoPorId         Int?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id                 Int      @id @default(autoincrement())
+  numero             Int
+  ano                Int      @default(2026)
+  codigo             String
+  unidade            String
+  local              String?
+  area               String?
+  nome               String
+  tipoRisco          String
+  grauRisco          String   @default("Média")
+  naturezaRisco      String
+  origemRisco        String?
+  fonteRisco         String?
+  fatorRisco         String?
+  fragilidade        String?
+  eventoIncerteza    String?
+  objetivoImpactado  String?
+  responsavelNome    String?
+  descricaoRisco     String
+  possivelImpacto    String
+  medidasPreventivas String?
+  planoAcaoSugerido  String?
+  status             String   @default("Ativo")
+  criadoPorId        Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   analises AnaliseRisco[]
 
@@ -733,7 +733,7 @@ model RiscoCatalogo {
 }
 
 model AprOperacional {
-  id                    Int      @id @default(autoincrement())
+  id                    Int       @id @default(autoincrement())
   numero                Int
   ano                   Int
   codigo                String
@@ -751,12 +751,12 @@ model AprOperacional {
   controlesObrigatorios String
   episNecessarios       String?
   permissoesNecessarias String?
-  nivelRisco            String   @default("Moderado")
-  status                String   @default("Rascunho")
+  nivelRisco            String    @default("Moderado")
+  status                String    @default("Rascunho")
   criadoPorId           Int?
   criadoPorNome         String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   aprovacoes AprAprovacao[]
 
@@ -1000,16 +1000,16 @@ model CameraMonitoramento {
   infravermelho          String
   monitoramento          String    @default("Ativo")
   ultimaManutencao       DateTime?
-    observacoesTecnicas    String?
-    unidade                String    @default("GJA-T1")
-    cadastradoPorId        Int?
-    statusCadastro         String    @default("Ativa")
-    removidaEm             DateTime?
-    removidaPorId          Int?
-    motivoRemocao          String?
-    desconectadaDesde      DateTime?
-    totalIndisponibilidade Int       @default(0)
-    totalFalhas            Int       @default(0)
+  observacoesTecnicas    String?
+  unidade                String    @default("GJA-T1")
+  cadastradoPorId        Int?
+  statusCadastro         String    @default("Ativa")
+  removidaEm             DateTime?
+  removidaPorId          Int?
+  motivoRemocao          String?
+  desconectadaDesde      DateTime?
+  totalIndisponibilidade Int       @default(0)
+  totalFalhas            Int       @default(0)
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -1022,38 +1022,38 @@ model CameraMonitoramento {
 }
 
 model OrdemServicoCamera {
-  id                       Int      @id @default(autoincrement())
-  numero                   Int
-  ano                      Int
-  codigo                   String
-  cameraId                 Int
-  unidade                  String   @default("GJA-T1")
-  status                   String   @default("EM_ABERTO")
-  origem                   String   @default("CAMERA_DESCONECTADA")
-  descricao                String?
-  abertaPorId              Int?
-  atendidoPorId            Int?
-  tratativa                String?
-  houveDano                Boolean  @default(false)
-  descricaoDano            String?
-  requerTrocaCamera        Boolean  @default(false)
-  requerCompra             Boolean  @default(false)
-  itensNecessarios         String?
-  observacoesTecnicas      String?
-  desconectadaEm           DateTime?
-  atendimentoIniciadoEm    DateTime?
-  concluidoEm              DateTime?
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                    Int       @id @default(autoincrement())
+  numero                Int
+  ano                   Int
+  codigo                String
+  cameraId              Int
+  unidade               String    @default("GJA-T1")
+  status                String    @default("EM_ABERTO")
+  origem                String    @default("CAMERA_DESCONECTADA")
+  descricao             String?
+  abertaPorId           Int?
+  atendidoPorId         Int?
+  tratativa             String?
+  houveDano             Boolean   @default(false)
+  descricaoDano         String?
+  requerTrocaCamera     Boolean   @default(false)
+  requerCompra          Boolean   @default(false)
+  itensNecessarios      String?
+  observacoesTecnicas   String?
+  desconectadaEm        DateTime?
+  atendimentoIniciadoEm DateTime?
+  concluidoEm           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   camera      CameraMonitoramento @relation(fields: [cameraId], references: [id], onDelete: Cascade)
   abertaPor   Usuario?            @relation("OrdemServicoAbertaPor", fields: [abertaPorId], references: [id])
   atendidoPor Usuario?            @relation("OrdemServicoAtendidaPor", fields: [atendidoPorId], references: [id])
 
-  @@index([cameraId, status])
-  @@index([unidade, status])
   @@unique([codigo, unidade])
   @@unique([numero, ano, unidade])
+  @@index([cameraId, status])
+  @@index([unidade, status])
 }
 
 model CameraChecklistOperacional {
@@ -1103,19 +1103,19 @@ model CameraEventoStatus {
 }
 
 model RelatorioCftv {
-  id             Int      @id @default(autoincrement())
-  numero         Int
-  ano            Int
-  codigo         String
-  unidade        String
-  responsavelId  Int?
-  camerasIdsJson String
-  snapshotJson    String?
-  retencaoMedia   Int      @default(0)
-  totalEventos    Int      @default(0)
-  totalIndisponibilidade Int @default(0)
-  totalCameras   Int      @default(0)
-  createdAt      DateTime @default(now())
+  id                     Int      @id @default(autoincrement())
+  numero                 Int
+  ano                    Int
+  codigo                 String
+  unidade                String
+  responsavelId          Int?
+  camerasIdsJson         String
+  snapshotJson           String?
+  retencaoMedia          Int      @default(0)
+  totalEventos           Int      @default(0)
+  totalIndisponibilidade Int      @default(0)
+  totalCameras           Int      @default(0)
+  createdAt              DateTime @default(now())
 
   responsavel Usuario? @relation("RelatorioCftvResponsavel", fields: [responsavelId], references: [id])
 
@@ -1123,21 +1123,21 @@ model RelatorioCftv {
 }
 
 model ConfiguracaoSistema {
-  id                  Int      @id @default(autoincrement())
-  chave               String   @unique
-  nomeEmpresa         String   @default("Movecta S/A")
-  slaCameras          Int      @default(98)
-  tempoMaximoOffline  Int      @default(60)
-  checklistCameraDias Int      @default(7)
-  corsPermitido       String?
-  logoUrl             String?
-  rodapePdf           String?
-    ocrProvider         String?  @default("openai")
-    openaiApiKey        String?
-    openaiOcrModel      String?  @default("gpt-4.1-mini")
-    openaiAprimoramentoTextoAtivo Boolean @default(false)
-    updatedAt           DateTime @updatedAt
-  createdAt           DateTime @default(now())
+  id                            Int      @id @default(autoincrement())
+  chave                         String   @unique
+  nomeEmpresa                   String   @default("Movecta S/A")
+  slaCameras                    Int      @default(98)
+  tempoMaximoOffline            Int      @default(60)
+  checklistCameraDias           Int      @default(7)
+  corsPermitido                 String?
+  logoUrl                       String?
+  rodapePdf                     String?
+  ocrProvider                   String?  @default("openai")
+  openaiApiKey                  String?
+  openaiOcrModel                String?  @default("gpt-4.1-mini")
+  openaiAprimoramentoTextoAtivo Boolean  @default(false)
+  updatedAt                     DateTime @updatedAt
+  createdAt                     DateTime @default(now())
 }
 
 model NotificacaoLida {
