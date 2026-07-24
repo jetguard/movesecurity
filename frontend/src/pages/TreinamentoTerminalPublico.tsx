@@ -40,19 +40,19 @@ const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
 
 function campoClasse() {
-  return "w-full rounded-xl border border-slate-400 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/25";
+  return "terminal-input w-full rounded-xl border px-4 py-3 text-sm font-bold outline-none transition focus:ring-2 focus:ring-blue-500/25";
 }
 
 function labelClasse() {
-  return "block text-xs font-black uppercase tracking-[0.16em] text-slate-950";
+  return "terminal-label block text-xs font-black uppercase tracking-[0.16em]";
 }
 
 function painelClasse(extra = "") {
-  return `rounded-2xl border border-blue-100 bg-[#ffffff] p-4 text-[#07132f] shadow-2xl shadow-slate-900/15 sm:p-6 ${extra}`;
+  return `terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6 ${extra}`;
 }
 
 function botaoSecundarioClasse(extra = "") {
-  return `inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-700 bg-[#ffffff] px-5 py-3 text-sm font-black text-blue-800 shadow-lg shadow-slate-900/10 transition hover:bg-blue-50 sm:w-auto ${extra}`;
+  return `terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto ${extra}`;
 }
 
 function apenasDigitos(valor: string) {
@@ -292,7 +292,7 @@ export default function TreinamentoTerminalPublico() {
       </picture>
       <div className="fixed inset-0 z-0 bg-white/35" />
       <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
-        <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-[#ffffff] px-4 py-3 shadow-xl shadow-slate-900/15 sm:mb-8 sm:px-5 sm:py-4">
+        <div className="terminal-panel mb-5 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 shadow-xl sm:mb-8 sm:px-5 sm:py-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-700">Movecta</p>
             <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Treinamento de acesso ao terminal</h1>
@@ -302,13 +302,13 @@ export default function TreinamentoTerminalPublico() {
 
         <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-4 sm:gap-3">
           {["Orientacoes", "Dados", "Video", "Declaracao"].map((item, index) => (
-            <div key={item} className={`rounded-xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "border-blue-700 bg-blue-700 text-white" : "border-blue-100 bg-[#ffffff] text-[#07132f]"}`}>
+            <div key={item} className={`rounded-xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "terminal-step-active" : "terminal-step-idle"}`}>
               {index + 1}. {item}
             </div>
           ))}
         </div>
 
-        {mensagem && <div className="mb-5 rounded-xl border border-blue-200 bg-[#ffffff] px-4 py-3 text-sm font-black text-blue-950 shadow-lg shadow-slate-900/15">{mensagem}</div>}
+        {mensagem && <div className="terminal-message mb-5 rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
 
         {etapa === 0 && (
           <div className={painelClasse()}>
@@ -316,7 +316,7 @@ export default function TreinamentoTerminalPublico() {
             <h2 className="mt-3 text-xl font-black sm:text-2xl">Antes de iniciar</h2>
             <div className="mt-5 grid gap-4">
               {(config?.resumo || []).map((texto) => (
-                <p key={texto} className="rounded-xl border border-blue-100 bg-[#ffffff] p-4 text-sm font-bold leading-6 text-[#07132f] shadow-sm">{texto}</p>
+                <p key={texto} className="terminal-info-card rounded-xl border p-4 text-sm font-bold leading-6 shadow-sm">{texto}</p>
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
@@ -360,7 +360,7 @@ export default function TreinamentoTerminalPublico() {
                 <h2 className="text-xl font-black sm:text-2xl">Video obrigatorio</h2>
                 <p className="mt-1 text-sm font-bold text-slate-900">O video nao pode ser acelerado nem avancado manualmente.</p>
               </div>
-              <div className="rounded-xl border border-blue-100 bg-[#ffffff] px-4 py-3 text-sm font-black text-[#07132f] shadow-sm">
+              <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
                 <Clock3 className="mr-2 inline h-4 w-4 text-blue-700" />
                 Restante: {formatarTempo(restante)}
               </div>
@@ -400,14 +400,14 @@ export default function TreinamentoTerminalPublico() {
         {etapa === 3 && treinamento && (
           <div className={painelClasse()}>
             <h2 className="text-xl font-black sm:text-2xl">Declaracao e assinatura</h2>
-            <label className="mt-5 flex items-start gap-3 rounded-xl border border-blue-100 bg-[#ffffff] p-4 text-sm font-bold text-[#07132f] shadow-sm">
+            <label className="terminal-info-card mt-5 flex items-start gap-3 rounded-xl border p-4 text-sm font-bold shadow-sm">
               <input type="checkbox" className="mt-1 h-5 w-5 accent-blue-600" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
               <span>Declaro que assisti integralmente ao video, compreendi as orientacoes apresentadas e estou ciente das regras de acesso, seguranca e conduta aplicaveis ao terminal.</span>
             </label>
-            <div className="mt-5 rounded-xl border border-blue-100 bg-[#ffffff] p-4 shadow-sm">
+            <div className="terminal-info-card mt-5 rounded-xl border p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-xs font-black uppercase tracking-[0.16em] text-[#07132f]">Assinatura</p>
-                <button type="button" onClick={limparAssinatura} className="inline-flex items-center gap-2 rounded-lg border border-blue-700 bg-[#ffffff] px-3 py-2 text-xs font-black text-blue-800 hover:bg-blue-50">
+                <p className="terminal-label text-xs font-black uppercase tracking-[0.16em]">Assinatura</p>
+                <button type="button" onClick={limparAssinatura} className="terminal-secondary-action inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black">
                   <RotateCcw size={14} /> Limpar
                 </button>
               </div>
@@ -425,7 +425,7 @@ export default function TreinamentoTerminalPublico() {
         )}
 
         {etapa === 4 && treinamento && (
-          <div className={painelClasse("border-emerald-700/45 bg-white text-center")}>
+          <div className={painelClasse("text-center")}>
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
             <h2 className="mt-4 text-2xl font-black">Treinamento concluido</h2>
             <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {treinamento.codigo} emitido. O envio por e-mail sera realizado quando o SMTP estiver configurado no servidor.</p>
