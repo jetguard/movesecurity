@@ -40,15 +40,19 @@ const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
 
 function campoClasse() {
-  return "w-full rounded-xl border border-slate-300 bg-white/90 px-4 py-3 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20";
+  return "w-full rounded-xl border border-slate-400 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none transition placeholder:text-slate-500 focus:border-blue-600 focus:ring-2 focus:ring-blue-500/25";
 }
 
 function labelClasse() {
-  return "block text-xs font-semibold uppercase tracking-[0.16em] text-slate-600";
+  return "block text-xs font-black uppercase tracking-[0.16em] text-slate-950";
 }
 
 function painelClasse(extra = "") {
-  return `rounded-2xl border border-white/70 bg-white/85 p-4 text-slate-950 shadow-2xl shadow-slate-900/10 backdrop-blur-md sm:p-6 ${extra}`;
+  return `rounded-2xl border border-white bg-white/95 p-4 text-slate-950 shadow-2xl shadow-slate-900/15 backdrop-blur-sm sm:p-6 ${extra}`;
+}
+
+function botaoSecundarioClasse(extra = "") {
+  return `inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-950 bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg shadow-slate-900/15 transition hover:border-blue-700 hover:bg-blue-700 sm:w-auto ${extra}`;
 }
 
 function apenasDigitos(valor: string) {
@@ -286,9 +290,9 @@ export default function TreinamentoTerminalPublico() {
         <source media="(min-width: 768px)" srcSet={fundoDesktopUrl} />
         <img src={fundoMobileUrl} alt="" aria-hidden="true" className="h-full w-full object-cover object-center" />
       </picture>
-      <div className="fixed inset-0 z-0 bg-white/20" />
+      <div className="fixed inset-0 z-0 bg-white/35" />
       <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
-        <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-white/60 bg-white/70 px-4 py-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:mb-8 sm:px-5 sm:py-4">
+        <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-white bg-white/95 px-4 py-3 shadow-xl shadow-slate-900/15 backdrop-blur-sm sm:mb-8 sm:px-5 sm:py-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.3em] text-blue-700">Movecta</p>
             <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Treinamento de acesso ao terminal</h1>
@@ -298,13 +302,13 @@ export default function TreinamentoTerminalPublico() {
 
         <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-4 sm:gap-3">
           {["Orientacoes", "Dados", "Video", "Declaracao"].map((item, index) => (
-            <div key={item} className={`rounded-xl border px-3 py-2 text-xs font-bold shadow-lg shadow-slate-900/5 backdrop-blur-md sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "border-blue-500/40 bg-blue-600/90 text-white" : "border-white/60 bg-white/70 text-slate-500"}`}>
+            <div key={item} className={`rounded-xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 backdrop-blur-sm sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "border-blue-700 bg-blue-700 text-white" : "border-white bg-white/95 text-slate-800"}`}>
               {index + 1}. {item}
             </div>
           ))}
         </div>
 
-        {mensagem && <div className="mb-5 rounded-xl border border-blue-500/30 bg-white/85 px-4 py-3 text-sm font-semibold text-blue-900 shadow-lg shadow-slate-900/10 backdrop-blur-md">{mensagem}</div>}
+        {mensagem && <div className="mb-5 rounded-xl border border-blue-700/40 bg-white/95 px-4 py-3 text-sm font-black text-blue-950 shadow-lg shadow-slate-900/15 backdrop-blur-sm">{mensagem}</div>}
 
         {etapa === 0 && (
           <div className={painelClasse()}>
@@ -312,11 +316,11 @@ export default function TreinamentoTerminalPublico() {
             <h2 className="mt-3 text-xl font-black sm:text-2xl">Antes de iniciar</h2>
             <div className="mt-5 grid gap-4">
               {(config?.resumo || []).map((texto) => (
-                <p key={texto} className="rounded-xl border border-slate-200 bg-white/80 p-4 text-sm font-medium leading-6 text-slate-700">{texto}</p>
+                <p key={texto} className="rounded-xl border border-slate-300 bg-white p-4 text-sm font-bold leading-6 text-slate-950">{texto}</p>
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => setPortariaAberta(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white/80 px-5 py-3 text-sm font-black text-slate-800 transition hover:border-blue-500 hover:text-blue-700 sm:w-auto">
+              <button onClick={() => setPortariaAberta(true)} className={botaoSecundarioClasse()}>
                 <FileText size={18} /> Ver Portaria
               </button>
               <button onClick={() => setEtapa(1)} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 sm:w-auto">
@@ -339,7 +343,7 @@ export default function TreinamentoTerminalPublico() {
               <label className={labelClasse()}>Telefone / WhatsApp<input className={`${campoClasse()} mt-2`} value={form.telefone} onChange={(e) => alterar("telefone", e.target.value)} required /></label>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(0)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white/80 px-5 py-3 text-sm font-black text-slate-800 transition hover:border-blue-500 hover:text-blue-700 sm:w-auto">
+              <button type="button" onClick={() => voltarPara(0)} className={botaoSecundarioClasse()}>
                 <ArrowLeft size={18} /> Voltar para orientacoes
               </button>
               <button disabled={carregando} className="w-full rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:opacity-60 sm:w-auto">
@@ -354,10 +358,10 @@ export default function TreinamentoTerminalPublico() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-black sm:text-2xl">Video obrigatorio</h2>
-                <p className="mt-1 text-sm font-medium text-slate-600">O video nao pode ser acelerado nem avancado manualmente.</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">O video nao pode ser acelerado nem avancado manualmente.</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-white/85 px-4 py-3 text-sm font-bold text-slate-800">
-                <Clock3 className="mr-2 inline h-4 w-4 text-blue-600" />
+              <div className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-950">
+                <Clock3 className="mr-2 inline h-4 w-4 text-blue-700" />
                 Restante: {formatarTempo(restante)}
               </div>
             </div>
@@ -379,14 +383,14 @@ export default function TreinamentoTerminalPublico() {
               <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(100, ((tempoAtual || 0) / Math.max(1, duracao || 1)) * 100)}%` }} />
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(1)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white/80 px-5 py-3 text-sm font-black text-slate-800 transition hover:border-blue-500 hover:text-blue-700 sm:w-auto">
+              <button type="button" onClick={() => voltarPara(1)} className={botaoSecundarioClasse()}>
                 <ArrowLeft size={18} /> Voltar para dados
               </button>
               <button onClick={alternarVideo} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 sm:w-auto">
                 {tocando ? <Pause size={18} /> : <Play size={18} />}
                 {tocando ? "Pausar" : "Continuar"}
               </button>
-              <button type="button" onClick={abrirTelaCheia} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-blue-500/40 bg-blue-50/90 px-5 py-3 text-sm font-black text-blue-800 transition hover:bg-blue-100 sm:w-auto">
+              <button type="button" onClick={abrirTelaCheia} className={botaoSecundarioClasse()}>
                 <Maximize2 size={18} /> Tela cheia
               </button>
             </div>
@@ -396,21 +400,21 @@ export default function TreinamentoTerminalPublico() {
         {etapa === 3 && treinamento && (
           <div className={painelClasse()}>
             <h2 className="text-xl font-black sm:text-2xl">Declaracao e assinatura</h2>
-            <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-200 bg-white/80 p-4 text-sm font-medium text-slate-700">
+            <label className="mt-5 flex items-start gap-3 rounded-xl border border-slate-300 bg-white p-4 text-sm font-bold text-slate-950">
               <input type="checkbox" className="mt-1 h-5 w-5 accent-blue-600" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
               <span>Declaro que assisti integralmente ao video, compreendi as orientacoes apresentadas e estou ciente das regras de acesso, seguranca e conduta aplicaveis ao terminal.</span>
             </label>
-            <div className="mt-5 rounded-xl border border-slate-200 bg-white/80 p-4">
+            <div className="mt-5 rounded-xl border border-slate-300 bg-white p-4">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-600">Assinatura</p>
-                <button type="button" onClick={limparAssinatura} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-blue-500">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-950">Assinatura</p>
+                <button type="button" onClick={limparAssinatura} className="inline-flex items-center gap-2 rounded-lg border border-slate-950 bg-slate-950 px-3 py-2 text-xs font-black text-white hover:border-blue-700 hover:bg-blue-700">
                   <RotateCcw size={14} /> Limpar
                 </button>
               </div>
               <canvas ref={canvasRef} width={900} height={220} className="h-48 w-full touch-none rounded-xl bg-white ring-1 ring-slate-200" onPointerDown={iniciarAssinatura} onPointerMove={desenhar} onPointerUp={() => setAssinando(false)} onPointerLeave={() => setAssinando(false)} />
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(2)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white/80 px-5 py-3 text-sm font-black text-slate-800 transition hover:border-blue-500 hover:text-blue-700 sm:w-auto">
+              <button type="button" onClick={() => voltarPara(2)} className={botaoSecundarioClasse()}>
                 <ArrowLeft size={18} /> Voltar para video
               </button>
               <button disabled={carregando} onClick={concluir} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:opacity-60 sm:w-auto">
@@ -421,10 +425,10 @@ export default function TreinamentoTerminalPublico() {
         )}
 
         {etapa === 4 && treinamento && (
-          <div className={painelClasse("border-emerald-400/45 bg-white/90 text-center")}>
+          <div className={painelClasse("border-emerald-700/45 bg-white text-center")}>
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
             <h2 className="mt-4 text-2xl font-black">Treinamento concluido</h2>
-            <p className="mt-2 text-sm font-medium text-emerald-800">Certificado {treinamento.codigo} emitido. O envio por e-mail sera realizado quando o SMTP estiver configurado no servidor.</p>
+            <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {treinamento.codigo} emitido. O envio por e-mail sera realizado quando o SMTP estiver configurado no servidor.</p>
             {treinamento.certificadoUrl && (
               <a href={treinamento.certificadoUrl} download className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500">
                 <Download size={18} /> Baixar certificado
