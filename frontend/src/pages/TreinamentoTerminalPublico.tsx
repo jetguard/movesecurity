@@ -285,7 +285,7 @@ export default function TreinamentoTerminalPublico() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
+    <main className="treinamento-terminal-publico relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
       <picture className="fixed inset-0 z-0 block h-full w-full">
         <source media="(min-width: 768px)" srcSet={fundoDesktopUrl} />
         <img src={fundoMobileUrl} alt="" aria-hidden="true" className="h-full w-full object-cover object-center" />

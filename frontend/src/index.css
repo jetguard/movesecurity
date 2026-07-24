@@ -170,6 +170,30 @@
     color: #f8fafc;
   }
 
+  .treinamento-terminal-publico input,
+  .treinamento-terminal-publico textarea,
+  .treinamento-terminal-publico select,
+  .dark .treinamento-terminal-publico input,
+  .dark .treinamento-terminal-publico textarea,
+  .dark .treinamento-terminal-publico select {
+    background-color: #ffffff !important;
+    border-color: #2563eb !important;
+    color: #07132f !important;
+  }
+
+  .treinamento-terminal-publico input::placeholder,
+  .treinamento-terminal-publico textarea::placeholder,
+  .dark .treinamento-terminal-publico input::placeholder,
+  .dark .treinamento-terminal-publico textarea::placeholder {
+    color: #475569 !important;
+  }
+
+  .treinamento-terminal-publico input[type="checkbox"],
+  .dark .treinamento-terminal-publico input[type="checkbox"] {
+    accent-color: #2563eb;
+    border-color: #2563eb !important;
+  }
+
   .dark table {
     color: #e2e8f0;
   }
