@@ -201,7 +201,7 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
     }
 
     const existente = await prisma.treinamentoTerminal.findFirst({
-      where: { cpf, email, status: "Em andamento" },
+      where: { cpf, email },
       orderBy: { updatedAt: "desc" },
     });
 
@@ -210,7 +210,11 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
         where: { id: existente.id },
         data: { ultimoAcessoEm: new Date() },
       });
-      return res.json({ treinamento: respostaPublica(atualizado), emAndamento: true });
+      return res.json({
+        treinamento: respostaPublica(atualizado),
+        emAndamento: !treinamentoConcluido(atualizado.status),
+        concluido: treinamentoConcluido(atualizado.status),
+      });
     }
 
     const treinamento = await prisma.treinamentoTerminal.create({

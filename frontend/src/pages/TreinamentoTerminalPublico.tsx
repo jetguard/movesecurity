@@ -72,6 +72,10 @@ function formatarTempo(segundos: number) {
   return `${String(min).padStart(2, "0")}:${String(seg).padStart(2, "0")}`;
 }
 
+function treinamentoConcluido(treinamento?: Treinamento | null) {
+  return String(treinamento?.status || "").toLowerCase().startsWith("conclu");
+}
+
 export default function TreinamentoTerminalPublico() {
   const [config, setConfig] = useState<Config | null>(null);
   const [etapa, setEtapa] = useState(0);
@@ -100,6 +104,10 @@ export default function TreinamentoTerminalPublico() {
     maiorTempoRef.current = treinamento.progressoSegundos || 0;
     setTempoAtual(treinamento.progressoSegundos || 0);
     setDuracao(treinamento.duracaoSegundos || 0);
+    if (treinamentoConcluido(treinamento)) {
+      setEtapa(4);
+      return;
+    }
     if (treinamento.videoConcluido) setEtapa(3);
   }, [treinamento]);
 
@@ -144,8 +152,13 @@ export default function TreinamentoTerminalPublico() {
     try {
       const response = await axios.post("/api/public/treinamento-terminal/iniciar", form);
       setTreinamento(response.data.treinamento);
-      setMensagem(response.data.emAndamento ? "Treinamento em andamento encontrado. Voce pode continuar de onde parou." : "Cadastro registrado. Inicie o video de orientacao.");
-      setEtapa(2);
+      if (response.data.concluido) {
+        setMensagem("Treinamento ja concluido. Certificado disponivel para download.");
+        setEtapa(4);
+      } else {
+        setMensagem(response.data.emAndamento ? "Treinamento em andamento encontrado. Voce pode continuar de onde parou." : "Cadastro registrado. Inicie o video de orientacao.");
+        setEtapa(2);
+      }
     } catch (error: any) {
       setMensagem(error.response?.data?.error || "Nao foi possivel iniciar o treinamento.");
     } finally {
@@ -402,8 +415,8 @@ export default function TreinamentoTerminalPublico() {
             <h2 className="mt-4 text-2xl font-black">Treinamento concluido</h2>
             <p className="mt-2 text-sm text-emerald-100">Certificado {treinamento.codigo} emitido. O envio por e-mail sera realizado quando o SMTP estiver configurado no servidor.</p>
             {treinamento.certificadoUrl && (
-              <a href={treinamento.certificadoUrl} className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500">
-                Salvar certificado
+              <a href={treinamento.certificadoUrl} download className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500">
+                <Download size={18} /> Baixar certificado
               </a>
             )}
           </div>
