@@ -474,7 +474,7 @@ export default function IntegracaoTerminalPublico() {
                           key={String(valor)}
                           type="button"
                           onClick={() => setRespostas((atuais) => atuais.map((item, posicao) => (posicao === index ? valor : item)))}
-                          className={`rounded-2xl border px-4 py-3 text-sm font-black transition ${selecionado ? "border-blue-600 bg-blue-600 text-white shadow-lg shadow-blue-700/20" : "border-blue-200 bg-white text-blue-950 hover:bg-blue-50"}`}
+                          className={`terminal-quiz-option rounded-2xl border px-4 py-3 text-sm font-black transition ${selecionado ? "terminal-quiz-option-active shadow-lg shadow-blue-700/20" : "terminal-quiz-option-idle"}`}
                         >
                           {valor ? "Verdadeiro" : "Falso"}
                         </button>

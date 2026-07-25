@@ -353,6 +353,34 @@
     background: linear-gradient(180deg, #3b82f6, #2563eb) !important;
   }
 
+  .treinamento-terminal-publico .terminal-quiz-option,
+  .dark .treinamento-terminal-publico .terminal-quiz-option {
+    box-shadow:
+      0 10px 22px rgb(15 23 42 / 0.05),
+      inset 0 1px 0 rgb(255 255 255 / 0.95) !important;
+  }
+
+  .treinamento-terminal-publico .terminal-quiz-option-idle,
+  .dark .treinamento-terminal-publico .terminal-quiz-option-idle {
+    background-color: #ffffff !important;
+    border-color: #bfdbfe !important;
+    color: #102a56 !important;
+  }
+
+  .treinamento-terminal-publico .terminal-quiz-option-idle:hover,
+  .dark .treinamento-terminal-publico .terminal-quiz-option-idle:hover {
+    background-color: #eff6ff !important;
+    border-color: #60a5fa !important;
+    color: #1d4ed8 !important;
+  }
+
+  .treinamento-terminal-publico .terminal-quiz-option-active,
+  .dark .treinamento-terminal-publico .terminal-quiz-option-active {
+    background: linear-gradient(180deg, #2563eb, #1d4ed8) !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
+  }
+
   .treinamento-terminal-publico .terminal-success-action,
   .dark .treinamento-terminal-publico .terminal-success-action {
     background: linear-gradient(180deg, #059669, #047857) !important;
