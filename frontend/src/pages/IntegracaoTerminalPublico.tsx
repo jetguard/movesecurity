@@ -429,7 +429,7 @@ export default function IntegracaoTerminalPublico() {
             <video
               ref={videoRef}
               src={config?.videoUrl}
-              className="mt-5 aspect-video w-full rounded-2xl border border-slate-800 bg-black"
+              className="terminal-integration-video mt-5 w-full rounded-2xl border border-blue-200 bg-white"
               onLoadedMetadata={prepararVideo}
               onTimeUpdate={atualizarTempo}
               onEnded={finalizarVideo}
