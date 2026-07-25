@@ -198,7 +198,7 @@ function respostaPublica(integracao: any) {
 
 export function configIntegracaoTerminal(req: Request, res: Response) {
   return res.json({
-    titulo: "Integracao operacional do terminal",
+    titulo: "Integração de condutores",
     portaria: "Integracao de motoristas",
     resumo: resumoPortaria,
     videoUrl: videoPadrao(),
