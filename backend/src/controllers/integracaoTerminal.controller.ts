@@ -85,7 +85,7 @@ async function proximoCodigo() {
     where: { codigo: { endsWith: `/${ano}` } },
     orderBy: { id: "desc" },
   });
-  const numero = ultimo ? Number(ultimo.codigo.match(/CERT-(\d+)\//)?.[1] || 0) + 1 : 1;
+  const numero = ultimo ? Number(ultimo.codigo.match(/INT-(\d+)\//)?.[1] || 0) + 1 : 1;
   return `INT-${String(numero).padStart(5, "0")}/${ano}`;
 }
 
