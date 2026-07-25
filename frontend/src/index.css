@@ -417,6 +417,7 @@
     .treinamento-terminal-publico .terminal-integration-video,
     .dark .treinamento-terminal-publico .terminal-integration-video {
       aspect-ratio: 16 / 9;
+      object-fit: contain;
     }
   }
 
