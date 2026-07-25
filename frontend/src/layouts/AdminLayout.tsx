@@ -511,6 +511,10 @@ export default function AdminLayout() {
                     <FileCheck2 size={16} />
                     Treinamentos de Acesso
                   </Link>
+                  <Link to="/integracoes-do-terminal" className={subItem}>
+                    <FileCheck2 size={16} />
+                    Integrações do Terminal
+                  </Link>
                   <Link to="/planejamento" className={subItem}>
                     <Columns3 size={16} />
                     Quadro de Tarefas

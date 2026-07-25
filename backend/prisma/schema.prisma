@@ -104,6 +104,39 @@ model TreinamentoTerminal {
   @@index([status, updatedAt])
 }
 
+model IntegracaoTerminal {
+  id                 Int       @id @default(autoincrement())
+  token              String    @unique
+  codigo             String    @unique
+  nomeCompleto       String
+  cpf                String
+  dataNascimento     DateTime
+  empresa            String
+  cargo              String
+  email              String
+  telefone           String
+  etapa              String    @default("video")
+  status             String    @default("Em andamento")
+  videoUrl           String?
+  progressoSegundos  Int       @default(0)
+  duracaoSegundos    Int       @default(0)
+  videoConcluido     Boolean   @default(false)
+  quizAprovado       Boolean   @default(false)
+  respostasQuiz      String?
+  aceiteDeclaracao   Boolean   @default(false)
+  assinaturaDataUrl  String?
+  certificadoArquivo String?
+  emailStatus        String?
+  emailEnviadoEm     DateTime?
+  concluidoEm        DateTime?
+  ultimoAcessoEm     DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([cpf])
+  @@index([status, updatedAt])
+}
+
 model SessaoUsuario {
   id                 String    @id @default(cuid())
   usuarioId          Int

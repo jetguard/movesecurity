@@ -66,11 +66,20 @@ const RelatorioDiarioExecutivo = lazyWithReload(
 const TreinamentoTerminalPublico = lazyWithReload(
   () => import("./pages/TreinamentoTerminalPublico"),
 );
+const IntegracaoTerminalPublico = lazyWithReload(
+  () => import("./pages/IntegracaoTerminalPublico"),
+);
 const ValidarCertificadoTreinamento = lazyWithReload(
   () => import("./pages/ValidarCertificadoTreinamento"),
 );
+const ValidarCertificadoIntegracao = lazyWithReload(
+  () => import("./pages/ValidarCertificadoIntegracao"),
+);
 const TreinamentosTerminal = lazyWithReload(
   () => import("./pages/TreinamentosTerminal"),
+);
+const IntegracoesTerminal = lazyWithReload(
+  () => import("./pages/IntegracoesTerminal"),
 );
 
 function CarregandoPagina() {
@@ -85,7 +94,9 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
           <Route path="/treinamento-terminal" element={<TreinamentoTerminalPublico />} />
+          <Route path="/integracao-terminal" element={<IntegracaoTerminalPublico />} />
           <Route path="/validar-certificado/:token" element={<ValidarCertificadoTreinamento />} />
+          <Route path="/validar-integracao/:token" element={<ValidarCertificadoIntegracao />} />
           <Route
             path="/alterar-senha"
             element={
@@ -151,6 +162,20 @@ export default function App() {
                   ]}
                 >
                   <TreinamentosTerminal />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="integracoes-do-terminal"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <IntegracoesTerminal />
                 </ProtectedRoute>
               }
             />
