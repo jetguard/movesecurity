@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, FileText, Maximize2, Pause, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, Maximize2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
 
 type Config = {
   titulo: string;
@@ -44,7 +44,6 @@ const vazio = {
   telefone: "",
 };
 
-const portariaPdfUrl = "/docs/portaria-alf-sts-205-2026.pdf";
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
 
@@ -133,7 +132,6 @@ export default function IntegracaoTerminalPublico() {
   const [aceite, setAceite] = useState(false);
   const [assinando, setAssinando] = useState(false);
   const [assinaturaVazia, setAssinaturaVazia] = useState(true);
-  const [portariaAberta, setPortariaAberta] = useState(false);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const maiorTempoRef = useRef(0);
@@ -381,9 +379,6 @@ export default function IntegracaoTerminalPublico() {
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => setPortariaAberta(true)} className={botaoSecundarioClasse()}>
-                <FileText size={18} /> Ver Portaria
-              </button>
               <button onClick={() => setEtapa(1)} className={botaoPrimarioClasse()}>
                 Entendi, avancar
               </button>
@@ -536,27 +531,6 @@ export default function IntegracaoTerminalPublico() {
         )}
       </section>
 
-      {portariaAberta && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-          <div className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-2xl">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-5 py-4">
-              <div>
-                <p className="text-xs font-bold uppercase text-blue-300">Documento oficial</p>
-                <h2 className="text-lg font-black text-white">Portaria ALF/STS 205/2026</h2>
-              </div>
-              <div className="flex items-center gap-2">
-                <a href={portariaPdfUrl} download className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-black text-white transition hover:bg-blue-500">
-                  <Download size={16} /> Download
-                </a>
-                <button onClick={() => setPortariaAberta(false)} className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 text-slate-200 transition hover:border-red-400 hover:text-red-200" aria-label="Fechar">
-                  <X size={18} />
-                </button>
-              </div>
-            </div>
-            <iframe title="Portaria ALF/STS 205/2026" src={portariaPdfUrl} className="min-h-0 flex-1 bg-white" />
-          </div>
-        </div>
-      )}
     </main>
   );
 }
