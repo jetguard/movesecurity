@@ -183,7 +183,7 @@ export default function TreinamentoTerminalPublico() {
   async function iniciar(event: FormEvent) {
     event.preventDefault();
     if (!cpfValido(form.cpf)) {
-      setMensagem("Informe um CPF valido para continuar.");
+      setMensagem("Informe um CPF válido para continuar.");
       return;
     }
     setCarregando(true);
@@ -192,14 +192,14 @@ export default function TreinamentoTerminalPublico() {
       const response = await axios.post("/api/public/treinamento-terminal/iniciar", form);
       setTreinamento(response.data.treinamento);
       if (response.data.concluido) {
-        setMensagem("Treinamento ja concluido. Certificado disponivel para download.");
+        setMensagem("Treinamento já concluído. Certificado disponível para download.");
         setEtapa(4);
       } else {
-        setMensagem(response.data.emAndamento ? "Treinamento em andamento encontrado. Voce pode continuar de onde parou." : "Cadastro registrado. Inicie o video de orientacao.");
+        setMensagem(response.data.emAndamento ? "Treinamento em andamento encontrado. Você pode continuar de onde parou." : "Cadastro registrado. Inicie o vídeo de orientação.");
         setEtapa(2);
       }
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Nao foi possivel iniciar o treinamento.");
+      setMensagem(error.response?.data?.error || "Não foi possível iniciar o treinamento.");
     } finally {
       setCarregando(false);
     }
@@ -233,7 +233,7 @@ export default function TreinamentoTerminalPublico() {
     if (!video) return;
     if (video.paused) {
       video.playbackRate = velocidadeVideo;
-      video.play().then(() => setTocando(true)).catch(() => setMensagem("Nao foi possivel iniciar o video."));
+      video.play().then(() => setTocando(true)).catch(() => setMensagem("Não foi possível iniciar o vídeo."));
     } else {
       video.pause();
       setTocando(false);
@@ -244,7 +244,7 @@ export default function TreinamentoTerminalPublico() {
   function abrirTelaCheia() {
     const video = videoRef.current;
     if (!video) return;
-    video.requestFullscreen?.().catch(() => setMensagem("Nao foi possivel abrir o video em tela cheia."));
+    video.requestFullscreen?.().catch(() => setMensagem("Não foi possível abrir o vídeo em tela cheia."));
   }
 
   function alternarVelocidadeVideo() {
@@ -261,13 +261,13 @@ export default function TreinamentoTerminalPublico() {
       setTempoAtual(video.duration || tempoAtual);
     }
     setTocando(false);
-    salvarProgresso(true).then(() => setEtapa(3)).catch(() => setMensagem("Nao foi possivel liberar a declaracao."));
+    salvarProgresso(true).then(() => setEtapa(3)).catch(() => setMensagem("Não foi possível liberar a declaração."));
   }
 
   function finalizarVideo() {
     maiorTempoRef.current = Math.max(maiorTempoRef.current, videoRef.current?.duration || tempoAtual);
     setTocando(false);
-    salvarProgresso(true).then(() => setEtapa(3)).catch(() => setMensagem("Nao foi possivel registrar a conclusao do video."));
+    salvarProgresso(true).then(() => setEtapa(3)).catch(() => setMensagem("Não foi possível registrar a conclusão do vídeo."));
   }
 
   function pontoCanvas(event: PointerEvent<HTMLCanvasElement>) {
@@ -310,7 +310,7 @@ export default function TreinamentoTerminalPublico() {
 
   async function concluir() {
     if (!treinamento || !aceite || assinaturaVazia) {
-      setMensagem("Confirme a declaracao e registre sua assinatura.");
+      setMensagem("Confirme a declaração e registre sua assinatura.");
       return;
     }
     setCarregando(true);
@@ -324,7 +324,7 @@ export default function TreinamentoTerminalPublico() {
       setEtapa(4);
       setMensagem("Certificado emitido com sucesso.");
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Nao foi possivel emitir o certificado.");
+      setMensagem(error.response?.data?.error || "Não foi possível emitir o certificado.");
     } finally {
       setCarregando(false);
     }
@@ -347,7 +347,7 @@ export default function TreinamentoTerminalPublico() {
         </div>
 
         <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-4 sm:gap-3">
-          {["Orientacoes", "Dados", "Video", "Declaracao"].map((item, index) => (
+          {["Orientações", "Dados", "Vídeo", "Declaração"].map((item, index) => (
             <div key={item} className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "terminal-step-active" : "terminal-step-idle"}`}>
               {index + 1}. {item}
             </div>
@@ -370,7 +370,7 @@ export default function TreinamentoTerminalPublico() {
                 <FileText size={18} /> Ver Portaria
               </button>
               <button onClick={() => setEtapa(1)} className={botaoPrimarioClasse()}>
-                Entendi, avancar
+                Entendi, avançar
               </button>
             </div>
           </div>
@@ -378,22 +378,22 @@ export default function TreinamentoTerminalPublico() {
 
         {etapa === 1 && (
           <form onSubmit={iniciar} className={painelClasse()}>
-            <h2 className="text-xl font-black sm:text-2xl">Identificacao do participante</h2>
+            <h2 className="text-xl font-black sm:text-2xl">Identificação do participante</h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className={labelClasse()}>Nome completo<input className={`${campoClasse()} mt-2.5`} value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required /></label>
-              <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2.5`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} inputMode="numeric" maxLength={14} aria-invalid={form.cpf.length === 14 && !cpfValido(form.cpf)} title="Digite um CPF valido" required /></label>
+              <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2.5`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} inputMode="numeric" maxLength={14} aria-invalid={form.cpf.length === 14 && !cpfValido(form.cpf)} title="Digite um CPF válido" required /></label>
               <label className={labelClasse()}>Data de nascimento<input className={`${campoClasse()} mt-2.5`} type="date" value={form.dataNascimento} onChange={(e) => alterar("dataNascimento", e.target.value)} required /></label>
               <label className={labelClasse()}>Empresa<input className={`${campoClasse()} mt-2.5`} value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} required /></label>
-              <label className={labelClasse()}>Funcao/Cargo<input className={`${campoClasse()} mt-2.5`} value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} required /></label>
+              <label className={labelClasse()}>Função/Cargo<input className={`${campoClasse()} mt-2.5`} value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} required /></label>
               <label className={labelClasse()}>E-mail<input className={`${campoClasse()} mt-2.5`} type="email" value={form.email} onChange={(e) => alterar("email", e.target.value)} required /></label>
               <label className={labelClasse()}>Telefone / WhatsApp<input className={`${campoClasse()} mt-2.5`} value={form.telefone} onChange={(e) => alterar("telefone", e.target.value)} required /></label>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <button type="button" onClick={() => voltarPara(0)} className={botaoSecundarioClasse()}>
-                <ArrowLeft size={18} /> Voltar para orientacoes
+                <ArrowLeft size={18} /> Voltar para orientações
               </button>
               <button disabled={carregando} className={botaoPrimarioClasse()}>
-                {carregando ? "Verificando..." : "Avancar para o video"}
+                {carregando ? "Verificando..." : "Avançar para o vídeo"}
               </button>
             </div>
           </form>
@@ -403,8 +403,8 @@ export default function TreinamentoTerminalPublico() {
           <div className={painelClasse()}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black sm:text-2xl">Video obrigatorio</h2>
-                <p className="mt-1 text-sm font-bold text-slate-900">Modo de testes ativo: use os controles abaixo para acelerar ou pular o video.</p>
+                <h2 className="text-xl font-black sm:text-2xl">Vídeo obrigatório</h2>
+                <p className="mt-1 text-sm font-bold text-slate-900">Modo de testes ativo: use os controles abaixo para acelerar ou pular o vídeo.</p>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
                 <Clock3 className="mr-2 inline h-4 w-4 text-blue-700" />
@@ -443,7 +443,7 @@ export default function TreinamentoTerminalPublico() {
                 <FastForward size={18} /> {velocidadeVideo === 1 ? "Acelerar 1.5x" : "Voltar para 1x"}
               </button>
               <button type="button" onClick={pularVideoTeste} className={botaoSecundarioClasse()}>
-                <SkipForward size={18} /> Pular video
+                <SkipForward size={18} /> Pular vídeo
               </button>
             </div>
           </div>
@@ -451,10 +451,10 @@ export default function TreinamentoTerminalPublico() {
 
         {etapa === 3 && treinamento && (
           <div className={painelClasse()}>
-            <h2 className="text-xl font-black sm:text-2xl">Declaracao e assinatura</h2>
+            <h2 className="text-xl font-black sm:text-2xl">Declaração e assinatura</h2>
             <label className="terminal-info-card mt-5 flex items-start gap-3 rounded-xl border p-4 text-sm font-bold shadow-sm">
               <input type="checkbox" className="mt-1 h-5 w-5 accent-blue-600" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
-              <span>Declaro que assisti integralmente ao video, compreendi as orientacoes apresentadas e estou ciente das regras de acesso, seguranca e conduta aplicaveis ao terminal.</span>
+              <span>Declaro que assisti integralmente ao vídeo, compreendi as orientações apresentadas e estou ciente das regras de acesso, segurança e conduta aplicáveis ao terminal.</span>
             </label>
             <div className="terminal-info-card mt-5 rounded-xl border p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -467,7 +467,7 @@ export default function TreinamentoTerminalPublico() {
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
               <button type="button" onClick={() => voltarPara(2)} className={botaoSecundarioClasse()}>
-                <ArrowLeft size={18} /> Voltar para video
+                <ArrowLeft size={18} /> Voltar para vídeo
               </button>
               <button disabled={carregando} onClick={concluir} className={botaoSucessoClasse()}>
                 <FileCheck2 size={18} /> Emitir certificado
@@ -479,8 +479,8 @@ export default function TreinamentoTerminalPublico() {
         {etapa === 4 && treinamento && (
           <div className={painelClasse("text-center")}>
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
-            <h2 className="mt-4 text-2xl font-black">Treinamento concluido</h2>
-            <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {treinamento.codigo} emitido. O envio por e-mail sera realizado quando o SMTP estiver configurado no servidor.</p>
+            <h2 className="mt-4 text-2xl font-black">Treinamento concluído</h2>
+            <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {treinamento.codigo} emitido. O envio por e-mail será realizado quando o SMTP estiver configurado no servidor.</p>
             {treinamento.certificadoUrl && (
               <a href={treinamento.certificadoUrl} download className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500">
                 <Download size={18} /> Baixar certificado

@@ -10,12 +10,12 @@ import { pdfAssets } from "../services/documentoPdfBase.service";
 import { enviarEmail } from "../services/email.service";
 
 const resumoPortaria = [
-  "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdicao da Alfandega da Receita Federal do Brasil do Porto de Santos a conclusao do curso basico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
+  "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdição da Alfândega da Receita Federal do Brasil do Porto de Santos à conclusão do curso básico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
 ];
 
 const assinaturaSegurancaPatrimonial = path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.jpeg");
 const rodapeCertificado =
-  "curso básico de conhecimentos aduaneiros como requisito para o credenciamento de pessoas para ingresso em recintos alfandegados";
+  "Curso básico de conhecimentos aduaneiros como requisito para o credenciamento de pessoas para ingresso em recintos alfandegados";
 
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
@@ -105,8 +105,8 @@ function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, 
 
 function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: number, largura: number) {
   if (fs.existsSync(assinaturaSegurancaPatrimonial)) {
-    doc.image(assinaturaSegurancaPatrimonial, x + 55, y - 66, {
-      cover: [largura - 120, 44],
+    doc.image(assinaturaSegurancaPatrimonial, x + 30, y - 74, {
+      cover: [largura - 60, 68],
       align: "center",
       valign: "center",
     });
@@ -125,8 +125,10 @@ function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: 
 
 async function gerarCertificadoPdf(treinamento: any) {
   const destino = arquivoCertificado(treinamento.token);
+  const destinoTemporario = `${destino}.tmp`;
+  fs.rmSync(destinoTemporario, { force: true });
   const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0, bufferPages: true });
-  const stream = fs.createWriteStream(destino);
+  const stream = fs.createWriteStream(destinoTemporario);
   doc.pipe(stream);
 
   const pageWidth = doc.page.width;
@@ -157,7 +159,7 @@ async function gerarCertificadoPdf(treinamento: any) {
     lineGap: 8,
   });
 
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(17).text(`Guaruja, ${dataPorExtenso(concluidoEm)}.`, 210, 295, {
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(17).text(`Guarujá, ${dataPorExtenso(concluidoEm)}.`, 210, 295, {
     width: 430,
     align: "center",
   });
@@ -194,13 +196,14 @@ async function gerarCertificadoPdf(treinamento: any) {
     width: pageWidth - 116,
     align: "center",
   });
-  doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validacao: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
+  doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validação: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
     stream.on("finish", resolve);
     stream.on("error", reject);
   });
+  fs.renameSync(destinoTemporario, destino);
 
   return destino;
 }
@@ -238,7 +241,7 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
     const dataNascimento = new Date(req.body.dataNascimento);
 
     if (!texto(req.body.nomeCompleto) || !cpfValido(cpf) || !email || Number.isNaN(dataNascimento.getTime())) {
-      return res.status(400).json({ error: "Informe nome completo, CPF valido, e-mail e data de nascimento." });
+      return res.status(400).json({ error: "Informe nome completo, CPF válido, e-mail e data de nascimento." });
     }
 
     if (idade(dataNascimento) < 18) {
@@ -300,7 +303,7 @@ export async function atualizarProgressoTreinamento(req: Request, res: Response)
   try {
     const token = String(req.params.token || "");
     const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento nao encontrado." });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
     if (treinamentoConcluido(treinamento.status)) return res.json({ treinamento: respostaPublica(treinamento) });
 
     const progresso = Math.max(0, Math.floor(Number(req.body.progressoSegundos || 0)));
@@ -329,11 +332,11 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
   try {
     const token = String(req.params.token || "");
     const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento nao encontrado." });
-    if (!treinamento.videoConcluido) return res.status(400).json({ error: "Conclua o video antes de emitir o certificado." });
-    if (!req.body.aceiteDeclaracao) return res.status(400).json({ error: "Confirme a declaracao de ciencia." });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!treinamento.videoConcluido) return res.status(400).json({ error: "Conclua o vídeo antes de emitir o certificado." });
+    if (!req.body.aceiteDeclaracao) return res.status(400).json({ error: "Confirme a declaração de ciência." });
     if (!texto(req.body.assinaturaDataUrl).startsWith("data:image/png;base64,")) {
-      return res.status(400).json({ error: "Informe a assinatura eletronica." });
+      return res.status(400).json({ error: "Informe a assinatura eletrônica." });
     }
 
     let atualizado = await prisma.treinamentoTerminal.update({
@@ -352,8 +355,8 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
     const email = await enviarEmail({
       to: atualizado.email,
       subject: `Certificado de treinamento - ${atualizado.codigo}`,
-      text: `Ola, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusao do treinamento de acesso ao terminal.`,
-      html: `<p>Ola, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusao do treinamento de acesso ao terminal.</p>`,
+      text: `Olá, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.`,
+      html: `<p>Olá, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.</p>`,
       attachments: [{ filename: `certificado-${atualizado.codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
     });
 
@@ -376,18 +379,36 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
 export async function baixarCertificadoTreinamento(req: Request, res: Response) {
   const token = String(req.params.token || "");
   const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-  if (!treinamento?.certificadoArquivo || !fs.existsSync(treinamento.certificadoArquivo)) {
-    return res.status(404).json({ error: "Certificado nao encontrado." });
+  if (!treinamento || !treinamentoConcluido(treinamento.status)) {
+    return res.status(404).json({ error: "Certificado não encontrado." });
   }
 
-  return res.download(treinamento.certificadoArquivo, `certificado-${treinamento.codigo.replace("/", "-")}.pdf`);
+  let certificadoArquivo = treinamento.certificadoArquivo;
+  const precisaRegenerar =
+    !certificadoArquivo ||
+    !fs.existsSync(certificadoArquivo) ||
+    fs.statSync(certificadoArquivo).size < 1024;
+
+  if (precisaRegenerar) {
+    certificadoArquivo = await gerarCertificadoPdf(treinamento);
+    await prisma.treinamentoTerminal.update({
+      where: { id: treinamento.id },
+      data: { certificadoArquivo },
+    });
+  }
+
+  if (!certificadoArquivo) {
+    return res.status(404).json({ error: "Certificado não encontrado." });
+  }
+
+  return res.download(certificadoArquivo, `certificado-${treinamento.codigo.replace("/", "-")}.pdf`);
 }
 
 export async function validarCertificadoTreinamento(req: Request, res: Response) {
   const token = String(req.params.token || "");
   const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
   if (!treinamento || !treinamentoConcluido(treinamento.status) || !treinamento.certificadoArquivo) {
-    return res.status(404).json({ error: "Certificado nao encontrado ou ainda nao emitido." });
+    return res.status(404).json({ error: "Certificado não encontrado ou ainda não emitido." });
   }
 
   return res.json({
@@ -419,10 +440,10 @@ export async function listarTreinamentosTerminal(req: AuthRequest, res: Response
 export async function excluirTreinamentoTerminal(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento invalido." });
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
 
     const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { id } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento nao encontrado." });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
 
     if (treinamento.certificadoArquivo && fs.existsSync(treinamento.certificadoArquivo)) {
       fs.rmSync(treinamento.certificadoArquivo, { force: true });
