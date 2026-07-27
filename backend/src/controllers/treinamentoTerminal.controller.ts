@@ -13,6 +13,10 @@ const resumoPortaria = [
   "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdicao da Alfandega da Receita Federal do Brasil do Porto de Santos a conclusao do curso basico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
 ];
 
+const assinaturaSegurancaPatrimonial = path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.jpeg");
+const rodapeCertificado =
+  "curso básico de conhecimentos aduaneiros como requisito para o credenciamento de pessoas para ingresso em recintos alfandegados";
+
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
 }
@@ -99,6 +103,26 @@ function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, 
   doc.fillColor("#111827").font("Helvetica").fontSize(8).text(cargo, x, y + 27, { width: largura, align: "center" });
 }
 
+function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: number, largura: number) {
+  if (fs.existsSync(assinaturaSegurancaPatrimonial)) {
+    doc.image(assinaturaSegurancaPatrimonial, x + 55, y - 66, {
+      cover: [largura - 120, 44],
+      align: "center",
+      valign: "center",
+    });
+  }
+
+  doc.moveTo(x, y).lineTo(x + largura, y).strokeColor("#2f6bb2").lineWidth(1).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9.5).text("Segurança Patrimonial", x, y + 12, {
+    width: largura,
+    align: "center",
+  });
+  doc.fillColor("#111827").font("Helvetica").fontSize(8.5).text("Movecta S.A", x, y + 28, {
+    width: largura,
+    align: "center",
+  });
+}
+
 async function gerarCertificadoPdf(treinamento: any) {
   const destino = arquivoCertificado(treinamento.token);
   const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0, bufferPages: true });
@@ -123,7 +147,8 @@ async function gerarCertificadoPdf(treinamento: any) {
   doc.restore();
 
   doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text("CERTIFICADO", 44, 58, { width: 270, lineBreak: false });
-  doc.fillColor("#dbeafe").font("Helvetica-Bold").fontSize(9).text(treinamento.codigo, pageWidth - 210, 38, { width: 166, align: "right" });
+  doc.roundedRect(pageWidth - 218, 34, 174, 34, 10).fillAndStroke("#ffffff", "#bfdbfe");
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15).text(treinamento.codigo, pageWidth - 204, 44, { width: 146, align: "center" });
 
   const textoPrincipal = `Certificamos que o(a) colaborador(a) ${treinamento.nomeCompleto} participou do programa Portas Abertas da Movecta S.A em ${dataCurta(concluidoEm)}.`;
   doc.fillColor("#111827").font("Helvetica").fontSize(18).text(textoPrincipal, 178, 198, {
@@ -132,7 +157,7 @@ async function gerarCertificadoPdf(treinamento: any) {
     lineGap: 8,
   });
 
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(15).text(`Guaruja, ${dataPorExtenso(concluidoEm)}.`, 210, 295, {
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(17).text(`Guaruja, ${dataPorExtenso(concluidoEm)}.`, 210, 295, {
     width: 430,
     align: "center",
   });
@@ -149,11 +174,11 @@ async function gerarCertificadoPdf(treinamento: any) {
   }
 
   desenharLinhaAssinatura(doc, 158, 415, 275, treinamento.nomeCompleto, "Participante");
-  desenharLinhaAssinatura(doc, 472, 415, 275, "Movecta S.A", "Responsavel pelo treinamento");
+  desenharAssinaturaInstitucional(doc, 472, 415, 275);
 
-  doc.image(qrCode, 680, 248, { width: 82, height: 82 });
-  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDACAO", 676, 336, { width: 90, align: "center" });
-  doc.fillColor("#64748b").font("Helvetica").fontSize(6.5).text("Aponte a camera para confirmar a autenticidade deste certificado na plataforma.", 664, 348, { width: 116, align: "center", lineGap: 1 });
+  doc.image(qrCode, 700, 248, { width: 82, height: 82 });
+  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDACAO", 696, 336, { width: 90, align: "center" });
+  doc.fillColor("#64748b").font("Helvetica").fontSize(6.5).text("Aponte a camera para confirmar a autenticidade deste certificado na plataforma.", 686, 348, { width: 116, align: "center", lineGap: 1 });
 
   doc.moveTo(206, 505).lineTo(580, 505).strokeColor("#86b91d").lineWidth(1).stroke();
   doc.circle(206, 505, 3).fill("#86b91d");
@@ -165,6 +190,10 @@ async function gerarCertificadoPdf(treinamento: any) {
     doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
   }
 
+  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(8).text(rodapeCertificado, 58, pageHeight - 44, {
+    width: pageWidth - 116,
+    align: "center",
+  });
   doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validacao: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
   doc.end();
 
