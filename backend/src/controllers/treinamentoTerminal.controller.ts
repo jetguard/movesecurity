@@ -13,7 +13,7 @@ const resumoPortaria = [
   "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdição da Alfândega da Receita Federal do Brasil do Porto de Santos à conclusão do curso básico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
 ];
 
-const assinaturaSegurancaPatrimonial = path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.jpeg");
+const assinaturaSegurancaPatrimonial = path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png");
 const rodapeCertificado =
   "Curso básico de conhecimentos aduaneiros como requisito para o credenciamento de pessoas para ingresso em recintos alfandegados";
 
@@ -105,8 +105,8 @@ function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, 
 
 function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: number, largura: number) {
   if (fs.existsSync(assinaturaSegurancaPatrimonial)) {
-    doc.image(assinaturaSegurancaPatrimonial, x + 30, y - 74, {
-      cover: [largura - 60, 68],
+    doc.image(assinaturaSegurancaPatrimonial, x + 45, y - 58, {
+      fit: [largura - 90, 54],
       align: "center",
       valign: "center",
     });
