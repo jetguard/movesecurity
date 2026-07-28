@@ -14,6 +14,7 @@ const resumoPortaria = [
 ];
 
 const respostasQuiz = [false, false, false, true, true];
+const assinaturaSegurancaPatrimonial = path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png");
 
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
@@ -127,6 +128,26 @@ function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, 
   doc.fillColor("#111827").font("Helvetica").fontSize(8).text(cargo, x, y + 27, { width: largura, align: "center" });
 }
 
+function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: number, largura: number) {
+  if (fs.existsSync(assinaturaSegurancaPatrimonial)) {
+    doc.image(assinaturaSegurancaPatrimonial, x + 45, y - 58, {
+      fit: [largura - 90, 54],
+      align: "center",
+      valign: "center",
+    });
+  }
+
+  doc.moveTo(x, y).lineTo(x + largura, y).strokeColor("#2f6bb2").lineWidth(1).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9.5).text("Segurança Patrimonial", x, y + 12, {
+    width: largura,
+    align: "center",
+  });
+  doc.fillColor("#111827").font("Helvetica").fontSize(8.5).text("Movecta S.A", x, y + 28, {
+    width: largura,
+    align: "center",
+  });
+}
+
 async function gerarCertificadoPdf(integracao: any) {
   const destino = arquivoCertificado(integracao.token);
   const destinoTemporario = `${destino}.tmp`;
@@ -180,7 +201,7 @@ async function gerarCertificadoPdf(integracao: any) {
   }
 
   desenharLinhaAssinatura(doc, 158, 415, 275, integracao.nomeCompleto, "Motorista");
-  desenharLinhaAssinatura(doc, 472, 415, 275, "Movecta S.A", "Responsavel pela integracao");
+  desenharAssinaturaInstitucional(doc, 472, 415, 275);
 
   doc.image(qrCode, 58, 424, { width: 72, height: 72 });
   doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDACAO", 49, 502, { width: 90, align: "center" });
