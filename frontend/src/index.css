@@ -279,6 +279,28 @@
     border-color: #2563eb !important;
   }
 
+  .treinamento-terminal-publico .terminal-acceptance-checkbox,
+  .dark .treinamento-terminal-publico .terminal-acceptance-checkbox {
+    min-width: 2rem;
+    min-height: 2rem;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 8px rgb(37 99 235 / 0.18));
+  }
+
+  .treinamento-terminal-publico .terminal-acceptance-checkbox:focus-visible,
+  .dark .treinamento-terminal-publico .terminal-acceptance-checkbox:focus-visible {
+    outline: 3px solid rgb(37 99 235 / 0.38);
+    outline-offset: 3px;
+  }
+
+  @media (min-width: 640px) {
+    .treinamento-terminal-publico .terminal-acceptance-checkbox,
+    .dark .treinamento-terminal-publico .terminal-acceptance-checkbox {
+      min-width: 1.5rem;
+      min-height: 1.5rem;
+    }
+  }
+
   .treinamento-terminal-publico input[type="date"]::-webkit-calendar-picker-indicator,
   .dark .treinamento-terminal-publico input[type="date"]::-webkit-calendar-picker-indicator {
     filter: none !important;

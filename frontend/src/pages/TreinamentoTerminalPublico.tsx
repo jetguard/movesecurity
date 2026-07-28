@@ -462,8 +462,8 @@ export default function TreinamentoTerminalPublico() {
         {etapa === 3 && treinamento && (
           <div className={painelClasse()}>
             <h2 className="text-xl font-black sm:text-2xl">Declaração e assinatura</h2>
-            <label className="terminal-info-card mt-5 flex items-start gap-3 rounded-xl border p-4 text-sm font-bold shadow-sm">
-              <input type="checkbox" className="mt-1 h-5 w-5 accent-blue-600" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
+            <label className="terminal-info-card mt-5 flex cursor-pointer items-start gap-4 rounded-xl border p-5 text-base font-bold leading-7 shadow-sm sm:text-sm sm:leading-6">
+              <input type="checkbox" className="terminal-acceptance-checkbox mt-0.5 h-8 w-8 shrink-0 accent-blue-600 sm:h-6 sm:w-6" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
               <span>Declaro que assisti integralmente ao vídeo, compreendi as orientações apresentadas e estou ciente das regras de acesso, segurança e conduta aplicáveis ao terminal.</span>
             </label>
             <div className="terminal-info-card mt-5 rounded-xl border p-4 shadow-sm">
