@@ -25,6 +25,7 @@ const perfis = [
   { label: "Administrador", value: "ADMINISTRADOR" },
   { label: "Analista", value: "ANALISTA" },
   { label: "Operador", value: "OPERADOR" },
+  { label: "Portaria", value: "PORTARIA" },
   { label: "Técnico/Manutenção", value: "TECNICO_MANUTENCAO" },
 ];
 
@@ -326,7 +327,7 @@ export default function Usuarios() {
             </div>
           )}
 
-          {editando && ["OPERADOR", "ANALISTA", "TECNICO_MANUTENCAO"].includes(editando.perfilAcesso) && (
+          {editando && ["OPERADOR", "ANALISTA", "PORTARIA", "TECNICO_MANUTENCAO"].includes(editando.perfilAcesso) && (
             <div className="rounded-lg border bg-blue-50 p-4">
               <p className="font-semibold mb-2">Dispositivo autorizado</p>
               <p className="mb-3 text-sm text-slate-600">

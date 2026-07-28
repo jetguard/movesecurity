@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Award, CheckCircle2, Clock3, Download, Mail, PlayCircle, Search, Trash2 } from "lucide-react";
 import { api } from "../services/api";
+import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type Treinamento = {
   id: number;
@@ -44,6 +45,18 @@ function classeStatus(status: string) {
   return "border-blue-400/40 bg-blue-500/10 text-blue-700 dark:text-blue-200";
 }
 
+function apenasDigitos(valor: string) {
+  return valor.replace(/\D/g, "");
+}
+
+function mascararCpf(valor: string) {
+  const digitos = apenasDigitos(valor).slice(0, 11);
+  return digitos
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
 const cardsIndicadores: Array<[string, keyof ReturnType<typeof criarIndicadores>, LucideIcon]> = [
   ["Total", "total", Award],
   ["Em andamento", "andamento", Clock3],
@@ -63,9 +76,11 @@ function criarIndicadores(lista: Treinamento[]) {
 export default function TreinamentosTerminal() {
   const [lista, setLista] = useState<Treinamento[]>([]);
   const [busca, setBusca] = useState("");
+  const [cpfFiltro, setCpfFiltro] = useState("");
   const [status, setStatus] = useState("Todos");
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
+  const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(perfilAtual());
 
   async function carregar() {
     const response = await api.get("/treinamentos-terminal");
@@ -98,12 +113,14 @@ export default function TreinamentosTerminal() {
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
+    const cpfTermo = apenasDigitos(cpfFiltro);
     return lista.filter((item) => {
       const okStatus = status === "Todos" || item.status === status || (status === "Concluido" && estaConcluido(item.status));
       const okBusca = !termo || [item.nomeCompleto, item.cpf, item.email, item.empresa, item.codigo].join(" ").toLowerCase().includes(termo);
-      return okStatus && okBusca;
+      const okCpf = !cpfTermo || apenasDigitos(item.cpf).includes(cpfTermo);
+      return okStatus && okBusca && okCpf;
     });
-  }, [lista, busca, status]);
+  }, [lista, busca, cpfFiltro, status]);
 
   const indicadores = useMemo(() => criarIndicadores(lista), [lista]);
 
@@ -144,6 +161,14 @@ export default function TreinamentosTerminal() {
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF, e-mail, empresa ou certificado" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
           </div>
+          <input
+            value={cpfFiltro}
+            onChange={(e) => setCpfFiltro(mascararCpf(e.target.value))}
+            placeholder="Filtrar por CPF"
+            inputMode="numeric"
+            maxLength={14}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:w-48"
+          />
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white">
             <option>Todos</option>
             <option>Em andamento</option>
@@ -211,14 +236,16 @@ export default function TreinamentosTerminal() {
                           <Mail size={14} /> {enviandoId === item.id ? "Enviando..." : "Enviar"}
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => excluirTreinamento(item)}
-                        className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-500 hover:text-white dark:text-red-200"
-                        title="Excluir treinamento"
-                      >
-                        <Trash2 size={14} /> Excluir
-                      </button>
+                      {podeExcluir && (
+                        <button
+                          type="button"
+                          onClick={() => excluirTreinamento(item)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-500 hover:text-white dark:text-red-200"
+                          title="Excluir treinamento"
+                        >
+                          <Trash2 size={14} /> Excluir
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -47,6 +47,7 @@ import {
   somenteTecnicoManutencao,
   unidadesPermitidasUsuario,
   usuarioAtual,
+  PERFIS,
 } from "../utils/permissoes";
 
 const LIMITE_INATIVIDADE_MS = 5 * 60 * 1000;
@@ -84,6 +85,7 @@ export default function AdminLayout() {
   const [erroDesbloqueio, setErroDesbloqueio] = useState("");
   const [desbloqueando, setDesbloqueando] = useState(false);
   const usuario = usuarioAtual();
+  const portaria = usuario?.perfilAcesso === PERFIS.PORTARIA;
   const tecnicoManutencao = somenteTecnicoManutencao();
   const rotaTecnicoPermitida = location.pathname.startsWith("/cameras") || location.pathname.startsWith("/ordens-servico");
   const unidadesDisponiveis = useMemo(() => unidadesPermitidasUsuario(), []);
@@ -191,6 +193,13 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
+    if (portaria) {
+      setNotificacoes([]);
+      setMencoesPendentes(0);
+      setPassagensAbertas(0);
+      return;
+    }
+
     function carregarNotificacoes() {
       api
         .get("/gestao/notificacoes")
@@ -221,7 +230,7 @@ export default function AdminLayout() {
         "notificacoes-atualizadas",
         carregarNotificacoes,
       );
-  }, []);
+  }, [portaria]);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -427,14 +436,14 @@ export default function AdminLayout() {
           onClick={fecharMenuMobileAoNavegar}
           className="mt-6 flex flex-col gap-2 px-2 pb-6 sm:px-3"
         >
-          {!tecnicoManutencao && (
+          {!tecnicoManutencao && !portaria && (
             <Link to="/" className={item}>
               <LayoutDashboard size={20} className="shrink-0" />
               <span className={menuText}>Dashboard</span>
             </Link>
           )}
 
-          {!tecnicoManutencao && (
+          {!tecnicoManutencao && !portaria && (
             <>
               <button
                 onClick={() => setRelatoriosOpen(!relatoriosOpen)}
@@ -484,72 +493,87 @@ export default function AdminLayout() {
             </>
           )}
 
-          <button
-            onClick={() => setOperacaoOpen(!operacaoOpen)}
-            className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
-          >
-            <div className="flex items-center gap-3">
-              <ListChecks size={20} className="shrink-0" />
-              <span className={menuText}>Operação</span>
-            </div>
-            <span className={menuToggle}>{operacaoOpen ? "-" : "+"}</span>
-          </button>
+          {portaria ? (
+            <>
+              <Link to="/treinamentos-terminal" className={item}>
+                <FileCheck2 size={20} className="shrink-0" />
+                <span className={menuText}>Treinamentos Terminal</span>
+              </Link>
+              <Link to="/meus-dados" className={item}>
+                <Users size={20} className="shrink-0" />
+                <span className={menuText}>Minha Conta</span>
+              </Link>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={() => setOperacaoOpen(!operacaoOpen)}
+                className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+              >
+                <div className="flex items-center gap-3">
+                  <ListChecks size={20} className="shrink-0" />
+                  <span className={menuText}>Operação</span>
+                </div>
+                <span className={menuToggle}>{operacaoOpen ? "-" : "+"}</span>
+              </button>
 
-          {operacaoOpen && (
-            <div className={submenuClass}>
-              <Link to="/cameras" className={subItem}>
-                <Video size={16} />
-                Câmeras CFTV
-              </Link>
-              <Link to="/ordens-servico" className={subItem}>
-                <Wrench size={16} />
-                Ordens de Serviço
-              </Link>
-              {!tecnicoManutencao && (
-                <>
-                  <Link to="/treinamentos-terminal" className={subItem}>
-                    <FileCheck2 size={16} />
-                    Treinamentos de Acesso
+              {operacaoOpen && (
+                <div className={submenuClass}>
+                  <Link to="/cameras" className={subItem}>
+                    <Video size={16} />
+                    Câmeras CFTV
                   </Link>
-                  <Link to="/integracoes-do-terminal" className={subItem}>
-                    <FileCheck2 size={16} />
-                    Integrações do Terminal
+                  <Link to="/ordens-servico" className={subItem}>
+                    <Wrench size={16} />
+                    Ordens de Serviço
                   </Link>
-                  <Link to="/planejamento" className={subItem}>
-                    <Columns3 size={16} />
-                    Quadro de Tarefas
-                  </Link>
-                  <Link to="/tarefas" className={subItem}>
-                    <CheckCircle2 size={16} />
-                    Minhas Tarefas
-                  </Link>
-                  <Link to="/quadra-seguranca" className={subItem}>
-                    <PackageSearch size={16} />
-                    Quadra de Segurança
-                  </Link>
-                  <Link to="/mapa-operacional" className={subItem}>
-                    <MapPinned size={16} />
-                    Mapa Operacional
-                  </Link>
-                  <Link to="/notificacoes" className={subItem}>
-                    <Bell size={16} />
-                    Notificações
-                  </Link>
-                  <Link to="/alertas-operacionais" className={subItem}>
-                    <ShieldAlert size={16} />
-                    Alertas Operacionais
-                  </Link>
-                  <Link to="/pendencias" className={subItem}>
-                    <ListChecks size={16} />
-                    Pendências
-                  </Link>
-                  <Link to="/evidencias" className={subItem}>
-                    <Paperclip size={16} />
-                    Evidências
-                  </Link>
-                </>
+                  {!tecnicoManutencao && (
+                    <>
+                      <Link to="/treinamentos-terminal" className={subItem}>
+                        <FileCheck2 size={16} />
+                        Treinamentos de Acesso
+                      </Link>
+                      <Link to="/integracoes-do-terminal" className={subItem}>
+                        <FileCheck2 size={16} />
+                        Integrações do Terminal
+                      </Link>
+                      <Link to="/planejamento" className={subItem}>
+                        <Columns3 size={16} />
+                        Quadro de Tarefas
+                      </Link>
+                      <Link to="/tarefas" className={subItem}>
+                        <CheckCircle2 size={16} />
+                        Minhas Tarefas
+                      </Link>
+                      <Link to="/quadra-seguranca" className={subItem}>
+                        <PackageSearch size={16} />
+                        Quadra de Segurança
+                      </Link>
+                      <Link to="/mapa-operacional" className={subItem}>
+                        <MapPinned size={16} />
+                        Mapa Operacional
+                      </Link>
+                      <Link to="/notificacoes" className={subItem}>
+                        <Bell size={16} />
+                        Notificações
+                      </Link>
+                      <Link to="/alertas-operacionais" className={subItem}>
+                        <ShieldAlert size={16} />
+                        Alertas Operacionais
+                      </Link>
+                      <Link to="/pendencias" className={subItem}>
+                        <ListChecks size={16} />
+                        Pendências
+                      </Link>
+                      <Link to="/evidencias" className={subItem}>
+                        <Paperclip size={16} />
+                        Evidências
+                      </Link>
+                    </>
+                  )}
+                </div>
               )}
-            </div>
+            </>
           )}
 
           {podeGerenciarRiscos() && (
@@ -729,6 +753,7 @@ export default function AdminLayout() {
             </button>
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
+              {!portaria && (
               <Link
                 to="/notificacoes"
                 className="relative shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800"
@@ -740,6 +765,8 @@ export default function AdminLayout() {
                   </span>
                 )}
               </Link>
+              )}
+              {!portaria && (
               <Link
                 to="/meus-dados?aba=mencoes"
                 className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[390px]:inline-flex"
@@ -751,6 +778,8 @@ export default function AdminLayout() {
                   </span>
                 )}
               </Link>
+              )}
+              {!portaria && (
               <Link
                 to="/operacao-soc"
                 className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[460px]:inline-flex"
@@ -767,6 +796,7 @@ export default function AdminLayout() {
                   </span>
                 )}
               </Link>
+              )}
               <button
                 type="button"
                 onClick={bloquearSistema}
@@ -830,6 +860,7 @@ export default function AdminLayout() {
           </div>
 
           <div className="hidden min-w-0 items-center justify-end gap-3 sm:gap-4 md:flex">
+            {!portaria && (
             <Link
               to="/notificacoes"
               className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
@@ -841,6 +872,8 @@ export default function AdminLayout() {
                 </span>
               )}
             </Link>
+            )}
+            {!portaria && (
             <Link
               to="/meus-dados?aba=mencoes"
               className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
@@ -852,6 +885,8 @@ export default function AdminLayout() {
                 </span>
               )}
             </Link>
+            )}
+            {!portaria && (
             <Link
               to="/operacao-soc"
               className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
@@ -868,6 +903,7 @@ export default function AdminLayout() {
                 </span>
               )}
             </Link>
+            )}
             <button
               type="button"
               onClick={bloquearSistema}

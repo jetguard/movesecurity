@@ -159,6 +159,7 @@ export default function App() {
                     PERFIS.SUPER_ADMIN,
                     PERFIS.ADMINISTRADOR,
                     PERFIS.ANALISTA,
+                    PERFIS.PORTARIA,
                   ]}
                 >
                   <TreinamentosTerminal />

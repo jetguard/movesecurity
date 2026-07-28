@@ -10,7 +10,7 @@ import {
   reenviarCertificadoTreinamento,
   validarCertificadoTreinamento,
 } from "../controllers/treinamentoTerminal.controller";
-import { acessoAnalise, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { acessoTotal, acessoTreinamentosTerminal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
 
@@ -20,8 +20,8 @@ router.put("/public/treinamento-terminal/:token/progresso", atualizarProgressoTr
 router.post("/public/treinamento-terminal/:token/concluir", concluirTreinamentoTerminal);
 router.get("/public/treinamento-terminal/:token/certificado", baixarCertificadoTreinamento);
 router.get("/public/treinamento-terminal/:token/validar", validarCertificadoTreinamento);
-router.get("/treinamentos-terminal", autenticarUsuario, autorizarPerfis(acessoAnalise), listarTreinamentosTerminal);
-router.post("/treinamentos-terminal/:id/reenviar-certificado", autenticarUsuario, autorizarPerfis(acessoAnalise), reenviarCertificadoTreinamento);
+router.get("/treinamentos-terminal", autenticarUsuario, autorizarPerfis(acessoTreinamentosTerminal), listarTreinamentosTerminal);
+router.post("/treinamentos-terminal/:id/reenviar-certificado", autenticarUsuario, autorizarPerfis(acessoTreinamentosTerminal), reenviarCertificadoTreinamento);
 router.delete("/treinamentos-terminal/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirTreinamentoTerminal);
 
 export default router;

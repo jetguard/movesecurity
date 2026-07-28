@@ -46,6 +46,7 @@ function normalizarPerfil(perfil: string) {
     Administrador: "ADMINISTRADOR",
     Analista: "ANALISTA",
     Operador: "OPERADOR",
+    Portaria: "PORTARIA",
     "Técnico/Manutenção": "TECNICO_MANUTENCAO",
     "Tecnico/Manutencao": "TECNICO_MANUTENCAO",
     "Técnico Manutenção": "TECNICO_MANUTENCAO",
@@ -56,6 +57,7 @@ function normalizarPerfil(perfil: string) {
     ADMINISTRADOR: "ADMINISTRADOR",
     ANALISTA: "ANALISTA",
     OPERADOR: "OPERADOR",
+    PORTARIA: "PORTARIA",
     TECNICO_MANUTENCAO: "TECNICO_MANUTENCAO",
   };
 
