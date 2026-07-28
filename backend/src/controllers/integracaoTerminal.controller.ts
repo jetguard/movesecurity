@@ -68,11 +68,12 @@ function idade(data: Date) {
 }
 
 function dataCurta(data: Date) {
-  return data.toLocaleDateString("pt-BR");
+  return data.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 function dataPorExtenso(data: Date) {
   return data.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
     day: "2-digit",
     month: "long",
     year: "numeric",

@@ -70,11 +70,12 @@ function idade(data: Date) {
 }
 
 function dataCurta(data: Date) {
-  return data.toLocaleDateString("pt-BR");
+  return data.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
 function dataPorExtenso(data: Date) {
   return data.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -383,19 +384,11 @@ export async function baixarCertificadoTreinamento(req: Request, res: Response) 
     return res.status(404).json({ error: "Certificado não encontrado." });
   }
 
-  let certificadoArquivo = treinamento.certificadoArquivo;
-  const precisaRegenerar =
-    !certificadoArquivo ||
-    !fs.existsSync(certificadoArquivo) ||
-    fs.statSync(certificadoArquivo).size < 1024;
-
-  if (precisaRegenerar) {
-    certificadoArquivo = await gerarCertificadoPdf(treinamento);
-    await prisma.treinamentoTerminal.update({
-      where: { id: treinamento.id },
-      data: { certificadoArquivo },
-    });
-  }
+  const certificadoArquivo = await gerarCertificadoPdf(treinamento);
+  await prisma.treinamentoTerminal.update({
+    where: { id: treinamento.id },
+    data: { certificadoArquivo },
+  });
 
   if (!certificadoArquivo) {
     return res.status(404).json({ error: "Certificado não encontrado." });
