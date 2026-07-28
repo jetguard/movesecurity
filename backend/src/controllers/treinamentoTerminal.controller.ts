@@ -157,7 +157,7 @@ async function gerarCertificadoPdf(treinamento: any) {
   doc.roundedRect(pageWidth - 218, 34, 174, 34, 10).fillAndStroke("#ffffff", "#bfdbfe");
   doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15).text(treinamento.codigo, pageWidth - 204, 44, { width: 146, align: "center" });
 
-  const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu o Curso Básico de Conhecimentos Aduaneiros, atendendo ao requisito para o credenciamento de pessoas para ingresso em recintos alfandegados, conforme as normas aplicáveis, em ${dataCurta(concluidoEm)}.`;
+  const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu o Curso Básico de Conhecimentos Aduaneiros, atendendo ao requisito para o credenciamento de pessoas para ingresso em recintos alfandegados, conforme a PORTARIA ALF/STS Nº 205, DE 22 DE JUNHO DE 2026 e demais normas aplicáveis, em ${dataCurta(concluidoEm)}.`;
   doc.fillColor("#111827").font("Helvetica").fontSize(15.5).text(textoPrincipal, 160, 184, {
     width: 540,
     align: "center",
