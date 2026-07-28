@@ -14,11 +14,15 @@ const resumoPortaria = [
 ];
 
 const assinaturaSegurancaPatrimonial = path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png");
-const rodapeCertificado =
-  "Curso básico de conhecimentos aduaneiros como requisito para o credenciamento de pessoas para ingresso em recintos alfandegados";
 
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
+}
+
+function formatarCpf(cpf: string) {
+  const digitos = limparCpf(cpf);
+  if (digitos.length !== 11) return cpf || "-";
+  return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
 function cpfValido(cpf: string) {
@@ -153,16 +157,11 @@ async function gerarCertificadoPdf(treinamento: any) {
   doc.roundedRect(pageWidth - 218, 34, 174, 34, 10).fillAndStroke("#ffffff", "#bfdbfe");
   doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15).text(treinamento.codigo, pageWidth - 204, 44, { width: 146, align: "center" });
 
-  const textoPrincipal = `Certificamos que o(a) colaborador(a) ${treinamento.nomeCompleto} participou do programa Portas Abertas da Movecta S.A em ${dataCurta(concluidoEm)}.`;
-  doc.fillColor("#111827").font("Helvetica").fontSize(18).text(textoPrincipal, 178, 198, {
-    width: 500,
+  const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu o Curso Básico de Conhecimentos Aduaneiros, atendendo ao requisito para o credenciamento de pessoas para ingresso em recintos alfandegados, conforme as normas aplicáveis, em ${dataCurta(concluidoEm)}.`;
+  doc.fillColor("#111827").font("Helvetica").fontSize(15.5).text(textoPrincipal, 160, 184, {
+    width: 540,
     align: "center",
-    lineGap: 8,
-  });
-
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(17).text(`Guarujá, ${dataPorExtenso(concluidoEm)}.`, 210, 295, {
-    width: 430,
-    align: "center",
+    lineGap: 6,
   });
 
   if (treinamento.assinaturaDataUrl) {
@@ -193,10 +192,6 @@ async function gerarCertificadoPdf(treinamento: any) {
     doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
   }
 
-  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(8).text(rodapeCertificado, 58, pageHeight - 44, {
-    width: pageWidth - 116,
-    align: "center",
-  });
   doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validação: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
   doc.end();
 
