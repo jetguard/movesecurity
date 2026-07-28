@@ -544,8 +544,8 @@ export default function IntegracaoTerminalPublico() {
         {etapa === 5 && integracao && (
           <div className={painelClasse("text-center")}>
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
-            <h2 className="mt-4 text-2xl font-black">Integracao concluida</h2>
-            <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {integracao.codigo} emitido. O envio por e-mail sera realizado quando o SMTP estiver configurado no servidor.</p>
+            <h2 className="mt-4 text-2xl font-black">Integração concluída</h2>
+            <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {integracao.codigo} emitido. O arquivo está disponível para download e o envio ao e-mail cadastrado foi solicitado.</p>
             {integracao.certificadoUrl && (
               <a href={integracao.certificadoUrl} download className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500">
                 <Download size={18} /> Baixar certificado
