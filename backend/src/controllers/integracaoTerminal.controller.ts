@@ -408,6 +408,7 @@ export async function validarCertificadoIntegracao(req: Request, res: Response) 
 
   return res.json({
     valido: true,
+    token: integracao.token,
     codigo: integracao.codigo,
     nomeCompleto: integracao.nomeCompleto,
     cpf: integracao.cpf,

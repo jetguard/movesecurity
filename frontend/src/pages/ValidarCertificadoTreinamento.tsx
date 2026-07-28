@@ -5,6 +5,7 @@ import { CheckCircle2, Download, ShieldCheck, XCircle } from "lucide-react";
 
 type CertificadoValidado = {
   valido: boolean;
+  token: string;
   codigo: string;
   nomeCompleto: string;
   cpf: string;
@@ -16,7 +17,13 @@ type CertificadoValidado = {
 };
 
 function data(valor?: string) {
-  return valor ? new Date(valor).toLocaleString("pt-BR") : "-";
+  return valor ? new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "-";
+}
+
+function cpfFormatado(valor?: string) {
+  const digitos = String(valor || "").replace(/\D/g, "");
+  if (digitos.length !== 11) return valor || "-";
+  return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
 export default function ValidarCertificadoTreinamento() {
@@ -30,7 +37,7 @@ export default function ValidarCertificadoTreinamento() {
     axios
       .get(`/api/public/treinamento-terminal/${token}/validar`)
       .then((response) => setCertificado(response.data))
-      .catch((error) => setErro(error.response?.data?.error || "Certificado nao encontrado."))
+      .catch((error) => setErro(error.response?.data?.error || "Certificado não encontrado."))
       .finally(() => setCarregando(false));
   }, [token]);
 
@@ -41,7 +48,7 @@ export default function ValidarCertificadoTreinamento() {
           <div className="flex items-center justify-between gap-4 border-b border-slate-800 pb-5">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-300">Movecta</p>
-              <h1 className="mt-2 text-2xl font-black sm:text-3xl">Validacao de certificado</h1>
+              <h1 className="mt-2 text-2xl font-black sm:text-3xl">Validação de certificado</h1>
             </div>
             <ShieldCheck className="h-10 w-10 shrink-0 text-blue-300" />
           </div>
@@ -51,7 +58,7 @@ export default function ValidarCertificadoTreinamento() {
           {!carregando && erro && (
             <div className="mt-8 rounded-2xl border border-red-400/30 bg-red-500/10 p-5">
               <XCircle className="h-10 w-10 text-red-300" />
-              <h2 className="mt-4 text-xl font-black text-red-100">Documento nao validado</h2>
+              <h2 className="mt-4 text-xl font-black text-red-100">Documento não validado</h2>
               <p className="mt-2 text-sm text-red-100/80">{erro}</p>
             </div>
           )}
@@ -60,16 +67,24 @@ export default function ValidarCertificadoTreinamento() {
             <div className="mt-8 rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-5">
               <CheckCircle2 className="h-12 w-12 text-emerald-300" />
               <h2 className="mt-4 text-xl font-black text-emerald-100">Certificado verdadeiro</h2>
-              <p className="mt-2 text-sm text-emerald-100/80">Este certificado foi emitido pela plataforma Movecta e consta como valido.</p>
+              <p className="mt-2 text-sm text-emerald-100/80">Este certificado foi emitido pela plataforma Movecta e consta como válido.</p>
 
               <div className="mt-6 grid gap-3 text-sm sm:grid-cols-2">
                 <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Codigo</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Código</p>
                   <p className="mt-1 font-black">{certificado.codigo}</p>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Concluido em</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Concluído em</p>
                   <p className="mt-1 font-black">{data(certificado.concluidoEm)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">CPF</p>
+                  <p className="mt-1 font-black">{cpfFormatado(certificado.cpf)}</p>
+                </div>
+                <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Token</p>
+                  <p className="mt-1 break-all font-mono text-xs font-black text-blue-100">{certificado.token}</p>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4 sm:col-span-2">
                   <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">Participante</p>

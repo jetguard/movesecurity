@@ -406,6 +406,7 @@ export async function validarCertificadoTreinamento(req: Request, res: Response)
 
   return res.json({
     valido: true,
+    token: treinamento.token,
     codigo: treinamento.codigo,
     nomeCompleto: treinamento.nomeCompleto,
     cpf: treinamento.cpf,
