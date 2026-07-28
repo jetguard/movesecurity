@@ -92,14 +92,27 @@ function dataPorExtenso(data: Date) {
   });
 }
 
-async function proximoCodigo() {
+async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
-  const ultimo = await prisma.integracaoTerminal.findFirst({
+  await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('movecta_integracao_terminal_certificado_${ano}'))`);
+  const ultimo = await tx.integracaoTerminal.findFirst({
     where: { codigo: { endsWith: `/${ano}` } },
     orderBy: { id: "desc" },
   });
-  const numero = ultimo ? Number(ultimo.codigo.match(/INT-(\d+)\//)?.[1] || 0) + 1 : 1;
+  const numero = ultimo?.codigo ? Number(ultimo.codigo.match(/INT-(\d+)\//)?.[1] || 0) + 1 : 1;
   return `INT-${String(numero).padStart(5, "0")}/${ano}`;
+}
+
+async function garantirCodigoIntegracao(integracao: { id: number; codigo?: string | null }) {
+  if (integracao.codigo) return integracao.codigo;
+  const atualizado = await prisma.$transaction(async (tx) => {
+    const codigo = await proximoCodigo(tx);
+    return tx.integracaoTerminal.update({
+      where: { id: integracao.id },
+      data: { codigo },
+    });
+  });
+  return atualizado.codigo || "";
 }
 
 function arquivoCertificado(token: string) {
@@ -266,7 +279,6 @@ export async function iniciarIntegracaoTerminal(req: Request, res: Response) {
     const integracao = await prisma.integracaoTerminal.create({
       data: {
         token: randomUUID(),
-        codigo: await proximoCodigo(),
         nomeCompleto: texto(req.body.nomeCompleto),
         cpf,
         dataNascimento,
@@ -373,25 +385,30 @@ export async function concluirIntegracaoTerminal(req: Request, res: Response) {
       return res.status(400).json({ error: "Informe a assinatura eletronica." });
     }
 
-    let atualizado = await prisma.integracaoTerminal.update({
-      where: { id: integracao.id },
-      data: {
-        aceiteDeclaracao: true,
-        assinaturaDataUrl: texto(req.body.assinaturaDataUrl),
-        etapa: "concluido",
-        status: "Concluido",
-        concluidoEm: integracao.concluidoEm || new Date(),
-        ultimoAcessoEm: new Date(),
-      },
+    let atualizado = await prisma.$transaction(async (tx) => {
+      const codigo = integracao.codigo || (await proximoCodigo(tx));
+      return tx.integracaoTerminal.update({
+        where: { id: integracao.id },
+        data: {
+          codigo,
+          aceiteDeclaracao: true,
+          assinaturaDataUrl: texto(req.body.assinaturaDataUrl),
+          etapa: "concluido",
+          status: "Concluido",
+          concluidoEm: integracao.concluidoEm || new Date(),
+          ultimoAcessoEm: new Date(),
+        },
+      });
     });
 
     const certificadoArquivo = await gerarCertificadoPdf(atualizado);
+    const codigoCertificado = atualizado.codigo || "";
     const email = await enviarEmail({
       to: atualizado.email,
-      subject: `Certificado de Integração de Motoristas - ${atualizado.codigo}`,
+      subject: `Certificado de Integração de Motoristas - ${codigoCertificado}`,
       text: `Olá, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusão da Integração de Motoristas.`,
       html: `<p>Olá, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão da Integração de Motoristas.</p>`,
-      attachments: [{ filename: `certificado-${atualizado.codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
+      attachments: [{ filename: `certificado-${codigoCertificado.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
     });
 
     atualizado = await prisma.integracaoTerminal.update({
@@ -417,7 +434,8 @@ export async function baixarCertificadoIntegracao(req: Request, res: Response) {
     return res.status(404).json({ error: "Certificado nao encontrado." });
   }
 
-  return res.download(integracao.certificadoArquivo, `certificado-${integracao.codigo.replace("/", "-")}.pdf`);
+  const codigo = await garantirCodigoIntegracao(integracao);
+  return res.download(integracao.certificadoArquivo, `certificado-${codigo.replace("/", "-")}.pdf`);
 }
 
 export async function validarCertificadoIntegracao(req: Request, res: Response) {

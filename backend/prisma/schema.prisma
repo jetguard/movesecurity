@@ -76,7 +76,7 @@ model Usuario {
 model TreinamentoTerminal {
   id                 Int       @id @default(autoincrement())
   token              String    @unique
-  codigo             String    @unique
+  codigo             String?   @unique
   nomeCompleto       String
   cpf                String
   dataNascimento     DateTime
@@ -107,7 +107,7 @@ model TreinamentoTerminal {
 model IntegracaoTerminal {
   id                 Int       @id @default(autoincrement())
   token              String    @unique
-  codigo             String    @unique
+  codigo             String?   @unique
   nomeCompleto       String
   cpf                String
   dataNascimento     DateTime

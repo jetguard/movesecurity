@@ -92,14 +92,27 @@ function dataPorExtenso(data: Date) {
   });
 }
 
-async function proximoCodigo() {
+async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
-  const ultimo = await prisma.treinamentoTerminal.findFirst({
+  await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('movecta_treinamento_terminal_certificado_${ano}'))`);
+  const ultimo = await tx.treinamentoTerminal.findFirst({
     where: { codigo: { endsWith: `/${ano}` } },
     orderBy: { id: "desc" },
   });
-  const numero = ultimo ? Number(ultimo.codigo.match(/CERT-(\d+)\//)?.[1] || 0) + 1 : 1;
+  const numero = ultimo?.codigo ? Number(ultimo.codigo.match(/CERT-(\d+)\//)?.[1] || 0) + 1 : 1;
   return `CERT-${String(numero).padStart(5, "0")}/${ano}`;
+}
+
+async function garantirCodigoTreinamento(treinamento: { id: number; codigo?: string | null }) {
+  if (treinamento.codigo) return treinamento.codigo;
+  const atualizado = await prisma.$transaction(async (tx) => {
+    const codigo = await proximoCodigo(tx);
+    return tx.treinamentoTerminal.update({
+      where: { id: treinamento.id },
+      data: { codigo },
+    });
+  });
+  return atualizado.codigo || "";
 }
 
 function arquivoCertificado(token: string) {
@@ -280,7 +293,6 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
     const treinamento = await prisma.treinamentoTerminal.create({
       data: {
         token: randomUUID(),
-        codigo: await proximoCodigo(),
         nomeCompleto: texto(req.body.nomeCompleto),
         cpf,
         dataNascimento,
@@ -340,25 +352,30 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
       return res.status(400).json({ error: "Informe a assinatura eletrônica." });
     }
 
-    let atualizado = await prisma.treinamentoTerminal.update({
-      where: { id: treinamento.id },
-      data: {
-        aceiteDeclaracao: true,
-        assinaturaDataUrl: texto(req.body.assinaturaDataUrl),
-        etapa: "concluido",
-        status: "Concluido",
-        concluidoEm: treinamento.concluidoEm || new Date(),
-        ultimoAcessoEm: new Date(),
-      },
+    let atualizado = await prisma.$transaction(async (tx) => {
+      const codigo = treinamento.codigo || (await proximoCodigo(tx));
+      return tx.treinamentoTerminal.update({
+        where: { id: treinamento.id },
+        data: {
+          codigo,
+          aceiteDeclaracao: true,
+          assinaturaDataUrl: texto(req.body.assinaturaDataUrl),
+          etapa: "concluido",
+          status: "Concluido",
+          concluidoEm: treinamento.concluidoEm || new Date(),
+          ultimoAcessoEm: new Date(),
+        },
+      });
     });
 
     const certificadoArquivo = await gerarCertificadoPdf(atualizado);
+    const codigoCertificado = atualizado.codigo || "";
     const email = await enviarEmail({
       to: atualizado.email,
-      subject: `Certificado de treinamento - ${atualizado.codigo}`,
+      subject: `Certificado de treinamento - ${codigoCertificado}`,
       text: `Olá, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.`,
       html: `<p>Olá, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.</p>`,
-      attachments: [{ filename: `certificado-${atualizado.codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
+      attachments: [{ filename: `certificado-${codigoCertificado.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
     });
 
     atualizado = await prisma.treinamentoTerminal.update({
@@ -384,7 +401,9 @@ export async function baixarCertificadoTreinamento(req: Request, res: Response) 
     return res.status(404).json({ error: "Certificado não encontrado." });
   }
 
-  const certificadoArquivo = await gerarCertificadoPdf(treinamento);
+  const codigo = await garantirCodigoTreinamento(treinamento);
+  const treinamentoComCodigo = { ...treinamento, codigo };
+  const certificadoArquivo = await gerarCertificadoPdf(treinamentoComCodigo);
   await prisma.treinamentoTerminal.update({
     where: { id: treinamento.id },
     data: { certificadoArquivo },
@@ -394,7 +413,7 @@ export async function baixarCertificadoTreinamento(req: Request, res: Response) 
     return res.status(404).json({ error: "Certificado não encontrado." });
   }
 
-  return res.download(certificadoArquivo, `certificado-${treinamento.codigo.replace("/", "-")}.pdf`);
+  return res.download(certificadoArquivo, `certificado-${codigo.replace("/", "-")}.pdf`);
 }
 
 export async function validarCertificadoTreinamento(req: Request, res: Response) {
@@ -429,13 +448,15 @@ export async function reenviarCertificadoTreinamento(req: AuthRequest, res: Resp
       return res.status(400).json({ error: "O certificado só pode ser enviado após a conclusão do curso." });
     }
 
-    const certificadoArquivo = await gerarCertificadoPdf(treinamento);
+    const codigo = await garantirCodigoTreinamento(treinamento);
+    const treinamentoComCodigo = { ...treinamento, codigo };
+    const certificadoArquivo = await gerarCertificadoPdf(treinamentoComCodigo);
     const email = await enviarEmail({
       to: treinamento.email,
-      subject: `Certificado de treinamento - ${treinamento.codigo}`,
+      subject: `Certificado de treinamento - ${codigo}`,
       text: `Olá, ${treinamento.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.`,
       html: `<p>Olá, <strong>${treinamento.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.</p>`,
-      attachments: [{ filename: `certificado-${treinamento.codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
+      attachments: [{ filename: `certificado-${codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
     });
 
     const atualizado = await prisma.treinamentoTerminal.update({
