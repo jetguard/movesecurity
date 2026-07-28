@@ -133,6 +133,8 @@ export default function IntegracaoTerminalPublico() {
   const [carregando, setCarregando] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [tocando, setTocando] = useState(false);
+  const [videoCarregando, setVideoCarregando] = useState(false);
+  const [videoErro, setVideoErro] = useState(false);
   const [velocidadeVideo, setVelocidadeVideo] = useState(1);
   const [duracao, setDuracao] = useState(0);
   const [tempoAtual, setTempoAtual] = useState(0);
@@ -227,6 +229,8 @@ export default function IntegracaoTerminalPublico() {
   function prepararVideo() {
     const video = videoRef.current;
     if (!video || !integracao) return;
+    setVideoErro(false);
+    setVideoCarregando(false);
     if (integracao.progressoSegundos > 0 && video.currentTime < 1) {
       video.currentTime = integracao.progressoSegundos;
     }
@@ -251,8 +255,16 @@ export default function IntegracaoTerminalPublico() {
     const video = videoRef.current;
     if (!video) return;
     if (video.paused) {
+      setVideoErro(false);
+      setVideoCarregando(video.readyState < 3);
       video.playbackRate = velocidadeVideo;
-      video.play().then(() => setTocando(true)).catch(() => setMensagem("Nao foi possivel iniciar o video."));
+      video.play().then(() => {
+        setTocando(true);
+        setVideoCarregando(false);
+      }).catch(() => {
+        setVideoCarregando(false);
+        setMensagem("Nao foi possivel iniciar o video.");
+      });
     } else {
       video.pause();
       setTocando(false);
@@ -431,27 +443,47 @@ export default function IntegracaoTerminalPublico() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-black sm:text-2xl">Video obrigatorio</h2>
-                <p className="mt-1 text-sm font-bold text-slate-900">Modo de testes ativo: use os controles abaixo para acelerar ou pular o video.</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">Use os controles abaixo para reproduzir ou acelerar o video.</p>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
                 <Clock3 className="mr-2 inline h-4 w-4 text-blue-700" />
                 Restante: {formatarTempo(restante)}
               </div>
             </div>
-            <video
-              ref={videoRef}
-              src={config?.videoUrl}
-              className="terminal-integration-video mt-5 w-full rounded-2xl border border-blue-200 bg-white"
-              onLoadedMetadata={prepararVideo}
-              onTimeUpdate={atualizarTempo}
-              onEnded={finalizarVideo}
-              onRateChange={() => { if (videoRef.current && videoRef.current.playbackRate !== velocidadeVideo) videoRef.current.playbackRate = velocidadeVideo; }}
-              onSeeking={() => {
-                if (videoRef.current && videoRef.current.currentTime > maiorTempoRef.current + 1) {
-                  videoRef.current.currentTime = maiorTempoRef.current;
-                }
-              }}
-            />
+            <div className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-blue-200 bg-white">
+              <video
+                ref={videoRef}
+                src={config?.videoUrl}
+                className="terminal-integration-video w-full bg-white"
+                preload="auto"
+                playsInline
+                poster={fundoDesktopUrl}
+                onLoadStart={() => setVideoCarregando(true)}
+                onLoadedMetadata={prepararVideo}
+                onCanPlay={() => setVideoCarregando(false)}
+                onPlaying={() => setVideoCarregando(false)}
+                onWaiting={() => setVideoCarregando(true)}
+                onError={() => {
+                  setVideoCarregando(false);
+                  setVideoErro(true);
+                  setTocando(false);
+                  setMensagem("Nao foi possivel carregar o video. Verifique a conexao e tente novamente.");
+                }}
+                onTimeUpdate={atualizarTempo}
+                onEnded={finalizarVideo}
+                onRateChange={() => { if (videoRef.current && videoRef.current.playbackRate !== velocidadeVideo) videoRef.current.playbackRate = velocidadeVideo; }}
+                onSeeking={() => {
+                  if (videoRef.current && videoRef.current.currentTime > maiorTempoRef.current + 1) {
+                    videoRef.current.currentTime = maiorTempoRef.current;
+                  }
+                }}
+              />
+              {(videoCarregando || videoErro) && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/72 px-4 text-center text-sm font-black text-white">
+                  {videoErro ? "Nao foi possivel carregar o video." : "Carregando video..."}
+                </div>
+              )}
+            </div>
             <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-800">
               <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(100, ((tempoAtual || 0) / Math.max(1, duracao || 1)) * 100)}%` }} />
             </div>
