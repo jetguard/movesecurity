@@ -49,6 +49,12 @@ function texto(valor: unknown) {
   return String(valor || "").trim();
 }
 
+function emailValido(email: string) {
+  const normalizado = String(email || "").trim();
+  if (!normalizado || normalizado.length > 254 || normalizado.includes("..")) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
+}
+
 function videoPadrao() {
   return process.env.TREINAMENTO_TERMINAL_VIDEO_URL || "/videos/treinamento-terminal.mp4";
 }
@@ -235,7 +241,7 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
     const email = texto(req.body.email).toLowerCase();
     const dataNascimento = new Date(req.body.dataNascimento);
 
-    if (!texto(req.body.nomeCompleto) || !cpfValido(cpf) || !email || Number.isNaN(dataNascimento.getTime())) {
+    if (!texto(req.body.nomeCompleto) || !cpfValido(cpf) || !emailValido(email) || Number.isNaN(dataNascimento.getTime())) {
       return res.status(400).json({ error: "Informe nome completo, CPF válido, e-mail e data de nascimento." });
     }
 

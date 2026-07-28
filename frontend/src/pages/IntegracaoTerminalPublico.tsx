@@ -99,6 +99,12 @@ function cpfValido(cpf: string) {
   return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
 }
 
+function emailValido(email: string) {
+  const normalizado = email.trim();
+  if (!normalizado || normalizado.length > 254 || normalizado.includes("..")) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
+}
+
 function mascararTelefone(valor: string) {
   const digitos = apenasDigitos(valor).slice(0, 11);
   if (digitos.length <= 10) {
@@ -193,6 +199,10 @@ export default function IntegracaoTerminalPublico() {
     event.preventDefault();
     if (!cpfValido(form.cpf)) {
       setMensagem("Informe um CPF valido para continuar.");
+      return;
+    }
+    if (!emailValido(form.email)) {
+      setMensagem("Informe um e-mail válido para continuar.");
       return;
     }
     setCarregando(true);
@@ -413,7 +423,7 @@ export default function IntegracaoTerminalPublico() {
               <label className={labelClasse()}>Data de nascimento<input className={`${campoClasse()} mt-2.5`} type="date" value={form.dataNascimento} onChange={(e) => alterar("dataNascimento", e.target.value)} required /></label>
               <label className={labelClasse()}>Empresa<input className={`${campoClasse()} mt-2.5`} value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} required /></label>
               <label className={labelClasse()}>Funcao/Cargo<input className={`${campoClasse()} mt-2.5`} value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} required /></label>
-              <label className={labelClasse()}>E-mail<input className={`${campoClasse()} mt-2.5`} type="email" value={form.email} onChange={(e) => alterar("email", e.target.value)} required /></label>
+              <label className={labelClasse()}>E-mail<input className={`${campoClasse()} mt-2.5`} type="email" value={form.email} onChange={(e) => alterar("email", e.target.value)} aria-invalid={form.email.length > 0 && !emailValido(form.email)} title="Digite um e-mail válido" required /></label>
               <label className={labelClasse()}>Telefone / WhatsApp<input className={`${campoClasse()} mt-2.5`} value={form.telefone} onChange={(e) => alterar("telefone", e.target.value)} required /></label>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
