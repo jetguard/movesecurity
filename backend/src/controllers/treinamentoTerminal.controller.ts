@@ -178,9 +178,8 @@ async function gerarCertificadoPdf(treinamento: any) {
   desenharLinhaAssinatura(doc, 158, 415, 275, treinamento.nomeCompleto, "Participante");
   desenharAssinaturaInstitucional(doc, 472, 415, 275);
 
-  doc.image(qrCode, 700, 248, { width: 82, height: 82 });
-  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDACAO", 696, 336, { width: 90, align: "center" });
-  doc.fillColor("#64748b").font("Helvetica").fontSize(6.5).text("Aponte a camera para confirmar a autenticidade deste certificado na plataforma.", 686, 348, { width: 116, align: "center", lineGap: 1 });
+  doc.image(qrCode, 58, 424, { width: 72, height: 72 });
+  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDAÇÃO", 49, 502, { width: 90, align: "center" });
 
   doc.moveTo(206, 505).lineTo(580, 505).strokeColor("#86b91d").lineWidth(1).stroke();
   doc.circle(206, 505, 3).fill("#86b91d");
