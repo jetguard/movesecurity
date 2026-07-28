@@ -341,7 +341,7 @@ export default function TreinamentoTerminalPublico() {
         <div className="terminal-panel mb-5 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 shadow-xl sm:mb-8 sm:px-5 sm:py-4">
           <div>
             <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Movecta</p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Treinamento de acesso ao terminal</h1>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Treinamento de acesso ao Recinto Alfandegado</h1>
           </div>
           <ShieldCheck className="h-9 w-9 shrink-0 text-blue-600 sm:h-10 sm:w-10" />
         </div>

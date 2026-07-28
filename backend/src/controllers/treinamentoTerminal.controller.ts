@@ -222,7 +222,7 @@ function respostaPublica(treinamento: any) {
 
 export function configTreinamentoTerminal(req: Request, res: Response) {
   return res.json({
-    titulo: "Treinamento de acesso ao terminal",
+    titulo: "Treinamento de acesso ao Recinto Alfandegado",
     portaria: "Portaria ALF/STS no 205, de 22 de junho de 2026",
     resumo: resumoPortaria,
     videoUrl: videoPadrao(),
