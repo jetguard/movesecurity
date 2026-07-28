@@ -27,11 +27,11 @@ type Integracao = {
 };
 
 const perguntasQuiz = [
-  { texto: "O limite de velocidade dentro da Movecta e de 30 km/h?", correta: false },
-  { texto: "E seguro transitar entre as pilhas de conteiner?", correta: false },
-  { texto: "Em caso de emergencia devo descer do meu caminhao e correr pelo patio de conteiner?", correta: false },
-  { texto: "Apos o carregamento e antes de seguir viagem devo efetuar o travamento dos locks do conteiner?", correta: true },
-  { texto: "Meu acesso na Movecta portando armas ou sob efeito de alcool ou substancias ilicitas e proibido?", correta: true },
+  { texto: "O limite de velocidade dentro da Movecta é de 30 km/h?", correta: false },
+  { texto: "É seguro transitar entre as pilhas de contêiner?", correta: false },
+  { texto: "Em caso de emergência devo descer do meu caminhão e correr pelo pátio de contêiner?", correta: false },
+  { texto: "Após o carregamento e antes de seguir viagem devo efetuar o travamento dos locks do contêiner?", correta: true },
+  { texto: "Meu acesso na Movecta portando armas ou sob efeito de álcool ou substâncias ilícitas é proibido?", correta: true },
 ];
 
 const vazio = {
@@ -130,6 +130,7 @@ export default function IntegracaoTerminalPublico() {
   const [form, setForm] = useState(vazio);
   const [integracao, setIntegracao] = useState<Integracao | null>(null);
   const [respostas, setRespostas] = useState<Array<boolean | null>>(perguntasQuiz.map(() => null));
+  const [questoesIncorretas, setQuestoesIncorretas] = useState<number[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [mensagem, setMensagem] = useState("");
   const [tocando, setTocando] = useState(false);
@@ -298,6 +299,7 @@ export default function IntegracaoTerminalPublico() {
     }
     setCarregando(true);
     setMensagem("");
+    setQuestoesIncorretas([]);
     try {
       const response = await axios.post(`/api/public/integracao-terminal/${integracao.token}/quiz`, {
         respostas,
@@ -306,6 +308,10 @@ export default function IntegracaoTerminalPublico() {
       setEtapa(4);
       setMensagem("Quiz aprovado. Registre a declaracao e assinatura.");
     } catch (error: any) {
+      const incorretas = Array.isArray(error.response?.data?.questoesIncorretas)
+        ? error.response.data.questoesIncorretas.map((item: { numero: number }) => item.numero).filter(Number.isFinite)
+        : [];
+      setQuestoesIncorretas(incorretas);
       setMensagem(error.response?.data?.error || "Revise as respostas do quiz para continuar.");
     } finally {
       setCarregando(false);
@@ -383,13 +389,13 @@ export default function IntegracaoTerminalPublico() {
         <div className="terminal-panel mb-5 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 shadow-xl sm:mb-8 sm:px-5 sm:py-4">
           <div>
             <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Movecta</p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Integração de condutores</h1>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{config?.titulo || "Integração de Motoristas"}</h1>
           </div>
           <ShieldCheck className="h-9 w-9 shrink-0 text-blue-600 sm:h-10 sm:w-10" />
         </div>
 
         <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-5 sm:gap-3">
-          {["Orientacoes", "Dados", "Video", "Quiz", "Assinatura"].map((item, index) => (
+          {["Orientações", "Dados", "Vídeo", "Quiz", "Assinatura"].map((item, index) => (
             <div key={item} className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "terminal-step-active" : "terminal-step-idle"}`}>
               {index + 1}. {item}
             </div>
@@ -442,7 +448,7 @@ export default function IntegracaoTerminalPublico() {
           <div className={painelClasse()}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black sm:text-2xl">Video obrigatorio</h2>
+                <h2 className="text-xl font-black sm:text-2xl">Vídeo obrigatório</h2>
                 <p className="mt-1 text-sm font-bold text-slate-900">Use os controles abaixo para reproduzir ou acelerar o video.</p>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
@@ -511,8 +517,13 @@ export default function IntegracaoTerminalPublico() {
             <p className="mt-2 text-sm font-bold text-slate-700">Selecione Verdadeiro ou Falso em todas as perguntas para liberar a assinatura.</p>
             <div className="mt-6 grid gap-4">
               {perguntasQuiz.map((pergunta, index) => (
-                <div key={pergunta.texto} className="terminal-info-card rounded-2xl border p-4 shadow-sm">
+                <div key={pergunta.texto} className={`terminal-info-card rounded-2xl border p-4 shadow-sm ${questoesIncorretas.includes(index + 1) ? "border-red-400 ring-2 ring-red-300" : ""}`}>
                   <p className="text-sm font-black text-slate-950">{index + 1}. {pergunta.texto}</p>
+                  {questoesIncorretas.includes(index + 1) && (
+                    <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700">
+                      Esta resposta está incorreta. Selecione a outra alternativa para continuar.
+                    </p>
+                  )}
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">
                     {[true, false].map((valor) => {
                       const selecionado = respostas[index] === valor;
@@ -520,7 +531,10 @@ export default function IntegracaoTerminalPublico() {
                         <button
                           key={String(valor)}
                           type="button"
-                          onClick={() => setRespostas((atuais) => atuais.map((item, posicao) => (posicao === index ? valor : item)))}
+                          onClick={() => {
+                            setRespostas((atuais) => atuais.map((item, posicao) => (posicao === index ? valor : item)));
+                            setQuestoesIncorretas((atuais) => atuais.filter((numero) => numero !== index + 1));
+                          }}
                           className={`terminal-quiz-option rounded-2xl border px-4 py-3 text-sm font-black transition ${selecionado ? "terminal-quiz-option-active shadow-lg shadow-blue-700/20" : "terminal-quiz-option-idle"}`}
                         >
                           {valor ? "Verdadeiro" : "Falso"}
@@ -544,7 +558,7 @@ export default function IntegracaoTerminalPublico() {
 
         {etapa === 4 && integracao && (
           <div className={painelClasse()}>
-            <h2 className="text-xl font-black sm:text-2xl">Declaracao e assinatura</h2>
+            <h2 className="text-xl font-black sm:text-2xl">Declaração e assinatura</h2>
             <label className="terminal-info-card mt-5 flex cursor-pointer items-start gap-4 rounded-xl border p-5 text-base font-bold leading-7 shadow-sm sm:text-sm sm:leading-6">
               <input type="checkbox" className="terminal-acceptance-checkbox mt-0.5 h-8 w-8 shrink-0 accent-blue-600 sm:h-6 sm:w-6" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
               <span>Declaro que assisti integralmente ao video, compreendi as orientacoes apresentadas e estou ciente das regras de acesso, seguranca e conduta aplicaveis ao terminal.</span>
@@ -572,7 +586,7 @@ export default function IntegracaoTerminalPublico() {
         {etapa === 5 && integracao && (
           <div className={painelClasse("text-center")}>
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
-            <h2 className="mt-4 text-2xl font-black">Integração concluída</h2>
+            <h2 className="mt-4 text-2xl font-black">Integração de Motoristas concluída</h2>
             <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {integracao.codigo} emitido. O arquivo está disponível para download e o envio ao e-mail cadastrado foi solicitado.</p>
             {integracao.certificadoUrl && (
               <a href={integracao.certificadoUrl} download className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500">

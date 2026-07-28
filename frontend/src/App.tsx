@@ -95,6 +95,7 @@ export default function App() {
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
           <Route path="/treinamento-terminal" element={<TreinamentoTerminalPublico />} />
           <Route path="/integracao-terminal" element={<IntegracaoTerminalPublico />} />
+          <Route path="/integracao-motoristas" element={<IntegracaoTerminalPublico />} />
           <Route path="/validar-certificado/:token" element={<ValidarCertificadoTreinamento />} />
           <Route path="/validar-integracao/:token" element={<ValidarCertificadoIntegracao />} />
           <Route

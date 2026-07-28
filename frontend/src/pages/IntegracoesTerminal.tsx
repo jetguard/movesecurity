@@ -96,11 +96,11 @@ export default function IntegracoesTerminal() {
     <div className="space-y-6">
       <section className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-600 dark:text-blue-300">Integracao de motoristas</p>
-          <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">Integracoes do terminal</h1>
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-600 dark:text-blue-300">Integração de Motoristas</p>
+          <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">Integração de Motoristas</h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Acompanhe motoristas, progresso do video, quiz, certificados e envio por e-mail.</p>
         </div>
-        <a href="/integracao-terminal" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700">
+        <a href="/integracao-motoristas" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700">
           <PlayCircle size={18} /> Abrir pagina publica
         </a>
       </section>

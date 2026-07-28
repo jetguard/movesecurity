@@ -19,6 +19,12 @@ function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
 }
 
+function formatarCpf(cpf: string) {
+  const digitos = limparCpf(cpf);
+  if (digitos.length !== 11) return cpf || "-";
+  return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
 function cpfValido(cpf: string) {
   const digitos = limparCpf(cpf);
   if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
@@ -110,8 +116,10 @@ function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, 
 
 async function gerarCertificadoPdf(integracao: any) {
   const destino = arquivoCertificado(integracao.token);
+  const destinoTemporario = `${destino}.tmp`;
+  fs.rmSync(destinoTemporario, { force: true });
   const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0, bufferPages: true });
-  const stream = fs.createWriteStream(destino);
+  const stream = fs.createWriteStream(destinoTemporario);
   doc.pipe(stream);
 
   const pageWidth = doc.page.width;
@@ -132,16 +140,17 @@ async function gerarCertificadoPdf(integracao: any) {
   doc.restore();
 
   doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text("CERTIFICADO", 44, 58, { width: 270, lineBreak: false });
-  doc.fillColor("#dbeafe").font("Helvetica-Bold").fontSize(9).text(integracao.codigo, pageWidth - 210, 38, { width: 166, align: "right" });
+  doc.roundedRect(pageWidth - 218, 34, 174, 34, 10).fillAndStroke("#ffffff", "#bfdbfe");
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15).text(integracao.codigo, pageWidth - 204, 44, { width: 146, align: "center" });
 
-  const textoPrincipal = `Certificamos que o(a) motorista ${integracao.nomeCompleto} concluiu com aproveitamento a Integracao Operacional nos Terminais Movecta Guaruja, estando apto(a) a exercer suas atividades com foco na seguranca, eficiencia e conformidade. Validade: 2 anos a partir desta data.`;
-  doc.fillColor("#111827").font("Helvetica").fontSize(15).text(textoPrincipal, 156, 188, {
-    width: 500,
+  const textoPrincipal = `Certificamos que o(a) motorista ${integracao.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(integracao.cpf)}, concluiu com aproveitamento o Treinamento de Integração de Segurança. O profissional está apto a realizar o ingresso, trânsito e operações de transporte nos Terminais Alfandegados da Movecta Guarujá (Terminal 1 e Terminal 2), estando ciente das normas internas de circulação, procedimentos de segurança portuária e diretrizes de compliance da companhia.`;
+  doc.fillColor("#111827").font("Helvetica").fontSize(14.5).text(textoPrincipal, 150, 178, {
+    width: 548,
     align: "center",
-    lineGap: 8,
+    lineGap: 5,
   });
 
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(15).text(`Guaruja, ${dataPorExtenso(concluidoEm)}.`, 210, 295, {
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(15.5).text(`Guaruja, ${dataPorExtenso(concluidoEm)}.`, 210, 314, {
     width: 430,
     align: "center",
   });
@@ -160,9 +169,8 @@ async function gerarCertificadoPdf(integracao: any) {
   desenharLinhaAssinatura(doc, 158, 415, 275, integracao.nomeCompleto, "Motorista");
   desenharLinhaAssinatura(doc, 472, 415, 275, "Movecta S.A", "Responsavel pela integracao");
 
-  doc.image(qrCode, 680, 248, { width: 82, height: 82 });
-  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDACAO", 676, 336, { width: 90, align: "center" });
-  doc.fillColor("#64748b").font("Helvetica").fontSize(6.5).text("Aponte a camera para confirmar a autenticidade deste certificado na plataforma.", 664, 348, { width: 116, align: "center", lineGap: 1 });
+  doc.image(qrCode, 58, 424, { width: 72, height: 72 });
+  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDACAO", 49, 502, { width: 90, align: "center" });
 
   doc.moveTo(206, 505).lineTo(580, 505).strokeColor("#86b91d").lineWidth(1).stroke();
   doc.circle(206, 505, 3).fill("#86b91d");
@@ -181,6 +189,7 @@ async function gerarCertificadoPdf(integracao: any) {
     stream.on("finish", resolve);
     stream.on("error", reject);
   });
+  fs.renameSync(destinoTemporario, destino);
 
   return destino;
 }
@@ -205,8 +214,8 @@ function respostaPublica(integracao: any) {
 
 export function configIntegracaoTerminal(req: Request, res: Response) {
   return res.json({
-    titulo: "Integração de condutores",
-    portaria: "Integracao de motoristas",
+    titulo: "Integração de Motoristas",
+    portaria: "Integração de Motoristas",
     resumo: resumoPortaria,
     videoUrl: videoPadrao(),
   });
@@ -317,6 +326,9 @@ export async function responderQuizIntegracao(req: Request, res: Response) {
     const respostas: boolean[] = Array.isArray(req.body.respostas) ? req.body.respostas.map(Boolean) : [];
     const aprovado = respostas.length === respostasQuiz.length && respostas.every((resposta: boolean, index: number) => resposta === respostasQuiz[index]);
     if (!aprovado) {
+      const questoesIncorretas = respostasQuiz
+        .map((correta, index) => ({ numero: index + 1, correta, resposta: respostas[index] }))
+        .filter((item) => item.resposta !== item.correta);
       await prisma.integracaoTerminal.update({
         where: { id: integracao.id },
         data: {
@@ -326,7 +338,10 @@ export async function responderQuizIntegracao(req: Request, res: Response) {
           ultimoAcessoEm: new Date(),
         },
       });
-      return res.status(400).json({ error: "Revise as respostas do quiz para continuar." });
+      return res.status(400).json({
+        error: "Revise as respostas destacadas para continuar.",
+        questoesIncorretas,
+      });
     }
 
     const atualizado = await prisma.integracaoTerminal.update({
@@ -373,9 +388,9 @@ export async function concluirIntegracaoTerminal(req: Request, res: Response) {
     const certificadoArquivo = await gerarCertificadoPdf(atualizado);
     const email = await enviarEmail({
       to: atualizado.email,
-      subject: `Certificado de integracao operacional - ${atualizado.codigo}`,
-      text: `Ola, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusao da integracao operacional do terminal.`,
-      html: `<p>Ola, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusao da integracao operacional do terminal.</p>`,
+      subject: `Certificado de Integração de Motoristas - ${atualizado.codigo}`,
+      text: `Olá, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusão da Integração de Motoristas.`,
+      html: `<p>Olá, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão da Integração de Motoristas.</p>`,
       attachments: [{ filename: `certificado-${atualizado.codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
     });
 
