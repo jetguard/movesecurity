@@ -413,6 +413,49 @@ export async function validarCertificadoTreinamento(req: Request, res: Response)
   });
 }
 
+export async function reenviarCertificadoTreinamento(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+
+    const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { id } });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!treinamentoConcluido(treinamento.status)) {
+      return res.status(400).json({ error: "O certificado só pode ser enviado após a conclusão do curso." });
+    }
+
+    const certificadoArquivo = await gerarCertificadoPdf(treinamento);
+    const email = await enviarEmail({
+      to: treinamento.email,
+      subject: `Certificado de treinamento - ${treinamento.codigo}`,
+      text: `Olá, ${treinamento.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.`,
+      html: `<p>Olá, <strong>${treinamento.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.</p>`,
+      attachments: [{ filename: `certificado-${treinamento.codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
+    });
+
+    const atualizado = await prisma.treinamentoTerminal.update({
+      where: { id: treinamento.id },
+      data: {
+        certificadoArquivo,
+        emailStatus: email.status,
+        emailEnviadoEm: email.enviado ? new Date() : treinamento.emailEnviadoEm,
+      },
+    });
+
+    return res.json({
+      mensagem: email.enviado ? "Certificado enviado com sucesso." : "Envio registrado. Verifique a configuração de SMTP.",
+      treinamento: {
+        ...atualizado,
+        assinaturaDataUrl: undefined,
+        certificadoUrl: `/api/public/treinamento-terminal/${atualizado.token}/certificado`,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao reenviar certificado." });
+  }
+}
+
 export async function listarTreinamentosTerminal(req: AuthRequest, res: Response) {
   const treinamentos = await prisma.treinamentoTerminal.findMany({
     orderBy: { updatedAt: "desc" },

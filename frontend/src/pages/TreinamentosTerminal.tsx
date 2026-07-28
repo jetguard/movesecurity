@@ -64,6 +64,8 @@ export default function TreinamentosTerminal() {
   const [lista, setLista] = useState<Treinamento[]>([]);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("Todos");
+  const [mensagem, setMensagem] = useState("");
+  const [enviandoId, setEnviandoId] = useState<number | null>(null);
 
   async function carregar() {
     const response = await api.get("/treinamentos-terminal");
@@ -74,6 +76,20 @@ export default function TreinamentosTerminal() {
     if (!confirm(`Deseja excluir o treinamento de ${item.nomeCompleto}?`)) return;
     await api.delete(`/treinamentos-terminal/${item.id}`);
     setLista((atual) => atual.filter((treinamento) => treinamento.id !== item.id));
+  }
+
+  async function reenviarCertificado(item: Treinamento) {
+    setEnviandoId(item.id);
+    setMensagem("");
+    try {
+      const response = await api.post(`/treinamentos-terminal/${item.id}/reenviar-certificado`);
+      setLista((atual) => atual.map((treinamento) => (treinamento.id === item.id ? response.data.treinamento : treinamento)));
+      setMensagem(response.data.mensagem || "Certificado enviado com sucesso.");
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível enviar o certificado.");
+    } finally {
+      setEnviandoId(null);
+    }
   }
 
   useEffect(() => {
@@ -117,6 +133,12 @@ export default function TreinamentosTerminal() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        {mensagem && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+            {mensagem}
+          </div>
+        )}
+
         <div className="mb-4 flex flex-wrap gap-3">
           <div className="relative min-w-72 flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -177,14 +199,27 @@ export default function TreinamentosTerminal() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => excluirTreinamento(item)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-500 hover:text-white dark:text-red-200"
-                      title="Excluir treinamento"
-                    >
-                      <Trash2 size={14} /> Excluir
-                    </button>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {progresso(item) === 100 && estaConcluido(item.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reenviarCertificado(item)}
+                          disabled={enviandoId === item.id}
+                          className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-200"
+                          title="Enviar certificado por e-mail"
+                        >
+                          <Mail size={14} /> {enviandoId === item.id ? "Enviando..." : "Enviar"}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => excluirTreinamento(item)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-500 hover:text-white dark:text-red-200"
+                        title="Excluir treinamento"
+                      >
+                        <Trash2 size={14} /> Excluir
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

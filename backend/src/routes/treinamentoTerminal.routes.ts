@@ -7,6 +7,7 @@ import {
   excluirTreinamentoTerminal,
   iniciarTreinamentoTerminal,
   listarTreinamentosTerminal,
+  reenviarCertificadoTreinamento,
   validarCertificadoTreinamento,
 } from "../controllers/treinamentoTerminal.controller";
 import { acessoAnalise, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
@@ -20,6 +21,7 @@ router.post("/public/treinamento-terminal/:token/concluir", concluirTreinamentoT
 router.get("/public/treinamento-terminal/:token/certificado", baixarCertificadoTreinamento);
 router.get("/public/treinamento-terminal/:token/validar", validarCertificadoTreinamento);
 router.get("/treinamentos-terminal", autenticarUsuario, autorizarPerfis(acessoAnalise), listarTreinamentosTerminal);
+router.post("/treinamentos-terminal/:id/reenviar-certificado", autenticarUsuario, autorizarPerfis(acessoAnalise), reenviarCertificadoTreinamento);
 router.delete("/treinamentos-terminal/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirTreinamentoTerminal);
 
 export default router;
