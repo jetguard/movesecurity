@@ -520,7 +520,7 @@ export default function IntegracaoTerminalPublico() {
                 <div key={pergunta.texto} className={`terminal-info-card rounded-2xl border p-4 shadow-sm ${questoesIncorretas.includes(index + 1) ? "border-red-400 ring-2 ring-red-300" : ""}`}>
                   <p className="text-sm font-black text-slate-950">{index + 1}. {pergunta.texto}</p>
                   {questoesIncorretas.includes(index + 1) && (
-                    <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-black text-red-700">
+                    <p className="terminal-quiz-error mt-2 rounded-xl border px-3 py-2 text-sm font-black">
                       Esta resposta está incorreta. Selecione a outra alternativa para continuar.
                     </p>
                   )}

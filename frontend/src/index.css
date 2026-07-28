@@ -403,6 +403,14 @@
     color: #ffffff !important;
   }
 
+  .treinamento-terminal-publico .terminal-quiz-error,
+  .dark .treinamento-terminal-publico .terminal-quiz-error {
+    background-color: #fff1f2 !important;
+    border-color: #fb7185 !important;
+    color: #9f1239 !important;
+    box-shadow: inset 4px 0 0 #e11d48 !important;
+  }
+
   .treinamento-terminal-publico .terminal-success-action,
   .dark .treinamento-terminal-publico .terminal-success-action {
     background: linear-gradient(180deg, #059669, #047857) !important;
