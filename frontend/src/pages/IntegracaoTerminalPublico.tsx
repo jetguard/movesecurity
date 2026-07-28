@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, CheckCircle2, Clock3, Download, FastForward, FileCheck2, Maximize2, Pause, Play, RotateCcw, ShieldCheck, SkipForward } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Download, FastForward, FileCheck2, Maximize2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
 
 type Config = {
   titulo: string;
@@ -272,17 +272,6 @@ export default function IntegracaoTerminalPublico() {
     if (videoRef.current) videoRef.current.playbackRate = proximaVelocidade;
   }
 
-  function pularVideoTeste() {
-    const video = videoRef.current;
-    if (video) {
-      video.pause();
-      maiorTempoRef.current = Math.max(maiorTempoRef.current, video.duration || tempoAtual);
-      setTempoAtual(video.duration || tempoAtual);
-    }
-    setTocando(false);
-    salvarProgresso(true).then(() => setEtapa(3)).catch(() => setMensagem("Nao foi possivel liberar o quiz."));
-  }
-
   function finalizarVideo() {
     maiorTempoRef.current = Math.max(maiorTempoRef.current, videoRef.current?.duration || tempoAtual);
     setTocando(false);
@@ -479,9 +468,6 @@ export default function IntegracaoTerminalPublico() {
               </button>
               <button type="button" onClick={alternarVelocidadeVideo} className={botaoSecundarioClasse()}>
                 <FastForward size={18} /> {velocidadeVideo === 1 ? "Acelerar 1.5x" : "Voltar para 1x"}
-              </button>
-              <button type="button" onClick={pularVideoTeste} className={botaoSecundarioClasse()}>
-                <SkipForward size={18} /> Pular video
               </button>
             </div>
           </div>
