@@ -343,7 +343,7 @@ export default function TreinamentoPocSep007Publico() {
       .then((response) => {
         const lista = Array.isArray(response.data?.unidades) ? response.data.unidades : [];
         setUnidades(lista);
-        setForm((atual) => ({ ...atual, unidade: atual.unidade || lista[0] || "" }));
+        setForm((atual) => ({ ...atual, unidade: atual.unidade || "" }));
       })
       .catch(() => undefined);
   }, []);
@@ -632,7 +632,7 @@ export default function TreinamentoPocSep007Publico() {
                   required
                   className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
                 >
-                  <option value="">Selecione a unidade</option>
+                  <option value="">Selecione sua unidade</option>
                   {unidades.map((unidade) => (
                     <option key={unidade} value={unidade}>
                       {unidade}
