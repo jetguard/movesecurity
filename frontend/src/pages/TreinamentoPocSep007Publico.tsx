@@ -583,7 +583,7 @@ export default function TreinamentoPocSep007Publico() {
           <form onSubmit={iniciar} className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Acesso corporativo</p>
             <h2 className="mt-2 text-2xl font-black">Identifique-se para iniciar</h2>
-            <p className="mt-2 text-sm font-bold text-slate-700">
+            <p className="mt-2 text-sm font-extrabold leading-6 text-slate-950">
               Este treinamento é exclusivo para colaboradores da Movecta. Preencha seus dados para iniciar ou continuar.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
