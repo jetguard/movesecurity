@@ -143,6 +143,7 @@ model TreinamentoPocSep007 {
   usuarioId       Int?
   codigo          String?   @unique
   nomeCompleto    String
+  cpf             String?
   email           String
   cargo           String?
   departamento    String?
@@ -164,6 +165,7 @@ model TreinamentoPocSep007 {
   updatedAt       DateTime  @updatedAt
 
   @@index([email])
+  @@index([cpf])
   @@index([status, updatedAt])
 }
 

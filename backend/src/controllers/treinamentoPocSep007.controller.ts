@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
+import { UNIDADES_SISTEMA } from "../config/unidades";
 
 const TOTAL_ETAPAS_CONTEUDO = 15;
 const TOTAL_ETAPAS = 16;
@@ -12,12 +13,36 @@ function texto(valor: unknown) {
   return String(valor || "").trim();
 }
 
+function limparCpf(cpf: string) {
+  return String(cpf || "").replace(/\D/g, "");
+}
+
+function cpfValido(cpf: string) {
+  const digitos = limparCpf(cpf);
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+
+  const calcularDigito = (tamanho: number) => {
+    const soma = digitos
+      .slice(0, tamanho)
+      .split("")
+      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+
+  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+}
+
 function emailCorporativo(email: string) {
   return texto(email).toLowerCase();
 }
 
 function dominioMovecta(email: string) {
   return emailCorporativo(email).endsWith("@movecta.com.br");
+}
+
+function unidadeValida(unidade: string) {
+  return UNIDADES_SISTEMA.includes(unidade);
 }
 
 function userAgent(req: Request) {
@@ -45,6 +70,7 @@ function respostaPublica(registro: any) {
     token: registro.token,
     codigo: registro.codigo,
     nomeCompleto: registro.nomeCompleto,
+    cpf: registro.cpf,
     email: registro.email,
     cargo: registro.cargo,
     departamento: registro.departamento,
@@ -59,24 +85,35 @@ function respostaPublica(registro: any) {
   };
 }
 
+export async function listarUnidadesTreinamentoPocSep007(req: Request, res: Response) {
+  return res.json({ unidades: UNIDADES_SISTEMA });
+}
+
 export async function iniciarTreinamentoPocSep007(req: Request, res: Response) {
   try {
     const email = emailCorporativo(req.body.email);
+    const nomeCompleto = texto(req.body.nomeCompleto);
+    const cpf = limparCpf(req.body.cpf);
+    const unidade = texto(req.body.unidade);
     if (!dominioMovecta(email)) {
       return res.status(403).json({
         error: "Acesso não autorizado.\n\nEste treinamento é exclusivo para colaboradores da Movecta.\n\nUtilize seu e-mail corporativo (@movecta.com.br). Caso ainda não possua acesso, procure o administrador do sistema.",
       });
     }
 
-    const usuario = await prisma.usuario.findUnique({ where: { email } });
-    if (!usuario) {
-      return res.status(404).json({
-        error: "Seu e-mail corporativo foi validado, porém seu cadastro ainda não foi sincronizado com a plataforma.",
-      });
+    if (!nomeCompleto || !cpfValido(cpf) || !unidadeValida(unidade)) {
+      return res.status(400).json({ error: "Informe nome completo, CPF válido, e-mail corporativo e unidade para iniciar." });
     }
 
+    const usuario = await prisma.usuario.findUnique({ where: { email } });
+
     const existente = await prisma.treinamentoPocSep007.findFirst({
-      where: { email },
+      where: {
+        OR: [
+          { cpf },
+          { email },
+        ],
+      },
       orderBy: { updatedAt: "desc" },
     });
 
@@ -84,6 +121,14 @@ export async function iniciarTreinamentoPocSep007(req: Request, res: Response) {
       const atualizado = await prisma.treinamentoPocSep007.update({
         where: { id: existente.id },
         data: {
+          nomeCompleto,
+          cpf,
+          email,
+          usuarioId: usuario?.id || existente.usuarioId,
+          cargo: usuario?.cargo || existente.cargo,
+          departamento: usuario?.setor || existente.departamento,
+          unidade,
+          empresa: usuario?.empresa || existente.empresa || "Movecta",
           ultimoAcessoEm: new Date(),
           navegador: userAgent(req),
         },
@@ -94,13 +139,14 @@ export async function iniciarTreinamentoPocSep007(req: Request, res: Response) {
     const treinamento = await prisma.treinamentoPocSep007.create({
       data: {
         token: randomUUID(),
-        usuarioId: usuario.id,
-        nomeCompleto: usuario.nome,
-        email: usuario.email,
-        cargo: usuario.cargo,
-        departamento: usuario.setor,
-        unidade: usuario.unidade,
-        empresa: usuario.empresa || "Movecta",
+        usuarioId: usuario?.id,
+        nomeCompleto,
+        cpf,
+        email,
+        cargo: usuario?.cargo,
+        departamento: usuario?.setor,
+        unidade,
+        empresa: usuario?.empresa || "Movecta",
         etapaAtual: 1,
         porcentagem: 0,
         ipInicio: req.ip,

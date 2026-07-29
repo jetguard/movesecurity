@@ -3,12 +3,14 @@ import {
   concluirEtapaTreinamentoPocSep007,
   iniciarTreinamentoPocSep007,
   listarTreinamentosPocSep007,
+  listarUnidadesTreinamentoPocSep007,
   responderQuizTreinamentoPocSep007,
 } from "../controllers/treinamentoPocSep007.controller";
 import { acessoTreinamentosTerminal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
 
+router.get("/public/treinamento-poc-sep-007/unidades", listarUnidadesTreinamentoPocSep007);
 router.post("/public/treinamento-poc-sep-007/iniciar", iniciarTreinamentoPocSep007);
 router.put("/public/treinamento-poc-sep-007/:token/etapa", concluirEtapaTreinamentoPocSep007);
 router.post("/public/treinamento-poc-sep-007/:token/quiz", responderQuizTreinamentoPocSep007);

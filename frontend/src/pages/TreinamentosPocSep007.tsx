@@ -6,6 +6,7 @@ type TreinamentoPoc = {
   id: number;
   codigo?: string | null;
   nomeCompleto: string;
+  cpf?: string | null;
   email: string;
   cargo?: string | null;
   departamento?: string | null;
@@ -62,7 +63,7 @@ export default function TreinamentosPocSep007() {
     const termo = busca.trim().toLowerCase();
     return lista.filter((item) => {
       const okStatus = status === "Todos" || item.status === status || (status === "Concluido" && estaConcluido(item.status));
-      const okBusca = !termo || [item.nomeCompleto, item.email, item.cargo, item.departamento, item.unidade, item.empresa, item.codigo].join(" ").toLowerCase().includes(termo);
+      const okBusca = !termo || [item.nomeCompleto, item.cpf, item.email, item.cargo, item.departamento, item.unidade, item.empresa, item.codigo].join(" ").toLowerCase().includes(termo);
       return okStatus && okBusca;
     });
   }, [lista, busca, status]);
@@ -104,7 +105,7 @@ export default function TreinamentosPocSep007() {
         <div className="mb-4 flex flex-wrap gap-3">
           <div className="relative min-w-72 flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, e-mail, cargo, departamento, unidade ou certificado" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF, e-mail, cargo, departamento, unidade ou certificado" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
           </div>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white">
             <option>Todos</option>
@@ -133,7 +134,7 @@ export default function TreinamentosPocSep007() {
                 <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-900 dark:text-white">{item.nomeCompleto}</p>
-                    <p className="text-xs text-slate-500">{item.email}</p>
+                    <p className="text-xs text-slate-500">{item.cpf || "-"} - {item.email}</p>
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-bold text-slate-700 dark:text-slate-200">{item.departamento || "-"}</p>

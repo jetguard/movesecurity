@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, FileText, ShieldCheck } from "lucide-react";
 
@@ -20,6 +20,7 @@ type RegistroTreinamento = {
   token: string;
   codigo?: string | null;
   nomeCompleto: string;
+  cpf?: string | null;
   email: string;
   cargo?: string | null;
   departamento?: string | null;
@@ -30,6 +31,13 @@ type RegistroTreinamento = {
   porcentagem: number;
   nota?: number | null;
   tentativas: number;
+};
+
+const formInicial = {
+  nomeCompleto: "",
+  cpf: "",
+  email: "",
+  unidade: "",
 };
 
 const secoes: SecaoTreinamento[] = [
@@ -271,17 +279,63 @@ const quiz: PerguntaQuiz[] = [
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
 
+function apenasDigitos(valor: string) {
+  return valor.replace(/\D/g, "");
+}
+
+function mascararCpf(valor: string) {
+  const digitos = apenasDigitos(valor).slice(0, 11);
+  return digitos
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function cpfValido(cpf: string) {
+  const digitos = apenasDigitos(cpf);
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+
+  const calcularDigito = (tamanho: number) => {
+    const soma = digitos
+      .slice(0, tamanho)
+      .split("")
+      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+
+  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+}
+
+function emailValido(email: string) {
+  const normalizado = email.trim();
+  if (!normalizado || normalizado.length > 254 || normalizado.includes("..")) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
+}
+
 export default function TreinamentoPocSep007Publico() {
   const [indiceSecao, setIndiceSecao] = useState(0);
   const [respostas, setRespostas] = useState<Array<number | null>>(quiz.map(() => null));
   const [mostrarResultado, setMostrarResultado] = useState(false);
-  const [email, setEmail] = useState("");
+  const [form, setForm] = useState(formInicial);
+  const [unidades, setUnidades] = useState<string[]>([]);
   const [treinamento, setTreinamento] = useState<RegistroTreinamento | null>(null);
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [resultadoQuiz, setResultadoQuiz] = useState<{ aprovado: boolean; nota: number; acertos: number } | null>(null);
   const secaoAtual = secoes[indiceSecao];
   const etapaQuiz = indiceSecao >= secoes.length;
+
+  useEffect(() => {
+    axios
+      .get("/api/public/treinamento-poc-sep-007/unidades")
+      .then((response) => {
+        const lista = Array.isArray(response.data?.unidades) ? response.data.unidades : [];
+        setUnidades(lista);
+        setForm((atual) => ({ ...atual, unidade: atual.unidade || lista[0] || "" }));
+      })
+      .catch(() => undefined);
+  }, []);
 
   const acertos = useMemo(
     () => respostas.reduce<number>((total, resposta, index) => total + (resposta === quiz[index].correta ? 1 : 0), 0),
@@ -304,12 +358,33 @@ export default function TreinamentoPocSep007Publico() {
     setRespostas((atuais) => atuais.map((item, index) => (index === pergunta ? opcao : item)));
   }
 
+  function alterar(nome: keyof typeof formInicial, valor: string) {
+    if (nome === "cpf") valor = mascararCpf(valor);
+    setForm((atual) => ({ ...atual, [nome]: valor }));
+  }
+
   async function iniciar(event: FormEvent) {
     event.preventDefault();
+    if (!form.nomeCompleto.trim()) {
+      setMensagem("Informe o nome completo para continuar.");
+      return;
+    }
+    if (!cpfValido(form.cpf)) {
+      setMensagem("Informe um CPF válido para continuar.");
+      return;
+    }
+    if (!emailValido(form.email)) {
+      setMensagem("Informe um e-mail válido para continuar.");
+      return;
+    }
+    if (!form.unidade) {
+      setMensagem("Selecione a unidade para continuar.");
+      return;
+    }
     setCarregando(true);
     setMensagem("");
     try {
-      const response = await axios.post("/api/public/treinamento-poc-sep-007/iniciar", { email });
+      const response = await axios.post("/api/public/treinamento-poc-sep-007/iniciar", form);
       setTreinamento(response.data.treinamento);
       setIndiceSecao(Math.max(0, Math.min(secoes.length, (response.data.treinamento.etapaAtual || 1) - 1)));
     } catch (error: any) {
@@ -382,19 +457,61 @@ export default function TreinamentoPocSep007Publico() {
             <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Acesso corporativo</p>
             <h2 className="mt-2 text-2xl font-black">Identifique-se para iniciar</h2>
             <p className="mt-2 text-sm font-bold text-slate-700">
-              Este treinamento é exclusivo para colaboradores da Movecta. Informe seu e-mail corporativo.
+              Este treinamento é exclusivo para colaboradores da Movecta. Preencha seus dados para iniciar ou continuar.
             </p>
-            <label className="terminal-label mt-6 block text-sm font-extrabold">
-              E-mail corporativo
-              <input
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                type="email"
-                required
-                placeholder="nome.sobrenome@movecta.com.br"
-                className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
-              />
-            </label>
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <label className="terminal-label block text-sm font-extrabold">
+                Nome completo
+                <input
+                  value={form.nomeCompleto}
+                  onChange={(event) => alterar("nomeCompleto", event.target.value)}
+                  required
+                  placeholder="Digite seu nome completo"
+                  className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
+                />
+              </label>
+              <label className="terminal-label block text-sm font-extrabold">
+                CPF
+                <input
+                  value={form.cpf}
+                  onChange={(event) => alterar("cpf", event.target.value)}
+                  inputMode="numeric"
+                  maxLength={14}
+                  required
+                  placeholder="000.000.000-00"
+                  aria-invalid={form.cpf.length === 14 && !cpfValido(form.cpf)}
+                  title="Digite um CPF válido"
+                  className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
+                />
+              </label>
+              <label className="terminal-label block text-sm font-extrabold">
+                E-mail corporativo
+                <input
+                  value={form.email}
+                  onChange={(event) => alterar("email", event.target.value)}
+                  type="email"
+                  required
+                  placeholder="nome.sobrenome@movecta.com.br"
+                  className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
+                />
+              </label>
+              <label className="terminal-label block text-sm font-extrabold">
+                Unidade
+                <select
+                  value={form.unidade}
+                  onChange={(event) => alterar("unidade", event.target.value)}
+                  required
+                  className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
+                >
+                  <option value="">Selecione a unidade</option>
+                  {unidades.map((unidade) => (
+                    <option key={unidade} value={unidade}>
+                      {unidade}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
             {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
             <button disabled={carregando} className="terminal-primary-action mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
               {carregando ? "Validando..." : "Iniciar treinamento"}
@@ -405,7 +522,7 @@ export default function TreinamentoPocSep007Publico() {
         {treinamento && (
           <div className="terminal-info-card mb-5 rounded-xl border p-4 text-sm font-bold shadow-sm">
             <p className="font-black text-slate-950">{treinamento.nomeCompleto}</p>
-            <p>{treinamento.email}</p>
+            <p>{treinamento.cpf || "-"} | {treinamento.email}</p>
             <p>{treinamento.cargo || "-"} | {treinamento.departamento || "-"} | {treinamento.unidade || "-"}</p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
               <div className="h-full rounded-full bg-blue-600" style={{ width: `${treinamento.porcentagem}%` }} />
