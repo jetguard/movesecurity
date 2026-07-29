@@ -45,6 +45,12 @@ function unidadeValida(unidade: string) {
   return UNIDADES_SISTEMA.includes(unidade);
 }
 
+function emailValido(email: string) {
+  const normalizado = String(email || "").trim();
+  if (!normalizado || normalizado.length > 254 || normalizado.includes("..")) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
+}
+
 function userAgent(req: Request) {
   return texto(req.headers["user-agent"]);
 }
@@ -89,6 +95,52 @@ export async function listarUnidadesTreinamentoPocSep007(req: Request, res: Resp
   return res.json({ unidades: UNIDADES_SISTEMA });
 }
 
+export async function localizarParticipanteTreinamentoPocSep007(req: Request, res: Response) {
+  const identificador = texto(req.query.identificador).toLowerCase();
+  const cpf = limparCpf(identificador);
+  const email = emailValido(identificador) ? identificador : "";
+
+  if (!email && !cpfValido(cpf)) {
+    return res.json({ participante: null });
+  }
+
+  const usuario = await prisma.usuario.findFirst({
+    where: {
+      OR: [
+        ...(email ? [{ email }] : []),
+        ...(cpfValido(cpf) ? [{ cpf }] : []),
+      ],
+    },
+    select: {
+      id: true,
+      nome: true,
+      cpf: true,
+      email: true,
+      cargo: true,
+      setor: true,
+      unidade: true,
+      empresa: true,
+      statusUsuario: true,
+    },
+  });
+
+  if (!usuario || usuario.statusUsuario !== "ATIVO") {
+    return res.json({ participante: null });
+  }
+
+  return res.json({
+    participante: {
+      nomeCompleto: usuario.nome,
+      cpf: usuario.cpf,
+      email: usuario.email,
+      cargo: usuario.cargo,
+      departamento: usuario.setor,
+      unidade: usuario.unidade,
+      empresa: usuario.empresa,
+    },
+  });
+}
+
 export async function iniciarTreinamentoPocSep007(req: Request, res: Response) {
   try {
     const email = emailCorporativo(req.body.email);
@@ -105,7 +157,14 @@ export async function iniciarTreinamentoPocSep007(req: Request, res: Response) {
       return res.status(400).json({ error: "Informe nome completo, CPF válido, e-mail corporativo e unidade para iniciar." });
     }
 
-    const usuario = await prisma.usuario.findUnique({ where: { email } });
+    const usuario = await prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { email },
+          { cpf },
+        ],
+      },
+    });
 
     const existente = await prisma.treinamentoPocSep007.findFirst({
       where: {

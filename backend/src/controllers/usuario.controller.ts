@@ -10,6 +10,7 @@ const selectUsuario = {
   id: true,
   nome: true,
   email: true,
+  cpf: true,
   apelido: true,
   fotoPerfil: true,
   re: true,
@@ -74,6 +75,47 @@ function validarEquipe(equipe?: string) {
   return ["Equipe A", "Equipe B", "Equipe C", "Equipe D", "Administrativo"].includes(equipe) ? equipe : null;
 }
 
+function limparCpf(cpf: string) {
+  return String(cpf || "").replace(/\D/g, "");
+}
+
+function cpfValido(cpf: string) {
+  const digitos = limparCpf(cpf);
+  if (!digitos) return true;
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+
+  const calcularDigito = (tamanho: number) => {
+    const soma = digitos
+      .slice(0, tamanho)
+      .split("")
+      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+
+  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+}
+
+async function vincularTreinamentosPocSep007(usuario: { id: number; email: string; cpf?: string | null; cargo?: string | null; setor?: string | null; unidade?: string | null; empresa?: string | null }) {
+  const cpf = limparCpf(usuario.cpf || "");
+  await prisma.treinamentoPocSep007.updateMany({
+    where: {
+      usuarioId: null,
+      OR: [
+        { email: usuario.email },
+        ...(cpf ? [{ cpf }] : []),
+      ],
+    },
+    data: {
+      usuarioId: usuario.id,
+      cargo: usuario.cargo,
+      departamento: usuario.setor,
+      unidade: usuario.unidade,
+      empresa: usuario.empresa || "Movecta S/A",
+    },
+  });
+}
+
 export async function listarUsuarios(req: Request, res: Response) {
   const usuarios = await prisma.usuario.findMany({
     orderBy: {
@@ -90,6 +132,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
     const {
       nome,
       email,
+      cpf,
       re,
       setor,
       cargo,
@@ -103,24 +146,37 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
 
     const unidadesDoUsuario = normalizarUnidadesPermitidas(unidadesPermitidas, unidade);
     const unidadePrincipal = unidade && unidadesDoUsuario.includes(unidade) ? unidade : unidadesDoUsuario[0];
+    const cpfNormalizado = limparCpf(cpf);
 
     if (!nome || !email || !re || !setor || !cargo || !unidadePrincipal || !perfilAcesso || !senha) {
       return res.status(400).json({ error: "Preencha todos os campos obrigatórios." });
+    }
+
+    if (!cpfValido(cpfNormalizado)) {
+      return res.status(400).json({ error: "CPF inválido." });
     }
 
     if (senha !== confirmarSenha) {
       return res.status(400).json({ error: "As senhas não coincidem." });
     }
 
-    const existe = await prisma.usuario.findUnique({ where: { email } });
+    const existe = await prisma.usuario.findFirst({
+      where: {
+        OR: [
+          { email },
+          ...(cpfNormalizado ? [{ cpf: cpfNormalizado }] : []),
+        ],
+      },
+    });
     if (existe) {
-      return res.status(400).json({ error: "E-mail já cadastrado." });
+      return res.status(400).json({ error: existe.email === email ? "E-mail já cadastrado." : "CPF já cadastrado." });
     }
 
     const usuario = await prisma.usuario.create({
       data: {
         nome,
         email,
+        cpf: cpfNormalizado || null,
         re,
         setor,
         cargo,
@@ -143,6 +199,8 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       registroId: usuario.id,
       dadosNovos: usuario,
     });
+
+    await vincularTreinamentosPocSep007(usuario);
 
     return res.status(201).json(formatarUsuario(usuario));
   } catch (error) {
@@ -170,6 +228,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
     const {
       nome,
       email,
+      cpf,
       re,
       setor,
       cargo,
@@ -181,12 +240,30 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
     } = req.body;
     const unidadesDoUsuario = normalizarUnidadesPermitidas(unidadesPermitidas, unidade || usuarioAnterior.unidade);
     const unidadePrincipal = unidade && unidadesDoUsuario.includes(unidade) ? unidade : unidadesDoUsuario[0];
+    const cpfNormalizado = limparCpf(cpf);
+
+    if (!cpfValido(cpfNormalizado)) {
+      return res.status(400).json({ error: "CPF inválido." });
+    }
+
+    if (cpfNormalizado) {
+      const cpfExistente = await prisma.usuario.findFirst({
+        where: {
+          cpf: cpfNormalizado,
+          id: { not: Number(id) },
+        },
+      });
+      if (cpfExistente) {
+        return res.status(400).json({ error: "CPF já cadastrado." });
+      }
+    }
 
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
       data: {
         nome,
         email,
+        cpf: cpfNormalizado || null,
         re,
         setor,
         cargo,
@@ -211,6 +288,8 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       dadosAnteriores: usuarioAnterior,
       dadosNovos: usuario,
     });
+
+    await vincularTreinamentosPocSep007(usuario);
 
     return res.json(formatarUsuario(usuario));
   } catch (error) {

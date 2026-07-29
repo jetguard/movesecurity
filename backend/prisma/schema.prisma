@@ -11,6 +11,7 @@ model Usuario {
   id                         Int       @id @default(autoincrement())
   nome                       String
   email                      String    @unique
+  cpf                        String?   @unique
   senha                      String
   apelido                    String?
   fotoPerfil                 String?

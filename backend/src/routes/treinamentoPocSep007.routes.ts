@@ -4,6 +4,7 @@ import {
   iniciarTreinamentoPocSep007,
   listarTreinamentosPocSep007,
   listarUnidadesTreinamentoPocSep007,
+  localizarParticipanteTreinamentoPocSep007,
   responderQuizTreinamentoPocSep007,
 } from "../controllers/treinamentoPocSep007.controller";
 import { acessoTreinamentosTerminal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
@@ -11,6 +12,7 @@ import { acessoTreinamentosTerminal, autenticarUsuario, autorizarPerfis } from "
 const router = Router();
 
 router.get("/public/treinamento-poc-sep-007/unidades", listarUnidadesTreinamentoPocSep007);
+router.get("/public/treinamento-poc-sep-007/participante", localizarParticipanteTreinamentoPocSep007);
 router.post("/public/treinamento-poc-sep-007/iniciar", iniciarTreinamentoPocSep007);
 router.put("/public/treinamento-poc-sep-007/:token/etapa", concluirEtapaTreinamentoPocSep007);
 router.post("/public/treinamento-poc-sep-007/:token/quiz", responderQuizTreinamentoPocSep007);

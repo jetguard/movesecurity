@@ -322,6 +322,7 @@ export default function TreinamentoPocSep007Publico() {
   const [treinamento, setTreinamento] = useState<RegistroTreinamento | null>(null);
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [buscandoCadastro, setBuscandoCadastro] = useState(false);
   const [resultadoQuiz, setResultadoQuiz] = useState<{ aprovado: boolean; nota: number; acertos: number } | null>(null);
   const secaoAtual = secoes[indiceSecao];
   const etapaQuiz = indiceSecao >= secoes.length;
@@ -361,6 +362,36 @@ export default function TreinamentoPocSep007Publico() {
   function alterar(nome: keyof typeof formInicial, valor: string) {
     if (nome === "cpf") valor = mascararCpf(valor);
     setForm((atual) => ({ ...atual, [nome]: valor }));
+  }
+
+  async function buscarCadastro(identificador: string) {
+    const valor = identificador.trim();
+    if (!valor) return;
+    const cpf = mascararCpf(valor);
+    const podeBuscar = emailValido(valor) || cpfValido(cpf);
+    if (!podeBuscar) return;
+
+    setBuscandoCadastro(true);
+    try {
+      const response = await axios.get("/api/public/treinamento-poc-sep-007/participante", {
+        params: { identificador: valor },
+      });
+      const participante = response.data?.participante;
+      if (!participante) return;
+
+      setForm((atual) => ({
+        ...atual,
+        nomeCompleto: participante.nomeCompleto || atual.nomeCompleto,
+        cpf: mascararCpf(participante.cpf || atual.cpf),
+        email: participante.email || atual.email,
+        unidade: participante.unidade || atual.unidade,
+      }));
+      setMensagem("Cadastro localizado no JetGuard. Confira os dados e inicie o treinamento.");
+    } catch {
+      return;
+    } finally {
+      setBuscandoCadastro(false);
+    }
   }
 
   async function iniciar(event: FormEvent) {
@@ -475,6 +506,7 @@ export default function TreinamentoPocSep007Publico() {
                 <input
                   value={form.cpf}
                   onChange={(event) => alterar("cpf", event.target.value)}
+                  onBlur={(event) => buscarCadastro(event.target.value)}
                   inputMode="numeric"
                   maxLength={14}
                   required
@@ -489,6 +521,7 @@ export default function TreinamentoPocSep007Publico() {
                 <input
                   value={form.email}
                   onChange={(event) => alterar("email", event.target.value)}
+                  onBlur={(event) => buscarCadastro(event.target.value)}
                   type="email"
                   required
                   placeholder="nome.sobrenome@movecta.com.br"
@@ -513,6 +546,7 @@ export default function TreinamentoPocSep007Publico() {
               </label>
             </div>
             {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
+            {buscandoCadastro && <p className="mt-3 text-sm font-black text-blue-700">Consultando cadastro no JetGuard...</p>}
             <button disabled={carregando} className="terminal-primary-action mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
               {carregando ? "Validando..." : "Iniciar treinamento"}
             </button>

@@ -6,6 +6,7 @@ type Usuario = {
   id: number;
   nome: string;
   email: string;
+  cpf?: string;
   re?: string;
   setor?: string;
   cargo?: string;
@@ -32,6 +33,7 @@ const perfis = [
 const vazio = {
   nome: "",
   email: "",
+  cpf: "",
   re: "",
   setor: "",
   cargo: "",
@@ -44,6 +46,18 @@ const vazio = {
   senha: "",
   confirmarSenha: "",
 };
+
+function apenasDigitos(valor: string) {
+  return valor.replace(/\D/g, "");
+}
+
+function mascararCpf(valor: string) {
+  const digitos = apenasDigitos(valor).slice(0, 11);
+  return digitos
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
 
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -83,6 +97,7 @@ export default function Usuarios() {
   }, [busca, filtroPerfil, filtroStatus, usuarios]);
 
   function atualizarCampo(campo: string, valor: string | string[]) {
+    if (campo === "cpf" && typeof valor === "string") valor = mascararCpf(valor);
     setFormulario((atual) => ({ ...atual, [campo]: valor }));
   }
 
@@ -114,6 +129,7 @@ export default function Usuarios() {
       ...vazio,
       nome: usuario.nome,
       email: usuario.email,
+      cpf: mascararCpf(usuario.cpf || ""),
       re: usuario.re || "",
       setor: usuario.setor || "",
       cargo: usuario.cargo || "",
@@ -256,6 +272,7 @@ export default function Usuarios() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input className="rounded-lg border p-3" placeholder="Nome completo" value={formulario.nome} onChange={(e) => atualizarCampo("nome", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="E-mail" type="email" value={formulario.email} onChange={(e) => atualizarCampo("email", e.target.value)} required />
+            <input className="rounded-lg border p-3" placeholder="CPF" value={formulario.cpf} onChange={(e) => atualizarCampo("cpf", e.target.value)} inputMode="numeric" maxLength={14} />
             <input className="rounded-lg border p-3" placeholder="R.E" value={formulario.re} onChange={(e) => atualizarCampo("re", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Setor" value={formulario.setor} onChange={(e) => atualizarCampo("setor", e.target.value)} required />
             <input className="rounded-lg border p-3" placeholder="Cargo" value={formulario.cargo} onChange={(e) => atualizarCampo("cargo", e.target.value)} required />
@@ -353,6 +370,7 @@ export default function Usuarios() {
               <th className="p-3">Nome</th>
               <th className="p-3">E-mail</th>
               <th className="p-3">R.E</th>
+              <th className="p-3">CPF</th>
               <th className="p-3">Cargo</th>
               <th className="p-3">Setor</th>
               <th className="p-3">Equipe</th>
@@ -370,6 +388,7 @@ export default function Usuarios() {
                 <td className="p-3 font-semibold">{usuario.nome}</td>
                 <td className="p-3">{usuario.email}</td>
                 <td className="p-3">{usuario.re}</td>
+                <td className="p-3">{mascararCpf(usuario.cpf || "") || "-"}</td>
                 <td className="p-3">{usuario.cargo}</td>
                 <td className="p-3">{usuario.setor}</td>
                 <td className="p-3">{usuario.equipe || "-"}</td>
