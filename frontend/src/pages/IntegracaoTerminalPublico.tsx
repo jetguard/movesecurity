@@ -455,11 +455,11 @@ export default function IntegracaoTerminalPublico() {
                 Restante: {formatarTempo(restante)}
               </div>
             </div>
-            <div ref={videoFrameRef} className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-blue-200 bg-white">
+            <div ref={videoFrameRef} className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
               <video
                 ref={videoRef}
                 src={config?.videoUrl}
-                className="terminal-integration-video w-full bg-white"
+                className="terminal-integration-video w-full bg-slate-950"
                 preload="auto"
                 playsInline
                 disablePictureInPicture
@@ -467,7 +467,10 @@ export default function IntegracaoTerminalPublico() {
                 poster={fundoDesktopUrl}
                 onLoadStart={() => setVideoCarregando(true)}
                 onLoadedMetadata={prepararVideo}
+                onLoadedData={() => setVideoCarregando(false)}
                 onCanPlay={() => setVideoCarregando(false)}
+                onCanPlayThrough={() => setVideoCarregando(false)}
+                onPlay={() => setVideoCarregando((videoRef.current?.readyState || 0) < 3)}
                 onPlaying={() => setVideoCarregando(false)}
                 onWaiting={() => setVideoCarregando(true)}
                 onError={() => {
@@ -486,9 +489,9 @@ export default function IntegracaoTerminalPublico() {
                   }
                 }}
               />
-              {(videoCarregando || videoErro) && (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/72 px-4 text-center text-sm font-black text-white">
-                  {videoErro ? "Nao foi possivel carregar o video." : "Carregando video..."}
+              {(videoCarregando || videoErro || (!duracao && !tempoAtual)) && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/78 px-4 text-center text-sm font-black text-white">
+                  {videoErro ? "Não foi possível carregar o vídeo." : "Carregando vídeo..."}
                 </div>
               )}
             </div>
