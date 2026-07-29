@@ -1,4 +1,6 @@
+import axios from "axios";
 import { useMemo, useState } from "react";
+import type { FormEvent } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, FileText, ShieldCheck } from "lucide-react";
 
 type SecaoTreinamento = {
@@ -12,6 +14,22 @@ type PerguntaQuiz = {
   pergunta: string;
   opcoes: string[];
   correta: number;
+};
+
+type RegistroTreinamento = {
+  token: string;
+  codigo?: string | null;
+  nomeCompleto: string;
+  email: string;
+  cargo?: string | null;
+  departamento?: string | null;
+  unidade?: string | null;
+  empresa?: string | null;
+  etapaAtual: number;
+  status: string;
+  porcentagem: number;
+  nota?: number | null;
+  tentativas: number;
 };
 
 const secoes: SecaoTreinamento[] = [
@@ -257,6 +275,11 @@ export default function TreinamentoPocSep007Publico() {
   const [indiceSecao, setIndiceSecao] = useState(0);
   const [respostas, setRespostas] = useState<Array<number | null>>(quiz.map(() => null));
   const [mostrarResultado, setMostrarResultado] = useState(false);
+  const [email, setEmail] = useState("");
+  const [treinamento, setTreinamento] = useState<RegistroTreinamento | null>(null);
+  const [mensagem, setMensagem] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const [resultadoQuiz, setResultadoQuiz] = useState<{ aprovado: boolean; nota: number; acertos: number } | null>(null);
   const secaoAtual = secoes[indiceSecao];
   const etapaQuiz = indiceSecao >= secoes.length;
 
@@ -281,6 +304,64 @@ export default function TreinamentoPocSep007Publico() {
     setRespostas((atuais) => atuais.map((item, index) => (index === pergunta ? opcao : item)));
   }
 
+  async function iniciar(event: FormEvent) {
+    event.preventDefault();
+    setCarregando(true);
+    setMensagem("");
+    try {
+      const response = await axios.post("/api/public/treinamento-poc-sep-007/iniciar", { email });
+      setTreinamento(response.data.treinamento);
+      setIndiceSecao(Math.max(0, Math.min(secoes.length, (response.data.treinamento.etapaAtual || 1) - 1)));
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível iniciar o treinamento.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function concluirEtapaAtual() {
+    if (!treinamento) return;
+    setCarregando(true);
+    setMensagem("");
+    try {
+      const response = await axios.put(`/api/public/treinamento-poc-sep-007/${treinamento.token}/etapa`, {
+        etapa: indiceSecao + 1,
+      });
+      setTreinamento(response.data.treinamento);
+      avancar();
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível salvar a etapa.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function validarQuiz() {
+    if (!treinamento) return;
+    if (respostas.some((resposta) => resposta === null)) {
+      setMostrarResultado(true);
+      setMensagem("Responda todas as questões antes de validar.");
+      return;
+    }
+    setCarregando(true);
+    setMensagem("");
+    try {
+      const response = await axios.post(`/api/public/treinamento-poc-sep-007/${treinamento.token}/quiz`, {
+        respostas,
+      });
+      setResultadoQuiz({ aprovado: response.data.aprovado, nota: response.data.nota, acertos: response.data.acertos });
+      setTreinamento(response.data.treinamento);
+      setMostrarResultado(true);
+      setMensagem(response.data.aprovado ? "Parabéns! Você concluiu o treinamento com sucesso." : "Você não atingiu a nota mínima para aprovação. Revise o conteúdo e realize uma nova tentativa.");
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível validar a avaliação.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  const etapaLiberada = (index: number) => !treinamento || index + 1 <= treinamento.etapaAtual;
+
   return (
     <main className="treinamento-terminal-publico relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
       <picture className="fixed inset-0 z-0 block h-full w-full">
@@ -298,34 +379,73 @@ export default function TreinamentoPocSep007Publico() {
           <ShieldCheck className="h-9 w-9 shrink-0 text-blue-600 sm:h-10 sm:w-10" />
         </div>
 
-        <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+        {!treinamento && (
+          <form onSubmit={iniciar} className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
+            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Acesso corporativo</p>
+            <h2 className="mt-2 text-2xl font-black">Identifique-se para iniciar</h2>
+            <p className="mt-2 text-sm font-bold text-slate-700">
+              Este treinamento é exclusivo para colaboradores da Movecta. Informe seu e-mail corporativo.
+            </p>
+            <label className="terminal-label mt-6 block text-sm font-extrabold">
+              E-mail corporativo
+              <input
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                type="email"
+                required
+                placeholder="nome.sobrenome@movecta.com.br"
+                className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
+              />
+            </label>
+            {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
+            <button disabled={carregando} className="terminal-primary-action mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
+              {carregando ? "Validando..." : "Iniciar treinamento"}
+            </button>
+          </form>
+        )}
+
+        {treinamento && (
+          <div className="terminal-info-card mb-5 rounded-xl border p-4 text-sm font-bold shadow-sm">
+            <p className="font-black text-slate-950">{treinamento.nomeCompleto}</p>
+            <p>{treinamento.email}</p>
+            <p>{treinamento.cargo || "-"} | {treinamento.departamento || "-"} | {treinamento.unidade || "-"}</p>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-full rounded-full bg-blue-600" style={{ width: `${treinamento.porcentagem}%` }} />
+            </div>
+            <p className="mt-1 text-xs font-black text-blue-700">{treinamento.porcentagem}% concluído</p>
+          </div>
+        )}
+
+        {treinamento && <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
           {secoes.map((secao, index) => (
             <button
               key={secao.numero}
               type="button"
+              disabled={!etapaLiberada(index)}
               onClick={() => {
                 setMostrarResultado(false);
                 setIndiceSecao(index);
               }}
               className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 ${
                 indiceSecao === index ? "terminal-step-active" : "terminal-step-idle"
-              }`}
+              } disabled:cursor-not-allowed disabled:opacity-45`}
             >
               {secao.numero}
             </button>
           ))}
           <button
             type="button"
+            disabled={(treinamento?.etapaAtual || 1) < 16}
             onClick={() => setIndiceSecao(secoes.length)}
             className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 ${
               etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
-            }`}
+            } disabled:cursor-not-allowed disabled:opacity-45`}
           >
             Quiz
           </button>
-        </div>
+        </div>}
 
-        {!etapaQuiz ? (
+        {treinamento && !etapaQuiz ? (
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -354,12 +474,12 @@ export default function TreinamentoPocSep007Publico() {
               <button type="button" onClick={voltar} disabled={indiceSecao === 0} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-50 sm:w-auto">
                 <ArrowLeft size={18} /> Voltar
               </button>
-              <button type="button" onClick={avancar} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
-                {indiceSecao === secoes.length - 1 ? "Ir para o quiz" : "Próxima etapa"} <ArrowRight size={18} />
+              <button type="button" disabled={carregando} onClick={concluirEtapaAtual} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
+                {carregando ? "Salvando..." : "Li e compreendi esta etapa"} <ArrowRight size={18} />
               </button>
             </div>
           </div>
-        ) : (
+        ) : treinamento && (
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -407,9 +527,9 @@ export default function TreinamentoPocSep007Publico() {
               })}
             </div>
 
-            {mostrarResultado && (
+            {(mostrarResultado || resultadoQuiz) && (
               <div className={`mt-5 rounded-xl border px-4 py-3 text-sm font-black shadow-lg ${acertos === quiz.length ? "border-emerald-400 bg-emerald-50 text-emerald-800" : "border-amber-300 bg-amber-50 text-amber-900"}`}>
-                Resultado: {acertos} de {quiz.length} acertos. {acertos === quiz.length ? "Treinamento concluído com aproveitamento." : "Revise as questões destacadas e tente novamente."}
+                Resultado: {resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos. Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%. {(resultadoQuiz?.aprovado ?? acertos === quiz.length) ? "Treinamento concluído com aproveitamento." : "Revise as questões destacadas e tente novamente."}
               </div>
             )}
 
@@ -417,8 +537,8 @@ export default function TreinamentoPocSep007Publico() {
               <button type="button" onClick={voltar} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
                 <ArrowLeft size={18} /> Voltar às etapas
               </button>
-              <button type="button" onClick={() => setMostrarResultado(true)} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
-                Validar respostas
+              <button type="button" disabled={carregando} onClick={validarQuiz} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
+                {carregando ? "Validando..." : "Validar respostas"}
               </button>
             </div>
           </div>

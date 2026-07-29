@@ -24,9 +24,13 @@ export default function ProtectedRoute({ children, perfis }: Props) {
 
   if (
     usuario.perfilAcesso === PERFIS.PORTARIA &&
-    !["/treinamentos-terminal", "/meus-dados", "/perfil", "/alterar-senha"].some((rota) =>
-      location.pathname === rota || location.pathname.startsWith(`${rota}/`),
-    )
+    ![
+      "/treinamentos-terminal",
+      "/treinamentos-poc-sep-007",
+      "/meus-dados",
+      "/perfil",
+      "/alterar-senha",
+    ].some((rota) => location.pathname === rota || location.pathname.startsWith(`${rota}/`))
   ) {
     return <Navigate to="/treinamentos-terminal" replace />;
   }

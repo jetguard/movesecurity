@@ -41,6 +41,7 @@ import documentoRoutes from "./routes/documento.routes";
 import relatoCampoRoutes from "./routes/relatoCampo.routes";
 import treinamentoTerminalRoutes from "./routes/treinamentoTerminal.routes";
 import integracaoTerminalRoutes from "./routes/integracaoTerminal.routes";
+import treinamentoPocSep007Routes from "./routes/treinamentoPocSep007.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -164,6 +165,7 @@ app.use("/api/relatos-campo", relatoCampoRoutes);
 app.use("/api/public/relatos-campo", relatoCampoRoutes);
 app.use("/api", treinamentoTerminalRoutes);
 app.use("/api", integracaoTerminalRoutes);
+app.use("/api", treinamentoPocSep007Routes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);

@@ -137,6 +137,36 @@ model IntegracaoTerminal {
   @@index([status, updatedAt])
 }
 
+model TreinamentoPocSep007 {
+  id              Int       @id @default(autoincrement())
+  token           String    @unique
+  usuarioId       Int?
+  codigo          String?   @unique
+  nomeCompleto    String
+  email           String
+  cargo           String?
+  departamento    String?
+  unidade         String?
+  empresa         String?
+  etapaAtual      Int       @default(1)
+  status          String    @default("Em andamento")
+  porcentagem     Int       @default(0)
+  nota            Float?
+  tentativas      Int       @default(0)
+  respostasQuiz   String?
+  ipInicio        String?
+  navegador       String?
+  sistema         String?
+  dataInicio      DateTime  @default(now())
+  dataConclusao   DateTime?
+  ultimoAcessoEm  DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([status, updatedAt])
+}
+
 model SessaoUsuario {
   id                 String    @id @default(cuid())
   usuarioId          Int

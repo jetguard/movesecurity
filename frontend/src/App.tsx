@@ -81,6 +81,9 @@ const ValidarCertificadoIntegracao = lazyWithReload(
 const TreinamentosTerminal = lazyWithReload(
   () => import("./pages/TreinamentosTerminal"),
 );
+const TreinamentosPocSep007 = lazyWithReload(
+  () => import("./pages/TreinamentosPocSep007"),
+);
 const IntegracoesTerminal = lazyWithReload(
   () => import("./pages/IntegracoesTerminal"),
 );
@@ -168,6 +171,21 @@ export default function App() {
                   ]}
                 >
                   <TreinamentosTerminal />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="treinamentos-poc-sep-007"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.PORTARIA,
+                  ]}
+                >
+                  <TreinamentosPocSep007 />
                 </ProtectedRoute>
               }
             />

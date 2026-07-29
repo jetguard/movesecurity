@@ -499,6 +499,10 @@ export default function AdminLayout() {
                 <FileCheck2 size={20} className="shrink-0" />
                 <span className={menuText}>Treinamentos Terminal</span>
               </Link>
+              <Link to="/treinamentos-poc-sep-007" className={item}>
+                <FileCheck2 size={20} className="shrink-0" />
+                <span className={menuText}>POC-SEP-007</span>
+              </Link>
               <Link to="/meus-dados" className={item}>
                 <Users size={20} className="shrink-0" />
                 <span className={menuText}>Minha Conta</span>
@@ -532,6 +536,10 @@ export default function AdminLayout() {
                       <Link to="/treinamentos-terminal" className={subItem}>
                         <FileCheck2 size={16} />
                         Treinamentos de Acesso
+                      </Link>
+                      <Link to="/treinamentos-poc-sep-007" className={subItem}>
+                        <FileCheck2 size={16} />
+                        POC-SEP-007
                       </Link>
                       <Link to="/integracoes-do-terminal" className={subItem}>
                         <FileCheck2 size={16} />
