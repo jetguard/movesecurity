@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Request, Response } from "express";
 import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
@@ -73,6 +74,10 @@ function dataPtBr(data?: Date | string | null) {
   return new Date(data).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
+function appPublicUrl() {
+  return String(process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.FRONTEND_URL || "https://movecta.jetguard.com.br").replace(/\/$/, "");
+}
+
 function arquivoCertificado(token: string) {
   const pasta = path.resolve(process.cwd(), "uploads", "certificados-poc-sep-007");
   fs.mkdirSync(pasta, { recursive: true });
@@ -105,6 +110,13 @@ async function gerarCertificadoPocSep007(treinamento: any) {
   const pageHeight = doc.page.height;
   const concluidoEm = new Date(treinamento.dataConclusao || new Date());
   const fundo = caminhoFundoCertificadoPoc();
+  const validacaoUrl = `${appPublicUrl()}/validar-certificado/${treinamento.token}`;
+  const qrDataUrl = await QRCode.toDataURL(validacaoUrl, {
+    width: 220,
+    margin: 1,
+    color: { dark: "#0f172a", light: "#ffffff" },
+  });
+  const qrCode = Buffer.from(String(qrDataUrl).split(",")[1], "base64");
 
   doc.rect(0, 0, pageWidth, pageHeight).fill("#f4f7ff");
   if (fundo) {
@@ -149,6 +161,10 @@ async function gerarCertificadoPocSep007(treinamento: any) {
   doc.moveTo(256, 424).lineTo(586, 424).strokeColor("#1d4ed8").lineWidth(1.2).stroke();
   doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10).text(treinamento.nomeCompleto, 256, 438, { width: 330, align: "center" });
   doc.fillColor("#334155").font("Helvetica").fontSize(9).text("Colaborador", 256, 453, { width: 330, align: "center" });
+
+  doc.roundedRect(108, 388, 74, 92, 12).fillAndStroke("#ffffff", "#bfdbfe");
+  doc.image(qrCode, 116, 396, { width: 58, height: 58 });
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(6.5).text("VALIDAÇÃO", 108, 459, { width: 74, align: "center" });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {

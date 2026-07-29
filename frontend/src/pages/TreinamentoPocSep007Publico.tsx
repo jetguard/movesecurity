@@ -800,12 +800,12 @@ export default function TreinamentoPocSep007Publico() {
         ) : treinamento && etapaResultado ? (
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Resultado</p>
-            <h2 className="mt-2 text-2xl font-black">Resultado da avaliação</h2>
-            <div className={`mt-6 rounded-2xl border p-5 shadow-lg ${resultadoQuiz?.aprovado ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-amber-300 bg-amber-50 text-amber-950"}`}>
-              <p className="text-sm font-black uppercase tracking-[0.18em]">{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
-              <p className="mt-3 text-4xl font-black">{resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos</p>
-              <p className="mt-2 text-xl font-black">Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%</p>
-              <p className="mt-3 text-base font-bold">
+            <h2 className="mt-2 text-2xl font-black text-slate-950">Resultado da avaliação</h2>
+            <div className={`mt-6 rounded-2xl border-2 bg-white p-5 shadow-xl ${resultadoQuiz?.aprovado ? "border-emerald-500 text-emerald-950" : "border-amber-500 text-amber-950"}`}>
+              <p className={`text-sm font-black uppercase tracking-[0.18em] ${resultadoQuiz?.aprovado ? "text-emerald-700" : "text-amber-700"}`}>{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
+              <p className="mt-3 text-4xl font-black text-slate-950">{resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos</p>
+              <p className="mt-2 text-xl font-black text-slate-900">Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%</p>
+              <p className="mt-3 text-base font-bold text-slate-800">
                 É necessário atingir pelo menos 80% de acertos para avançar para assinatura e emissão do certificado.
               </p>
             </div>
