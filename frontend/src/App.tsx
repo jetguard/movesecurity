@@ -66,6 +66,9 @@ const RelatorioDiarioExecutivo = lazyWithReload(
 const TreinamentoTerminalPublico = lazyWithReload(
   () => import("./pages/TreinamentoTerminalPublico"),
 );
+const TreinamentoPocSep007Publico = lazyWithReload(
+  () => import("./pages/TreinamentoPocSep007Publico"),
+);
 const IntegracaoTerminalPublico = lazyWithReload(
   () => import("./pages/IntegracaoTerminalPublico"),
 );
@@ -94,6 +97,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
           <Route path="/treinamento-terminal" element={<TreinamentoTerminalPublico />} />
+          <Route path="/treinamento-poc-sep-007" element={<TreinamentoPocSep007Publico />} />
           <Route path="/integracao-terminal" element={<IntegracaoTerminalPublico />} />
           <Route path="/integracao-motoristas" element={<IntegracaoTerminalPublico />} />
           <Route path="/validar-certificado/:token" element={<ValidarCertificadoTreinamento />} />
