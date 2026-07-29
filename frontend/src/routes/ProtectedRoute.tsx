@@ -26,6 +26,7 @@ export default function ProtectedRoute({ children, perfis }: Props) {
     usuario.perfilAcesso === PERFIS.PORTARIA &&
     ![
       "/treinamentos-terminal",
+      "/integracoes-do-terminal",
       "/treinamentos-poc-sep-007",
       "/meus-dados",
       "/perfil",

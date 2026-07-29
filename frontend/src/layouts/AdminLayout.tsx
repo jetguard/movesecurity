@@ -59,6 +59,7 @@ export default function AdminLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
   const [operacaoOpen, setOperacaoOpen] = useState(true);
+  const [treinamentosOpen, setTreinamentosOpen] = useState(true);
   const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
   const [administracaoOpen, setAdministracaoOpen] = useState(false);
   const [apisOpen, setApisOpen] = useState(false);
@@ -495,14 +496,33 @@ export default function AdminLayout() {
 
           {portaria ? (
             <>
-              <Link to="/treinamentos-terminal" className={item}>
-                <FileCheck2 size={20} className="shrink-0" />
-                <span className={menuText}>Treinamentos Terminal</span>
-              </Link>
-              <Link to="/treinamentos-poc-sep-007" className={item}>
-                <FileCheck2 size={20} className="shrink-0" />
-                <span className={menuText}>POC-SEP-007</span>
-              </Link>
+              <button
+                onClick={() => setTreinamentosOpen(!treinamentosOpen)}
+                className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+              >
+                <div className="flex items-center gap-3">
+                  <FileCheck2 size={20} className="shrink-0" />
+                  <span className={menuText}>Treinamentos</span>
+                </div>
+                <span className={menuToggle}>{treinamentosOpen ? "-" : "+"}</span>
+              </button>
+
+              {treinamentosOpen && (
+                <div className={submenuClass}>
+                  <Link to="/treinamentos-terminal" className={subItem}>
+                    <FileCheck2 size={16} />
+                    Treinamento Terminal
+                  </Link>
+                  <Link to="/integracoes-do-terminal" className={subItem}>
+                    <FileCheck2 size={16} />
+                    Integração de Motorista
+                  </Link>
+                  <Link to="/treinamentos-poc-sep-007" className={subItem}>
+                    <FileCheck2 size={16} />
+                    POC-SEP-007
+                  </Link>
+                </div>
+              )}
               <Link to="/meus-dados" className={item}>
                 <Users size={20} className="shrink-0" />
                 <span className={menuText}>Minha Conta</span>
@@ -510,6 +530,38 @@ export default function AdminLayout() {
             </>
           ) : (
             <>
+              {!tecnicoManutencao && (
+                <>
+                  <button
+                    onClick={() => setTreinamentosOpen(!treinamentosOpen)}
+                    className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileCheck2 size={20} className="shrink-0" />
+                      <span className={menuText}>Treinamentos</span>
+                    </div>
+                    <span className={menuToggle}>{treinamentosOpen ? "-" : "+"}</span>
+                  </button>
+
+                  {treinamentosOpen && (
+                    <div className={submenuClass}>
+                      <Link to="/treinamentos-terminal" className={subItem}>
+                        <FileCheck2 size={16} />
+                        Treinamento Terminal
+                      </Link>
+                      <Link to="/integracoes-do-terminal" className={subItem}>
+                        <FileCheck2 size={16} />
+                        Integração de Motorista
+                      </Link>
+                      <Link to="/treinamentos-poc-sep-007" className={subItem}>
+                        <FileCheck2 size={16} />
+                        POC-SEP-007
+                      </Link>
+                    </div>
+                  )}
+                </>
+              )}
+
               <button
                 onClick={() => setOperacaoOpen(!operacaoOpen)}
                 className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
@@ -533,18 +585,6 @@ export default function AdminLayout() {
                   </Link>
                   {!tecnicoManutencao && (
                     <>
-                      <Link to="/treinamentos-terminal" className={subItem}>
-                        <FileCheck2 size={16} />
-                        Treinamentos de Acesso
-                      </Link>
-                      <Link to="/treinamentos-poc-sep-007" className={subItem}>
-                        <FileCheck2 size={16} />
-                        POC-SEP-007
-                      </Link>
-                      <Link to="/integracoes-do-terminal" className={subItem}>
-                        <FileCheck2 size={16} />
-                        Integrações do Terminal
-                      </Link>
                       <Link to="/planejamento" className={subItem}>
                         <Columns3 size={16} />
                         Quadro de Tarefas

@@ -10,7 +10,7 @@ import {
   responderQuizIntegracao,
   validarCertificadoIntegracao,
 } from "../controllers/integracaoTerminal.controller";
-import { acessoAnalise, acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { acessoTotal, acessoTreinamentosTerminal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
 
@@ -21,7 +21,7 @@ router.post("/public/integracao-terminal/:token/quiz", responderQuizIntegracao);
 router.post("/public/integracao-terminal/:token/concluir", concluirIntegracaoTerminal);
 router.get("/public/integracao-terminal/:token/certificado", baixarCertificadoIntegracao);
 router.get("/public/integracao-terminal/:token/validar", validarCertificadoIntegracao);
-router.get("/integracoes-do-terminal", autenticarUsuario, autorizarPerfis(acessoAnalise), listarIntegracoesTerminal);
+router.get("/integracoes-do-terminal", autenticarUsuario, autorizarPerfis(acessoTreinamentosTerminal), listarIntegracoesTerminal);
 router.delete("/integracoes-do-terminal/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirIntegracaoTerminal);
 
 export default router;
