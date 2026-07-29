@@ -1,7 +1,7 @@
 import axios from "axios";
-import { useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, FileText, ShieldCheck } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { FormEvent, PointerEvent } from "react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Download, FileText, PenLine, ShieldCheck } from "lucide-react";
 
 type SecaoTreinamento = {
   numero: string;
@@ -31,6 +31,8 @@ type RegistroTreinamento = {
   porcentagem: number;
   nota?: number | null;
   tentativas: number;
+  certificadoUrl?: string | null;
+  emailStatus?: string | null;
 };
 
 const formInicial = {
@@ -324,8 +326,16 @@ export default function TreinamentoPocSep007Publico() {
   const [carregando, setCarregando] = useState(false);
   const [buscandoCadastro, setBuscandoCadastro] = useState(false);
   const [resultadoQuiz, setResultadoQuiz] = useState<{ aprovado: boolean; nota: number; acertos: number } | null>(null);
+  const [assinaturaVazia, setAssinaturaVazia] = useState(true);
+  const [assinando, setAssinando] = useState(false);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const secaoAtual = secoes[indiceSecao];
-  const etapaQuiz = indiceSecao >= secoes.length;
+  const indiceQuiz = secoes.length;
+  const indiceResultado = secoes.length + 1;
+  const indiceAssinatura = secoes.length + 2;
+  const etapaQuiz = indiceSecao === indiceQuiz;
+  const etapaResultado = indiceSecao === indiceResultado;
+  const etapaAssinatura = indiceSecao >= indiceAssinatura;
 
   useEffect(() => {
     axios
@@ -416,8 +426,16 @@ export default function TreinamentoPocSep007Publico() {
     setMensagem("");
     try {
       const response = await axios.post("/api/public/treinamento-poc-sep-007/iniciar", form);
-      setTreinamento(response.data.treinamento);
-      setIndiceSecao(Math.max(0, Math.min(secoes.length, (response.data.treinamento.etapaAtual || 1) - 1)));
+      const registro = response.data.treinamento as RegistroTreinamento;
+      setTreinamento(registro);
+      if (registro.nota !== null && registro.nota !== undefined) {
+        const acertosEstimados = Math.round((Number(registro.nota) / 100) * quiz.length);
+        const aprovado = Number(registro.nota) >= 80;
+        setResultadoQuiz({ aprovado, nota: Number(registro.nota), acertos: acertosEstimados });
+        setIndiceSecao(registro.certificadoUrl ? indiceAssinatura : aprovado ? indiceAssinatura : indiceResultado);
+      } else {
+        setIndiceSecao(Math.max(0, Math.min(secoes.length, (registro.etapaAtual || 1) - 1)));
+      }
     } catch (error: any) {
       setMensagem(error.response?.data?.error || "Não foi possível iniciar o treinamento.");
     } finally {
@@ -458,9 +476,87 @@ export default function TreinamentoPocSep007Publico() {
       setResultadoQuiz({ aprovado: response.data.aprovado, nota: response.data.nota, acertos: response.data.acertos });
       setTreinamento(response.data.treinamento);
       setMostrarResultado(true);
-      setMensagem(response.data.aprovado ? "Parabéns! Você concluiu o treinamento com sucesso." : "Você não atingiu a nota mínima para aprovação. Revise o conteúdo e realize uma nova tentativa.");
+      setIndiceSecao(indiceResultado);
+      setMensagem(response.data.aprovado ? "Você atingiu a nota mínima. Avance para assinatura e emissão do certificado." : "Você não atingiu a nota mínima de 80%. Revise as perguntas e tente novamente.");
     } catch (error: any) {
       setMensagem(error.response?.data?.error || "Não foi possível validar a avaliação.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function prepararCanvas() {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const escala = window.devicePixelRatio || 1;
+    canvas.width = rect.width * escala;
+    canvas.height = rect.height * escala;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.scale(escala, escala);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#0f172a";
+    ctx.lineWidth = 2.4;
+    setAssinaturaVazia(true);
+  }
+
+  useEffect(() => {
+    if (!etapaAssinatura) return;
+    prepararCanvas();
+  }, [etapaAssinatura]);
+
+  function pontoCanvas(event: PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function iniciarAssinatura(event: PointerEvent<HTMLCanvasElement>) {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    canvas.setPointerCapture(event.pointerId);
+    const ponto = pontoCanvas(event);
+    ctx.beginPath();
+    ctx.moveTo(ponto.x, ponto.y);
+    setAssinando(true);
+    setAssinaturaVazia(false);
+  }
+
+  function moverAssinatura(event: PointerEvent<HTMLCanvasElement>) {
+    if (!assinando) return;
+    const ctx = canvasRef.current?.getContext("2d");
+    if (!ctx) return;
+    const ponto = pontoCanvas(event);
+    ctx.lineTo(ponto.x, ponto.y);
+    ctx.stroke();
+  }
+
+  function finalizarAssinatura() {
+    setAssinando(false);
+  }
+
+  async function concluirComAssinatura() {
+    if (!treinamento || !canvasRef.current) return;
+    if (assinaturaVazia) {
+      setMensagem("Assine no campo indicado para emitir o certificado.");
+      return;
+    }
+    setCarregando(true);
+    setMensagem("");
+    try {
+      const response = await axios.post(`/api/public/treinamento-poc-sep-007/${treinamento.token}/concluir`, {
+        assinaturaDataUrl: canvasRef.current.toDataURL("image/png"),
+      });
+      setTreinamento(response.data.treinamento);
+      setMensagem(response.data.mensagem || "Certificado emitido com sucesso.");
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível emitir o certificado.");
     } finally {
       setCarregando(false);
     }
@@ -565,7 +661,7 @@ export default function TreinamentoPocSep007Publico() {
           </div>
         )}
 
-        {treinamento && <div className="mb-5 grid grid-cols-2 gap-3">
+        {treinamento && <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <button
             type="button"
             onClick={() => {
@@ -573,7 +669,7 @@ export default function TreinamentoPocSep007Publico() {
               setIndiceSecao(Math.min(secoes.length - 1, Math.max(0, (treinamento.etapaAtual || 1) - 1)));
             }}
             className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
-              !etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
+              !etapaQuiz && !etapaResultado && !etapaAssinatura ? "terminal-step-active" : "terminal-step-idle"
             }`}
           >
             POC-SEP-007
@@ -581,16 +677,36 @@ export default function TreinamentoPocSep007Publico() {
           <button
             type="button"
             disabled={(treinamento?.etapaAtual || 1) < 16}
-            onClick={() => setIndiceSecao(secoes.length)}
+            onClick={() => setIndiceSecao(indiceQuiz)}
             className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
               etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
             } disabled:cursor-not-allowed disabled:opacity-45`}
           >
             Quiz
           </button>
+          <button
+            type="button"
+            disabled={!resultadoQuiz}
+            onClick={() => setIndiceSecao(indiceResultado)}
+            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
+              etapaResultado ? "terminal-step-active" : "terminal-step-idle"
+            } disabled:cursor-not-allowed disabled:opacity-45`}
+          >
+            Resultado
+          </button>
+          <button
+            type="button"
+            disabled={!resultadoQuiz?.aprovado}
+            onClick={() => setIndiceSecao(indiceAssinatura)}
+            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
+              etapaAssinatura ? "terminal-step-active" : "terminal-step-idle"
+            } disabled:cursor-not-allowed disabled:opacity-45`}
+          >
+            Assinatura
+          </button>
         </div>}
 
-        {treinamento && !etapaQuiz ? (
+        {treinamento && !etapaQuiz && !etapaResultado && !etapaAssinatura ? (
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -624,7 +740,7 @@ export default function TreinamentoPocSep007Publico() {
               </button>
             </div>
           </div>
-        ) : treinamento && (
+        ) : treinamento && etapaQuiz ? (
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
@@ -672,12 +788,6 @@ export default function TreinamentoPocSep007Publico() {
               })}
             </div>
 
-            {(mostrarResultado || resultadoQuiz) && (
-              <div className={`mt-5 rounded-xl border px-4 py-3 text-sm font-black shadow-lg ${acertos === quiz.length ? "border-emerald-400 bg-emerald-50 text-emerald-800" : "border-amber-300 bg-amber-50 text-amber-900"}`}>
-                Resultado: {resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos. Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%. {(resultadoQuiz?.aprovado ?? acertos === quiz.length) ? "Treinamento concluído com aproveitamento." : "Revise as questões destacadas e tente novamente."}
-              </div>
-            )}
-
             <div className="mt-6 flex flex-wrap gap-3">
               <button type="button" onClick={voltar} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
                 <ArrowLeft size={18} /> Voltar às etapas
@@ -687,7 +797,66 @@ export default function TreinamentoPocSep007Publico() {
               </button>
             </div>
           </div>
-        )}
+        ) : treinamento && etapaResultado ? (
+          <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
+            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Resultado</p>
+            <h2 className="mt-2 text-2xl font-black">Resultado da avaliação</h2>
+            <div className={`mt-6 rounded-2xl border p-5 shadow-lg ${resultadoQuiz?.aprovado ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-amber-300 bg-amber-50 text-amber-950"}`}>
+              <p className="text-sm font-black uppercase tracking-[0.18em]">{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
+              <p className="mt-3 text-4xl font-black">{resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos</p>
+              <p className="mt-2 text-xl font-black">Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%</p>
+              <p className="mt-3 text-base font-bold">
+                É necessário atingir pelo menos 80% de acertos para avançar para assinatura e emissão do certificado.
+              </p>
+            </div>
+            {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button type="button" onClick={() => setIndiceSecao(indiceQuiz)} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                <ArrowLeft size={18} /> Revisar perguntas
+              </button>
+              {resultadoQuiz?.aprovado && (
+                <button type="button" onClick={() => setIndiceSecao(indiceAssinatura)} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                  Avançar para assinatura <ArrowRight size={18} />
+                </button>
+              )}
+            </div>
+          </div>
+        ) : treinamento && etapaAssinatura ? (
+          <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Assinatura</p>
+                <h2 className="mt-2 text-2xl font-black">Assinatura e emissão do certificado</h2>
+                <p className="mt-2 text-sm font-bold text-slate-700">Assine no campo abaixo para emitir o certificado e enviá-lo ao e-mail informado.</p>
+              </div>
+              <PenLine className="h-10 w-10 text-blue-700" />
+            </div>
+            <div className="mt-6 rounded-2xl border border-blue-200 bg-white p-3 shadow-inner">
+              <canvas
+                ref={canvasRef}
+                className="h-44 w-full touch-none rounded-xl bg-white"
+                onPointerDown={iniciarAssinatura}
+                onPointerMove={moverAssinatura}
+                onPointerUp={finalizarAssinatura}
+                onPointerCancel={finalizarAssinatura}
+              />
+            </div>
+            {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button type="button" onClick={prepararCanvas} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                Limpar assinatura
+              </button>
+              <button type="button" disabled={carregando || Boolean(treinamento.certificadoUrl)} onClick={concluirComAssinatura} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
+                {carregando ? "Emitindo..." : treinamento.certificadoUrl ? "Certificado emitido" : "Emitir certificado"}
+              </button>
+              {treinamento.certificadoUrl && (
+                <a href={treinamento.certificadoUrl} target="_blank" rel="noreferrer" className="terminal-success-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                  <Download size={18} /> Baixar certificado
+                </a>
+              )}
+            </div>
+          </div>
+        ) : null}
       </section>
     </main>
   );

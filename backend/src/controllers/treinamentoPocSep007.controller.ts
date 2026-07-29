@@ -1,9 +1,14 @@
 import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 import { Request, Response } from "express";
+import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
 import { enviarEmail } from "../services/email.service";
+import { pdfAssets } from "../services/documentoPdfBase.service";
 
 const TOTAL_ETAPAS_CONTEUDO = 15;
 const TOTAL_ETAPAS = 16;
@@ -70,6 +75,107 @@ function dataPtBr(data?: Date | string | null) {
   return new Date(data).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
+function formatarCpf(cpf?: string | null) {
+  const digitos = limparCpf(cpf || "");
+  if (digitos.length !== 11) return cpf || "-";
+  return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+}
+
+function appPublicUrl() {
+  return String(process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.FRONTEND_URL || "https://movecta.jetguard.com.br").replace(/\/$/, "");
+}
+
+function arquivoCertificado(token: string) {
+  const pasta = path.resolve(process.cwd(), "uploads", "certificados-poc-sep-007");
+  fs.mkdirSync(pasta, { recursive: true });
+  return path.join(pasta, `certificado-poc-sep-007-${token}.pdf`);
+}
+
+function certificadoUrl(token: string) {
+  return `/api/public/treinamento-poc-sep-007/${token}/certificado`;
+}
+
+async function gerarCertificadoPocSep007(treinamento: any) {
+  const destino = arquivoCertificado(treinamento.token);
+  const temporario = `${destino}.tmp`;
+  fs.rmSync(temporario, { force: true });
+
+  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0 });
+  const stream = fs.createWriteStream(temporario);
+  doc.pipe(stream);
+
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+  const validacaoUrl = `${appPublicUrl()}/treinamento-poc-sep-007`;
+  const qrDataUrl = await QRCode.toDataURL(validacaoUrl, {
+    width: 220,
+    margin: 1,
+    color: { dark: "#0f172a", light: "#ffffff" },
+  });
+  const qrCode = Buffer.from(String(qrDataUrl).split(",")[1], "base64");
+  const concluidoEm = new Date(treinamento.dataConclusao || new Date());
+
+  doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
+  doc.rect(0, 0, pageWidth, 142).fill("#356bad");
+  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text("CERTIFICADO", 44, 58, { width: 270 });
+  doc.roundedRect(pageWidth - 230, 34, 186, 34, 10).fillAndStroke("#ffffff", "#bfdbfe");
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(14).text(treinamento.codigo || "-", pageWidth - 218, 44, { width: 162, align: "center" });
+
+  const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu com aproveitamento o treinamento POC-SEP-007 - Controle de Acesso de Pessoas e Veículos não Atrelados à Carga, obtendo nota ${treinamento.nota ?? "-"}%, em ${dataPtBr(concluidoEm)}.`;
+  doc.fillColor("#111827").font("Helvetica").fontSize(16).text(textoPrincipal, 118, 182, {
+    width: 620,
+    align: "center",
+    lineGap: 7,
+  });
+
+  if (treinamento.assinaturaDataUrl) {
+    const assinaturaBase64 = String(treinamento.assinaturaDataUrl).split(",")[1];
+    if (assinaturaBase64) {
+      const assinaturaPng = path.join(path.dirname(destino), `assinatura-poc-${treinamento.token}.png`);
+      fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
+      doc.image(assinaturaPng, 180, 350, { fit: [240, 58], align: "center" });
+      fs.rmSync(assinaturaPng, { force: true });
+    }
+  }
+
+  doc.moveTo(158, 415).lineTo(433, 415).strokeColor("#2f6bb2").lineWidth(1).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9).text(treinamento.nomeCompleto, 158, 427, { width: 275, align: "center" });
+  doc.fillColor("#111827").font("Helvetica").fontSize(8).text("Participante", 158, 442, { width: 275, align: "center" });
+
+  doc.moveTo(472, 415).lineTo(747, 415).strokeColor("#2f6bb2").lineWidth(1).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9.5).text("Segurança Patrimonial", 472, 427, { width: 275, align: "center" });
+  doc.fillColor("#111827").font("Helvetica").fontSize(8.5).text("Movecta S.A", 472, 442, { width: 275, align: "center" });
+
+  doc.image(qrCode, 58, 424, { width: 72, height: 72 });
+  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDAÇÃO", 49, 502, { width: 90, align: "center" });
+
+  if (fs.existsSync(pdfAssets.logo)) {
+    doc.image(pdfAssets.logo, 610, 488, { fit: [150, 46], align: "center" });
+  } else {
+    doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
+  }
+
+  doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validação: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
+  doc.end();
+
+  await new Promise<void>((resolve, reject) => {
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+  });
+  fs.renameSync(temporario, destino);
+  return destino;
+}
+
+async function enviarCertificadoPocSep007(treinamento: any, certificadoArquivo: string) {
+  return enviarEmail({
+    to: treinamento.email,
+    subject: `Certificado POC-SEP-007 - ${treinamento.codigo}`,
+    text: `Olá, ${treinamento.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento POC-SEP-007.`,
+    html: `<p>Olá, <strong>${treinamento.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento <strong>POC-SEP-007</strong>.</p>`,
+    attachments: [{ filename: `certificado-${String(treinamento.codigo || "poc").replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
+  });
+}
+
 async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
   await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('movecta_poc_sep_007_certificado_${ano}'))`);
@@ -100,6 +206,7 @@ function respostaPublica(registro: any) {
     dataConclusao: registro.dataConclusao,
     emailStatus: registro.emailStatus,
     emailEnviadoEm: registro.emailEnviadoEm,
+    certificadoUrl: registro.certificadoArquivo ? certificadoUrl(registro.token) : null,
   };
 }
 
@@ -280,17 +387,14 @@ export async function responderQuizTreinamentoPocSep007(req: Request, res: Respo
     const aprovado = nota >= NOTA_MINIMA;
 
     const atualizado = await prisma.$transaction(async (tx) => {
-      const codigo = aprovado && !treinamento.codigo ? await proximoCodigo(tx) : treinamento.codigo;
       return tx.treinamentoPocSep007.update({
         where: { id: treinamento.id },
         data: {
-          codigo,
           nota,
           respostasQuiz: JSON.stringify(respostas),
           tentativas: { increment: 1 },
-          status: aprovado ? "Concluido" : "Reprovado",
-          porcentagem: aprovado ? 100 : porcentagem(TOTAL_ETAPAS),
-          dataConclusao: aprovado ? (treinamento.dataConclusao || new Date()) : null,
+          status: aprovado ? "Aguardando assinatura" : "Reprovado",
+          porcentagem: aprovado ? 99 : porcentagem(TOTAL_ETAPAS),
           ultimoAcessoEm: new Date(),
           navegador: userAgent(req),
         },
@@ -309,13 +413,68 @@ export async function responderQuizTreinamentoPocSep007(req: Request, res: Respo
   }
 }
 
+export async function concluirTreinamentoPocSep007(req: Request, res: Response) {
+  try {
+    const token = texto(req.params.token);
+    const assinaturaDataUrl = texto(req.body.assinaturaDataUrl);
+    if (!assinaturaDataUrl.startsWith("data:image/")) {
+      return res.status(400).json({ error: "Assinatura inválida." });
+    }
+
+    const treinamento = await prisma.treinamentoPocSep007.findUnique({ where: { token } });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if ((treinamento.nota || 0) < NOTA_MINIMA) {
+      return res.status(400).json({ error: "A nota mínima para emissão do certificado é 80%." });
+    }
+
+    const comCodigo = await prisma.$transaction(async (tx) => {
+      const codigo = treinamento.codigo || await proximoCodigo(tx);
+      return tx.treinamentoPocSep007.update({
+        where: { id: treinamento.id },
+        data: {
+          codigo,
+          assinaturaDataUrl,
+          status: "Concluido",
+          porcentagem: 100,
+          dataConclusao: treinamento.dataConclusao || new Date(),
+          ultimoAcessoEm: new Date(),
+          navegador: userAgent(req),
+        },
+      });
+    });
+
+    const certificadoArquivo = await gerarCertificadoPocSep007(comCodigo);
+    const email = await enviarCertificadoPocSep007(comCodigo, certificadoArquivo);
+    const atualizado = await prisma.treinamentoPocSep007.update({
+      where: { id: comCodigo.id },
+      data: {
+        certificadoArquivo,
+        emailStatus: email.status,
+        emailEnviadoEm: email.enviado ? new Date() : comCodigo.emailEnviadoEm,
+      },
+    });
+
+    return res.json({
+      mensagem: email.enviado ? "Certificado emitido e enviado por e-mail." : "Certificado emitido. O envio por e-mail não foi confirmado.",
+      treinamento: respostaPublica(atualizado),
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao concluir treinamento POC-SEP-007." });
+  }
+}
+
 export async function listarTreinamentosPocSep007(req: AuthRequest, res: Response) {
   const treinamentos = await prisma.treinamentoPocSep007.findMany({
     orderBy: { updatedAt: "desc" },
     take: 300,
   });
 
-  return res.json(treinamentos);
+  return res.json(treinamentos.map((item) => ({
+    ...item,
+    assinaturaDataUrl: undefined,
+    certificadoUrl: item.certificadoArquivo ? certificadoUrl(item.token) : null,
+  })));
 }
 
 export async function reenviarEmailTreinamentoPocSep007(req: AuthRequest, res: Response) {
@@ -329,30 +488,15 @@ export async function reenviarEmailTreinamentoPocSep007(req: AuthRequest, res: R
       return res.status(400).json({ error: "O e-mail só pode ser reenviado após a conclusão do treinamento." });
     }
 
-    const assunto = `Conclusão do treinamento POC-SEP-007 - ${treinamento.codigo}`;
-    const textoEmail = `Olá, ${treinamento.nomeCompleto}.\n\nConfirmamos a conclusão do treinamento POC-SEP-007 - Controle de Acesso de Pessoas e Veículos não Atrelados à Carga.\n\nCódigo: ${treinamento.codigo}\nNota: ${treinamento.nota ?? "-"}%\nUnidade: ${treinamento.unidade || "-"}\nConclusão: ${dataPtBr(treinamento.dataConclusao)}\n\nMovecta - Segurança Patrimonial`;
-    const html = `
-      <p>Olá, <strong>${treinamento.nomeCompleto}</strong>.</p>
-      <p>Confirmamos a conclusão do treinamento <strong>POC-SEP-007 - Controle de Acesso de Pessoas e Veículos não Atrelados à Carga</strong>.</p>
-      <ul>
-        <li><strong>Código:</strong> ${treinamento.codigo}</li>
-        <li><strong>Nota:</strong> ${treinamento.nota ?? "-"}%</li>
-        <li><strong>Unidade:</strong> ${treinamento.unidade || "-"}</li>
-        <li><strong>Conclusão:</strong> ${dataPtBr(treinamento.dataConclusao)}</li>
-      </ul>
-      <p>Movecta - Segurança Patrimonial</p>
-    `;
-
-    const email = await enviarEmail({
-      to: treinamento.email,
-      subject: assunto,
-      text: textoEmail,
-      html,
-    });
+    const certificadoArquivo = treinamento.certificadoArquivo && fs.existsSync(treinamento.certificadoArquivo)
+      ? treinamento.certificadoArquivo
+      : await gerarCertificadoPocSep007(treinamento);
+    const email = await enviarCertificadoPocSep007(treinamento, certificadoArquivo);
 
     const atualizado = await prisma.treinamentoPocSep007.update({
       where: { id: treinamento.id },
       data: {
+        certificadoArquivo,
         emailStatus: email.status,
         emailEnviadoEm: email.enviado ? new Date() : treinamento.emailEnviadoEm,
       },
@@ -360,7 +504,11 @@ export async function reenviarEmailTreinamentoPocSep007(req: AuthRequest, res: R
 
     return res.json({
       mensagem: email.enviado ? "E-mail enviado com sucesso." : "Envio registrado. Verifique a configuração de SMTP.",
-      treinamento: atualizado,
+      treinamento: {
+        ...atualizado,
+        assinaturaDataUrl: undefined,
+        certificadoUrl: certificadoUrl(atualizado.token),
+      },
     });
   } catch (error) {
     console.error(error);
@@ -376,11 +524,41 @@ export async function excluirTreinamentoPocSep007(req: AuthRequest, res: Respons
     const treinamento = await prisma.treinamentoPocSep007.findUnique({ where: { id } });
     if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
 
+    if (treinamento.certificadoArquivo && fs.existsSync(treinamento.certificadoArquivo)) {
+      fs.rmSync(treinamento.certificadoArquivo, { force: true });
+    }
+
     await prisma.treinamentoPocSep007.delete({ where: { id } });
 
     return res.status(204).send();
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao excluir treinamento." });
+  }
+}
+
+export async function baixarCertificadoPocSep007(req: Request, res: Response) {
+  try {
+    const token = texto(req.params.token);
+    const treinamento = await prisma.treinamentoPocSep007.findUnique({ where: { token } });
+    if (!treinamento || !treinamentoConcluido(treinamento.status)) {
+      return res.status(404).json({ error: "Certificado não encontrado." });
+    }
+
+    const certificadoArquivo = treinamento.certificadoArquivo && fs.existsSync(treinamento.certificadoArquivo)
+      ? treinamento.certificadoArquivo
+      : await gerarCertificadoPocSep007(treinamento);
+
+    if (!treinamento.certificadoArquivo) {
+      await prisma.treinamentoPocSep007.update({
+        where: { id: treinamento.id },
+        data: { certificadoArquivo },
+      });
+    }
+
+    return res.download(certificadoArquivo, `certificado-${String(treinamento.codigo || "poc-sep-007").replace("/", "-")}.pdf`);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao baixar certificado." });
   }
 }

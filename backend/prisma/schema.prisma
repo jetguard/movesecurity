@@ -156,6 +156,8 @@ model TreinamentoPocSep007 {
   nota            Float?
   tentativas      Int       @default(0)
   respostasQuiz   String?
+  assinaturaDataUrl  String?
+  certificadoArquivo String?
   emailStatus     String?
   emailEnviadoEm  DateTime?
   ipInicio        String?

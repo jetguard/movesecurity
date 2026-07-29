@@ -20,6 +20,7 @@ type TreinamentoPoc = {
   tentativas: number;
   emailStatus?: string | null;
   emailEnviadoEm?: string | null;
+  certificadoUrl?: string | null;
   dataInicio: string;
   dataConclusao?: string | null;
   ultimoAcessoEm: string;
@@ -46,6 +47,12 @@ function criarIndicadores(lista: TreinamentoPoc[]) {
     concluidos: lista.filter((item) => estaConcluido(item.status)).length,
     avaliados: lista.filter((item) => item.nota !== null && item.nota !== undefined).length,
   };
+}
+
+function tentativaConclusao(item: TreinamentoPoc) {
+  if (!estaConcluido(item.status)) return `${item.tentativas} tentativa${item.tentativas === 1 ? "" : "s"}`;
+  if (item.tentativas <= 1) return "Concluiu na 1ª tentativa";
+  return `Concluiu na ${item.tentativas}ª tentativa`;
 }
 
 export default function TreinamentosPocSep007() {
@@ -183,14 +190,22 @@ export default function TreinamentosPocSep007() {
                   </td>
                   <td className="px-4 py-3 text-xs font-bold text-slate-500">
                     <p>Nota: {item.nota ?? "-"}</p>
-                    <p>Tentativas: {item.tentativas}</p>
+                    <p>{tentativaConclusao(item)}</p>
                   </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${classeStatus(item.status)}`}>{item.status}</span>
                     <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-500"><Mail size={12} /> {item.emailStatus || "E-mail pendente"}</p>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">{data(item.ultimoAcessoEm)}</td>
-                  <td className="px-4 py-3 text-xs font-black text-slate-600 dark:text-slate-300">{item.codigo || "Não emitido"}</td>
+                  <td className="px-4 py-3 text-xs font-black text-slate-600 dark:text-slate-300">
+                    {item.certificadoUrl ? (
+                      <a href={item.certificadoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white hover:bg-blue-700">
+                        PDF
+                      </a>
+                    ) : (
+                      item.codigo || "Não emitido"
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
                       {item.porcentagem === 100 && estaConcluido(item.status) && (
