@@ -112,59 +112,72 @@ async function gerarCertificadoPocSep007(treinamento: any) {
   const fundo = caminhoFundoCertificadoPoc();
   const validacaoUrl = `${appPublicUrl()}/validar-certificado/${treinamento.token}`;
   const qrDataUrl = await QRCode.toDataURL(validacaoUrl, {
-    width: 220,
+    width: 240,
     margin: 1,
     color: { dark: "#0f172a", light: "#ffffff" },
   });
   const qrCode = Buffer.from(String(qrDataUrl).split(",")[1], "base64");
 
-  doc.rect(0, 0, pageWidth, pageHeight).fill("#f4f7ff");
+  doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
   if (fundo) {
+    doc.save();
+    doc.opacity(0.12);
     doc.image(fundo, 0, 0, { width: pageWidth, height: pageHeight });
+    doc.restore();
   }
 
   doc.save();
-  doc.roundedRect(92, 98, 658, 378, 22).fillOpacity(0.88).fill("#ffffff");
+  doc.roundedRect(42, 38, pageWidth - 84, pageHeight - 76, 26).lineWidth(1.4).strokeColor("#93c5fd").stroke();
+  doc.roundedRect(54, 50, pageWidth - 108, pageHeight - 100, 20).lineWidth(0.7).strokeColor("#dbeafe").stroke();
   doc.restore();
 
-  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(11).text(treinamento.codigo || "CERTIFICADO", 112, 118, {
-    width: 160,
-    align: "left",
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(11).text(treinamento.codigo || "CERTIFICADO", pageWidth - 218, 66, {
+    width: 156,
+    align: "right",
   });
 
-  doc.fillColor("#07142f").font("Helvetica-Bold").fontSize(30).text("Treinamento POC-SEP-007", 126, 154, {
-    width: 590,
+  doc.fillColor("#07142f").font("Helvetica-Bold").fontSize(36).text("Treinamento POC-SEP-007", 88, 86, {
+    width: pageWidth - 176,
     align: "center",
   });
-  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(14).text("Controle de acesso de pessoas e veículos não atrelados à carga", 136, 194, {
-    width: 570,
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(16).text("Controle de acesso de pessoas e veículos não atrelados à carga", 96, 134, {
+    width: pageWidth - 192,
     align: "center",
   });
+
+  doc.moveTo(186, 176).lineTo(pageWidth - 186, 176).strokeColor("#7ed321").lineWidth(2).stroke();
 
   const textoPrincipal = `Certificamos que o colaborador ${String(treinamento.nomeCompleto || "").toUpperCase()} concluiu com aproveitamento o treinamento POC-SEP-007 na data de ${dataPtBr(concluidoEm)}.`;
-  doc.fillColor("#111827").font("Helvetica").fontSize(19).text(textoPrincipal, 148, 252, {
-    width: 546,
+  doc.fillColor("#111827").font("Helvetica").fontSize(21).text(textoPrincipal, 104, 214, {
+    width: pageWidth - 208,
     align: "center",
-    lineGap: 8,
+    lineGap: 9,
   });
+
+  doc.save();
+  doc.roundedRect(70, 416, 102, 112, 14).fillOpacity(0.96).fillAndStroke("#ffffff", "#bfdbfe");
+  doc.restore();
+  doc.image(qrCode, 84, 428, { width: 74, height: 74 });
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(7).text("VALIDAÇÃO", 70, 508, { width: 102, align: "center" });
 
   if (treinamento.assinaturaDataUrl) {
     const assinaturaBase64 = String(treinamento.assinaturaDataUrl).split(",")[1];
     if (assinaturaBase64) {
       const assinaturaPng = path.join(path.dirname(destino), `assinatura-poc-${treinamento.token}.png`);
       fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
-      doc.image(assinaturaPng, 292, 348, { fit: [258, 62], align: "center" });
+      doc.image(assinaturaPng, 292, 370, { fit: [258, 62], align: "center" });
       fs.rmSync(assinaturaPng, { force: true });
     }
   }
 
-  doc.moveTo(256, 424).lineTo(586, 424).strokeColor("#1d4ed8").lineWidth(1.2).stroke();
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10).text(treinamento.nomeCompleto, 256, 438, { width: 330, align: "center" });
-  doc.fillColor("#334155").font("Helvetica").fontSize(9).text("Colaborador", 256, 453, { width: 330, align: "center" });
+  doc.moveTo(256, 448).lineTo(586, 448).strokeColor("#1d4ed8").lineWidth(1.2).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10.5).text(treinamento.nomeCompleto, 256, 464, { width: 330, align: "center" });
+  doc.fillColor("#334155").font("Helvetica").fontSize(9).text("Colaborador", 256, 480, { width: 330, align: "center" });
 
-  doc.roundedRect(108, 388, 74, 92, 12).fillAndStroke("#ffffff", "#bfdbfe");
-  doc.image(qrCode, 116, 396, { width: 58, height: 58 });
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(6.5).text("VALIDAÇÃO", 108, 459, { width: 74, align: "center" });
+  doc.fillColor("#64748b").font("Helvetica").fontSize(7.5).text("Certificado emitido eletronicamente pela plataforma Movecta.", 206, pageHeight - 70, {
+    width: pageWidth - 412,
+    align: "center",
+  });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
