@@ -3,12 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { Request, Response } from "express";
 import PDFDocument from "pdfkit";
-import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
 import { enviarEmail } from "../services/email.service";
-import { pdfAssets } from "../services/documentoPdfBase.service";
 
 const TOTAL_ETAPAS_CONTEUDO = 15;
 const TOTAL_ETAPAS = 16;
@@ -75,16 +73,6 @@ function dataPtBr(data?: Date | string | null) {
   return new Date(data).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }
 
-function formatarCpf(cpf?: string | null) {
-  const digitos = limparCpf(cpf || "");
-  if (digitos.length !== 11) return cpf || "-";
-  return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
-}
-
-function appPublicUrl() {
-  return String(process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.FRONTEND_URL || "https://movecta.jetguard.com.br").replace(/\/$/, "");
-}
-
 function arquivoCertificado(token: string) {
   const pasta = path.resolve(process.cwd(), "uploads", "certificados-poc-sep-007");
   fs.mkdirSync(pasta, { recursive: true });
@@ -93,6 +81,15 @@ function arquivoCertificado(token: string) {
 
 function certificadoUrl(token: string) {
   return `/api/public/treinamento-poc-sep-007/${token}/certificado`;
+}
+
+function caminhoFundoCertificadoPoc() {
+  const caminhos = [
+    path.resolve(process.cwd(), "assets", "fundo-para-desktop.jpeg"),
+    path.resolve(process.cwd(), "..", "frontend", "public", "images", "treinamento-terminal", "fundo-para-desktop.jpeg"),
+    path.resolve(process.cwd(), "..", "frontend", "dist", "images", "treinamento-terminal", "fundo-para-desktop.jpeg"),
+  ];
+  return caminhos.find((caminho) => fs.existsSync(caminho));
 }
 
 async function gerarCertificadoPocSep007(treinamento: any) {
@@ -106,26 +103,37 @@ async function gerarCertificadoPocSep007(treinamento: any) {
 
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
-  const validacaoUrl = `${appPublicUrl()}/treinamento-poc-sep-007`;
-  const qrDataUrl = await QRCode.toDataURL(validacaoUrl, {
-    width: 220,
-    margin: 1,
-    color: { dark: "#0f172a", light: "#ffffff" },
-  });
-  const qrCode = Buffer.from(String(qrDataUrl).split(",")[1], "base64");
   const concluidoEm = new Date(treinamento.dataConclusao || new Date());
+  const fundo = caminhoFundoCertificadoPoc();
 
-  doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
-  doc.rect(0, 0, pageWidth, 142).fill("#356bad");
-  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text("CERTIFICADO", 44, 58, { width: 270 });
-  doc.roundedRect(pageWidth - 230, 34, 186, 34, 10).fillAndStroke("#ffffff", "#bfdbfe");
-  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(14).text(treinamento.codigo || "-", pageWidth - 218, 44, { width: 162, align: "center" });
+  doc.rect(0, 0, pageWidth, pageHeight).fill("#f4f7ff");
+  if (fundo) {
+    doc.image(fundo, 0, 0, { width: pageWidth, height: pageHeight });
+  }
 
-  const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu com aproveitamento o treinamento POC-SEP-007 - Controle de Acesso de Pessoas e Veículos não Atrelados à Carga, obtendo nota ${treinamento.nota ?? "-"}%, em ${dataPtBr(concluidoEm)}.`;
-  doc.fillColor("#111827").font("Helvetica").fontSize(16).text(textoPrincipal, 118, 182, {
-    width: 620,
+  doc.save();
+  doc.roundedRect(92, 98, 658, 378, 22).fillOpacity(0.88).fill("#ffffff");
+  doc.restore();
+
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(11).text(treinamento.codigo || "CERTIFICADO", 112, 118, {
+    width: 160,
+    align: "left",
+  });
+
+  doc.fillColor("#07142f").font("Helvetica-Bold").fontSize(30).text("Treinamento POC-SEP-007", 126, 154, {
+    width: 590,
     align: "center",
-    lineGap: 7,
+  });
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(14).text("Controle de acesso de pessoas e veículos não atrelados à carga", 136, 194, {
+    width: 570,
+    align: "center",
+  });
+
+  const textoPrincipal = `Certificamos que o colaborador ${String(treinamento.nomeCompleto || "").toUpperCase()} concluiu com aproveitamento o treinamento POC-SEP-007 na data de ${dataPtBr(concluidoEm)}.`;
+  doc.fillColor("#111827").font("Helvetica").fontSize(19).text(textoPrincipal, 148, 252, {
+    width: 546,
+    align: "center",
+    lineGap: 8,
   });
 
   if (treinamento.assinaturaDataUrl) {
@@ -133,29 +141,14 @@ async function gerarCertificadoPocSep007(treinamento: any) {
     if (assinaturaBase64) {
       const assinaturaPng = path.join(path.dirname(destino), `assinatura-poc-${treinamento.token}.png`);
       fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
-      doc.image(assinaturaPng, 180, 350, { fit: [240, 58], align: "center" });
+      doc.image(assinaturaPng, 292, 348, { fit: [258, 62], align: "center" });
       fs.rmSync(assinaturaPng, { force: true });
     }
   }
 
-  doc.moveTo(158, 415).lineTo(433, 415).strokeColor("#2f6bb2").lineWidth(1).stroke();
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9).text(treinamento.nomeCompleto, 158, 427, { width: 275, align: "center" });
-  doc.fillColor("#111827").font("Helvetica").fontSize(8).text("Participante", 158, 442, { width: 275, align: "center" });
-
-  doc.moveTo(472, 415).lineTo(747, 415).strokeColor("#2f6bb2").lineWidth(1).stroke();
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9.5).text("Segurança Patrimonial", 472, 427, { width: 275, align: "center" });
-  doc.fillColor("#111827").font("Helvetica").fontSize(8.5).text("Movecta S.A", 472, 442, { width: 275, align: "center" });
-
-  doc.image(qrCode, 58, 424, { width: 72, height: 72 });
-  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDAÇÃO", 49, 502, { width: 90, align: "center" });
-
-  if (fs.existsSync(pdfAssets.logo)) {
-    doc.image(pdfAssets.logo, 610, 488, { fit: [150, 46], align: "center" });
-  } else {
-    doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
-  }
-
-  doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validação: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
+  doc.moveTo(256, 424).lineTo(586, 424).strokeColor("#1d4ed8").lineWidth(1.2).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10).text(treinamento.nomeCompleto, 256, 438, { width: 330, align: "center" });
+  doc.fillColor("#334155").font("Helvetica").fontSize(9).text("Colaborador", 256, 453, { width: 330, align: "center" });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
