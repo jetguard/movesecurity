@@ -178,10 +178,10 @@ async function gerarCertificadoPdf(integracao: any) {
   doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15).text(integracao.codigo, pageWidth - 204, 44, { width: 146, align: "center" });
 
   const textoPrincipal = `Certificamos que o(a) motorista ${integracao.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(integracao.cpf)}, concluiu com aproveitamento o Treinamento de Integração de Segurança. O profissional está apto a realizar o ingresso, trânsito e operações de transporte nos Terminais Alfandegados da Movecta Guarujá (Terminal 1 e Terminal 2), estando ciente das normas internas de circulação, procedimentos de segurança portuária e diretrizes de compliance da companhia.`;
-  doc.fillColor("#111827").font("Helvetica").fontSize(14.5).text(textoPrincipal, 150, 178, {
-    width: 548,
+  doc.fillColor("#111827").font("Helvetica").fontSize(13.8).text(textoPrincipal, 92, 176, {
+    width: 664,
     align: "center",
-    lineGap: 5,
+    lineGap: 4,
   });
 
   doc.fillColor("#111827").font("Helvetica-Bold").fontSize(15.5).text(`Guaruja, ${dataPorExtenso(concluidoEm)}.`, 210, 314, {

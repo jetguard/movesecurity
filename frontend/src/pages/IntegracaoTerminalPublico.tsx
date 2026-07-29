@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, CheckCircle2, Clock3, Download, FastForward, FileCheck2, Maximize2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
 
 type Config = {
   titulo: string;
@@ -136,7 +136,6 @@ export default function IntegracaoTerminalPublico() {
   const [tocando, setTocando] = useState(false);
   const [videoCarregando, setVideoCarregando] = useState(false);
   const [videoErro, setVideoErro] = useState(false);
-  const [velocidadeVideo, setVelocidadeVideo] = useState(1);
   const [duracao, setDuracao] = useState(0);
   const [tempoAtual, setTempoAtual] = useState(0);
   const [aceite, setAceite] = useState(false);
@@ -241,7 +240,7 @@ export default function IntegracaoTerminalPublico() {
   function atualizarTempo() {
     const video = videoRef.current;
     if (!video) return;
-    if (video.playbackRate !== velocidadeVideo) video.playbackRate = velocidadeVideo;
+    if (video.playbackRate !== 1) video.playbackRate = 1;
     if (video.currentTime > maiorTempoRef.current + 1.5) {
       video.currentTime = maiorTempoRef.current;
       return;
@@ -258,7 +257,7 @@ export default function IntegracaoTerminalPublico() {
     if (video.paused) {
       setVideoErro(false);
       setVideoCarregando(video.readyState < 3);
-      video.playbackRate = velocidadeVideo;
+      video.playbackRate = 1;
       video.play().then(() => {
         setTocando(true);
         setVideoCarregando(false);
@@ -271,18 +270,6 @@ export default function IntegracaoTerminalPublico() {
       setTocando(false);
       salvarProgresso().catch(() => undefined);
     }
-  }
-
-  function abrirTelaCheia() {
-    const video = videoRef.current;
-    if (!video) return;
-    video.requestFullscreen?.().catch(() => setMensagem("Nao foi possivel abrir o video em tela cheia."));
-  }
-
-  function alternarVelocidadeVideo() {
-    const proximaVelocidade = velocidadeVideo === 1 ? 1.5 : 1;
-    setVelocidadeVideo(proximaVelocidade);
-    if (videoRef.current) videoRef.current.playbackRate = proximaVelocidade;
   }
 
   function finalizarVideo() {
@@ -449,7 +436,7 @@ export default function IntegracaoTerminalPublico() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-black sm:text-2xl">Vídeo obrigatório</h2>
-                <p className="mt-1 text-sm font-bold text-slate-900">Use os controles abaixo para reproduzir ou acelerar o video.</p>
+                <p className="mt-1 text-sm font-bold text-slate-900">Use o botao abaixo para reproduzir o video.</p>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
                 <Clock3 className="mr-2 inline h-4 w-4 text-blue-700" />
@@ -463,6 +450,8 @@ export default function IntegracaoTerminalPublico() {
                 className="terminal-integration-video w-full bg-white"
                 preload="auto"
                 playsInline
+                disablePictureInPicture
+                controlsList="nodownload nofullscreen noremoteplayback"
                 poster={fundoDesktopUrl}
                 onLoadStart={() => setVideoCarregando(true)}
                 onLoadedMetadata={prepararVideo}
@@ -477,7 +466,8 @@ export default function IntegracaoTerminalPublico() {
                 }}
                 onTimeUpdate={atualizarTempo}
                 onEnded={finalizarVideo}
-                onRateChange={() => { if (videoRef.current && videoRef.current.playbackRate !== velocidadeVideo) videoRef.current.playbackRate = velocidadeVideo; }}
+                onRateChange={() => { if (videoRef.current && videoRef.current.playbackRate !== 1) videoRef.current.playbackRate = 1; }}
+                onDoubleClick={(event) => event.preventDefault()}
                 onSeeking={() => {
                   if (videoRef.current && videoRef.current.currentTime > maiorTempoRef.current + 1) {
                     videoRef.current.currentTime = maiorTempoRef.current;
@@ -500,12 +490,6 @@ export default function IntegracaoTerminalPublico() {
               <button onClick={alternarVideo} className={botaoPrimarioClasse()}>
                 {tocando ? <Pause size={18} /> : <Play size={18} />}
                 {tocando ? "Pausar" : "Continuar"}
-              </button>
-              <button type="button" onClick={abrirTelaCheia} className={botaoSecundarioClasse()}>
-                <Maximize2 size={18} /> Tela cheia
-              </button>
-              <button type="button" onClick={alternarVelocidadeVideo} className={botaoSecundarioClasse()}>
-                <FastForward size={18} /> {velocidadeVideo === 1 ? "Acelerar 1.5x" : "Voltar para 1x"}
               </button>
             </div>
           </div>
