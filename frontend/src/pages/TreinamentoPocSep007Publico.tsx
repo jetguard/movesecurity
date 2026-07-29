@@ -831,10 +831,10 @@ export default function TreinamentoPocSep007Publico() {
               </div>
               <PenLine className="h-10 w-10 text-blue-700" />
             </div>
-            <div className="mt-6 rounded-2xl border border-blue-200 bg-white p-3 shadow-inner">
+            <div className="mt-6 rounded-2xl border border-blue-100 bg-white p-2 shadow-sm ring-1 ring-blue-50">
               <canvas
                 ref={canvasRef}
-                className="h-44 w-full touch-none rounded-xl bg-white"
+                className="h-44 w-full touch-none rounded-lg bg-white"
                 onPointerDown={iniciarAssinatura}
                 onPointerMove={moverAssinatura}
                 onPointerUp={finalizarAssinatura}
@@ -843,9 +843,11 @@ export default function TreinamentoPocSep007Publico() {
             </div>
             {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={prepararCanvas} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
-                Limpar assinatura
-              </button>
+              {!treinamento.certificadoUrl && (
+                <button type="button" onClick={prepararCanvas} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                  Limpar assinatura
+                </button>
+              )}
               <button type="button" disabled={carregando || Boolean(treinamento.certificadoUrl)} onClick={concluirComAssinatura} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
                 {carregando ? "Emitindo..." : treinamento.certificadoUrl ? "Certificado emitido" : "Emitir certificado"}
               </button>
