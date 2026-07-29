@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, Maximize2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
 
 type Config = {
   titulo: string;
@@ -142,6 +142,7 @@ export default function IntegracaoTerminalPublico() {
   const [assinando, setAssinando] = useState(false);
   const [assinaturaVazia, setAssinaturaVazia] = useState(true);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoFrameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const maiorTempoRef = useRef(0);
   const ultimoEnvioRef = useRef(0);
@@ -270,6 +271,17 @@ export default function IntegracaoTerminalPublico() {
       setTocando(false);
       salvarProgresso().catch(() => undefined);
     }
+  }
+
+  function abrirTelaCheia() {
+    const alvo = videoFrameRef.current || videoRef.current;
+    if (!alvo) return;
+    const requestFullscreen = alvo.requestFullscreen || (alvo as any).webkitRequestFullscreen;
+    if (!requestFullscreen) {
+      setMensagem("Tela cheia nao disponivel neste navegador.");
+      return;
+    }
+    requestFullscreen.call(alvo).catch(() => setMensagem("Nao foi possivel abrir o video em tela cheia."));
   }
 
   function finalizarVideo() {
@@ -443,7 +455,7 @@ export default function IntegracaoTerminalPublico() {
                 Restante: {formatarTempo(restante)}
               </div>
             </div>
-            <div className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-blue-200 bg-white">
+            <div ref={videoFrameRef} className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-blue-200 bg-white">
               <video
                 ref={videoRef}
                 src={config?.videoUrl}
@@ -490,6 +502,9 @@ export default function IntegracaoTerminalPublico() {
               <button onClick={alternarVideo} className={botaoPrimarioClasse()}>
                 {tocando ? <Pause size={18} /> : <Play size={18} />}
                 {tocando ? "Pausar" : "Continuar"}
+              </button>
+              <button type="button" onClick={abrirTelaCheia} className={botaoSecundarioClasse()}>
+                <Maximize2 size={18} /> Tela cheia
               </button>
             </div>
           </div>
