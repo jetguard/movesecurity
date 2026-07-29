@@ -1,7 +1,7 @@
 import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, FileText, Maximize2, Pause, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, Download, FastForward, FileCheck2, FileText, Maximize2, Pause, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
 
 type Config = {
   titulo: string;
@@ -126,6 +126,7 @@ export default function TreinamentoTerminalPublico() {
   const [tocando, setTocando] = useState(false);
   const [videoCarregando, setVideoCarregando] = useState(false);
   const [videoErro, setVideoErro] = useState(false);
+  const [velocidadeVideo, setVelocidadeVideo] = useState(1);
   const [duracao, setDuracao] = useState(0);
   const [tempoAtual, setTempoAtual] = useState(0);
   const [aceite, setAceite] = useState(false);
@@ -230,7 +231,7 @@ export default function TreinamentoTerminalPublico() {
   function atualizarTempo() {
     const video = videoRef.current;
     if (!video) return;
-    if (video.playbackRate !== 1) video.playbackRate = 1;
+    if (video.playbackRate !== velocidadeVideo) video.playbackRate = velocidadeVideo;
     if (video.currentTime > maiorTempoRef.current + 1.5) {
       video.currentTime = maiorTempoRef.current;
       return;
@@ -247,7 +248,7 @@ export default function TreinamentoTerminalPublico() {
     if (video.paused) {
       setVideoErro(false);
       setVideoCarregando(video.readyState < 3);
-      video.playbackRate = 1;
+      video.playbackRate = velocidadeVideo;
       video.play().then(() => {
         setTocando(true);
         setVideoCarregando(false);
@@ -266,6 +267,12 @@ export default function TreinamentoTerminalPublico() {
     const video = videoRef.current;
     if (!video) return;
     video.requestFullscreen?.().catch(() => setMensagem("Não foi possível abrir o vídeo em tela cheia."));
+  }
+
+  function alternarVelocidadeVideo() {
+    const proximaVelocidade = velocidadeVideo === 1 ? 1.5 : 1;
+    setVelocidadeVideo(proximaVelocidade);
+    if (videoRef.current) videoRef.current.playbackRate = proximaVelocidade;
   }
 
   function finalizarVideo() {
@@ -436,7 +443,7 @@ export default function TreinamentoTerminalPublico() {
                 }}
                 onTimeUpdate={atualizarTempo}
                 onEnded={finalizarVideo}
-                onRateChange={() => { if (videoRef.current && videoRef.current.playbackRate !== 1) videoRef.current.playbackRate = 1; }}
+                onRateChange={() => { if (videoRef.current && videoRef.current.playbackRate !== velocidadeVideo) videoRef.current.playbackRate = velocidadeVideo; }}
                 onSeeking={() => {
                   if (videoRef.current && videoRef.current.currentTime > maiorTempoRef.current + 1) {
                     videoRef.current.currentTime = maiorTempoRef.current;
@@ -462,6 +469,9 @@ export default function TreinamentoTerminalPublico() {
               </button>
               <button type="button" onClick={abrirTelaCheia} className={botaoSecundarioClasse()}>
                 <Maximize2 size={18} /> Tela cheia
+              </button>
+              <button type="button" onClick={alternarVelocidadeVideo} className={botaoSecundarioClasse()}>
+                <FastForward size={18} /> {velocidadeVideo === 1 ? "Acelerar 1.5x" : "Voltar para 1x"}
               </button>
             </div>
           </div>
