@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
+import { enviarEmail } from "../services/email.service";
 
 const TOTAL_ETAPAS_CONTEUDO = 15;
 const TOTAL_ETAPAS = 16;
@@ -60,6 +61,15 @@ function porcentagem(etapaAtual: number, status?: string | null) {
   return Math.max(0, Math.min(99, Math.round(((etapaAtual - 1) / TOTAL_ETAPAS) * 100)));
 }
 
+function treinamentoConcluido(status?: string | null) {
+  return String(status || "").toLowerCase().startsWith("conclu");
+}
+
+function dataPtBr(data?: Date | string | null) {
+  if (!data) return "-";
+  return new Date(data).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+
 async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
   await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('movecta_poc_sep_007_certificado_${ano}'))`);
@@ -88,6 +98,8 @@ function respostaPublica(registro: any) {
     nota: registro.nota,
     tentativas: registro.tentativas,
     dataConclusao: registro.dataConclusao,
+    emailStatus: registro.emailStatus,
+    emailEnviadoEm: registro.emailEnviadoEm,
   };
 }
 
@@ -304,4 +316,71 @@ export async function listarTreinamentosPocSep007(req: AuthRequest, res: Respons
   });
 
   return res.json(treinamentos);
+}
+
+export async function reenviarEmailTreinamentoPocSep007(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+
+    const treinamento = await prisma.treinamentoPocSep007.findUnique({ where: { id } });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!treinamentoConcluido(treinamento.status) || !treinamento.codigo) {
+      return res.status(400).json({ error: "O e-mail só pode ser reenviado após a conclusão do treinamento." });
+    }
+
+    const assunto = `Conclusão do treinamento POC-SEP-007 - ${treinamento.codigo}`;
+    const textoEmail = `Olá, ${treinamento.nomeCompleto}.\n\nConfirmamos a conclusão do treinamento POC-SEP-007 - Controle de Acesso de Pessoas e Veículos não Atrelados à Carga.\n\nCódigo: ${treinamento.codigo}\nNota: ${treinamento.nota ?? "-"}%\nUnidade: ${treinamento.unidade || "-"}\nConclusão: ${dataPtBr(treinamento.dataConclusao)}\n\nMovecta - Segurança Patrimonial`;
+    const html = `
+      <p>Olá, <strong>${treinamento.nomeCompleto}</strong>.</p>
+      <p>Confirmamos a conclusão do treinamento <strong>POC-SEP-007 - Controle de Acesso de Pessoas e Veículos não Atrelados à Carga</strong>.</p>
+      <ul>
+        <li><strong>Código:</strong> ${treinamento.codigo}</li>
+        <li><strong>Nota:</strong> ${treinamento.nota ?? "-"}%</li>
+        <li><strong>Unidade:</strong> ${treinamento.unidade || "-"}</li>
+        <li><strong>Conclusão:</strong> ${dataPtBr(treinamento.dataConclusao)}</li>
+      </ul>
+      <p>Movecta - Segurança Patrimonial</p>
+    `;
+
+    const email = await enviarEmail({
+      to: treinamento.email,
+      subject: assunto,
+      text: textoEmail,
+      html,
+    });
+
+    const atualizado = await prisma.treinamentoPocSep007.update({
+      where: { id: treinamento.id },
+      data: {
+        emailStatus: email.status,
+        emailEnviadoEm: email.enviado ? new Date() : treinamento.emailEnviadoEm,
+      },
+    });
+
+    return res.json({
+      mensagem: email.enviado ? "E-mail enviado com sucesso." : "Envio registrado. Verifique a configuração de SMTP.",
+      treinamento: atualizado,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao reenviar e-mail." });
+  }
+}
+
+export async function excluirTreinamentoPocSep007(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+
+    const treinamento = await prisma.treinamentoPocSep007.findUnique({ where: { id } });
+    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+
+    await prisma.treinamentoPocSep007.delete({ where: { id } });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir treinamento." });
+  }
 }

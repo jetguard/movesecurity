@@ -1,13 +1,15 @@
 import { Router } from "express";
 import {
   concluirEtapaTreinamentoPocSep007,
+  excluirTreinamentoPocSep007,
   iniciarTreinamentoPocSep007,
   listarTreinamentosPocSep007,
   listarUnidadesTreinamentoPocSep007,
   localizarParticipanteTreinamentoPocSep007,
+  reenviarEmailTreinamentoPocSep007,
   responderQuizTreinamentoPocSep007,
 } from "../controllers/treinamentoPocSep007.controller";
-import { acessoTreinamentosTerminal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import { acessoTotal, acessoTreinamentosTerminal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
 const router = Router();
 
@@ -17,5 +19,7 @@ router.post("/public/treinamento-poc-sep-007/iniciar", iniciarTreinamentoPocSep0
 router.put("/public/treinamento-poc-sep-007/:token/etapa", concluirEtapaTreinamentoPocSep007);
 router.post("/public/treinamento-poc-sep-007/:token/quiz", responderQuizTreinamentoPocSep007);
 router.get("/treinamentos-poc-sep-007", autenticarUsuario, autorizarPerfis(acessoTreinamentosTerminal), listarTreinamentosPocSep007);
+router.post("/treinamentos-poc-sep-007/:id/reenviar-email", autenticarUsuario, autorizarPerfis(acessoTreinamentosTerminal), reenviarEmailTreinamentoPocSep007);
+router.delete("/treinamentos-poc-sep-007/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirTreinamentoPocSep007);
 
 export default router;

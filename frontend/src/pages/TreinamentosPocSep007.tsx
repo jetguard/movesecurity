@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { Award, CheckCircle2, Clock3, FileText, PlayCircle, Search } from "lucide-react";
+import { Award, CheckCircle2, Clock3, FileText, Mail, PlayCircle, Search, Trash2 } from "lucide-react";
 import { api } from "../services/api";
+import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type TreinamentoPoc = {
   id: number;
@@ -17,6 +18,8 @@ type TreinamentoPoc = {
   porcentagem: number;
   nota?: number | null;
   tentativas: number;
+  emailStatus?: string | null;
+  emailEnviadoEm?: string | null;
   dataInicio: string;
   dataConclusao?: string | null;
   ultimoAcessoEm: string;
@@ -49,10 +52,34 @@ export default function TreinamentosPocSep007() {
   const [lista, setLista] = useState<TreinamentoPoc[]>([]);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("Todos");
+  const [mensagem, setMensagem] = useState("");
+  const [enviandoId, setEnviandoId] = useState<number | null>(null);
+  const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(perfilAtual());
 
   async function carregar() {
     const response = await api.get("/treinamentos-poc-sep-007");
     setLista(Array.isArray(response.data) ? response.data : []);
+  }
+
+  async function reenviarEmail(item: TreinamentoPoc) {
+    setEnviandoId(item.id);
+    setMensagem("");
+    try {
+      const response = await api.post(`/treinamentos-poc-sep-007/${item.id}/reenviar-email`);
+      setLista((atual) => atual.map((treinamento) => (treinamento.id === item.id ? response.data.treinamento : treinamento)));
+      setMensagem(response.data.mensagem || "E-mail enviado com sucesso.");
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível reenviar o e-mail.");
+    } finally {
+      setEnviandoId(null);
+    }
+  }
+
+  async function excluirTreinamento(item: TreinamentoPoc) {
+    if (!confirm(`Deseja excluir o treinamento POC-SEP-007 de ${item.nomeCompleto}?`)) return;
+    await api.delete(`/treinamentos-poc-sep-007/${item.id}`);
+    setLista((atual) => atual.filter((treinamento) => treinamento.id !== item.id));
+    setMensagem("Treinamento excluído com sucesso.");
   }
 
   useEffect(() => {
@@ -102,6 +129,12 @@ export default function TreinamentosPocSep007() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        {mensagem && (
+          <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100">
+            {mensagem}
+          </div>
+        )}
+
         <div className="mb-4 flex flex-wrap gap-3">
           <div className="relative min-w-72 flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
@@ -127,6 +160,7 @@ export default function TreinamentosPocSep007() {
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Último acesso</th>
                 <th className="px-4 py-3">Certificado</th>
+                <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -153,14 +187,40 @@ export default function TreinamentosPocSep007() {
                   </td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full border px-3 py-1 text-xs font-black ${classeStatus(item.status)}`}>{item.status}</span>
+                    <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-500"><Mail size={12} /> {item.emailStatus || "E-mail pendente"}</p>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">{data(item.ultimoAcessoEm)}</td>
                   <td className="px-4 py-3 text-xs font-black text-slate-600 dark:text-slate-300">{item.codigo || "Não emitido"}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {item.porcentagem === 100 && estaConcluido(item.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reenviarEmail(item)}
+                          disabled={enviandoId === item.id}
+                          className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-200"
+                          title="Reenviar por e-mail"
+                        >
+                          <Mail size={14} /> {enviandoId === item.id ? "Enviando..." : "Enviar"}
+                        </button>
+                      )}
+                      {podeExcluir && (
+                        <button
+                          type="button"
+                          onClick={() => excluirTreinamento(item)}
+                          className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-500 hover:text-white dark:text-red-200"
+                          title="Excluir treinamento"
+                        >
+                          <Trash2 size={14} /> Excluir
+                        </button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
               ))}
               {!filtrados.length && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm font-semibold text-slate-500">Nenhum treinamento encontrado.</td>
+                  <td colSpan={9} className="px-4 py-10 text-center text-sm font-semibold text-slate-500">Nenhum treinamento encontrado.</td>
                 </tr>
               )}
             </tbody>
