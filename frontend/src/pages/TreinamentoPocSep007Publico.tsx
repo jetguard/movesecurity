@@ -360,8 +360,6 @@ export default function TreinamentoPocSep007Publico() {
     }
   }
 
-  const etapaLiberada = (index: number) => !treinamento || index + 1 <= treinamento.etapaAtual;
-
   return (
     <main className="treinamento-terminal-publico relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
       <picture className="fixed inset-0 z-0 block h-full w-full">
@@ -416,28 +414,24 @@ export default function TreinamentoPocSep007Publico() {
           </div>
         )}
 
-        {treinamento && <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-          {secoes.map((secao, index) => (
-            <button
-              key={secao.numero}
-              type="button"
-              disabled={!etapaLiberada(index)}
-              onClick={() => {
-                setMostrarResultado(false);
-                setIndiceSecao(index);
-              }}
-              className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 ${
-                indiceSecao === index ? "terminal-step-active" : "terminal-step-idle"
-              } disabled:cursor-not-allowed disabled:opacity-45`}
-            >
-              {secao.numero}
-            </button>
-          ))}
+        {treinamento && <div className="mb-5 grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setMostrarResultado(false);
+              setIndiceSecao(Math.min(secoes.length - 1, Math.max(0, (treinamento.etapaAtual || 1) - 1)));
+            }}
+            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
+              !etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
+            }`}
+          >
+            POC-SEP-007
+          </button>
           <button
             type="button"
             disabled={(treinamento?.etapaAtual || 1) < 16}
             onClick={() => setIndiceSecao(secoes.length)}
-            className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 ${
+            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
               etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
             } disabled:cursor-not-allowed disabled:opacity-45`}
           >
@@ -449,11 +443,11 @@ export default function TreinamentoPocSep007Publico() {
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Etapa {secaoAtual.numero}</p>
+                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">POC-SEP-007</p>
                 <h2 className="mt-2 text-2xl font-black">{secaoAtual.titulo}</h2>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
-                {indiceSecao + 1} de {secoes.length}
+                Leitura {indiceSecao + 1} de {secoes.length}
               </div>
             </div>
 
