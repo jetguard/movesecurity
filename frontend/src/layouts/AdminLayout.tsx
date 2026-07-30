@@ -13,6 +13,7 @@ import {
   FileCheck2,
   FileBarChart,
   FolderOpen,
+  Gauge,
   LayoutDashboard,
   LogOut,
   ScrollText,
@@ -690,6 +691,10 @@ export default function AdminLayout() {
                   <Link to="/planos-acao" className={subItem}>
                     <ListChecks size={16} />
                     Plano de ação 5W2H
+                  </Link>
+                  <Link to="/riscos/pontuacoes" className={subItem}>
+                    <Gauge size={16} />
+                    Pontuações
                   </Link>
                 </div>
               )}

@@ -35,6 +35,9 @@ const RiscosCadastroGeral = lazyWithReload(
 const RiscosModuloEmConstrucao = lazyWithReload(
   () => import("./pages/RiscosModuloEmConstrucao"),
 );
+const RiscosPontuacoes = lazyWithReload(
+  () => import("./pages/RiscosPontuacoes"),
+);
 const PlanosAcao = lazyWithReload(() => import("./pages/PlanosAcao"));
 const APRs = lazyWithReload(() => import("./pages/APRs"));
 const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
@@ -458,6 +461,20 @@ export default function App() {
                   ]}
                 >
                   <RiscosModuloEmConstrucao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="riscos/pontuacoes"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <RiscosPontuacoes />
                 </ProtectedRoute>
               }
             />
