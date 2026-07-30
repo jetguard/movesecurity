@@ -56,11 +56,26 @@ const probabilidadeInicial: LinhaPontuacao[] = [
     descricao: "1 ocorrência a cada 25 anos",
     pontuacao: 1,
   },
-  { id: "prob-11", criterio: "Intervalo", descricao: "Não realiza revisão", pontuacao: 5 },
+  {
+    id: "prob-11",
+    criterio: "Intervalo",
+    descricao: "Não realiza revisão",
+    pontuacao: 5,
+  },
   { id: "prob-12", criterio: "Intervalo", descricao: "Bienal", pontuacao: 4 },
   { id: "prob-13", criterio: "Intervalo", descricao: "Anual", pontuacao: 3 },
-  { id: "prob-14", criterio: "Intervalo", descricao: "Semestral", pontuacao: 2 },
-  { id: "prob-15", criterio: "Intervalo", descricao: "Trimestral", pontuacao: 1 },
+  {
+    id: "prob-14",
+    criterio: "Intervalo",
+    descricao: "Semestral",
+    pontuacao: 2,
+  },
+  {
+    id: "prob-15",
+    criterio: "Intervalo",
+    descricao: "Trimestral",
+    pontuacao: 1,
+  },
 ];
 
 const impactoInicial: LinhaPontuacao[] = [
@@ -100,10 +115,30 @@ const impactoInicial: LinhaPontuacao[] = [
     descricao: "Superior a 15 dias",
     pontuacao: 5,
   },
-  { id: "imp-7", criterio: "Parada na Operação", descricao: "Até 14 dias", pontuacao: 4 },
-  { id: "imp-8", criterio: "Parada na Operação", descricao: "Até 7 dias", pontuacao: 3 },
-  { id: "imp-9", criterio: "Parada na Operação", descricao: "Até 3 dias", pontuacao: 2 },
-  { id: "imp-10", criterio: "Parada na Operação", descricao: "Até 1 dia", pontuacao: 1 },
+  {
+    id: "imp-7",
+    criterio: "Parada na Operação",
+    descricao: "Até 14 dias",
+    pontuacao: 4,
+  },
+  {
+    id: "imp-8",
+    criterio: "Parada na Operação",
+    descricao: "Até 7 dias",
+    pontuacao: 3,
+  },
+  {
+    id: "imp-9",
+    criterio: "Parada na Operação",
+    descricao: "Até 3 dias",
+    pontuacao: 2,
+  },
+  {
+    id: "imp-10",
+    criterio: "Parada na Operação",
+    descricao: "Até 1 dia",
+    pontuacao: 1,
+  },
   {
     id: "imp-11",
     criterio: "Impacto Financeiro",
@@ -137,13 +172,15 @@ const impactoInicial: LinhaPontuacao[] = [
   {
     id: "imp-16",
     criterio: "Impacto Ambiental",
-    descricao: "Liberação de poluente não-IMO > 2.000L/Kg ou IMO classe 1, 6 ou 7",
+    descricao:
+      "Liberação de poluente não-IMO > 2.000L/Kg ou IMO classe 1, 6 ou 7",
     pontuacao: 5,
   },
   {
     id: "imp-17",
     criterio: "Impacto Ambiental",
-    descricao: "Liberação externa 200-2.000L/Kg ou IMO classe 2, 3, 4, 5, 8 ou 9",
+    descricao:
+      "Liberação externa 200-2.000L/Kg ou IMO classe 2, 3, 4, 5, 8 ou 9",
     pontuacao: 4,
   },
   {
@@ -272,24 +309,32 @@ export default function RiscosPontuacoes() {
 
     if (editando.tipo === "probabilidade") {
       setProbabilidades((lista) =>
-        lista.map((linha) => (linha.id === editando.id ? editando.dados : linha)),
+        lista.map((linha) =>
+          linha.id === editando.id ? editando.dados : linha,
+        ),
       );
     }
 
     if (editando.tipo === "impacto") {
       setImpactos((lista) =>
-        lista.map((linha) => (linha.id === editando.id ? editando.dados : linha)),
+        lista.map((linha) =>
+          linha.id === editando.id ? editando.dados : linha,
+        ),
       );
     }
 
     if (editando.tipo === "faixa") {
       setFaixas((lista) =>
-        lista.map((linha) => (linha.id === editando.id ? editando.dados : linha)),
+        lista.map((linha) =>
+          linha.id === editando.id ? editando.dados : linha,
+        ),
       );
     }
 
     setEditando(null);
-    setMensagem("Linha atualizada nesta tela. A persistência será ligada na próxima etapa.");
+    setMensagem(
+      "Linha atualizada nesta tela. A persistência será ligada na próxima etapa.",
+    );
     window.setTimeout(() => setMensagem(""), 4000);
   }
 
@@ -331,8 +376,13 @@ export default function RiscosPontuacoes() {
             </thead>
             <tbody>
               {linhas.map((linha) => (
-                <tr key={linha.id} className="bg-slate-950/70 text-sm font-semibold text-slate-100">
-                  <td className="rounded-l-xl px-3 py-3 text-blue-100">{linha.criterio}</td>
+                <tr
+                  key={linha.id}
+                  className="bg-slate-950/70 text-sm font-semibold text-slate-100"
+                >
+                  <td className="rounded-l-xl px-3 py-3 text-blue-100">
+                    {linha.criterio}
+                  </td>
                   <td className="px-3 py-3">{linha.descricao}</td>
                   <td className="px-3 py-3 text-center">
                     <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-lime-400 px-3 text-sm font-black text-slate-950">
@@ -340,7 +390,11 @@ export default function RiscosPontuacoes() {
                     </span>
                   </td>
                   <td className="rounded-r-xl px-3 py-3 text-right">
-                    <BotaoEditar onClick={() => setEditando({ tipo, id: linha.id, dados: { ...linha } })} />
+                    <BotaoEditar
+                      onClick={() =>
+                        setEditando({ tipo, id: linha.id, dados: { ...linha } })
+                      }
+                    />
                   </td>
                 </tr>
               ))}
@@ -377,7 +431,10 @@ export default function RiscosPontuacoes() {
 
         <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-100">
           <div className="flex gap-3">
-            <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" size={22} />
+            <AlertTriangle
+              className="mt-0.5 shrink-0 text-amber-300"
+              size={22}
+            />
             <div>
               <p className="font-black">Atenção antes de editar</p>
               <p className="mt-1 text-sm font-semibold leading-6 text-amber-50">
@@ -401,9 +458,14 @@ export default function RiscosPontuacoes() {
             ["Critérios de Impacto", totais.impacto],
             ["Faixas de Classificação", totais.faixas],
           ].map(([titulo, total]) => (
-            <div key={titulo} className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+            <div
+              key={titulo}
+              className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5"
+            >
               <Gauge className="text-blue-300" size={22} />
-              <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-slate-400">{titulo}</p>
+              <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-slate-400">
+                {titulo}
+              </p>
               <p className="mt-2 text-3xl font-black text-white">{total}</p>
             </div>
           ))}
@@ -426,7 +488,9 @@ export default function RiscosPontuacoes() {
 
         <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-xl shadow-black/20">
           <div className="border-b border-slate-800 pb-4">
-            <h2 className="text-xl font-black text-white">Faixa e Classificação</h2>
+            <h2 className="text-xl font-black text-white">
+              Faixa e Classificação
+            </h2>
             <p className="text-sm font-semibold text-slate-300">
               Periodicidade e ação conforme a faixa de resultado.
             </p>
@@ -444,8 +508,13 @@ export default function RiscosPontuacoes() {
               </thead>
               <tbody>
                 {faixas.map((linha) => (
-                  <tr key={linha.id} className="bg-slate-950/70 text-sm font-semibold text-slate-100">
-                    <td className="rounded-l-xl px-3 py-3 text-blue-100">{linha.faixa}</td>
+                  <tr
+                    key={linha.id}
+                    className="bg-slate-950/70 text-sm font-semibold text-slate-100"
+                  >
+                    <td className="rounded-l-xl px-3 py-3 text-blue-100">
+                      {linha.faixa}
+                    </td>
                     <td className="px-3 py-3">
                       <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black text-blue-100">
                         {linha.classificacao}
@@ -453,7 +522,15 @@ export default function RiscosPontuacoes() {
                     </td>
                     <td className="px-3 py-3">{linha.periodicidade}</td>
                     <td className="rounded-r-xl px-3 py-3 text-right">
-                      <BotaoEditar onClick={() => setEditando({ tipo: "faixa", id: linha.id, dados: { ...linha } })} />
+                      <BotaoEditar
+                        onClick={() =>
+                          setEditando({
+                            tipo: "faixa",
+                            id: linha.id,
+                            dados: { ...linha },
+                          })
+                        }
+                      />
                     </td>
                   </tr>
                 ))}
@@ -471,7 +548,9 @@ export default function RiscosPontuacoes() {
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-amber-300">
                   Edição de pontuação
                 </p>
-                <h2 className="mt-2 text-2xl font-black text-white">Editar linha</h2>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  Editar linha
+                </h2>
               </div>
               <button
                 type="button"
@@ -498,7 +577,10 @@ export default function RiscosPontuacoes() {
                       onChange={(event) =>
                         setEditando({
                           ...editando,
-                          dados: { ...editando.dados, faixa: event.target.value },
+                          dados: {
+                            ...editando.dados,
+                            faixa: event.target.value,
+                          },
                         })
                       }
                     />
@@ -511,7 +593,10 @@ export default function RiscosPontuacoes() {
                       onChange={(event) =>
                         setEditando({
                           ...editando,
-                          dados: { ...editando.dados, classificacao: event.target.value },
+                          dados: {
+                            ...editando.dados,
+                            classificacao: event.target.value,
+                          },
                         })
                       }
                     />
@@ -524,7 +609,10 @@ export default function RiscosPontuacoes() {
                       onChange={(event) =>
                         setEditando({
                           ...editando,
-                          dados: { ...editando.dados, periodicidade: event.target.value },
+                          dados: {
+                            ...editando.dados,
+                            periodicidade: event.target.value,
+                          },
                         })
                       }
                     />
@@ -540,7 +628,10 @@ export default function RiscosPontuacoes() {
                       onChange={(event) =>
                         setEditando({
                           ...editando,
-                          dados: { ...editando.dados, criterio: event.target.value },
+                          dados: {
+                            ...editando.dados,
+                            criterio: event.target.value,
+                          },
                         })
                       }
                     />
@@ -553,7 +644,10 @@ export default function RiscosPontuacoes() {
                       onChange={(event) =>
                         setEditando({
                           ...editando,
-                          dados: { ...editando.dados, descricao: event.target.value },
+                          dados: {
+                            ...editando.dados,
+                            descricao: event.target.value,
+                          },
                         })
                       }
                     />

@@ -1,0 +1,52 @@
+CREATE TABLE "AnaliseRiscoCompleta" (
+    "id" SERIAL NOT NULL,
+    "numero" INTEGER NOT NULL,
+    "ano" INTEGER NOT NULL,
+    "codigo" TEXT NOT NULL,
+    "unidade" TEXT NOT NULL,
+    "macroProcessoId" INTEGER,
+    "macroProcessoCodigo" TEXT NOT NULL,
+    "macroProcessoNome" TEXT NOT NULL,
+    "setorId" INTEGER,
+    "setorNome" TEXT NOT NULL,
+    "riscoId" INTEGER,
+    "riscoCodigo" TEXT NOT NULL,
+    "riscoNome" TEXT NOT NULL,
+    "fatoresRiscoJson" TEXT NOT NULL DEFAULT '[]',
+    "sc" INTEGER NOT NULL,
+    "fe" INTEGER NOT NULL,
+    "intervalo" INTEGER NOT NULL,
+    "sse" INTEGER NOT NULL,
+    "ope" INTEGER NOT NULL,
+    "fin" INTEGER NOT NULL,
+    "adm" INTEGER NOT NULL,
+    "img" INTEGER NOT NULL,
+    "lc" INTEGER NOT NULL,
+    "notaProbabilidade" DOUBLE PRECISION NOT NULL,
+    "mediaProbabilidade" DOUBLE PRECISION NOT NULL,
+    "nivelProbabilidade" TEXT NOT NULL,
+    "notaConsequencia" DOUBLE PRECISION NOT NULL,
+    "mediaConsequencia" DOUBLE PRECISION NOT NULL,
+    "nivelConsequencia" TEXT NOT NULL,
+    "resultadoInerente" DOUBLE PRECISION NOT NULL,
+    "nivelRiscoInerente" TEXT NOT NULL,
+    "classificacaoRisco" TEXT NOT NULL,
+    "periodicidadeAcao" TEXT NOT NULL,
+    "preventivosJson" TEXT NOT NULL DEFAULT '[]',
+    "detectivosJson" TEXT NOT NULL DEFAULT '[]',
+    "corretivosJson" TEXT NOT NULL DEFAULT '[]',
+    "resultadoResidual" DOUBLE PRECISION,
+    "nivelRiscoResidual" TEXT,
+    "classificacaoResidual" TEXT,
+    "responsavelId" INTEGER,
+    "status" TEXT NOT NULL DEFAULT 'Ativo',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "AnaliseRiscoCompleta_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "AnaliseRiscoCompleta_codigo_unidade_key" ON "AnaliseRiscoCompleta"("codigo", "unidade");
+CREATE INDEX "AnaliseRiscoCompleta_unidade_status_idx" ON "AnaliseRiscoCompleta"("unidade", "status");
+CREATE INDEX "AnaliseRiscoCompleta_macroProcessoId_idx" ON "AnaliseRiscoCompleta"("macroProcessoId");
+CREATE INDEX "AnaliseRiscoCompleta_setorId_idx" ON "AnaliseRiscoCompleta"("setorId");

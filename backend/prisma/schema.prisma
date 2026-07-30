@@ -903,6 +903,57 @@ model ControlePreventivoCadastro {
   @@index([status, numero])
 }
 
+model AnaliseRiscoCompleta {
+  id                    Int      @id @default(autoincrement())
+  numero                Int
+  ano                   Int
+  codigo                String
+  unidade               String
+  macroProcessoId       Int?
+  macroProcessoCodigo   String
+  macroProcessoNome     String
+  setorId               Int?
+  setorNome             String
+  riscoId               Int?
+  riscoCodigo           String
+  riscoNome             String
+  fatoresRiscoJson      String   @default("[]")
+  sc                    Int
+  fe                    Int
+  intervalo             Int
+  sse                   Int
+  ope                   Int
+  fin                   Int
+  adm                   Int
+  img                   Int
+  lc                    Int
+  notaProbabilidade     Float
+  mediaProbabilidade    Float
+  nivelProbabilidade    String
+  notaConsequencia      Float
+  mediaConsequencia     Float
+  nivelConsequencia     String
+  resultadoInerente     Float
+  nivelRiscoInerente    String
+  classificacaoRisco    String
+  periodicidadeAcao     String
+  preventivosJson       String   @default("[]")
+  detectivosJson        String   @default("[]")
+  corretivosJson        String   @default("[]")
+  resultadoResidual     Float?
+  nivelRiscoResidual    String?
+  classificacaoResidual String?
+  responsavelId         Int?
+  status                String   @default("Ativo")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([codigo, unidade])
+  @@index([unidade, status])
+  @@index([macroProcessoId])
+  @@index([setorId])
+}
+
 model AprOperacional {
   id                    Int       @id @default(autoincrement())
   numero                Int

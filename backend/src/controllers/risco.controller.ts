@@ -448,7 +448,9 @@ async function criarCadastroSequencial(
         .json({ error: `Informe o nome de ${nomeLegivel}.` });
     const registro = await prisma.$transaction(async (tx) => {
       const sequencial = await proximoCodigoCadastro(tx, delegate, prefixo);
-      return (tx as any)[delegate].create({ data: { ...sequencial, ...dados } });
+      return (tx as any)[delegate].create({
+        data: { ...sequencial, ...dados },
+      });
     });
     await registrarLog({
       req,
@@ -704,11 +706,9 @@ export async function criarCatalogoRisco(req: AuthRequest, res: Response) {
   } catch (error: any) {
     console.error(error);
     if (error?.code === "P2002")
-      return res
-        .status(409)
-        .json({
-          error: "Já existe um risco identificado com este nome na unidade.",
-        });
+      return res.status(409).json({
+        error: "Já existe um risco identificado com este nome na unidade.",
+      });
     return res.status(500).json({ error: "Erro ao criar risco identificado" });
   }
 }
@@ -743,11 +743,9 @@ export async function atualizarCatalogoRisco(req: AuthRequest, res: Response) {
   } catch (error: any) {
     console.error(error);
     if (error?.code === "P2002")
-      return res
-        .status(409)
-        .json({
-          error: "Já existe um risco identificado com este nome na unidade.",
-        });
+      return res.status(409).json({
+        error: "Já existe um risco identificado com este nome na unidade.",
+      });
     return res
       .status(500)
       .json({ error: "Erro ao atualizar risco identificado" });
@@ -790,12 +788,10 @@ export async function removerCatalogoRisco(req: AuthRequest, res: Response) {
 
 export async function excluirCatalogoRisco(req: AuthRequest, res: Response) {
   try {
-    return res
-      .status(405)
-      .json({
-        error:
-          "Exclusão definitiva não é permitida. Use inativação, anulação ou encerramento.",
-      });
+    return res.status(405).json({
+      error:
+        "Exclusão definitiva não é permitida. Use inativação, anulação ou encerramento.",
+    });
   } catch (error) {
     console.error(error);
     return res
@@ -817,11 +813,9 @@ export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
     );
 
     if (!ocorrenciaCodigo && !eventoCodigo && !investigacaoCodigo) {
-      return res
-        .status(400)
-        .json({
-          error: "Informe o número da ocorrência, evento ou investigação.",
-        });
+      return res.status(400).json({
+        error: "Informe o número da ocorrência, evento ou investigação.",
+      });
     }
 
     if (investigacaoCodigo) {
@@ -938,6 +932,398 @@ export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
   }
 }
 
+type FatorAnaliseCompleta = {
+  id?: number | null;
+  codigo?: string;
+  nome: string;
+};
+
+type ControleAnaliseCompleta = {
+  id?: number | null;
+  codigo?: string;
+  nome: string;
+};
+
+const camposPontuacaoCompleta = [
+  "sc",
+  "fe",
+  "intervalo",
+  "sse",
+  "ope",
+  "fin",
+  "adm",
+  "img",
+  "lc",
+] as const;
+
+function pontuacaoCompleta(valor: unknown) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero)) return 1;
+  return Math.min(Math.max(Math.trunc(numero), 1), 5);
+}
+
+function arredondarRisco(valor: number) {
+  return Math.round(valor * 100) / 100;
+}
+
+function nivelProbabilidadeCompleta(media: number) {
+  if (media <= 1.5) return "Possível";
+  if (media <= 2.5) return "Provável";
+  if (media <= 3.5) return "Frequente";
+  if (media <= 4.5) return "Presente";
+  return "Inevitável";
+}
+
+function nivelConsequenciaCompleta(media: number) {
+  if (media <= 1.5) return "Menor";
+  if (media <= 2.5) return "Moderado";
+  if (media <= 3.5) return "Alto";
+  if (media <= 4.5) return "Severo";
+  return "Crítico";
+}
+
+function classificacaoCompleta(resultado: number) {
+  if (resultado <= 5) {
+    return {
+      nivel: "BAIXO",
+      classificacao: "BAIXO",
+      periodicidade: "Revisão a cada 24 meses",
+    };
+  }
+  if (resultado <= 10) {
+    return {
+      nivel: "MENOR",
+      classificacao: "MENOR",
+      periodicidade: "Revisão a cada 12 meses",
+    };
+  }
+  if (resultado <= 15) {
+    return {
+      nivel: "ALTO",
+      classificacao: "ALTO",
+      periodicidade: "Revisão a cada 180 dias",
+    };
+  }
+  return {
+    nivel: "EXTREMO",
+    classificacao: "EXTREMO",
+    periodicidade: "Revisão a cada 90 dias",
+  };
+}
+
+function calcularAnaliseCompleta(body: Record<string, unknown>) {
+  const sc = pontuacaoCompleta(body.sc);
+  const fe = pontuacaoCompleta(body.fe);
+  const intervalo = pontuacaoCompleta(body.intervalo || body.int);
+  const sse = pontuacaoCompleta(body.sse);
+  const ope = pontuacaoCompleta(body.ope);
+  const fin = pontuacaoCompleta(body.fin);
+  const adm = pontuacaoCompleta(body.adm);
+  const img = pontuacaoCompleta(body.img);
+  const lc = pontuacaoCompleta(body.lc);
+  const notaProbabilidade = sc + fe + intervalo;
+  const mediaProbabilidade = arredondarRisco(notaProbabilidade / 3);
+  const impactos = [sse, ope, fin, adm, img, lc];
+  const notaConsequencia = impactos.reduce((total, valor) => total + valor, 0);
+  const mediaConsequencia = arredondarRisco(notaConsequencia / impactos.length);
+  const resultadoInerente = arredondarRisco(
+    mediaProbabilidade * mediaConsequencia,
+  );
+  const classificacao = classificacaoCompleta(resultadoInerente);
+
+  return {
+    sc,
+    fe,
+    intervalo,
+    sse,
+    ope,
+    fin,
+    adm,
+    img,
+    lc,
+    notaProbabilidade,
+    mediaProbabilidade,
+    nivelProbabilidade: nivelProbabilidadeCompleta(mediaProbabilidade),
+    notaConsequencia,
+    mediaConsequencia,
+    nivelConsequencia: nivelConsequenciaCompleta(mediaConsequencia),
+    resultadoInerente,
+    nivelRiscoInerente: classificacao.nivel,
+    classificacaoRisco: classificacao.classificacao,
+    periodicidadeAcao: classificacao.periodicidade,
+  };
+}
+
+function normalizarListaJson<T>(
+  valor: unknown,
+  normalizar: (item: Record<string, unknown>) => T | null,
+) {
+  const lista = Array.isArray(valor) ? valor : [];
+  return lista
+    .map((item) =>
+      item && typeof item === "object"
+        ? normalizar(item as Record<string, unknown>)
+        : null,
+    )
+    .filter(Boolean) as T[];
+}
+
+function normalizarFatores(valor: unknown) {
+  return normalizarListaJson<FatorAnaliseCompleta>(valor, (item) => {
+    const nome = textoObrigatorio(item.nome);
+    if (!nome) return null;
+    return {
+      id: normalizarId(item.id),
+      codigo: textoObrigatorio(item.codigo),
+      nome,
+    };
+  });
+}
+
+function normalizarControles(valor: unknown) {
+  return normalizarListaJson<ControleAnaliseCompleta>(valor, (item) => {
+    const nome = textoObrigatorio(item.nome);
+    if (!nome) return null;
+    return {
+      id: normalizarId(item.id),
+      codigo: textoObrigatorio(item.codigo),
+      nome,
+    };
+  });
+}
+
+function parseListaJson<T>(valor: string | null | undefined): T[] {
+  try {
+    const lista = JSON.parse(valor || "[]");
+    return Array.isArray(lista) ? lista : [];
+  } catch {
+    return [];
+  }
+}
+
+function apresentarAnaliseCompleta(registro: any) {
+  return {
+    ...registro,
+    fatoresRisco: parseListaJson<FatorAnaliseCompleta>(
+      registro.fatoresRiscoJson,
+    ),
+    preventivos: parseListaJson<ControleAnaliseCompleta>(
+      registro.preventivosJson,
+    ),
+    detectivos: parseListaJson<ControleAnaliseCompleta>(
+      registro.detectivosJson,
+    ),
+    corretivos: parseListaJson<ControleAnaliseCompleta>(
+      registro.corretivosJson,
+    ),
+  };
+}
+
+async function dadosAnaliseCompleta(req: AuthRequest) {
+  const macroProcessoId = normalizarId(req.body.macroProcessoId);
+  const setorId = normalizarId(req.body.setorId);
+  const riscoId = normalizarId(req.body.riscoId);
+
+  const [macroProcesso, setor, risco] = await Promise.all([
+    macroProcessoId
+      ? prisma.riscoMacroProcesso.findUnique({ where: { id: macroProcessoId } })
+      : null,
+    setorId ? prisma.riscoSetor.findUnique({ where: { id: setorId } }) : null,
+    riscoId
+      ? prisma.riscoCadastroGeral.findUnique({ where: { id: riscoId } })
+      : null,
+  ]);
+
+  if (!macroProcesso) throw new Error("Selecione o macro processo.");
+  if (!setor) throw new Error("Selecione o setor.");
+  if (!risco) throw new Error("Selecione o risco.");
+  if (setor.macroProcessoId !== macroProcesso.id) {
+    throw new Error("O setor selecionado não pertence ao macro processo.");
+  }
+
+  const fatores = normalizarFatores(req.body.fatoresRisco);
+  if (!fatores.length) throw new Error("Selecione ao menos um fator de risco.");
+
+  return {
+    macroProcessoId: macroProcesso.id,
+    macroProcessoCodigo: macroProcesso.codigo,
+    macroProcessoNome: macroProcesso.nome,
+    setorId: setor.id,
+    setorNome: setor.nome,
+    riscoId: risco.id,
+    riscoCodigo: risco.codigo,
+    riscoNome: risco.nome,
+    fatoresRiscoJson: JSON.stringify(fatores),
+    ...calcularAnaliseCompleta(req.body),
+  };
+}
+
+export async function listarAnalisesCompletasRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const registros = await prisma.analiseRiscoCompleta.findMany({
+      where: { unidade: req.unidadeAtiva },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return res.json(registros.map(apresentarAnaliseCompleta));
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar análises completas." });
+  }
+}
+
+export async function criarAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const ano = new Date().getFullYear();
+    const dados = await dadosAnaliseCompleta(req);
+    const registro = await prisma.$transaction(async (tx) => {
+      await tx.$executeRawUnsafe(
+        `SELECT pg_advisory_xact_lock(hashtext('jetguard_analise_risco_completa_${req.unidadeAtiva}_${ano}'))`,
+      );
+      const ultimo = await tx.analiseRiscoCompleta.findFirst({
+        where: { ano, unidade: req.unidadeAtiva },
+        orderBy: { numero: "desc" },
+      });
+      const numero = Number(ultimo?.numero || 0) + 1;
+      return tx.analiseRiscoCompleta.create({
+        data: {
+          numero,
+          ano,
+          codigo: `ARC-${String(numero).padStart(4, "0")}/${ano}`,
+          unidade: req.unidadeAtiva || req.body.unidade,
+          responsavelId: req.usuarioId || null,
+          ...dados,
+        },
+      });
+    });
+
+    await registrarLog({
+      req,
+      acao: "Criação de análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: registro.id,
+      dadosNovos: registro,
+    });
+
+    return res.status(201).json(apresentarAnaliseCompleta(registro));
+  } catch (error: any) {
+    const mensagem = error?.message || "Erro ao criar análise completa.";
+    if (!mensagem.startsWith("Erro"))
+      return res.status(400).json({ error: mensagem });
+    console.error(error);
+    return res.status(500).json({ error: mensagem });
+  }
+}
+
+export async function atualizarAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+
+    const dados = await dadosAnaliseCompleta(req);
+    const registro = await prisma.analiseRiscoCompleta.update({
+      where: { id },
+      data: {
+        ...dados,
+        preventivosJson:
+          req.body.preventivos !== undefined
+            ? JSON.stringify(normalizarControles(req.body.preventivos))
+            : anterior.preventivosJson,
+        detectivosJson:
+          req.body.detectivos !== undefined
+            ? JSON.stringify(normalizarControles(req.body.detectivos))
+            : anterior.detectivosJson,
+        corretivosJson:
+          req.body.corretivos !== undefined
+            ? JSON.stringify(normalizarControles(req.body.corretivos))
+            : anterior.corretivosJson,
+        status: textoObrigatorio(req.body.status) || anterior.status,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Atualização de análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(apresentarAnaliseCompleta(registro));
+  } catch (error: any) {
+    const mensagem = error?.message || "Erro ao atualizar análise completa.";
+    if (!mensagem.startsWith("Erro"))
+      return res.status(400).json({ error: mensagem });
+    console.error(error);
+    return res.status(500).json({ error: mensagem });
+  }
+}
+
+export async function atualizarControlesAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+
+    const registro = await prisma.analiseRiscoCompleta.update({
+      where: { id },
+      data: {
+        preventivosJson: JSON.stringify(
+          normalizarControles(req.body.preventivos),
+        ),
+        detectivosJson: JSON.stringify(
+          normalizarControles(req.body.detectivos),
+        ),
+        corretivosJson: JSON.stringify(
+          normalizarControles(req.body.corretivos),
+        ),
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Atualização de controles da análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(apresentarAnaliseCompleta(registro));
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar controles da análise completa." });
+  }
+}
+
 async function resolverVinculos(req: AuthRequest) {
   const ocorrenciaValor = normalizarCodigo(
     req.body.ocorrenciaId || req.body.ocorrenciaCodigo,
@@ -1017,11 +1403,9 @@ export async function criarRisco(req: AuthRequest, res: Response) {
     const riscoCatalogoId = normalizarId(req.body.riscoCatalogoId);
 
     if (!riscoCatalogoId) {
-      return res
-        .status(400)
-        .json({
-          error: "Selecione um risco identificado antes de criar a análise.",
-        });
+      return res.status(400).json({
+        error: "Selecione um risco identificado antes de criar a análise.",
+      });
     }
 
     const riscoIdentificado = await prisma.riscoCatalogo.findFirst({
@@ -1029,11 +1413,9 @@ export async function criarRisco(req: AuthRequest, res: Response) {
     });
 
     if (!riscoIdentificado) {
-      return res
-        .status(404)
-        .json({
-          error: "Risco identificado não encontrado para a unidade ativa.",
-        });
+      return res.status(404).json({
+        error: "Risco identificado não encontrado para a unidade ativa.",
+      });
     }
     const erroValidacao = validarAnalise(req);
     if (erroValidacao) return res.status(400).json({ error: erroValidacao });
@@ -1155,12 +1537,10 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
     const riscoCatalogoId = normalizarId(req.body.riscoCatalogoId);
 
     if (!riscoCatalogoId) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "A análise precisa permanecer vinculada a um risco identificado.",
-        });
+      return res.status(400).json({
+        error:
+          "A análise precisa permanecer vinculada a um risco identificado.",
+      });
     }
 
     const riscoIdentificado = await prisma.riscoCatalogo.findFirst({
@@ -1168,11 +1548,9 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
     });
 
     if (!riscoIdentificado) {
-      return res
-        .status(404)
-        .json({
-          error: "Risco identificado não encontrado para a unidade ativa.",
-        });
+      return res.status(404).json({
+        error: "Risco identificado não encontrado para a unidade ativa.",
+      });
     }
     const erroValidacao = validarAnalise(req);
     if (erroValidacao) return res.status(400).json({ error: erroValidacao });

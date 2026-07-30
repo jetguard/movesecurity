@@ -32,6 +32,9 @@ const Usuarios = lazyWithReload(() => import("./pages/Usuarios"));
 const RiscosCadastroGeral = lazyWithReload(
   () => import("./pages/RiscosCadastroGeral"),
 );
+const RiscosAnaliseCompleta = lazyWithReload(
+  () => import("./pages/RiscosAnaliseCompleta"),
+);
 const RiscosModuloEmConstrucao = lazyWithReload(
   () => import("./pages/RiscosModuloEmConstrucao"),
 );
@@ -446,7 +449,7 @@ export default function App() {
                     PERFIS.ANALISTA,
                   ]}
                 >
-                  <RiscosModuloEmConstrucao />
+                  <RiscosAnaliseCompleta />
                 </ProtectedRoute>
               }
             />

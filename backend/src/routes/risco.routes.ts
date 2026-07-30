@@ -4,6 +4,8 @@ import multer from "multer";
 import {
   atualizarRisco,
   atualizarCatalogoRisco,
+  atualizarAnaliseCompletaRisco,
+  atualizarControlesAnaliseCompletaRisco,
   atualizarControlePreventivoCadastro,
   atualizarFatorRiscoCadastro,
   atualizarMacroProcessoRisco,
@@ -11,6 +13,7 @@ import {
   atualizarSetorRisco,
   buscarVinculoRisco,
   criarCatalogoRisco,
+  criarAnaliseCompletaRisco,
   criarControlePreventivoCadastro,
   criarFatorRiscoCadastro,
   criarMacroProcessoRisco,
@@ -24,6 +27,7 @@ import {
   excluirRiscoCadastroGeral,
   excluirSetorRisco,
   gerarPdfRisco,
+  listarAnalisesCompletasRisco,
   listarCadastroGeralRiscos,
   listarCatalogoRiscos,
   listarLocaisRisco,
@@ -72,6 +76,30 @@ router.get(
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   listarCadastroGeralRiscos,
+);
+router.get(
+  "/analise-completa",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  listarAnalisesCompletasRisco,
+);
+router.post(
+  "/analise-completa",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  criarAnaliseCompletaRisco,
+);
+router.put(
+  "/analise-completa/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  atualizarAnaliseCompletaRisco,
+);
+router.patch(
+  "/analise-completa/:id/controles",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  atualizarControlesAnaliseCompletaRisco,
 );
 router.post(
   "/cadastro-geral/macro-processos",
