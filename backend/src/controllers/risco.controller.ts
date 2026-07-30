@@ -4,21 +4,40 @@ import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { gerarRiscoPdf } from "../services/riscoPdf.service";
 
-const valores = { "Muito Baixa": 1, Baixa: 2, Média: 3, Media: 3, Moderada: 3, Alta: 4, "Muito Alta": 5 } as Record<string, number>;
-const impactos = { Insignificante: 1, Baixo: 2, Moderado: 3, Alto: 4, Crítico: 5, Critico: 5 } as Record<string, number>;
+const valores = {
+  "Muito Baixa": 1,
+  Baixa: 2,
+  Média: 3,
+  Media: 3,
+  Moderada: 3,
+  Alta: 4,
+  "Muito Alta": 5,
+} as Record<string, number>;
+const impactos = {
+  Insignificante: 1,
+  Baixo: 2,
+  Moderado: 3,
+  Alto: 4,
+  Crítico: 5,
+  Critico: 5,
+} as Record<string, number>;
 
 function numeroProbabilidade(valor: unknown) {
   const numero = Number(valor);
   if (!Number.isFinite(numero)) return null;
   const permitidos = [1, 2, 3, 4, 5];
-  return permitidos.includes(numero) ? numero : Math.min(Math.max(Math.trunc(numero), 1), 5);
+  return permitidos.includes(numero)
+    ? numero
+    : Math.min(Math.max(Math.trunc(numero), 1), 5);
 }
 
 function numeroImpacto(valor: unknown) {
   const numero = Number(String(valor).replace(",", "."));
   if (!Number.isFinite(numero)) return null;
   const permitidos = [1, 2, 3, 4, 5];
-  return permitidos.includes(numero) ? numero : Math.min(Math.max(Math.trunc(numero), 1), 5);
+  return permitidos.includes(numero)
+    ? numero
+    : Math.min(Math.max(Math.trunc(numero), 1), 5);
 }
 
 function textoProbabilidade(valor: number) {
@@ -45,8 +64,12 @@ function calcularNivelPorResultado(resultado: number) {
 }
 
 function calcularClassificacao(req: AuthRequest) {
-  const probabilidadeValor = numeroProbabilidade(req.body.probabilidadeValor) || valores[req.body.probabilidade] || 1;
-  const impactoValor = numeroImpacto(req.body.impactoValor) || impactos[req.body.severidade] || 1;
+  const probabilidadeValor =
+    numeroProbabilidade(req.body.probabilidadeValor) ||
+    valores[req.body.probabilidade] ||
+    1;
+  const impactoValor =
+    numeroImpacto(req.body.impactoValor) || impactos[req.body.severidade] || 1;
   const resultadoRisco = probabilidadeValor * impactoValor;
   const nivelRisco = calcularNivelPorResultado(resultadoRisco);
 
@@ -55,7 +78,8 @@ function calcularClassificacao(req: AuthRequest) {
     impactoValor,
     resultadoRisco,
     nivelRisco,
-    probabilidadeTexto: req.body.probabilidade || textoProbabilidade(probabilidadeValor),
+    probabilidadeTexto:
+      req.body.probabilidade || textoProbabilidade(probabilidadeValor),
     impactoTexto: req.body.severidade || textoImpacto(impactoValor),
   };
 }
@@ -82,7 +106,10 @@ function calcularReavaliacao(req: AuthRequest) {
 }
 
 function validarAnalise(req: AuthRequest) {
-  if (!numeroProbabilidade(req.body.probabilidadeValor) && !valores[req.body.probabilidade]) {
+  if (
+    !numeroProbabilidade(req.body.probabilidadeValor) &&
+    !valores[req.body.probabilidade]
+  ) {
     return "Informe a probabilidade da análise.";
   }
   if (!numeroImpacto(req.body.impactoValor) && !impactos[req.body.severidade]) {
@@ -100,7 +127,9 @@ function normalizarId(valor: unknown) {
 }
 
 function normalizarCodigo(valor: unknown) {
-  return String(valor || "").trim().toUpperCase();
+  return String(valor || "")
+    .trim()
+    .toUpperCase();
 }
 
 function textoObrigatorio(valor: unknown) {
@@ -109,7 +138,9 @@ function textoObrigatorio(valor: unknown) {
 
 function dadosCatalogo(req: AuthRequest) {
   const nome = textoObrigatorio(req.body.nome || req.body.tituloRisco);
-  const tipoRisco = textoObrigatorio(req.body.tipoRisco || req.body.categoriaRisco);
+  const tipoRisco = textoObrigatorio(
+    req.body.tipoRisco || req.body.categoriaRisco,
+  );
 
   return {
     unidade: req.unidadeAtiva || req.body.unidade,
@@ -118,18 +149,25 @@ function dadosCatalogo(req: AuthRequest) {
     nome,
     tipoRisco,
     grauRisco: "Não analisado",
-    naturezaRisco: textoObrigatorio(req.body.naturezaRisco) || tipoRisco || "Risco operacional",
+    naturezaRisco:
+      textoObrigatorio(req.body.naturezaRisco) ||
+      tipoRisco ||
+      "Risco operacional",
     origemRisco: null,
     fonteRisco: null,
     fatorRisco: null,
     fragilidade: null,
     eventoIncerteza: null,
     objetivoImpactado: null,
-    responsavelNome: textoObrigatorio(req.body.responsavelNome || req.body.responsavel) || null,
+    responsavelNome:
+      textoObrigatorio(req.body.responsavelNome || req.body.responsavel) ||
+      null,
     descricaoRisco: textoObrigatorio(req.body.descricaoRisco),
     possivelImpacto: textoObrigatorio(req.body.possivelImpacto),
     medidasPreventivas: textoObrigatorio(req.body.medidasPreventivas) || null,
-    planoAcaoSugerido: textoObrigatorio(req.body.planoAcaoSugerido || req.body.planoAcao) || null,
+    planoAcaoSugerido:
+      textoObrigatorio(req.body.planoAcaoSugerido || req.body.planoAcao) ||
+      null,
     status: textoObrigatorio(req.body.status) || "Ativo",
   };
 }
@@ -138,9 +176,451 @@ function codigoRiscoIdentificado(numero: number, ano: number) {
   return `RISCO-${String(numero).padStart(4, "0")}/${ano}`;
 }
 
-function naturezaAnalise(req: AuthRequest) {
-  return textoObrigatorio(req.body.naturezaRisco) || textoObrigatorio(req.body.tipoRisco) || "Risco operacional";
+function codigoCadastro(prefixo: string, numero: number) {
+  return `${prefixo}${String(numero).padStart(3, "0")}`;
 }
+
+async function proximoCodigoCadastro(
+  tx: any,
+  delegate: string,
+  prefixo: string,
+) {
+  await tx.$executeRawUnsafe(
+    `SELECT pg_advisory_xact_lock(hashtext('jetguard_${delegate}_${prefixo}'))`,
+  );
+  const ultimo = await tx[delegate].findFirst({ orderBy: { numero: "desc" } });
+  const numero = Number(ultimo?.numero || 0) + 1;
+  return { numero, codigo: codigoCadastro(prefixo, numero) };
+}
+
+function dadosCadastroSimples(req: AuthRequest) {
+  const nome = textoObrigatorio(req.body.nome);
+  const descricao = textoObrigatorio(req.body.descricao) || null;
+  const status = textoObrigatorio(req.body.status) || "Ativo";
+  return { nome, descricao, status };
+}
+
+function naturezaAnalise(req: AuthRequest) {
+  return (
+    textoObrigatorio(req.body.naturezaRisco) ||
+    textoObrigatorio(req.body.tipoRisco) ||
+    "Risco operacional"
+  );
+}
+
+export async function listarCadastroGeralRiscos(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const [macroProcessos, riscos, fatores, controles] = await Promise.all([
+      prisma.riscoMacroProcesso.findMany({
+        orderBy: { numero: "asc" },
+        include: { setores: { orderBy: { nome: "asc" } } },
+      }),
+      prisma.riscoCadastroGeral.findMany({ orderBy: { numero: "asc" } }),
+      prisma.fatorRiscoCadastro.findMany({ orderBy: { numero: "asc" } }),
+      prisma.controlePreventivoCadastro.findMany({
+        orderBy: { numero: "asc" },
+      }),
+    ]);
+
+    return res.json({ macroProcessos, riscos, fatores, controles });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar cadastro geral de riscos." });
+  }
+}
+
+export async function criarMacroProcessoRisco(req: AuthRequest, res: Response) {
+  try {
+    const nome = textoObrigatorio(req.body.nome);
+    if (!nome)
+      return res
+        .status(400)
+        .json({ error: "Informe o nome do macro processo." });
+
+    const registro = await prisma.$transaction(async (tx) => {
+      const sequencial = await proximoCodigoCadastro(
+        tx,
+        "riscoMacroProcesso",
+        "MP",
+      );
+      return tx.riscoMacroProcesso.create({
+        data: {
+          ...sequencial,
+          nome,
+          status: textoObrigatorio(req.body.status) || "Ativo",
+        },
+      });
+    });
+
+    await registrarLog({
+      req,
+      acao: "Criação de macro processo de risco",
+      tipoRegistro: "RiscoMacroProcesso",
+      registroId: registro.id,
+      dadosNovos: registro,
+    });
+    return res.status(201).json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({ error: "Macro processo já cadastrado." });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao cadastrar macro processo." });
+  }
+}
+
+export async function atualizarMacroProcessoRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const nome = textoObrigatorio(req.body.nome);
+    if (!nome)
+      return res
+        .status(400)
+        .json({ error: "Informe o nome do macro processo." });
+    const anterior = await prisma.riscoMacroProcesso.findUnique({
+      where: { id },
+      include: { setores: true },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Macro processo não encontrado." });
+    const registro = await prisma.riscoMacroProcesso.update({
+      where: { id },
+      data: {
+        nome,
+        status: textoObrigatorio(req.body.status) || anterior.status,
+      },
+    });
+    await registrarLog({
+      req,
+      acao: "Atualização de macro processo de risco",
+      tipoRegistro: "RiscoMacroProcesso",
+      registroId: id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+    return res.json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({ error: "Macro processo já cadastrado." });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao atualizar macro processo." });
+  }
+}
+
+export async function excluirMacroProcessoRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.riscoMacroProcesso.findUnique({
+      where: { id },
+      include: { setores: true },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Macro processo não encontrado." });
+    await prisma.riscoMacroProcesso.delete({ where: { id } });
+    await registrarLog({
+      req,
+      acao: "Exclusão de macro processo de risco",
+      tipoRegistro: "RiscoMacroProcesso",
+      registroId: id,
+      dadosAnteriores: anterior,
+    });
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir macro processo." });
+  }
+}
+
+export async function criarSetorRisco(req: AuthRequest, res: Response) {
+  try {
+    const nome = textoObrigatorio(req.body.nome);
+    const macroProcessoId = normalizarId(req.body.macroProcessoId);
+    if (!nome || !macroProcessoId)
+      return res.status(400).json({ error: "Informe setor e macro processo." });
+    const registro = await prisma.riscoSetor.create({
+      data: {
+        nome,
+        macroProcessoId,
+        status: textoObrigatorio(req.body.status) || "Ativo",
+      },
+    });
+    await registrarLog({
+      req,
+      acao: "Criação de setor de risco",
+      tipoRegistro: "RiscoSetor",
+      registroId: registro.id,
+      dadosNovos: registro,
+    });
+    return res.status(201).json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res
+        .status(400)
+        .json({ error: "Setor já cadastrado para este macro processo." });
+    if (error?.code === "P2003")
+      return res.status(404).json({ error: "Macro processo não encontrado." });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao cadastrar setor." });
+  }
+}
+
+export async function atualizarSetorRisco(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const nome = textoObrigatorio(req.body.nome);
+    const macroProcessoId = normalizarId(req.body.macroProcessoId);
+    if (!nome || !macroProcessoId)
+      return res.status(400).json({ error: "Informe setor e macro processo." });
+    const anterior = await prisma.riscoSetor.findUnique({ where: { id } });
+    if (!anterior)
+      return res.status(404).json({ error: "Setor não encontrado." });
+    const registro = await prisma.riscoSetor.update({
+      where: { id },
+      data: {
+        nome,
+        macroProcessoId,
+        status: textoObrigatorio(req.body.status) || anterior.status,
+      },
+    });
+    await registrarLog({
+      req,
+      acao: "Atualização de setor de risco",
+      tipoRegistro: "RiscoSetor",
+      registroId: id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+    return res.json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res
+        .status(400)
+        .json({ error: "Setor já cadastrado para este macro processo." });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao atualizar setor." });
+  }
+}
+
+export async function excluirSetorRisco(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.riscoSetor.findUnique({ where: { id } });
+    if (!anterior)
+      return res.status(404).json({ error: "Setor não encontrado." });
+    await prisma.riscoSetor.delete({ where: { id } });
+    await registrarLog({
+      req,
+      acao: "Exclusão de setor de risco",
+      tipoRegistro: "RiscoSetor",
+      registroId: id,
+      dadosAnteriores: anterior,
+    });
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir setor." });
+  }
+}
+
+async function criarCadastroSequencial(
+  req: AuthRequest,
+  res: Response,
+  delegate: string,
+  prefixo: string,
+  tipoRegistro: string,
+  nomeLegivel: string,
+) {
+  try {
+    const dados = dadosCadastroSimples(req);
+    if (!dados.nome)
+      return res
+        .status(400)
+        .json({ error: `Informe o nome de ${nomeLegivel}.` });
+    const registro = await prisma.$transaction(async (tx) => {
+      const sequencial = await proximoCodigoCadastro(tx, delegate, prefixo);
+      return (tx as any)[delegate].create({ data: { ...sequencial, ...dados } });
+    });
+    await registrarLog({
+      req,
+      acao: `Criação de ${nomeLegivel}`,
+      tipoRegistro,
+      registroId: registro.id,
+      dadosNovos: registro,
+    });
+    return res.status(201).json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({ error: `${nomeLegivel} já cadastrado.` });
+    console.error(error);
+    return res.status(500).json({ error: `Erro ao cadastrar ${nomeLegivel}.` });
+  }
+}
+
+async function atualizarCadastroSimples(
+  req: AuthRequest,
+  res: Response,
+  delegate: string,
+  tipoRegistro: string,
+  nomeLegivel: string,
+) {
+  try {
+    const id = Number(req.params.id);
+    const dados = dadosCadastroSimples(req);
+    if (!dados.nome)
+      return res
+        .status(400)
+        .json({ error: `Informe o nome de ${nomeLegivel}.` });
+    const anterior = await (prisma as any)[delegate].findUnique({
+      where: { id },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: `${nomeLegivel} não encontrado.` });
+    const registro = await (prisma as any)[delegate].update({
+      where: { id },
+      data: { ...dados, status: dados.status || anterior.status },
+    });
+    await registrarLog({
+      req,
+      acao: `Atualização de ${nomeLegivel}`,
+      tipoRegistro,
+      registroId: id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+    return res.json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({ error: `${nomeLegivel} já cadastrado.` });
+    console.error(error);
+    return res.status(500).json({ error: `Erro ao atualizar ${nomeLegivel}.` });
+  }
+}
+
+async function excluirCadastroSimples(
+  req: AuthRequest,
+  res: Response,
+  delegate: string,
+  tipoRegistro: string,
+  nomeLegivel: string,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await (prisma as any)[delegate].findUnique({
+      where: { id },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: `${nomeLegivel} não encontrado.` });
+    await (prisma as any)[delegate].delete({ where: { id } });
+    await registrarLog({
+      req,
+      acao: `Exclusão de ${nomeLegivel}`,
+      tipoRegistro,
+      registroId: id,
+      dadosAnteriores: anterior,
+    });
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: `Erro ao excluir ${nomeLegivel}.` });
+  }
+}
+
+export const criarRiscoCadastroGeral = (req: AuthRequest, res: Response) =>
+  criarCadastroSequencial(
+    req,
+    res,
+    "riscoCadastroGeral",
+    "R",
+    "RiscoCadastroGeral",
+    "risco",
+  );
+export const atualizarRiscoCadastroGeral = (req: AuthRequest, res: Response) =>
+  atualizarCadastroSimples(
+    req,
+    res,
+    "riscoCadastroGeral",
+    "RiscoCadastroGeral",
+    "risco",
+  );
+export const excluirRiscoCadastroGeral = (req: AuthRequest, res: Response) =>
+  excluirCadastroSimples(
+    req,
+    res,
+    "riscoCadastroGeral",
+    "RiscoCadastroGeral",
+    "risco",
+  );
+
+export const criarFatorRiscoCadastro = (req: AuthRequest, res: Response) =>
+  criarCadastroSequencial(
+    req,
+    res,
+    "fatorRiscoCadastro",
+    "FR",
+    "FatorRiscoCadastro",
+    "fator de risco",
+  );
+export const atualizarFatorRiscoCadastro = (req: AuthRequest, res: Response) =>
+  atualizarCadastroSimples(
+    req,
+    res,
+    "fatorRiscoCadastro",
+    "FatorRiscoCadastro",
+    "fator de risco",
+  );
+export const excluirFatorRiscoCadastro = (req: AuthRequest, res: Response) =>
+  excluirCadastroSimples(
+    req,
+    res,
+    "fatorRiscoCadastro",
+    "FatorRiscoCadastro",
+    "fator de risco",
+  );
+
+export const criarControlePreventivoCadastro = (
+  req: AuthRequest,
+  res: Response,
+) =>
+  criarCadastroSequencial(
+    req,
+    res,
+    "controlePreventivoCadastro",
+    "CP",
+    "ControlePreventivoCadastro",
+    "controle preventivo",
+  );
+export const atualizarControlePreventivoCadastro = (
+  req: AuthRequest,
+  res: Response,
+) =>
+  atualizarCadastroSimples(
+    req,
+    res,
+    "controlePreventivoCadastro",
+    "ControlePreventivoCadastro",
+    "controle preventivo",
+  );
+export const excluirControlePreventivoCadastro = (
+  req: AuthRequest,
+  res: Response,
+) =>
+  excluirCadastroSimples(
+    req,
+    res,
+    "controlePreventivoCadastro",
+    "ControlePreventivoCadastro",
+    "controle preventivo",
+  );
 
 export async function listarCatalogoRiscos(req: AuthRequest, res: Response) {
   try {
@@ -155,7 +635,9 @@ export async function listarCatalogoRiscos(req: AuthRequest, res: Response) {
     return res.json(riscos);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar riscos identificados" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar riscos identificados" });
   }
 }
 
@@ -171,15 +653,24 @@ export async function listarLocaisRisco(req: AuthRequest, res: Response) {
     return res.json(locais);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar locais da análise de risco" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar locais da análise de risco" });
   }
 }
 
 export async function criarCatalogoRisco(req: AuthRequest, res: Response) {
   try {
     const dados = dadosCatalogo(req);
-    if (!dados.nome || !dados.tipoRisco || !dados.descricaoRisco || !dados.possivelImpacto) {
-      return res.status(400).json({ error: "Preencha nome, tipo, descrição e impacto do risco." });
+    if (
+      !dados.nome ||
+      !dados.tipoRisco ||
+      !dados.descricaoRisco ||
+      !dados.possivelImpacto
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Preencha nome, tipo, descrição e impacto do risco." });
     }
 
     const risco = await prisma.$transaction(async (tx) => {
@@ -212,7 +703,12 @@ export async function criarCatalogoRisco(req: AuthRequest, res: Response) {
     return res.status(201).json(risco);
   } catch (error: any) {
     console.error(error);
-    if (error?.code === "P2002") return res.status(409).json({ error: "Já existe um risco identificado com este nome na unidade." });
+    if (error?.code === "P2002")
+      return res
+        .status(409)
+        .json({
+          error: "Já existe um risco identificado com este nome na unidade.",
+        });
     return res.status(500).json({ error: "Erro ao criar risco identificado" });
   }
 }
@@ -220,8 +716,13 @@ export async function criarCatalogoRisco(req: AuthRequest, res: Response) {
 export async function atualizarCatalogoRisco(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
-    const anterior = await prisma.riscoCatalogo.findFirst({ where: { id, unidade: req.unidadeAtiva } });
-    if (!anterior) return res.status(404).json({ error: "Risco identificado não encontrado" });
+    const anterior = await prisma.riscoCatalogo.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Risco identificado não encontrado" });
 
     const dados = dadosCatalogo(req);
     const risco = await prisma.riscoCatalogo.update({
@@ -241,16 +742,28 @@ export async function atualizarCatalogoRisco(req: AuthRequest, res: Response) {
     return res.json(risco);
   } catch (error: any) {
     console.error(error);
-    if (error?.code === "P2002") return res.status(409).json({ error: "Já existe um risco identificado com este nome na unidade." });
-    return res.status(500).json({ error: "Erro ao atualizar risco identificado" });
+    if (error?.code === "P2002")
+      return res
+        .status(409)
+        .json({
+          error: "Já existe um risco identificado com este nome na unidade.",
+        });
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar risco identificado" });
   }
 }
 
 export async function removerCatalogoRisco(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
-    const anterior = await prisma.riscoCatalogo.findFirst({ where: { id, unidade: req.unidadeAtiva } });
-    if (!anterior) return res.status(404).json({ error: "Risco identificado não encontrado" });
+    const anterior = await prisma.riscoCatalogo.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Risco identificado não encontrado" });
 
     const risco = await prisma.riscoCatalogo.update({
       where: { id },
@@ -269,27 +782,46 @@ export async function removerCatalogoRisco(req: AuthRequest, res: Response) {
     return res.json(risco);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao inativar risco identificado" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao inativar risco identificado" });
   }
 }
 
 export async function excluirCatalogoRisco(req: AuthRequest, res: Response) {
   try {
-    return res.status(405).json({ error: "Exclusão definitiva não é permitida. Use inativação, anulação ou encerramento." });
+    return res
+      .status(405)
+      .json({
+        error:
+          "Exclusão definitiva não é permitida. Use inativação, anulação ou encerramento.",
+      });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao excluir risco identificado" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao excluir risco identificado" });
   }
 }
 
 export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
   try {
-    const ocorrenciaCodigo = normalizarCodigo(req.query.ocorrenciaCodigo || req.query.ocorrencia);
-    const eventoCodigo = normalizarCodigo(req.query.eventoCodigo || req.query.evento);
-    const investigacaoCodigo = normalizarCodigo(req.query.investigacaoCodigo || req.query.investigacao);
+    const ocorrenciaCodigo = normalizarCodigo(
+      req.query.ocorrenciaCodigo || req.query.ocorrencia,
+    );
+    const eventoCodigo = normalizarCodigo(
+      req.query.eventoCodigo || req.query.evento,
+    );
+    const investigacaoCodigo = normalizarCodigo(
+      req.query.investigacaoCodigo || req.query.investigacao,
+    );
 
     if (!ocorrenciaCodigo && !eventoCodigo && !investigacaoCodigo) {
-      return res.status(400).json({ error: "Informe o número da ocorrência, evento ou investigação." });
+      return res
+        .status(400)
+        .json({
+          error: "Informe o número da ocorrência, evento ou investigação.",
+        });
     }
 
     if (investigacaoCodigo) {
@@ -303,12 +835,22 @@ export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
         },
         include: {
           ocorrencia: {
-            select: { id: true, codigo: true, assunto: true, local: true, natureza: true, subNatureza: true },
+            select: {
+              id: true,
+              codigo: true,
+              assunto: true,
+              local: true,
+              natureza: true,
+              subNatureza: true,
+            },
           },
         },
       });
 
-      if (!investigacao) return res.status(404).json({ error: "Investigação não encontrada para esta unidade." });
+      if (!investigacao)
+        return res
+          .status(404)
+          .json({ error: "Investigação não encontrada para esta unidade." });
 
       return res.json({
         origem: "Investigação",
@@ -322,20 +864,30 @@ export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
         ocorrenciaId: investigacao.ocorrenciaId,
         investigacaoId: investigacao.id,
         ocorrenciaCodigo: investigacao.numeroOcorrencia,
-        investigacaoCodigo: investigacao.codigo || investigacao.numeroOcorrencia,
-        resumo: investigacao.descricaoInvestigacao || investigacao.ocorrencia?.assunto || "",
+        investigacaoCodigo:
+          investigacao.codigo || investigacao.numeroOcorrencia,
+        resumo:
+          investigacao.descricaoInvestigacao ||
+          investigacao.ocorrencia?.assunto ||
+          "",
       });
     }
 
     if (ocorrenciaCodigo) {
       const ocorrencia = await prisma.ocorrencia.findFirst({
-        where: { unidade: req.unidadeAtiva, codigo: { equals: ocorrenciaCodigo } },
+        where: {
+          unidade: req.unidadeAtiva,
+          codigo: { equals: ocorrenciaCodigo },
+        },
         include: {
           investigacao: { select: { id: true, codigo: true, status: true } },
         },
       });
 
-      if (!ocorrencia) return res.status(404).json({ error: "Ocorrência não encontrada para esta unidade." });
+      if (!ocorrencia)
+        return res
+          .status(404)
+          .json({ error: "Ocorrência não encontrada para esta unidade." });
 
       return res.json({
         origem: "Ocorrência",
@@ -359,7 +911,10 @@ export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
         where: { unidade: req.unidadeAtiva, codigo: { equals: eventoCodigo } },
       });
 
-      if (!evento) return res.status(404).json({ error: "Evento não encontrado para esta unidade." });
+      if (!evento)
+        return res
+          .status(404)
+          .json({ error: "Evento não encontrado para esta unidade." });
 
       return res.json({
         origem: "Evento",
@@ -384,19 +939,34 @@ export async function buscarVinculoRisco(req: AuthRequest, res: Response) {
 }
 
 async function resolverVinculos(req: AuthRequest) {
-  const ocorrenciaValor = normalizarCodigo(req.body.ocorrenciaId || req.body.ocorrenciaCodigo);
-  const eventoValor = normalizarCodigo(req.body.eventoId || req.body.eventoCodigo);
-  const investigacaoValor = normalizarCodigo(req.body.investigacaoId || req.body.investigacaoCodigo);
+  const ocorrenciaValor = normalizarCodigo(
+    req.body.ocorrenciaId || req.body.ocorrenciaCodigo,
+  );
+  const eventoValor = normalizarCodigo(
+    req.body.eventoId || req.body.eventoCodigo,
+  );
+  const investigacaoValor = normalizarCodigo(
+    req.body.investigacaoId || req.body.investigacaoCodigo,
+  );
 
   const [ocorrencia, evento, investigacao] = await Promise.all([
     ocorrenciaValor && Number.isNaN(Number(ocorrenciaValor))
-      ? prisma.ocorrencia.findFirst({ where: { codigo: ocorrenciaValor, unidade: req.unidadeAtiva }, select: { id: true } })
+      ? prisma.ocorrencia.findFirst({
+          where: { codigo: ocorrenciaValor, unidade: req.unidadeAtiva },
+          select: { id: true },
+        })
       : null,
     eventoValor && Number.isNaN(Number(eventoValor))
-      ? prisma.evento.findFirst({ where: { codigo: eventoValor, unidade: req.unidadeAtiva }, select: { id: true } })
+      ? prisma.evento.findFirst({
+          where: { codigo: eventoValor, unidade: req.unidadeAtiva },
+          select: { id: true },
+        })
       : null,
     investigacaoValor && Number.isNaN(Number(investigacaoValor))
-      ? prisma.investigacao.findFirst({ where: { codigo: investigacaoValor, unidade: req.unidadeAtiva }, select: { id: true } })
+      ? prisma.investigacao.findFirst({
+          where: { codigo: investigacaoValor, unidade: req.unidadeAtiva },
+          select: { id: true },
+        })
       : null,
   ]);
 
@@ -414,7 +984,9 @@ function includeRisco() {
     responsavelAcao: { select: { id: true, nome: true, apelido: true } },
     ocorrencia: { select: { id: true, codigo: true, assunto: true } },
     evento: { select: { id: true, codigo: true, assunto: true } },
-    investigacao: { select: { id: true, numeroOcorrencia: true, titulo: true } },
+    investigacao: {
+      select: { id: true, numeroOcorrencia: true, titulo: true },
+    },
     fotos: true,
   };
 }
@@ -445,7 +1017,11 @@ export async function criarRisco(req: AuthRequest, res: Response) {
     const riscoCatalogoId = normalizarId(req.body.riscoCatalogoId);
 
     if (!riscoCatalogoId) {
-      return res.status(400).json({ error: "Selecione um risco identificado antes de criar a análise." });
+      return res
+        .status(400)
+        .json({
+          error: "Selecione um risco identificado antes de criar a análise.",
+        });
     }
 
     const riscoIdentificado = await prisma.riscoCatalogo.findFirst({
@@ -453,7 +1029,11 @@ export async function criarRisco(req: AuthRequest, res: Response) {
     });
 
     if (!riscoIdentificado) {
-      return res.status(404).json({ error: "Risco identificado não encontrado para a unidade ativa." });
+      return res
+        .status(404)
+        .json({
+          error: "Risco identificado não encontrado para a unidade ativa.",
+        });
     }
     const erroValidacao = validarAnalise(req);
     if (erroValidacao) return res.status(400).json({ error: erroValidacao });
@@ -479,18 +1059,22 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         eventoIncerteza: null,
         objetivoImpactado: null,
         eficaciaControles: textoObrigatorio(req.body.eficaciaControles) || null,
-        criteriosAvaliacao: textoObrigatorio(req.body.criteriosAvaliacao) || null,
+        criteriosAvaliacao:
+          textoObrigatorio(req.body.criteriosAvaliacao) || null,
         controlesInternos: textoObrigatorio(req.body.controlesInternos) || null,
-        atividadesControle: textoObrigatorio(req.body.atividadesControle) || null,
+        atividadesControle:
+          textoObrigatorio(req.body.atividadesControle) || null,
         monitoramento: textoObrigatorio(req.body.monitoramento) || null,
-        comunicacaoConsulta: textoObrigatorio(req.body.comunicacaoConsulta) || null,
+        comunicacaoConsulta:
+          textoObrigatorio(req.body.comunicacaoConsulta) || null,
         naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,
         causaProvavel: textoObrigatorio(req.body.causaProvavel) || null,
         consequencia: textoObrigatorio(req.body.consequencia) || null,
         pessoasAfetadas: textoObrigatorio(req.body.pessoasAfetadas) || null,
-        controlesExistentes: textoObrigatorio(req.body.controlesExistentes) || null,
+        controlesExistentes:
+          textoObrigatorio(req.body.controlesExistentes) || null,
         probabilidade: classificacao.probabilidadeTexto,
         severidade: classificacao.impactoTexto,
         probabilidadeValor: classificacao.probabilidadeValor,
@@ -501,7 +1085,8 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         tratamentoRisco: textoObrigatorio(req.body.tratamentoRisco) || null,
         medidasPreventivas: req.body.medidasPreventivas,
         planoAcao: req.body.planoAcao,
-        acaoProposta: textoObrigatorio(req.body.acaoProposta || req.body.planoAcao) || null,
+        acaoProposta:
+          textoObrigatorio(req.body.acaoProposta || req.body.planoAcao) || null,
         responsavelAcaoId: normalizarId(req.body.responsavelAcaoId),
         responsavelAcaoNome: req.body.responsavelAcaoNome,
         prazo: new Date(req.body.prazo),
@@ -513,9 +1098,13 @@ export async function criarRisco(req: AuthRequest, res: Response) {
         novoImpacto: reavaliacao.novoImpacto,
         novoResultado: reavaliacao.novoResultado,
         novoNivelRisco: reavaliacao.novoNivelRisco,
-        observacaoReavaliacao: textoObrigatorio(req.body.observacaoReavaliacao) || null,
-        dataReavaliacao: req.body.dataReavaliacao ? new Date(req.body.dataReavaliacao) : null,
-        responsavelReavaliacao: textoObrigatorio(req.body.responsavelReavaliacao) || null,
+        observacaoReavaliacao:
+          textoObrigatorio(req.body.observacaoReavaliacao) || null,
+        dataReavaliacao: req.body.dataReavaliacao
+          ? new Date(req.body.dataReavaliacao)
+          : null,
+        responsavelReavaliacao:
+          textoObrigatorio(req.body.responsavelReavaliacao) || null,
         status: req.body.status || "Aberto",
         ocorrenciaId: vinculos.ocorrenciaId,
         eventoId: vinculos.eventoId,
@@ -557,7 +1146,8 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
       include: includeRisco(),
     });
 
-    if (!anterior) return res.status(404).json({ error: "Análise de risco não encontrada" });
+    if (!anterior)
+      return res.status(404).json({ error: "Análise de risco não encontrada" });
 
     const classificacao = calcularClassificacao(req);
     const reavaliacao = calcularReavaliacao(req);
@@ -565,7 +1155,12 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
     const riscoCatalogoId = normalizarId(req.body.riscoCatalogoId);
 
     if (!riscoCatalogoId) {
-      return res.status(400).json({ error: "A análise precisa permanecer vinculada a um risco identificado." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "A análise precisa permanecer vinculada a um risco identificado.",
+        });
     }
 
     const riscoIdentificado = await prisma.riscoCatalogo.findFirst({
@@ -573,7 +1168,11 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
     });
 
     if (!riscoIdentificado) {
-      return res.status(404).json({ error: "Risco identificado não encontrado para a unidade ativa." });
+      return res
+        .status(404)
+        .json({
+          error: "Risco identificado não encontrado para a unidade ativa.",
+        });
     }
     const erroValidacao = validarAnalise(req);
     if (erroValidacao) return res.status(400).json({ error: erroValidacao });
@@ -596,18 +1195,22 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
         eventoIncerteza: null,
         objetivoImpactado: null,
         eficaciaControles: textoObrigatorio(req.body.eficaciaControles) || null,
-        criteriosAvaliacao: textoObrigatorio(req.body.criteriosAvaliacao) || null,
+        criteriosAvaliacao:
+          textoObrigatorio(req.body.criteriosAvaliacao) || null,
         controlesInternos: textoObrigatorio(req.body.controlesInternos) || null,
-        atividadesControle: textoObrigatorio(req.body.atividadesControle) || null,
+        atividadesControle:
+          textoObrigatorio(req.body.atividadesControle) || null,
         monitoramento: textoObrigatorio(req.body.monitoramento) || null,
-        comunicacaoConsulta: textoObrigatorio(req.body.comunicacaoConsulta) || null,
+        comunicacaoConsulta:
+          textoObrigatorio(req.body.comunicacaoConsulta) || null,
         naturezaRisco: naturezaAnalise(req),
         descricaoRisco: req.body.descricaoRisco,
         possivelImpacto: req.body.possivelImpacto,
         causaProvavel: textoObrigatorio(req.body.causaProvavel) || null,
         consequencia: textoObrigatorio(req.body.consequencia) || null,
         pessoasAfetadas: textoObrigatorio(req.body.pessoasAfetadas) || null,
-        controlesExistentes: textoObrigatorio(req.body.controlesExistentes) || null,
+        controlesExistentes:
+          textoObrigatorio(req.body.controlesExistentes) || null,
         probabilidade: classificacao.probabilidadeTexto,
         severidade: classificacao.impactoTexto,
         probabilidadeValor: classificacao.probabilidadeValor,
@@ -618,7 +1221,8 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
         tratamentoRisco: textoObrigatorio(req.body.tratamentoRisco) || null,
         medidasPreventivas: req.body.medidasPreventivas,
         planoAcao: req.body.planoAcao,
-        acaoProposta: textoObrigatorio(req.body.acaoProposta || req.body.planoAcao) || null,
+        acaoProposta:
+          textoObrigatorio(req.body.acaoProposta || req.body.planoAcao) || null,
         responsavelAcaoId: normalizarId(req.body.responsavelAcaoId),
         responsavelAcaoNome: req.body.responsavelAcaoNome,
         prazo: new Date(req.body.prazo),
@@ -630,9 +1234,13 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
         novoImpacto: reavaliacao.novoImpacto,
         novoResultado: reavaliacao.novoResultado,
         novoNivelRisco: reavaliacao.novoNivelRisco,
-        observacaoReavaliacao: textoObrigatorio(req.body.observacaoReavaliacao) || null,
-        dataReavaliacao: req.body.dataReavaliacao ? new Date(req.body.dataReavaliacao) : null,
-        responsavelReavaliacao: textoObrigatorio(req.body.responsavelReavaliacao) || null,
+        observacaoReavaliacao:
+          textoObrigatorio(req.body.observacaoReavaliacao) || null,
+        dataReavaliacao: req.body.dataReavaliacao
+          ? new Date(req.body.dataReavaliacao)
+          : null,
+        responsavelReavaliacao:
+          textoObrigatorio(req.body.responsavelReavaliacao) || null,
         status: req.body.status,
         ocorrenciaId: vinculos.ocorrenciaId,
         eventoId: vinculos.eventoId,
@@ -645,7 +1253,10 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
 
     await registrarLog({
       req,
-      acao: risco.status === "Concluído" ? "Conclusão de análise de risco" : "Atualização de análise de risco",
+      acao:
+        risco.status === "Concluído"
+          ? "Conclusão de análise de risco"
+          : "Atualização de análise de risco",
       tipoRegistro: "AnaliseRisco",
       registroId: risco.id,
       dadosAnteriores: anterior,
@@ -655,7 +1266,9 @@ export async function atualizarRisco(req: AuthRequest, res: Response) {
     return res.json(risco);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao atualizar análise de risco" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar análise de risco" });
   }
 }
 
@@ -668,8 +1281,8 @@ export async function gerarPdfRisco(req: AuthRequest, res: Response) {
     },
   });
 
-  if (!risco) return res.status(404).json({ error: "Análise de risco não encontrada" });
+  if (!risco)
+    return res.status(404).json({ error: "Análise de risco não encontrada" });
   const urlValidacao = `${req.protocol}://${req.get("host")}/api/riscos/${risco.id}/pdf`;
   return gerarRiscoPdf(res, risco, urlValidacao);
 }
-

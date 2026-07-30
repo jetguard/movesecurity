@@ -30,6 +30,9 @@ const MeusDados = lazyWithReload(() => import("./pages/MeusDados"));
 const Logs = lazyWithReload(() => import("./pages/Logs"));
 const Usuarios = lazyWithReload(() => import("./pages/Usuarios"));
 const Riscos = lazyWithReload(() => import("./pages/Riscos"));
+const RiscosCadastroGeral = lazyWithReload(
+  () => import("./pages/RiscosCadastroGeral"),
+);
 const APRs = lazyWithReload(() => import("./pages/APRs"));
 const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
 const Pendencias = lazyWithReload(() => import("./pages/Pendencias"));
@@ -410,6 +413,20 @@ export default function App() {
                   ]}
                 >
                   <Riscos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="riscos/cadastro-geral"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <RiscosCadastroGeral />
                 </ProtectedRoute>
               }
             />

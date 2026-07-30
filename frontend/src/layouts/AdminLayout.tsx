@@ -680,6 +680,10 @@ export default function AdminLayout() {
                     <ShieldAlert size={16} />
                     Análise de Riscos
                   </Link>
+                  <Link to="/riscos/cadastro-geral" className={subItem}>
+                    <Columns3 size={16} />
+                    Cadastro Geral
+                  </Link>
                   <Link to="/aprs" className={subItem}>
                     <FileCheck2 size={16} />
                     APR Operacional

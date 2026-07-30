@@ -838,6 +838,71 @@ model RiscoCatalogo {
   @@index([unidade, status])
 }
 
+model RiscoMacroProcesso {
+  id        Int      @id @default(autoincrement())
+  numero    Int
+  codigo    String   @unique
+  nome      String   @unique
+  status    String   @default("Ativo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  setores RiscoSetor[]
+}
+
+model RiscoSetor {
+  id              Int      @id @default(autoincrement())
+  nome            String
+  macroProcessoId Int
+  status          String   @default("Ativo")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  macroProcesso RiscoMacroProcesso @relation(fields: [macroProcessoId], references: [id], onDelete: Cascade)
+
+  @@unique([nome, macroProcessoId])
+  @@index([macroProcessoId, status])
+}
+
+model RiscoCadastroGeral {
+  id        Int      @id @default(autoincrement())
+  numero    Int
+  codigo    String   @unique
+  nome      String   @unique
+  descricao String?
+  status    String   @default("Ativo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, numero])
+}
+
+model FatorRiscoCadastro {
+  id        Int      @id @default(autoincrement())
+  numero    Int
+  codigo    String   @unique
+  nome      String   @unique
+  descricao String?
+  status    String   @default("Ativo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, numero])
+}
+
+model ControlePreventivoCadastro {
+  id        Int      @id @default(autoincrement())
+  numero    Int
+  codigo    String   @unique
+  nome      String   @unique
+  descricao String?
+  status    String   @default("Ativo")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, numero])
+}
+
 model AprOperacional {
   id                    Int       @id @default(autoincrement())
   numero                Int
