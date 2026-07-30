@@ -521,6 +521,10 @@ export default function AdminLayout() {
                     <FileCheck2 size={16} />
                     POC-SEP-007
                   </Link>
+                  <Link to="/treinamentos-poc-sep-001" className={subItem}>
+                    <FileCheck2 size={16} />
+                    POC-SEP-001
+                  </Link>
                 </div>
               )}
               <Link to="/meus-dados" className={item}>
@@ -556,6 +560,10 @@ export default function AdminLayout() {
                       <Link to="/treinamentos-poc-sep-007" className={subItem}>
                         <FileCheck2 size={16} />
                         POC-SEP-007
+                      </Link>
+                      <Link to="/treinamentos-poc-sep-001" className={subItem}>
+                        <FileCheck2 size={16} />
+                        POC-SEP-001
                       </Link>
                     </div>
                   )}

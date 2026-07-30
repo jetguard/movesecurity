@@ -116,6 +116,26 @@ async function vincularTreinamentosPocSep007(usuario: { id: number; email: strin
   });
 }
 
+async function vincularTreinamentosPocSep001(usuario: { id: number; email: string; cpf?: string | null; cargo?: string | null; setor?: string | null; unidade?: string | null; empresa?: string | null }) {
+  const cpf = limparCpf(usuario.cpf || "");
+  await prisma.treinamentoPocSep001.updateMany({
+    where: {
+      usuarioId: null,
+      OR: [
+        { email: usuario.email },
+        ...(cpf ? [{ cpf }] : []),
+      ],
+    },
+    data: {
+      usuarioId: usuario.id,
+      cargo: usuario.cargo,
+      departamento: usuario.setor,
+      unidade: usuario.unidade,
+      empresa: usuario.empresa || "Movecta S/A",
+    },
+  });
+}
+
 export async function listarUsuarios(req: Request, res: Response) {
   const usuarios = await prisma.usuario.findMany({
     orderBy: {
@@ -201,6 +221,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
     });
 
     await vincularTreinamentosPocSep007(usuario);
+    await vincularTreinamentosPocSep001(usuario);
 
     return res.status(201).json(formatarUsuario(usuario));
   } catch (error) {
@@ -290,6 +311,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
     });
 
     await vincularTreinamentosPocSep007(usuario);
+    await vincularTreinamentosPocSep001(usuario);
 
     return res.json(formatarUsuario(usuario));
   } catch (error) {

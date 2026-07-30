@@ -69,6 +69,9 @@ const TreinamentoTerminalPublico = lazyWithReload(
 const TreinamentoPocSep007Publico = lazyWithReload(
   () => import("./pages/TreinamentoPocSep007Publico"),
 );
+const TreinamentoPocSep001Publico = lazyWithReload(
+  () => import("./pages/TreinamentoPocSep001Publico"),
+);
 const IntegracaoTerminalPublico = lazyWithReload(
   () => import("./pages/IntegracaoTerminalPublico"),
 );
@@ -83,6 +86,9 @@ const TreinamentosTerminal = lazyWithReload(
 );
 const TreinamentosPocSep007 = lazyWithReload(
   () => import("./pages/TreinamentosPocSep007"),
+);
+const TreinamentosPocSep001 = lazyWithReload(
+  () => import("./pages/TreinamentosPocSep001"),
 );
 const IntegracoesTerminal = lazyWithReload(
   () => import("./pages/IntegracoesTerminal"),
@@ -101,6 +107,7 @@ export default function App() {
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
           <Route path="/treinamento-terminal" element={<TreinamentoTerminalPublico />} />
           <Route path="/treinamento-poc-sep-007" element={<TreinamentoPocSep007Publico />} />
+          <Route path="/treinamento-poc-sep-001" element={<TreinamentoPocSep001Publico />} />
           <Route path="/integracao-terminal" element={<IntegracaoTerminalPublico />} />
           <Route path="/integracao-motoristas" element={<IntegracaoTerminalPublico />} />
           <Route path="/validar-certificado/:token" element={<ValidarCertificadoTreinamento />} />
@@ -186,6 +193,21 @@ export default function App() {
                   ]}
                 >
                   <TreinamentosPocSep007 />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="treinamentos-poc-sep-001"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.PORTARIA,
+                  ]}
+                >
+                  <TreinamentosPocSep001 />
                 </ProtectedRoute>
               }
             />

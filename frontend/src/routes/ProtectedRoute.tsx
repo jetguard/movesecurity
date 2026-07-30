@@ -28,6 +28,7 @@ export default function ProtectedRoute({ children, perfis }: Props) {
       "/treinamentos-terminal",
       "/integracoes-do-terminal",
       "/treinamentos-poc-sep-007",
+      "/treinamentos-poc-sep-001",
       "/meus-dados",
       "/perfil",
       "/alterar-senha",
