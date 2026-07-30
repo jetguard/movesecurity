@@ -59,6 +59,9 @@ function normalizarPerfil(perfil: string) {
   const mapa: Record<string, string> = {
     "Super Admin": "SUPER_ADMIN",
     Administrador: "ADMINISTRADOR",
+    Gestor: "GESTOR",
+    Coordenador: "COORDENADOR",
+    Supervisor: "SUPERVISOR",
     Analista: "ANALISTA",
     Operador: "OPERADOR",
     Portaria: "PORTARIA",
@@ -70,6 +73,9 @@ function normalizarPerfil(perfil: string) {
     MANUTENCAO: "TECNICO_MANUTENCAO",
     SUPER_ADMIN: "SUPER_ADMIN",
     ADMINISTRADOR: "ADMINISTRADOR",
+    GESTOR: "GESTOR",
+    COORDENADOR: "COORDENADOR",
+    SUPERVISOR: "SUPERVISOR",
     ANALISTA: "ANALISTA",
     OPERADOR: "OPERADOR",
     PORTARIA: "PORTARIA",
@@ -273,14 +279,12 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       },
     });
     if (existe) {
-      return res
-        .status(400)
-        .json({
-          error:
-            existe.email === email
-              ? "E-mail já cadastrado."
-              : "CPF já cadastrado.",
-        });
+      return res.status(400).json({
+        error:
+          existe.email === email
+            ? "E-mail já cadastrado."
+            : "CPF já cadastrado.",
+      });
     }
 
     const usuario = await prisma.usuario.create({
@@ -452,12 +456,9 @@ export async function redefinirSenhaUsuario(req: AuthRequest, res: Response) {
       usuarioAnterior.perfilAcesso === "SUPER_ADMIN" &&
       req.usuarioPerfil !== "SUPER_ADMIN"
     ) {
-      return res
-        .status(403)
-        .json({
-          error:
-            "Somente Super Admin pode redefinir senha de outro Super Admin.",
-        });
+      return res.status(403).json({
+        error: "Somente Super Admin pode redefinir senha de outro Super Admin.",
+      });
     }
 
     const usuario = await prisma.usuario.update({
@@ -616,11 +617,9 @@ export async function alterarStatusUsuario(req: AuthRequest, res: Response) {
     }
 
     if (usuarioAnterior.perfilAcesso === "SUPER_ADMIN") {
-      return res
-        .status(403)
-        .json({
-          error: "O usuário Super Admin não pode ser bloqueado ou desativado.",
-        });
+      return res.status(403).json({
+        error: "O usuário Super Admin não pode ser bloqueado ou desativado.",
+      });
     }
 
     const usuario = await prisma.usuario.update({
@@ -807,12 +806,10 @@ export async function atualizarPinOperacional(req: AuthRequest, res: Response) {
     }
 
     if (!validarFormatoPin(String(novoPin))) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "O PIN de segurança deve possuir exatamente 4 dígitos numéricos.",
-        });
+      return res.status(400).json({
+        error:
+          "O PIN de segurança deve possuir exatamente 4 dígitos numéricos.",
+      });
     }
 
     const usuario = await prisma.usuario.findUnique({
@@ -840,11 +837,9 @@ export async function atualizarPinOperacional(req: AuthRequest, res: Response) {
       await validarPinOperacional(usuario.id, String(pinAtual));
     } else {
       if (!senhaAtual) {
-        return res
-          .status(400)
-          .json({
-            error: "Informe sua senha atual para criar o PIN de segurança.",
-          });
+        return res.status(400).json({
+          error: "Informe sua senha atual para criar o PIN de segurança.",
+        });
       }
 
       const senhaValida = await bcrypt.compare(

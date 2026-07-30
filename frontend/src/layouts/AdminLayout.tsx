@@ -88,6 +88,13 @@ export default function AdminLayout() {
   const usuario = usuarioAtual();
   const portaria = usuario?.perfilAcesso === PERFIS.PORTARIA;
   const tecnicoManutencao = somenteTecnicoManutencao();
+  const podeVerPainelTreinamentos = [
+    PERFIS.SUPER_ADMIN,
+    PERFIS.ADMINISTRADOR,
+    PERFIS.GESTOR,
+    PERFIS.COORDENADOR,
+    PERFIS.SUPERVISOR,
+  ].includes(usuario?.perfilAcesso || "");
   const rotaTecnicoPermitida =
     location.pathname.startsWith("/cameras") ||
     location.pathname.startsWith("/ordens-servico");
@@ -521,16 +528,18 @@ export default function AdminLayout() {
                     <FileCheck2 size={16} />
                     Integração de Motorista
                   </Link>
-                  {["001", "002", "003", "004", "005", "006", "007"].map((codigo) => (
-                    <Link
-                      key={codigo}
-                      to={`/treinamentos-poc-sep-${codigo}`}
-                      className={subItem}
-                    >
-                      <FileCheck2 size={16} />
-                      POC-SEP-{codigo}
-                    </Link>
-                  ))}
+                  {["001", "002", "003", "004", "005", "006", "007"].map(
+                    (codigo) => (
+                      <Link
+                        key={codigo}
+                        to={`/treinamentos-poc-sep-${codigo}`}
+                        className={subItem}
+                      >
+                        <FileCheck2 size={16} />
+                        POC-SEP-{codigo}
+                      </Link>
+                    ),
+                  )}
                 </div>
               )}
               <Link to="/meus-dados" className={item}>
@@ -565,16 +574,24 @@ export default function AdminLayout() {
                         <FileCheck2 size={16} />
                         Integração de Motorista
                       </Link>
-                      {["001", "002", "003", "004", "005", "006", "007"].map((codigo) => (
-                        <Link
-                          key={codigo}
-                          to={`/treinamentos-poc-sep-${codigo}`}
-                          className={subItem}
-                        >
-                          <FileCheck2 size={16} />
-                          POC-SEP-{codigo}
+                      {podeVerPainelTreinamentos && (
+                        <Link to="/painel-treinamentos" className={subItem}>
+                          <FileBarChart size={16} />
+                          Painel Analítico
                         </Link>
-                      ))}
+                      )}
+                      {["001", "002", "003", "004", "005", "006", "007"].map(
+                        (codigo) => (
+                          <Link
+                            key={codigo}
+                            to={`/treinamentos-poc-sep-${codigo}`}
+                            className={subItem}
+                          >
+                            <FileCheck2 size={16} />
+                            POC-SEP-{codigo}
+                          </Link>
+                        ),
+                      )}
                     </div>
                   )}
                 </>

@@ -1,6 +1,9 @@
 ﻿export const PERFIS = {
   SUPER_ADMIN: "SUPER_ADMIN",
   ADMINISTRADOR: "ADMINISTRADOR",
+  GESTOR: "GESTOR",
+  COORDENADOR: "COORDENADOR",
+  SUPERVISOR: "SUPERVISOR",
   ANALISTA: "ANALISTA",
   OPERADOR: "OPERADOR",
   PORTARIA: "PORTARIA",
@@ -42,8 +45,7 @@ export function temPerfil(perfis: string[]) {
 export const podeAdministrar = () =>
   temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]);
 
-export const podeSuperAdmin = () =>
-  temPerfil([PERFIS.SUPER_ADMIN]);
+export const podeSuperAdmin = () => temPerfil([PERFIS.SUPER_ADMIN]);
 
 export const podeAnalisar = () =>
   temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]);
@@ -55,10 +57,19 @@ export const podeGerenciarRiscos = () =>
   temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]);
 
 export const podeVerNaturezas = () =>
-  temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA, PERFIS.OPERADOR]);
+  temPerfil([
+    PERFIS.SUPER_ADMIN,
+    PERFIS.ADMINISTRADOR,
+    PERFIS.ANALISTA,
+    PERFIS.OPERADOR,
+  ]);
 
 export const podeAtenderManutencao = () =>
-  temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.TECNICO_MANUTENCAO]);
+  temPerfil([
+    PERFIS.SUPER_ADMIN,
+    PERFIS.ADMINISTRADOR,
+    PERFIS.TECNICO_MANUTENCAO,
+  ]);
 
 export const somenteTecnicoManutencao = () =>
   temPerfil([PERFIS.TECNICO_MANUTENCAO]);
@@ -68,15 +79,29 @@ export function unidadesPermitidasUsuario() {
   if (!usuario) return ["GJA-T1"];
 
   if (usuario.perfilAcesso === PERFIS.SUPER_ADMIN) {
-    return ["GJA-T1", "GJA-T2", "ITAJAÍ-SC", "SUAPE-T1", "SUAPE-T2", "ANHANGUERA"];
+    return [
+      "GJA-T1",
+      "GJA-T2",
+      "ITAJAÍ-SC",
+      "SUAPE-T1",
+      "SUAPE-T2",
+      "ANHANGUERA",
+    ];
   }
 
-  const unidades = Array.isArray(usuario.unidadesPermitidas) && usuario.unidadesPermitidas.length > 0
-    ? usuario.unidadesPermitidas
-    : [usuario.unidade || "GJA-T1"];
+  const unidades =
+    Array.isArray(usuario.unidadesPermitidas) &&
+    usuario.unidadesPermitidas.length > 0
+      ? usuario.unidadesPermitidas
+      : [usuario.unidade || "GJA-T1"];
 
-  return Array.from(new Set(unidades.map((unidade) => unidade === "ITAJAI-SC" ? "ITAJAÍ-SC" : unidade)));
+  return Array.from(
+    new Set(
+      unidades.map((unidade) =>
+        unidade === "ITAJAI-SC" ? "ITAJAÍ-SC" : unidade,
+      ),
+    ),
+  );
 }
 
 export const podeTrocarAmbiente = () => unidadesPermitidasUsuario().length > 1;
-

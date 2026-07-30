@@ -2,7 +2,10 @@
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma";
 import { jwtSecret } from "../config/security";
-import { normalizarUnidadesPermitidas, UNIDADES_SISTEMA } from "../config/unidades";
+import {
+  normalizarUnidadesPermitidas,
+  UNIDADES_SISTEMA,
+} from "../config/unidades";
 
 export type AuthRequest = Request & {
   usuarioId?: number;
@@ -30,7 +33,7 @@ function lerCookie(req: Request, nome: string) {
 export async function autenticarUsuario(
   req: AuthRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ) {
   const authHeader = req.headers.authorization;
   const cookieToken = lerCookie(req, "jetguard_access");
@@ -84,7 +87,11 @@ export async function autenticarUsuario(
         },
       });
 
-      if (!sessao || sessao.usuarioId !== usuario.id || sessao.status !== "ATIVA") {
+      if (
+        !sessao ||
+        sessao.usuarioId !== usuario.id ||
+        sessao.status !== "ATIVA"
+      ) {
         return res.status(401).json({
           error: "Sessão encerrada. Faça login novamente.",
           code: "SESSAO_ENCERRADA",
@@ -122,7 +129,10 @@ export async function autenticarUsuario(
     const unidadesPermitidas =
       usuario.perfilAcesso === PERFIS.SUPER_ADMIN
         ? UNIDADES_SISTEMA
-        : normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade);
+        : normalizarUnidadesPermitidas(
+            usuario.unidadesPermitidas,
+            usuario.unidade,
+          );
     req.unidadesPermitidas = unidadesPermitidas;
 
     if (unidadeSolicitada && !unidadesPermitidas.includes(unidadeSolicitada)) {
@@ -131,7 +141,12 @@ export async function autenticarUsuario(
       });
     }
 
-    req.unidadeAtiva = unidadeSolicitada || unidadeSessao || usuario.unidade || unidadesPermitidas[0] || "GJA-T1";
+    req.unidadeAtiva =
+      unidadeSolicitada ||
+      unidadeSessao ||
+      usuario.unidade ||
+      unidadesPermitidas[0] ||
+      "GJA-T1";
 
     if (req.sessaoId && unidadeSolicitada) {
       await prisma.sessaoUsuario.update({
@@ -167,6 +182,9 @@ export function autorizarPerfis(perfisPermitidos: string[]) {
 export const PERFIS = {
   SUPER_ADMIN: "SUPER_ADMIN",
   ADMINISTRADOR: "ADMINISTRADOR",
+  GESTOR: "GESTOR",
+  COORDENADOR: "COORDENADOR",
+  SUPERVISOR: "SUPERVISOR",
   ANALISTA: "ANALISTA",
   OPERADOR: "OPERADOR",
   PORTARIA: "PORTARIA",
@@ -174,12 +192,23 @@ export const PERFIS = {
 };
 
 export const acessoTotal = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR];
-export const acessoAnalise = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA];
+export const acessoAnalise = [
+  PERFIS.SUPER_ADMIN,
+  PERFIS.ADMINISTRADOR,
+  PERFIS.ANALISTA,
+];
 export const acessoTreinamentosTerminal = [
   PERFIS.SUPER_ADMIN,
   PERFIS.ADMINISTRADOR,
   PERFIS.ANALISTA,
   PERFIS.PORTARIA,
+];
+export const acessoPainelTreinamentos = [
+  PERFIS.SUPER_ADMIN,
+  PERFIS.ADMINISTRADOR,
+  PERFIS.GESTOR,
+  PERFIS.COORDENADOR,
+  PERFIS.SUPERVISOR,
 ];
 export const acessoRelatorios = [
   PERFIS.SUPER_ADMIN,
@@ -199,4 +228,3 @@ export const acessoManutencao = [
   PERFIS.ADMINISTRADOR,
   PERFIS.TECNICO_MANUTENCAO,
 ];
-

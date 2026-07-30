@@ -63,6 +63,9 @@ const APIsOpenAI = lazyWithReload(() => import("./pages/APIsOpenAI"));
 const RelatorioDiarioExecutivo = lazyWithReload(
   () => import("./pages/RelatorioDiarioExecutivo"),
 );
+const PainelTreinamentos = lazyWithReload(
+  () => import("./pages/PainelTreinamentos"),
+);
 const TreinamentoTerminalPublico = lazyWithReload(
   () => import("./pages/TreinamentoTerminalPublico"),
 );
@@ -237,6 +240,22 @@ export default function App() {
               }
             />
             <Route path="operacao-soc" element={<OperacaoSOC />} />
+            <Route
+              path="painel-treinamentos"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.GESTOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                  ]}
+                >
+                  <PainelTreinamentos />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="treinamentos-terminal"
               element={
