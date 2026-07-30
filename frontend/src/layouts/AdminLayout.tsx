@@ -521,15 +521,7 @@ export default function AdminLayout() {
                     <FileCheck2 size={16} />
                     Integração de Motorista
                   </Link>
-                  <Link to="/treinamentos-poc-sep-007" className={subItem}>
-                    <FileCheck2 size={16} />
-                    POC-SEP-007
-                  </Link>
-                  <Link to="/treinamentos-poc-sep-001" className={subItem}>
-                    <FileCheck2 size={16} />
-                    POC-SEP-001
-                  </Link>
-                  {["002", "003", "004", "005", "006"].map((codigo) => (
+                  {["001", "002", "003", "004", "005", "006", "007"].map((codigo) => (
                     <Link
                       key={codigo}
                       to={`/treinamentos-poc-sep-${codigo}`}
@@ -573,15 +565,7 @@ export default function AdminLayout() {
                         <FileCheck2 size={16} />
                         Integração de Motorista
                       </Link>
-                      <Link to="/treinamentos-poc-sep-007" className={subItem}>
-                        <FileCheck2 size={16} />
-                        POC-SEP-007
-                      </Link>
-                      <Link to="/treinamentos-poc-sep-001" className={subItem}>
-                        <FileCheck2 size={16} />
-                        POC-SEP-001
-                      </Link>
-                      {["002", "003", "004", "005", "006"].map((codigo) => (
+                      {["001", "002", "003", "004", "005", "006", "007"].map((codigo) => (
                         <Link
                           key={codigo}
                           to={`/treinamentos-poc-sep-${codigo}`}
