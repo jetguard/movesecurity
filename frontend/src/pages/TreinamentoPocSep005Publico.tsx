@@ -51,6 +51,7 @@ const formInicial = {
   cpf: "",
   email: "",
   unidade: "",
+  terceirizado: false,
 };
 
 const secoes: SecaoTreinamento[] = [
@@ -514,8 +515,8 @@ export default function TreinamentoPocSep005Publico() {
     );
   }
 
-  function alterar(nome: keyof typeof formInicial, valor: string) {
-    if (nome === "cpf") valor = mascararCpf(valor);
+  function alterar(nome: keyof typeof formInicial, valor: string | boolean) {
+    if (nome === "cpf") valor = mascararCpf(String(valor));
     setForm((atual) => ({ ...atual, [nome]: valor }));
   }
 
@@ -806,14 +807,14 @@ export default function TreinamentoPocSep005Publico() {
             className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6"
           >
             <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">
-              Acesso corporativo
+              Acesso ao treinamento
             </p>
             <h2 className="mt-2 text-2xl font-black">
               Identifique-se para iniciar
             </h2>
             <p className="mt-2 text-sm font-extrabold leading-6 text-slate-950">
-              Este treinamento é exclusivo para colaboradores da Movecta.
-              Preencha seus dados para iniciar ou continuar.
+              Este treinamento é destinado a colaboradores Movecta e terceiros
+              autorizados. Preencha seus dados para iniciar ou continuar.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className="terminal-label block text-sm font-extrabold">
@@ -844,16 +845,37 @@ export default function TreinamentoPocSep005Publico() {
                 />
               </label>
               <label className="terminal-label block text-sm font-extrabold">
-                E-mail corporativo
+                {form.terceirizado ? "E-mail pessoal" : "E-mail corporativo"}
                 <input
                   value={form.email}
                   onChange={(event) => alterar("email", event.target.value)}
                   onBlur={(event) => buscarCadastro(event.target.value)}
                   type="email"
                   required
-                  placeholder="nome.sobrenome@movecta.com.br"
+                  placeholder={
+                    form.terceirizado
+                      ? "seuemail@exemplo.com"
+                      : "nome.sobrenome@movecta.com.br"
+                  }
                   className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
                 />
+              </label>
+              <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/90 p-4 text-sm font-extrabold text-slate-900 shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={form.terceirizado}
+                  onChange={(event) =>
+                    alterar("terceirizado", event.target.checked)
+                  }
+                  className="mt-1 h-5 w-5 rounded border-blue-300 text-blue-600 accent-blue-600"
+                />
+                <span>
+                  Sou colaborador terceirizado autorizado
+                  <span className="mt-1 block text-xs font-bold text-slate-700">
+                    Marque esta opção para usar e-mail pessoal. Colaboradores
+                    Movecta devem manter o e-mail corporativo.
+                  </span>
+                </span>
               </label>
               <label className="terminal-label block text-sm font-extrabold">
                 Unidade

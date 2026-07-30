@@ -414,20 +414,24 @@ export async function iniciarTreinamentoPocSep004(req: Request, res: Response) {
     const nomeCompleto = texto(req.body.nomeCompleto);
     const cpf = limparCpf(req.body.cpf);
     const unidade = texto(req.body.unidade);
-    if (!dominioMovecta(email)) {
+    const terceirizado = req.body.terceirizado === true;
+    if (!terceirizado && !dominioMovecta(email)) {
       return res.status(403).json({
         error:
-          "Acesso não autorizado.\n\nEste treinamento é exclusivo para colaboradores da Movecta.\n\nUtilize seu e-mail corporativo (@movecta.com.br). Caso ainda não possua acesso, procure o administrador do sistema.",
+          "Acesso não autorizado.\n\nPara colaboradores Movecta, utilize seu e-mail corporativo (@movecta.com.br).\n\nSe você for terceirizado autorizado, marque a opção correspondente e informe um e-mail válido.",
       });
     }
 
-    if (!nomeCompleto || !cpfValido(cpf) || !unidadeValida(unidade)) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Informe nome completo, CPF válido, e-mail corporativo e unidade para iniciar.",
-        });
+    if (
+      !nomeCompleto ||
+      !cpfValido(cpf) ||
+      !emailValido(email) ||
+      !unidadeValida(unidade)
+    ) {
+      return res.status(400).json({
+        error:
+          "Informe nome completo, CPF válido, e-mail válido e unidade para iniciar.",
+      });
     }
 
     const usuario = await prisma.usuario.findFirst({
@@ -454,7 +458,9 @@ export async function iniciarTreinamentoPocSep004(req: Request, res: Response) {
           cargo: usuario?.cargo || existente.cargo,
           departamento: usuario?.setor || existente.departamento,
           unidade,
-          empresa: usuario?.empresa || existente.empresa || "Movecta",
+          empresa: terceirizado
+            ? usuario?.empresa || existente.empresa || "Terceirizado"
+            : usuario?.empresa || existente.empresa || "Movecta",
           ultimoAcessoEm: new Date(),
           navegador: userAgent(req),
         },
@@ -472,7 +478,9 @@ export async function iniciarTreinamentoPocSep004(req: Request, res: Response) {
         cargo: usuario?.cargo,
         departamento: usuario?.setor,
         unidade,
-        empresa: usuario?.empresa || "Movecta",
+        empresa: terceirizado
+          ? usuario?.empresa || "Terceirizado"
+          : usuario?.empresa || "Movecta",
         etapaAtual: 1,
         porcentagem: 0,
         ipInicio: req.ip,
@@ -549,11 +557,9 @@ export async function responderQuizTreinamentoPocSep004(
       respostas.length !== respostasCorretas.length ||
       respostas.some((item) => !Number.isInteger(item))
     ) {
-      return res
-        .status(400)
-        .json({
-          error: "Responda todas as questões para finalizar a avaliação.",
-        });
+      return res.status(400).json({
+        error: "Responda todas as questões para finalizar a avaliação.",
+      });
     }
 
     const treinamento = await prisma.treinamentoPocSep004.findUnique({
@@ -702,12 +708,10 @@ export async function reenviarEmailTreinamentoPocSep004(
     if (!treinamento)
       return res.status(404).json({ error: "Treinamento não encontrado." });
     if (!treinamentoConcluido(treinamento.status) || !treinamento.codigo) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "O e-mail só pode ser reenviado após a conclusão do treinamento.",
-        });
+      return res.status(400).json({
+        error:
+          "O e-mail só pode ser reenviado após a conclusão do treinamento.",
+      });
     }
 
     const certificadoArquivo =

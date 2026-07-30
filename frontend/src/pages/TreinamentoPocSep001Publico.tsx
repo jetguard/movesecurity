@@ -1,7 +1,15 @@
 ﻿import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, ArrowRight, CheckCircle2, Download, FileText, PenLine, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
+  Download,
+  FileText,
+  PenLine,
+  ShieldCheck,
+} from "lucide-react";
 
 type SecaoTreinamento = {
   numero: string;
@@ -43,14 +51,17 @@ const formInicial = {
   cpf: "",
   email: "",
   unidade: "",
+  terceirizado: false,
 };
 
 const secoes: SecaoTreinamento[] = [
   {
     numero: "3",
     titulo: "Definições",
-    objetivo: "Apresentar os principais termos usados no procedimento POC-SEP-001.",
-    resumo: "O procedimento define conceitos como Evento, Ocorrência e Investigação, além das siglas RE, RO, RI, RCA, CCOS, CFTV e demais termos usados nos registros de segurança patrimonial.",
+    objetivo:
+      "Apresentar os principais termos usados no procedimento POC-SEP-001.",
+    resumo:
+      "O procedimento define conceitos como Evento, Ocorrência e Investigação, além das siglas RE, RO, RI, RCA, CCOS, CFTV e demais termos usados nos registros de segurança patrimonial.",
     responsabilidades: [
       "Compreender corretamente cada termo antes de registrar ou comunicar um fato.",
       "Usar a classificação correta para diferenciar evento, ocorrência e investigação.",
@@ -62,13 +73,16 @@ const secoes: SecaoTreinamento[] = [
       "RE significa Relatório de Evento; RO, Relatório de Ocorrência; RI, Relatório de Investigação; RCA, Relatório Cronológico Analítico.",
       "CCOS é o Centro de Controle Operacional de Segurança e CFTV é o circuito fechado de televisão.",
     ],
-    atencao: "A escolha correta entre RE, RO e RI orienta todo o registro, a análise e o encaminhamento do fato.",
+    atencao:
+      "A escolha correta entre RE, RO e RI orienta todo o registro, a análise e o encaminhamento do fato.",
   },
   {
     numero: "4",
     titulo: "Responsabilidades",
-    objetivo: "Identificar o papel de cada função no atendimento, registro e investigação.",
-    resumo: "O procedimento distribui responsabilidades entre Assistente de CFTV, Assistente de Segurança, Líder de Segurança, Supervisor e Coordenador, de acordo com a gravidade e complexidade do fato.",
+    objetivo:
+      "Identificar o papel de cada função no atendimento, registro e investigação.",
+    resumo:
+      "O procedimento distribui responsabilidades entre Assistente de CFTV, Assistente de Segurança, Líder de Segurança, Supervisor e Coordenador, de acordo com a gravidade e complexidade do fato.",
     responsabilidades: [
       "Assistente de CFTV monitora, previne, identifica, sinaliza e registra eventos.",
       "Assistente de Segurança aciona o CCOS, vai ao local, registra, colhe evidências e direciona informações.",
@@ -81,13 +95,16 @@ const secoes: SecaoTreinamento[] = [
       "O Líder de Segurança valida, tipifica e formaliza os relatórios.",
       "Supervisor e Coordenador atuam nos casos de risco elevado e em análises de causa raiz.",
     ],
-    atencao: "Cada função deve atuar dentro de sua responsabilidade para manter rastreabilidade, agilidade e qualidade do registro.",
+    atencao:
+      "Cada função deve atuar dentro de sua responsabilidade para manter rastreabilidade, agilidade e qualidade do registro.",
   },
   {
     numero: "5.1",
     titulo: "Sequência das Atividades",
-    objetivo: "Demonstrar a sequência de tratamento para Evento, Ocorrência e Investigação.",
-    resumo: "A sequência das atividades estabelece quando usar RE, RO ou RI e orienta a elaboração dos registros com neutralidade, narrativa cronológica e base em evidências.",
+    objetivo:
+      "Demonstrar a sequência de tratamento para Evento, Ocorrência e Investigação.",
+    resumo:
+      "A sequência das atividades estabelece quando usar RE, RO ou RI e orienta a elaboração dos registros com neutralidade, narrativa cronológica e base em evidências.",
     responsabilidades: [
       "Registrar fatos com neutralidade descritiva, sem juízo de valor, subjetividade ou adjetivações.",
       "Preservar evidências, metadados e informações classificadas como sigilo corporativo.",
@@ -100,13 +117,15 @@ const secoes: SecaoTreinamento[] = [
       "RO e RI devem respeitar as naturezas previstas no FC-1114; RE permite naturezas livres.",
       "A investigação pode usar Timeline Analysis e Relatório Cronológico Analítico quando necessário.",
     ],
-    atencao: "Dados, evidências e metadados de RE, RO e RI são classificados como Sigilo Corporativo.",
+    atencao:
+      "Dados, evidências e metadados de RE, RO e RI são classificados como Sigilo Corporativo.",
   },
   {
     numero: "5.2",
     titulo: "Identificação da Ocorrência / Evento",
     objetivo: "Orientar como identificar e validar uma ocorrência ou evento.",
-    resumo: "A identificação pode ocorrer por CFTV, ronda ou comunicação de terceiros, seguindo o procedimento de monitoramento e a classificação corporativa.",
+    resumo:
+      "A identificação pode ocorrer por CFTV, ronda ou comunicação de terceiros, seguindo o procedimento de monitoramento e a classificação corporativa.",
     responsabilidades: [
       "Validar o fato por imagem, testemunho, relato, constatação ou evidência de danos.",
       "Classificar o registro conforme o FC-1114 quando aplicável.",
@@ -117,13 +136,15 @@ const secoes: SecaoTreinamento[] = [
       "A classificação adequada evita registros incompletos ou direcionamentos incorretos.",
       "A evidência deve sustentar o registro e o encaminhamento.",
     ],
-    atencao: "Não registre conclusões sem evidência suficiente; valide o fato antes de classificar e encaminhar.",
+    atencao:
+      "Não registre conclusões sem evidência suficiente; valide o fato antes de classificar e encaminhar.",
   },
   {
     numero: "5.3",
     titulo: "Comunicação",
     objetivo: "Padronizar a comunicação imediata dos fatos identificados.",
-    resumo: "Após identificar o fato, a equipe deve comunicar imediatamente o CCOS, informar a liderança e acionar recursos internos ou externos conforme a gravidade.",
+    resumo:
+      "Após identificar o fato, a equipe deve comunicar imediatamente o CCOS, informar a liderança e acionar recursos internos ou externos conforme a gravidade.",
     responsabilidades: [
       "Informar o CCOS imediatamente.",
       "Comunicar o Líder de Segurança.",
@@ -134,13 +155,16 @@ const secoes: SecaoTreinamento[] = [
       "O acionamento deve considerar a gravidade e a natureza do fato.",
       "A liderança deve ser mantida informada para coordenação das ações.",
     ],
-    atencao: "Em situações críticas, a demora na comunicação pode ampliar impactos operacionais, patrimoniais e pessoais.",
+    atencao:
+      "Em situações críticas, a demora na comunicação pode ampliar impactos operacionais, patrimoniais e pessoais.",
   },
   {
     numero: "5.4",
     titulo: "Registro",
-    objetivo: "Definir as informações mínimas para registrar eventos, ocorrências e investigações.",
-    resumo: "O registro deve conter dados objetivos, descrição detalhada, ações realizadas, evidências e assinatura eletrônica ou manual, com envio aos interessados.",
+    objetivo:
+      "Definir as informações mínimas para registrar eventos, ocorrências e investigações.",
+    resumo:
+      "O registro deve conter dados objetivos, descrição detalhada, ações realizadas, evidências e assinatura eletrônica ou manual, com envio aos interessados.",
     responsabilidades: [
       "Registrar data, horário, local, classificação e pessoas envolvidas.",
       "Descrever os fatos de forma detalhada e cronológica.",
@@ -151,13 +175,15 @@ const secoes: SecaoTreinamento[] = [
       "As ações tomadas devem ser registradas.",
       "O registro deve ser enviado aos interessados conforme necessidade.",
     ],
-    atencao: "Registro incompleto compromete a rastreabilidade, a análise e as tratativas posteriores.",
+    atencao:
+      "Registro incompleto compromete a rastreabilidade, a análise e as tratativas posteriores.",
   },
   {
     numero: "5.5",
     titulo: "Classificação da Ocorrência / Evento",
     objetivo: "Apresentar os níveis P1, P2, P3 e P4 previstos no procedimento.",
-    resumo: "A classificação orienta prioridade, acionamento e encaminhamento conforme impacto, gravidade, risco e criticidade do fato.",
+    resumo:
+      "A classificação orienta prioridade, acionamento e encaminhamento conforme impacto, gravidade, risco e criticidade do fato.",
     responsabilidades: [
       "Classificar corretamente a severidade do fato.",
       "Usar a classificação para orientar comunicação, acionamento e encaminhamento.",
@@ -168,13 +194,16 @@ const secoes: SecaoTreinamento[] = [
       "P3 Moderada / Média envolve desvios de conduta, falhas técnicas pontuais ou baixo potencial de propagação.",
       "P4 Baixa / Rotineira envolve anomalias operacionais sem danos ativos, registros informativos ou falhas estéticas.",
     ],
-    atencao: "A classificação incorreta pode atrasar acionamentos ou gerar escalonamento inadequado.",
+    atencao:
+      "A classificação incorreta pode atrasar acionamentos ou gerar escalonamento inadequado.",
   },
   {
     numero: "5.6",
     titulo: "Encaminhamento",
-    objetivo: "Definir quem deve ser acionado conforme a classificação do fato.",
-    resumo: "O encaminhamento segue o nível de criticidade, desde tratamento pela própria equipe até acionamento de coordenação, gerência, lideranças e autoridades externas.",
+    objetivo:
+      "Definir quem deve ser acionado conforme a classificação do fato.",
+    resumo:
+      "O encaminhamento segue o nível de criticidade, desde tratamento pela própria equipe até acionamento de coordenação, gerência, lideranças e autoridades externas.",
     responsabilidades: [
       "Baixa / Rotineira: tratar pela própria equipe de segurança.",
       "Moderada / Média: acionar Líder de Segurança e líderes dos departamentos envolvidos.",
@@ -186,13 +215,16 @@ const secoes: SecaoTreinamento[] = [
       "Nas unidades do Sul, as funções de Supervisor e Coordenador Regional se aplicam ao Líder.",
       "O nível de criticidade define a cadeia de comunicação.",
     ],
-    atencao: "Encaminhe o registro ao nível correto para garantir resposta proporcional ao risco.",
+    atencao:
+      "Encaminhe o registro ao nível correto para garantir resposta proporcional ao risco.",
   },
   {
     numero: "5.7",
     titulo: "Encerramento",
-    objetivo: "Orientar como formalizar o encerramento e responsabilização dos registros.",
-    resumo: "RO e RI devem ser encaminhados formalmente aos gestores das unidades impactadas, que assumem as tratativas corretivas, administrativas ou judiciais cabíveis.",
+    objetivo:
+      "Orientar como formalizar o encerramento e responsabilização dos registros.",
+    resumo:
+      "RO e RI devem ser encaminhados formalmente aos gestores das unidades impactadas, que assumem as tratativas corretivas, administrativas ou judiciais cabíveis.",
     responsabilidades: [
       "Encaminhar formalmente RO e RI aos gestores impactados.",
       "Direcionar casos com danos ao patrimônio e autoria identificada ao Departamento de Seguros.",
@@ -203,13 +235,16 @@ const secoes: SecaoTreinamento[] = [
       "O Departamento de Seguros trata ressarcimento, sub-rogação, liquidação de sinistros, provisionamento e recuperação de custos.",
       "Todos os relatórios devem permanecer arquivados de forma controlada.",
     ],
-    atencao: "O encerramento não elimina a necessidade de ações corretivas, administrativas, judiciais ou de recuperação de custos.",
+    atencao:
+      "O encerramento não elimina a necessidade de ações corretivas, administrativas, judiciais ou de recuperação de custos.",
   },
   {
     numero: "5.8",
     titulo: "Indicadores de Controle",
-    objetivo: "Apresentar os indicadores usados para monitorar eventos e ocorrências.",
-    resumo: "Os indicadores permitem acompanhar volume, tempo de resposta, perdas, recuperação, reincidência e concentração de incidentes por área ou região.",
+    objetivo:
+      "Apresentar os indicadores usados para monitorar eventos e ocorrências.",
+    resumo:
+      "Os indicadores permitem acompanhar volume, tempo de resposta, perdas, recuperação, reincidência e concentração de incidentes por área ou região.",
     responsabilidades: [
       "Monitorar número de ocorrências por mês.",
       "Acompanhar tempo médio de resposta.",
@@ -221,13 +256,16 @@ const secoes: SecaoTreinamento[] = [
       "A reincidência ajuda a identificar vulnerabilidades.",
       "Áreas com maior concentração de eventos exigem atenção gerencial.",
     ],
-    atencao: "Indicadores devem apoiar decisões e ações preventivas, não apenas registro estatístico.",
+    atencao:
+      "Indicadores devem apoiar decisões e ações preventivas, não apenas registro estatístico.",
   },
   {
     numero: "5.9",
     titulo: "Conclusão",
-    objetivo: "Reforçar os resultados esperados com a aplicação do procedimento.",
-    resumo: "A aplicação do POC-SEP-001 busca otimizar a eficiência operacional, aumentar transparência e auditabilidade, fortalecer a resiliência e mitigar riscos reputacionais.",
+    objetivo:
+      "Reforçar os resultados esperados com a aplicação do procedimento.",
+    resumo:
+      "A aplicação do POC-SEP-001 busca otimizar a eficiência operacional, aumentar transparência e auditabilidade, fortalecer a resiliência e mitigar riscos reputacionais.",
     responsabilidades: [
       "Aplicar o procedimento de forma consistente.",
       "Manter registros completos, rastreáveis e auditáveis.",
@@ -238,24 +276,40 @@ const secoes: SecaoTreinamento[] = [
       "A padronização melhora a qualidade da análise e do encerramento.",
       "A rastreabilidade dos registros apoia decisões estratégicas e jurídicas.",
     ],
-    atencao: "O procedimento deve ser seguido para garantir eficiência, transparência, resiliência e conformidade.",
+    atencao:
+      "O procedimento deve ser seguido para garantir eficiência, transparência, resiliência e conformidade.",
   },
 ];
 
 const quizBase: PerguntaQuiz[] = [
   {
     pergunta: "O que é um Evento conforme o POC-SEP-001?",
-    opcoes: ["Um fato que pode comprometer a segurança física, patrimonial, operacional ou de pessoas no terminal", "Um relatório usado somente pelo Departamento de Seguros", "Uma investigação concluída por autoridade externa", "Uma falha estética sem necessidade de registro"],
+    opcoes: [
+      "Um fato que pode comprometer a segurança física, patrimonial, operacional ou de pessoas no terminal",
+      "Um relatório usado somente pelo Departamento de Seguros",
+      "Uma investigação concluída por autoridade externa",
+      "Uma falha estética sem necessidade de registro",
+    ],
     correta: 0,
   },
   {
     pergunta: "Quando um fato deve ser tratado como Ocorrência?",
-    opcoes: ["Quando for apenas uma observação sem impacto", "Quando houver desvio dos padrões, impacto real ou potencial aos ativos e necessidade de análise, registro e resposta", "Quando não houver evidência ou relato", "Quando envolver somente estatística mensal"],
+    opcoes: [
+      "Quando for apenas uma observação sem impacto",
+      "Quando houver desvio dos padrões, impacto real ou potencial aos ativos e necessidade de análise, registro e resposta",
+      "Quando não houver evidência ou relato",
+      "Quando envolver somente estatística mensal",
+    ],
     correta: 1,
   },
   {
     pergunta: "Qual é a finalidade da Investigação?",
-    opcoes: ["Substituir todos os registros de evento", "Registrar visitas e acessos de rotina", "Elucidar dinâmica, autoria, materialidade, causas, vulnerabilidades e extensão dos danos com base em evidências", "Emitir crachá provisório"],
+    opcoes: [
+      "Substituir todos os registros de evento",
+      "Registrar visitas e acessos de rotina",
+      "Elucidar dinâmica, autoria, materialidade, causas, vulnerabilidades e extensão dos danos com base em evidências",
+      "Emitir crachá provisório",
+    ],
     correta: 2,
   },
   {
@@ -264,58 +318,112 @@ const quizBase: PerguntaQuiz[] = [
     correta: 0,
   },
   {
-    pergunta: "Qual função monitora, previne, identifica e sinaliza ocorrências pelo CFTV?",
-    opcoes: ["Coordenador", "Assistente de CFTV", "Departamento de Seguros", "Gestor da unidade impactada"],
+    pergunta:
+      "Qual função monitora, previne, identifica e sinaliza ocorrências pelo CFTV?",
+    opcoes: [
+      "Coordenador",
+      "Assistente de CFTV",
+      "Departamento de Seguros",
+      "Gestor da unidade impactada",
+    ],
     correta: 1,
   },
   {
     pergunta: "Qual responsabilidade pertence ao Assistente de Segurança?",
-    opcoes: ["Definir sozinho a estratégia jurídica", "Acionar o CCOS, ir ao local, registrar, colher evidências e direcionar informações", "Eliminar a necessidade de evidências", "Criar indicadores financeiros"],
+    opcoes: [
+      "Definir sozinho a estratégia jurídica",
+      "Acionar o CCOS, ir ao local, registrar, colher evidências e direcionar informações",
+      "Eliminar a necessidade de evidências",
+      "Criar indicadores financeiros",
+    ],
     correta: 1,
   },
   {
-    pergunta: "Na sequência das atividades, qual relatório é usado para investigação?",
+    pergunta:
+      "Na sequência das atividades, qual relatório é usado para investigação?",
     opcoes: ["RE", "RO", "RI", "PAM"],
     correta: 2,
   },
   {
     pergunta: "Qual prática é vedada na elaboração dos relatórios?",
-    opcoes: ["Narrativa cronológica", "Evidências materiais", "Juízo de valor, subjetividade e adjetivações", "Neutralidade descritiva"],
+    opcoes: [
+      "Narrativa cronológica",
+      "Evidências materiais",
+      "Juízo de valor, subjetividade e adjetivações",
+      "Neutralidade descritiva",
+    ],
     correta: 2,
   },
   {
-    pergunta: "A identificação de ocorrência ou evento pode ocorrer por quais meios?",
-    opcoes: ["CFTV, ronda ou comunicação de terceiros", "Somente por e-mail externo", "Somente após conclusão de investigação", "Apenas por relatório mensal"],
+    pergunta:
+      "A identificação de ocorrência ou evento pode ocorrer por quais meios?",
+    opcoes: [
+      "CFTV, ronda ou comunicação de terceiros",
+      "Somente por e-mail externo",
+      "Somente após conclusão de investigação",
+      "Apenas por relatório mensal",
+    ],
     correta: 0,
   },
   {
-    pergunta: "Após identificar um fato, quem deve ser informado imediatamente?",
-    opcoes: ["Somente o Departamento de Seguros", "O CCOS", "Apenas a Receita Federal", "Somente o setor de compras"],
+    pergunta:
+      "Após identificar um fato, quem deve ser informado imediatamente?",
+    opcoes: [
+      "Somente o Departamento de Seguros",
+      "O CCOS",
+      "Apenas a Receita Federal",
+      "Somente o setor de compras",
+    ],
     correta: 1,
   },
   {
     pergunta: "Qual informação deve constar no registro?",
-    opcoes: ["Somente o nome do comunicante", "Data, horário, local, classificação, pessoas envolvidas, descrição, ações tomadas, fotos e assinatura quando aplicável", "Apenas a classificação P1 a P4", "Somente o número do formulário"],
+    opcoes: [
+      "Somente o nome do comunicante",
+      "Data, horário, local, classificação, pessoas envolvidas, descrição, ações tomadas, fotos e assinatura quando aplicável",
+      "Apenas a classificação P1 a P4",
+      "Somente o número do formulário",
+    ],
     correta: 1,
   },
   {
     pergunta: "O que caracteriza P1 Crítica / Emergencial?",
-    opcoes: ["Falha estética sem dano ativo", "Ameaça imediata à vida, sinistros de alto valor ou interrupção total das operações ou infraestrutura crítica", "Evento informativo sem impacto", "Desvio de baixo potencial de propagação"],
+    opcoes: [
+      "Falha estética sem dano ativo",
+      "Ameaça imediata à vida, sinistros de alto valor ou interrupção total das operações ou infraestrutura crítica",
+      "Evento informativo sem impacto",
+      "Desvio de baixo potencial de propagação",
+    ],
     correta: 1,
   },
   {
     pergunta: "O que caracteriza P4 Baixa / Rotineira?",
-    opcoes: ["Ameaça imediata à vida", "Danos significativos ao patrimônio", "Anomalias operacionais sem danos ativos, registros informativos ou falhas estéticas", "Violação grave de perímetro com alta severidade"],
+    opcoes: [
+      "Ameaça imediata à vida",
+      "Danos significativos ao patrimônio",
+      "Anomalias operacionais sem danos ativos, registros informativos ou falhas estéticas",
+      "Violação grave de perímetro com alta severidade",
+    ],
     correta: 2,
   },
   {
     pergunta: "Quem deve ser acionado em ocorrência Moderada / Média?",
-    opcoes: ["Somente a própria equipe de segurança", "Apenas o Departamento de Seguros", "Líder de Segurança e líderes dos departamentos envolvidos", "Somente órgãos externos"],
+    opcoes: [
+      "Somente a própria equipe de segurança",
+      "Apenas o Departamento de Seguros",
+      "Líder de Segurança e líderes dos departamentos envolvidos",
+      "Somente órgãos externos",
+    ],
     correta: 2,
   },
   {
     pergunta: "Qual indicador de controle é previsto no procedimento?",
-    opcoes: ["Quantidade de refeições por turno", "Número de ocorrências por mês", "Volume de containers carregados", "Número de crachás emitidos por visitante"],
+    opcoes: [
+      "Quantidade de refeições por turno",
+      "Número de ocorrências por mês",
+      "Volume de containers carregados",
+      "Número de crachás emitidos por visitante",
+    ],
     correta: 1,
   },
 ];
@@ -343,17 +451,25 @@ function cpfValido(cpf: string) {
     const soma = digitos
       .slice(0, tamanho)
       .split("")
-      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+      .reduce(
+        (total, numero, index) =>
+          total + Number(numero) * (tamanho + 1 - index),
+        0,
+      );
     const resto = (soma * 10) % 11;
     return resto === 10 ? 0 : resto;
   };
 
-  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+  return (
+    calcularDigito(9) === Number(digitos[9]) &&
+    calcularDigito(10) === Number(digitos[10])
+  );
 }
 
 function emailValido(email: string) {
   const normalizado = email.trim();
-  if (!normalizado || normalizado.length > 254 || normalizado.includes("..")) return false;
+  if (!normalizado || normalizado.length > 254 || normalizado.includes(".."))
+    return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
 }
 
@@ -362,8 +478,16 @@ function embaralhar<T>(itens: T[]) {
 }
 
 function embaralharQuiz(perguntas: PerguntaQuiz[]) {
-  return embaralhar(perguntas.map((pergunta, baseIndex) => ({ ...pergunta, baseIndex }))).map((pergunta) => {
-    const opcoes = embaralhar(pergunta.opcoes.map((texto, index) => ({ texto, correta: index === pergunta.correta, originalIndex: index })));
+  return embaralhar(
+    perguntas.map((pergunta, baseIndex) => ({ ...pergunta, baseIndex })),
+  ).map((pergunta) => {
+    const opcoes = embaralhar(
+      pergunta.opcoes.map((texto, index) => ({
+        texto,
+        correta: index === pergunta.correta,
+        originalIndex: index,
+      })),
+    );
     return {
       pergunta: pergunta.pergunta,
       opcoes: opcoes.map((opcao) => opcao.texto),
@@ -377,16 +501,24 @@ function embaralharQuiz(perguntas: PerguntaQuiz[]) {
 export default function TreinamentoPocSep001Publico() {
   const [quiz] = useState(() => embaralharQuiz(quizBase));
   const [indiceSecao, setIndiceSecao] = useState(0);
-  const [respostas, setRespostas] = useState<Array<number | null>>(() => quiz.map(() => null));
+  const [respostas, setRespostas] = useState<Array<number | null>>(() =>
+    quiz.map(() => null),
+  );
   const [indicePerguntaQuiz, setIndicePerguntaQuiz] = useState(0);
   const [mostrarResultado, setMostrarResultado] = useState(false);
   const [form, setForm] = useState(formInicial);
   const [unidades, setUnidades] = useState<string[]>([]);
-  const [treinamento, setTreinamento] = useState<RegistroTreinamento | null>(null);
+  const [treinamento, setTreinamento] = useState<RegistroTreinamento | null>(
+    null,
+  );
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [buscandoCadastro, setBuscandoCadastro] = useState(false);
-  const [resultadoQuiz, setResultadoQuiz] = useState<{ aprovado: boolean; nota: number; acertos: number } | null>(null);
+  const [resultadoQuiz, setResultadoQuiz] = useState<{
+    aprovado: boolean;
+    nota: number;
+    acertos: number;
+  } | null>(null);
   const [assinaturaVazia, setAssinaturaVazia] = useState(true);
   const [assinando, setAssinando] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -402,7 +534,9 @@ export default function TreinamentoPocSep001Publico() {
     axios
       .get("/api/public/treinamento-poc-sep-001/unidades")
       .then((response) => {
-        const lista = Array.isArray(response.data?.unidades) ? response.data.unidades : [];
+        const lista = Array.isArray(response.data?.unidades)
+          ? response.data.unidades
+          : [];
         setUnidades(lista);
         setForm((atual) => ({ ...atual, unidade: atual.unidade || "" }));
       })
@@ -410,7 +544,12 @@ export default function TreinamentoPocSep001Publico() {
   }, []);
 
   const acertos = useMemo(
-    () => respostas.reduce<number>((total, resposta, index) => total + (resposta === quiz[index].correta ? 1 : 0), 0),
+    () =>
+      respostas.reduce<number>(
+        (total, resposta, index) =>
+          total + (resposta === quiz[index].correta ? 1 : 0),
+        0,
+      ),
     [respostas],
   );
 
@@ -427,11 +566,13 @@ export default function TreinamentoPocSep001Publico() {
   }
 
   function selecionarResposta(pergunta: number, opcao: number) {
-    setRespostas((atuais) => atuais.map((item, index) => (index === pergunta ? opcao : item)));
+    setRespostas((atuais) =>
+      atuais.map((item, index) => (index === pergunta ? opcao : item)),
+    );
   }
 
-  function alterar(nome: keyof typeof formInicial, valor: string) {
-    if (nome === "cpf") valor = mascararCpf(valor);
+  function alterar(nome: keyof typeof formInicial, valor: string | boolean) {
+    if (nome === "cpf") valor = mascararCpf(String(valor));
     setForm((atual) => ({ ...atual, [nome]: valor }));
   }
 
@@ -444,9 +585,12 @@ export default function TreinamentoPocSep001Publico() {
 
     setBuscandoCadastro(true);
     try {
-      const response = await axios.get("/api/public/treinamento-poc-sep-001/participante", {
-        params: { identificador: valor },
-      });
+      const response = await axios.get(
+        "/api/public/treinamento-poc-sep-001/participante",
+        {
+          params: { identificador: valor },
+        },
+      );
       const participante = response.data?.participante;
       if (!participante) return;
 
@@ -457,7 +601,9 @@ export default function TreinamentoPocSep001Publico() {
         email: participante.email || atual.email,
         unidade: participante.unidade || atual.unidade,
       }));
-      setMensagem("Cadastro localizado no JetGuard. Confira os dados e inicie o treinamento.");
+      setMensagem(
+        "Cadastro localizado no JetGuard. Confira os dados e inicie o treinamento.",
+      );
     } catch {
       return;
     } finally {
@@ -486,19 +632,39 @@ export default function TreinamentoPocSep001Publico() {
     setCarregando(true);
     setMensagem("");
     try {
-      const response = await axios.post("/api/public/treinamento-poc-sep-001/iniciar", form);
+      const response = await axios.post(
+        "/api/public/treinamento-poc-sep-001/iniciar",
+        form,
+      );
       const registro = response.data.treinamento as RegistroTreinamento;
       setTreinamento(registro);
       if (registro.nota !== null && registro.nota !== undefined) {
-        const acertosEstimados = Math.round((Number(registro.nota) / 100) * quiz.length);
+        const acertosEstimados = Math.round(
+          (Number(registro.nota) / 100) * quiz.length,
+        );
         const aprovado = Number(registro.nota) >= 80;
-        setResultadoQuiz({ aprovado, nota: Number(registro.nota), acertos: acertosEstimados });
-        setIndiceSecao(registro.certificadoUrl ? indiceAssinatura : aprovado ? indiceAssinatura : indiceResultado);
+        setResultadoQuiz({
+          aprovado,
+          nota: Number(registro.nota),
+          acertos: acertosEstimados,
+        });
+        setIndiceSecao(
+          registro.certificadoUrl
+            ? indiceAssinatura
+            : aprovado
+              ? indiceAssinatura
+              : indiceResultado,
+        );
       } else {
-        setIndiceSecao(Math.max(0, Math.min(secoes.length, (registro.etapaAtual || 1) - 1)));
+        setIndiceSecao(
+          Math.max(0, Math.min(secoes.length, (registro.etapaAtual || 1) - 1)),
+        );
       }
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível iniciar o treinamento.");
+      setMensagem(
+        error.response?.data?.error ||
+          "Não foi possível iniciar o treinamento.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -509,13 +675,18 @@ export default function TreinamentoPocSep001Publico() {
     setCarregando(true);
     setMensagem("");
     try {
-      const response = await axios.put(`/api/public/treinamento-poc-sep-001/${treinamento.token}/etapa`, {
-        etapa: indiceSecao + 1,
-      });
+      const response = await axios.put(
+        `/api/public/treinamento-poc-sep-001/${treinamento.token}/etapa`,
+        {
+          etapa: indiceSecao + 1,
+        },
+      );
       setTreinamento(response.data.treinamento);
       avancar();
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível salvar a etapa.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível salvar a etapa.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -525,7 +696,12 @@ export default function TreinamentoPocSep001Publico() {
     if (!treinamento) return;
     if (respostas.some((resposta) => resposta === null)) {
       setMostrarResultado(true);
-      setIndicePerguntaQuiz(Math.max(0, respostas.findIndex((resposta) => resposta === null)));
+      setIndicePerguntaQuiz(
+        Math.max(
+          0,
+          respostas.findIndex((resposta) => resposta === null),
+        ),
+      );
       setMensagem("Responda todas as questões antes de validar.");
       return;
     }
@@ -535,22 +711,39 @@ export default function TreinamentoPocSep001Publico() {
       const respostasOriginais = quizBase.map<number | null>(() => null);
       respostas.forEach((resposta, perguntaIndex) => {
         const pergunta = quiz[perguntaIndex];
-        if (resposta !== null) respostasOriginais[pergunta.baseIndex] = pergunta.opcoesOriginais[resposta];
+        if (resposta !== null)
+          respostasOriginais[pergunta.baseIndex] =
+            pergunta.opcoesOriginais[resposta];
       });
-      const response = await axios.post(`/api/public/treinamento-poc-sep-001/${treinamento.token}/quiz`, {
-        respostas: respostasOriginais,
+      const response = await axios.post(
+        `/api/public/treinamento-poc-sep-001/${treinamento.token}/quiz`,
+        {
+          respostas: respostasOriginais,
+        },
+      );
+      setResultadoQuiz({
+        aprovado: response.data.aprovado,
+        nota: response.data.nota,
+        acertos: response.data.acertos,
       });
-      setResultadoQuiz({ aprovado: response.data.aprovado, nota: response.data.nota, acertos: response.data.acertos });
       setTreinamento(response.data.treinamento);
       setMostrarResultado(true);
       setIndiceSecao(indiceResultado);
       if (!response.data.aprovado) {
-        const primeiraIncorreta = respostas.findIndex((resposta, index) => resposta !== quiz[index].correta);
+        const primeiraIncorreta = respostas.findIndex(
+          (resposta, index) => resposta !== quiz[index].correta,
+        );
         setIndicePerguntaQuiz(Math.max(0, primeiraIncorreta));
       }
-      setMensagem(response.data.aprovado ? "Você atingiu a nota mínima. Avance para assinatura e emissão do certificado." : "Você não atingiu a nota mínima de 80%. Revise as perguntas e tente novamente.");
+      setMensagem(
+        response.data.aprovado
+          ? "Você atingiu a nota mínima. Avance para assinatura e emissão do certificado."
+          : "Você não atingiu a nota mínima de 80%. Revise as perguntas e tente novamente.",
+      );
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível validar a avaliação.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível validar a avaliação.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -621,13 +814,18 @@ export default function TreinamentoPocSep001Publico() {
     setCarregando(true);
     setMensagem("");
     try {
-      const response = await axios.post(`/api/public/treinamento-poc-sep-001/${treinamento.token}/concluir`, {
-        assinaturaDataUrl: canvasRef.current.toDataURL("image/png"),
-      });
+      const response = await axios.post(
+        `/api/public/treinamento-poc-sep-001/${treinamento.token}/concluir`,
+        {
+          assinaturaDataUrl: canvasRef.current.toDataURL("image/png"),
+        },
+      );
       setTreinamento(response.data.treinamento);
       setMensagem(response.data.mensagem || "Certificado emitido com sucesso.");
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível emitir o certificado.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível emitir o certificado.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -637,32 +835,51 @@ export default function TreinamentoPocSep001Publico() {
     <main className="treinamento-terminal-publico relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
       <picture className="fixed inset-0 z-0 block h-full w-full">
         <source media="(min-width: 768px)" srcSet={fundoDesktopUrl} />
-        <img src={fundoMobileUrl} alt="" aria-hidden="true" className="h-full w-full object-cover object-center" />
+        <img
+          src={fundoMobileUrl}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover object-center"
+        />
       </picture>
       <div className="fixed inset-0 z-0 bg-white/45" />
 
       <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
         <div className="terminal-panel mb-5 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 shadow-xl sm:mb-8 sm:px-5 sm:py-4">
           <div>
-            <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">POC-SEP-001</p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">Atendimento e Registros de Eventos, Ocorrências e Investigações</h1>
+            <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">
+              POC-SEP-001
+            </p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+              Atendimento e Registros de Eventos, Ocorrências e Investigações
+            </h1>
           </div>
           <ShieldCheck className="h-9 w-9 shrink-0 text-blue-600 sm:h-10 sm:w-10" />
         </div>
 
         {!treinamento && (
-          <form onSubmit={iniciar} className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
-            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Acesso corporativo</p>
-            <h2 className="mt-2 text-2xl font-black">Identifique-se para iniciar</h2>
+          <form
+            onSubmit={iniciar}
+            className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6"
+          >
+            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">
+              Acesso ao treinamento
+            </p>
+            <h2 className="mt-2 text-2xl font-black">
+              Identifique-se para iniciar
+            </h2>
             <p className="mt-2 text-sm font-extrabold leading-6 text-slate-950">
-              Este treinamento é exclusivo para colaboradores da Movecta. Preencha seus dados para iniciar ou continuar.
+              Este treinamento é destinado a colaboradores Movecta e terceiros
+              autorizados. Preencha seus dados para iniciar ou continuar.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <label className="terminal-label block text-sm font-extrabold">
                 Nome completo
                 <input
                   value={form.nomeCompleto}
-                  onChange={(event) => alterar("nomeCompleto", event.target.value)}
+                  onChange={(event) =>
+                    alterar("nomeCompleto", event.target.value)
+                  }
                   required
                   placeholder="Digite seu nome completo"
                   className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
@@ -684,17 +901,39 @@ export default function TreinamentoPocSep001Publico() {
                 />
               </label>
               <label className="terminal-label block text-sm font-extrabold">
-                E-mail corporativo
+                {form.terceirizado ? "E-mail pessoal" : "E-mail corporativo"}
                 <input
                   value={form.email}
                   onChange={(event) => alterar("email", event.target.value)}
                   onBlur={(event) => buscarCadastro(event.target.value)}
                   type="email"
                   required
-                  placeholder="nome.sobrenome@movecta.com.br"
+                  placeholder={
+                    form.terceirizado
+                      ? "seuemail@exemplo.com"
+                      : "nome.sobrenome@movecta.com.br"
+                  }
                   className="terminal-input mt-2.5 w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition"
                 />
               </label>
+              <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50/90 p-4 text-sm font-extrabold text-slate-900 shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={form.terceirizado}
+                  onChange={(event) =>
+                    alterar("terceirizado", event.target.checked)
+                  }
+                  className="mt-1 h-5 w-5 rounded border-blue-300 text-blue-600 accent-blue-600"
+                />
+                <span>
+                  Sou colaborador terceirizado autorizado
+                  <span className="mt-1 block text-xs font-bold text-slate-700">
+                    Marque esta opção para usar e-mail pessoal. Colaboradores
+                    Movecta devem manter o e-mail corporativo.
+                  </span>
+                </span>
+              </label>
+
               <label className="terminal-label block text-sm font-extrabold">
                 Unidade
                 <select
@@ -712,9 +951,20 @@ export default function TreinamentoPocSep001Publico() {
                 </select>
               </label>
             </div>
-            {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
-            {buscandoCadastro && <p className="mt-3 text-sm font-black text-blue-700">Consultando cadastro no JetGuard...</p>}
-            <button disabled={carregando} className="terminal-primary-action mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
+            {mensagem && (
+              <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">
+                {mensagem}
+              </div>
+            )}
+            {buscandoCadastro && (
+              <p className="mt-3 text-sm font-black text-blue-700">
+                Consultando cadastro no JetGuard...
+              </p>
+            )}
+            <button
+              disabled={carregando}
+              className="terminal-primary-action mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto"
+            >
               {carregando ? "Validando..." : "Iniciar treinamento"}
             </button>
           </form>
@@ -722,67 +972,92 @@ export default function TreinamentoPocSep001Publico() {
 
         {treinamento && (
           <div className="terminal-info-card mb-5 rounded-xl border p-4 text-sm font-bold shadow-sm">
-            <p className="font-black text-slate-950">{treinamento.nomeCompleto}</p>
-            <p>{treinamento.cpf || "-"} | {treinamento.email}</p>
-            <p>{treinamento.cargo || "-"} | {treinamento.departamento || "-"} | {treinamento.unidade || "-"}</p>
+            <p className="font-black text-slate-950">
+              {treinamento.nomeCompleto}
+            </p>
+            <p>
+              {treinamento.cpf || "-"} | {treinamento.email}
+            </p>
+            <p>
+              {treinamento.cargo || "-"} | {treinamento.departamento || "-"} |{" "}
+              {treinamento.unidade || "-"}
+            </p>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-200">
-              <div className="h-full rounded-full bg-blue-600" style={{ width: `${treinamento.porcentagem}%` }} />
+              <div
+                className="h-full rounded-full bg-blue-600"
+                style={{ width: `${treinamento.porcentagem}%` }}
+              />
             </div>
-            <p className="mt-1 text-xs font-black text-blue-700">{treinamento.porcentagem}% concluído</p>
+            <p className="mt-1 text-xs font-black text-blue-700">
+              {treinamento.porcentagem}% concluído
+            </p>
           </div>
         )}
 
-        {treinamento && <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <button
-            type="button"
-            onClick={() => {
-              setMostrarResultado(false);
-              setIndiceSecao(Math.min(secoes.length - 1, Math.max(0, (treinamento.etapaAtual || 1) - 1)));
-            }}
-            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
-              !etapaQuiz && !etapaResultado && !etapaAssinatura ? "terminal-step-active" : "terminal-step-idle"
-            }`}
-          >
-            POC-SEP-001
-          </button>
-          <button
-            type="button"
-            disabled={(treinamento?.etapaAtual || 1) < 12}
-            onClick={() => setIndiceSecao(indiceQuiz)}
-            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
-              etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
-            } disabled:cursor-not-allowed disabled:opacity-45`}
-          >
-            Quiz
-          </button>
-          <button
-            type="button"
-            disabled={!resultadoQuiz}
-            onClick={() => setIndiceSecao(indiceResultado)}
-            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
-              etapaResultado ? "terminal-step-active" : "terminal-step-idle"
-            } disabled:cursor-not-allowed disabled:opacity-45`}
-          >
-            Resultado
-          </button>
-          <button
-            type="button"
-            disabled={!resultadoQuiz?.aprovado}
-            onClick={() => setIndiceSecao(indiceAssinatura)}
-            className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
-              etapaAssinatura ? "terminal-step-active" : "terminal-step-idle"
-            } disabled:cursor-not-allowed disabled:opacity-45`}
-          >
-            Assinatura
-          </button>
-        </div>}
+        {treinamento && (
+          <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <button
+              type="button"
+              onClick={() => {
+                setMostrarResultado(false);
+                setIndiceSecao(
+                  Math.min(
+                    secoes.length - 1,
+                    Math.max(0, (treinamento.etapaAtual || 1) - 1),
+                  ),
+                );
+              }}
+              className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
+                !etapaQuiz && !etapaResultado && !etapaAssinatura
+                  ? "terminal-step-active"
+                  : "terminal-step-idle"
+              }`}
+            >
+              POC-SEP-001
+            </button>
+            <button
+              type="button"
+              disabled={(treinamento?.etapaAtual || 1) < 12}
+              onClick={() => setIndiceSecao(indiceQuiz)}
+              className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
+                etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
+              } disabled:cursor-not-allowed disabled:opacity-45`}
+            >
+              Quiz
+            </button>
+            <button
+              type="button"
+              disabled={!resultadoQuiz}
+              onClick={() => setIndiceSecao(indiceResultado)}
+              className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
+                etapaResultado ? "terminal-step-active" : "terminal-step-idle"
+              } disabled:cursor-not-allowed disabled:opacity-45`}
+            >
+              Resultado
+            </button>
+            <button
+              type="button"
+              disabled={!resultadoQuiz?.aprovado}
+              onClick={() => setIndiceSecao(indiceAssinatura)}
+              className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
+                etapaAssinatura ? "terminal-step-active" : "terminal-step-idle"
+              } disabled:cursor-not-allowed disabled:opacity-45`}
+            >
+              Assinatura
+            </button>
+          </div>
+        )}
 
         {treinamento && !etapaQuiz && !etapaResultado && !etapaAssinatura ? (
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">POC-SEP-001</p>
-                <h2 className="mt-2 text-2xl font-black">{secaoAtual.titulo}</h2>
+                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">
+                  POC-SEP-001
+                </p>
+                <h2 className="mt-2 text-2xl font-black">
+                  {secaoAtual.titulo}
+                </h2>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
                 Leitura {indiceSecao + 1} de {secoes.length}
@@ -791,20 +1066,33 @@ export default function TreinamentoPocSep001Publico() {
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
               <div className="terminal-info-card rounded-xl border p-4 shadow-sm">
-                <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Objetivo</p>
-                <p className="mt-2 text-sm font-black leading-6 text-slate-950">{secaoAtual.objetivo}</p>
+                <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">
+                  Objetivo
+                </p>
+                <p className="mt-2 text-sm font-black leading-6 text-slate-950">
+                  {secaoAtual.objetivo}
+                </p>
               </div>
               <div className="terminal-info-card rounded-xl border p-4 shadow-sm">
-                <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Conteúdo resumido</p>
-                <p className="mt-2 text-sm font-bold leading-6 text-slate-800">{secaoAtual.resumo}</p>
+                <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">
+                  Conteúdo resumido
+                </p>
+                <p className="mt-2 text-sm font-bold leading-6 text-slate-800">
+                  {secaoAtual.resumo}
+                </p>
               </div>
             </div>
 
             <div className="mt-5 terminal-info-card rounded-xl border p-4 shadow-sm">
-              <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Principais responsabilidades</p>
+              <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">
+                Principais responsabilidades
+              </p>
               <div className="mt-3 grid gap-2">
                 {secaoAtual.responsabilidades.map((responsabilidade) => (
-                  <div key={responsabilidade} className="flex gap-3 text-sm font-bold leading-6 text-slate-800">
+                  <div
+                    key={responsabilidade}
+                    className="flex gap-3 text-sm font-bold leading-6 text-slate-800"
+                  >
                     <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
                     <span>{responsabilidade}</span>
                   </div>
@@ -813,9 +1101,14 @@ export default function TreinamentoPocSep001Publico() {
             </div>
 
             <div className="mt-5 grid gap-3">
-              <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Pontos importantes</p>
+              <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">
+                Pontos importantes
+              </p>
               {secaoAtual.pontos.map((ponto) => (
-                <div key={ponto} className="terminal-info-card flex gap-3 rounded-xl border p-4 text-sm font-bold leading-6 shadow-sm">
+                <div
+                  key={ponto}
+                  className="terminal-info-card flex gap-3 rounded-xl border p-4 text-sm font-bold leading-6 shadow-sm"
+                >
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
                   <span>{ponto}</span>
                 </div>
@@ -827,11 +1120,22 @@ export default function TreinamentoPocSep001Publico() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={voltar} disabled={indiceSecao === 0} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-50 sm:w-auto">
+              <button
+                type="button"
+                onClick={voltar}
+                disabled={indiceSecao === 0}
+                className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-50 sm:w-auto"
+              >
                 <ArrowLeft size={18} /> Voltar
               </button>
-              <button type="button" disabled={carregando} onClick={concluirEtapaAtual} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
-                {carregando ? "Salvando..." : "Li e compreendi esta etapa"} <ArrowRight size={18} />
+              <button
+                type="button"
+                disabled={carregando}
+                onClick={concluirEtapaAtual}
+                className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto"
+              >
+                {carregando ? "Salvando..." : "Li e compreendi esta etapa"}{" "}
+                <ArrowRight size={18} />
               </button>
             </div>
           </div>
@@ -839,9 +1143,13 @@ export default function TreinamentoPocSep001Publico() {
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Avaliação</p>
+                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">
+                  Avaliação
+                </p>
                 <h2 className="mt-2 text-2xl font-black">Quiz POC-SEP-001</h2>
-                <p className="mt-2 text-sm font-bold text-slate-700">Responda as 15 questões com base no procedimento estudado.</p>
+                <p className="mt-2 text-sm font-bold text-slate-700">
+                  Responda as 15 questões com base no procedimento estudado.
+                </p>
               </div>
               <FileText className="h-10 w-10 text-blue-700" />
             </div>
@@ -853,8 +1161,13 @@ export default function TreinamentoPocSep001Publico() {
                 const respondida = resposta !== null;
                 const incorreta = mostrarResultado && resposta !== item.correta;
                 return (
-                  <div key={item.pergunta} className={`terminal-info-card rounded-2xl border p-4 shadow-sm ${incorreta ? "border-red-400 ring-2 ring-red-300" : ""}`}>
-                    <p className="text-sm font-black text-slate-950">{perguntaIndex + 1}. {item.pergunta}</p>
+                  <div
+                    key={item.pergunta}
+                    className={`terminal-info-card rounded-2xl border p-4 shadow-sm ${incorreta ? "border-red-400 ring-2 ring-red-300" : ""}`}
+                  >
+                    <p className="text-sm font-black text-slate-950">
+                      {perguntaIndex + 1}. {item.pergunta}
+                    </p>
                     {incorreta && (
                       <p className="terminal-quiz-error mt-2 rounded-xl border px-3 py-2 text-sm font-black">
                         Resposta incorreta. Revise esta questão.
@@ -865,9 +1178,13 @@ export default function TreinamentoPocSep001Publico() {
                         <button
                           key={opcao}
                           type="button"
-                          onClick={() => selecionarResposta(perguntaIndex, opcaoIndex)}
+                          onClick={() =>
+                            selecionarResposta(perguntaIndex, opcaoIndex)
+                          }
                           className={`terminal-quiz-option rounded-2xl border px-4 py-3 text-left text-sm font-black transition ${
-                            resposta === opcaoIndex ? "terminal-quiz-option-active shadow-lg shadow-blue-700/20" : "terminal-quiz-option-idle"
+                            resposta === opcaoIndex
+                              ? "terminal-quiz-option-active shadow-lg shadow-blue-700/20"
+                              : "terminal-quiz-option-idle"
                           }`}
                         >
                           {String.fromCharCode(65 + opcaoIndex)}. {opcao}
@@ -887,16 +1204,24 @@ export default function TreinamentoPocSep001Publico() {
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
               <button
                 type="button"
-                onClick={() => setIndicePerguntaQuiz((atual) => Math.max(0, atual - 1))}
+                onClick={() =>
+                  setIndicePerguntaQuiz((atual) => Math.max(0, atual - 1))
+                }
                 disabled={indicePerguntaQuiz === 0}
                 className="terminal-secondary-action inline-flex items-center gap-2 rounded-xl border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <ArrowLeft size={16} /> Pergunta anterior
               </button>
-              <span>Questão {indicePerguntaQuiz + 1} de {quiz.length}</span>
+              <span>
+                Questão {indicePerguntaQuiz + 1} de {quiz.length}
+              </span>
               <button
                 type="button"
-                onClick={() => setIndicePerguntaQuiz((atual) => Math.min(quiz.length - 1, atual + 1))}
+                onClick={() =>
+                  setIndicePerguntaQuiz((atual) =>
+                    Math.min(quiz.length - 1, atual + 1),
+                  )
+                }
                 disabled={indicePerguntaQuiz === quiz.length - 1}
                 className="terminal-secondary-action inline-flex items-center gap-2 rounded-xl border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -905,33 +1230,72 @@ export default function TreinamentoPocSep001Publico() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={voltar} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+              <button
+                type="button"
+                onClick={voltar}
+                className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto"
+              >
                 <ArrowLeft size={18} /> Voltar às etapas
               </button>
-              <button type="button" disabled={carregando} onClick={validarQuiz} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
+              <button
+                type="button"
+                disabled={carregando}
+                onClick={validarQuiz}
+                className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto"
+              >
                 {carregando ? "Validando..." : "Validar respostas"}
               </button>
             </div>
           </div>
         ) : treinamento && etapaResultado ? (
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
-            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Resultado</p>
-            <h2 className="mt-2 text-2xl font-black text-slate-950">Resultado da avaliação</h2>
-            <div className={`terminal-result-card mt-6 rounded-2xl border-2 bg-white p-5 shadow-xl ${resultadoQuiz?.aprovado ? "border-emerald-500" : "border-blue-500"}`}>
-              <p className={`text-sm font-black uppercase tracking-[0.18em] ${resultadoQuiz?.aprovado ? "text-emerald-700" : "text-blue-700"}`}>{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
-              <p className="mt-3 text-4xl font-black text-slate-950">{resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos</p>
-              <p className="mt-2 text-xl font-black text-slate-900">Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%</p>
+            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">
+              Resultado
+            </p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950">
+              Resultado da avaliação
+            </h2>
+            <div
+              className={`terminal-result-card mt-6 rounded-2xl border-2 bg-white p-5 shadow-xl ${resultadoQuiz?.aprovado ? "border-emerald-500" : "border-blue-500"}`}
+            >
+              <p
+                className={`text-sm font-black uppercase tracking-[0.18em] ${resultadoQuiz?.aprovado ? "text-emerald-700" : "text-blue-700"}`}
+              >
+                {resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}
+              </p>
+              <p className="mt-3 text-4xl font-black text-slate-950">
+                {resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos
+              </p>
+              <p className="mt-2 text-xl font-black text-slate-900">
+                Nota:{" "}
+                {resultadoQuiz?.nota ??
+                  Math.round((acertos / quiz.length) * 100)}
+                %
+              </p>
               <p className="mt-3 text-base font-bold text-slate-800">
-                É necessário atingir pelo menos 80% de acertos para avançar para assinatura e emissão do certificado.
+                É necessário atingir pelo menos 80% de acertos para avançar para
+                assinatura e emissão do certificado.
               </p>
             </div>
-            {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
+            {mensagem && (
+              <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">
+                {mensagem}
+              </div>
+            )}
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => setIndiceSecao(indiceQuiz)} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+              <button
+                type="button"
+                onClick={() => setIndiceSecao(indiceQuiz)}
+                className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto"
+              >
                 <ArrowLeft size={18} /> Revisar perguntas
               </button>
               {resultadoQuiz?.aprovado && (
-                <button type="button" onClick={() => setIndiceSecao(indiceAssinatura)} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setIndiceSecao(indiceAssinatura)}
+                  className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto"
+                >
                   Avançar para assinatura <ArrowRight size={18} />
                 </button>
               )}
@@ -941,9 +1305,16 @@ export default function TreinamentoPocSep001Publico() {
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Assinatura</p>
-                <h2 className="mt-2 text-2xl font-black">Assinatura e emissão do certificado</h2>
-                <p className="mt-2 text-sm font-bold text-slate-700">Assine no campo abaixo para emitir o certificado e enviá-lo ao e-mail informado.</p>
+                <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">
+                  Assinatura
+                </p>
+                <h2 className="mt-2 text-2xl font-black">
+                  Assinatura e emissão do certificado
+                </h2>
+                <p className="mt-2 text-sm font-bold text-slate-700">
+                  Assine no campo abaixo para emitir o certificado e enviá-lo ao
+                  e-mail informado.
+                </p>
               </div>
               <PenLine className="h-10 w-10 text-blue-700" />
             </div>
@@ -957,18 +1328,40 @@ export default function TreinamentoPocSep001Publico() {
                 onPointerCancel={finalizarAssinatura}
               />
             </div>
-            {mensagem && <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
+            {mensagem && (
+              <div className="terminal-message mt-4 whitespace-pre-line rounded-xl border px-4 py-3 text-sm font-black shadow-lg">
+                {mensagem}
+              </div>
+            )}
             <div className="mt-6 flex flex-wrap gap-3">
               {!treinamento.certificadoUrl && (
-                <button type="button" onClick={prepararCanvas} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                <button
+                  type="button"
+                  onClick={prepararCanvas}
+                  className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto"
+                >
                   Limpar assinatura
                 </button>
               )}
-              <button type="button" disabled={carregando || Boolean(treinamento.certificadoUrl)} onClick={concluirComAssinatura} className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto">
-                {carregando ? "Emitindo..." : treinamento.certificadoUrl ? "Certificado emitido" : "Emitir certificado"}
+              <button
+                type="button"
+                disabled={carregando || Boolean(treinamento.certificadoUrl)}
+                onClick={concluirComAssinatura}
+                className="terminal-primary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition disabled:opacity-60 sm:w-auto"
+              >
+                {carregando
+                  ? "Emitindo..."
+                  : treinamento.certificadoUrl
+                    ? "Certificado emitido"
+                    : "Emitir certificado"}
               </button>
               {treinamento.certificadoUrl && (
-                <a href={treinamento.certificadoUrl} target="_blank" rel="noreferrer" className="terminal-success-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
+                <a
+                  href={treinamento.certificadoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="terminal-success-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto"
+                >
                   <Download size={18} /> Baixar certificado
                 </a>
               )}
@@ -979,4 +1372,3 @@ export default function TreinamentoPocSep001Publico() {
     </main>
   );
 }
-
