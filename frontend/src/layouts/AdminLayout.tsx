@@ -88,7 +88,9 @@ export default function AdminLayout() {
   const usuario = usuarioAtual();
   const portaria = usuario?.perfilAcesso === PERFIS.PORTARIA;
   const tecnicoManutencao = somenteTecnicoManutencao();
-  const rotaTecnicoPermitida = location.pathname.startsWith("/cameras") || location.pathname.startsWith("/ordens-servico");
+  const rotaTecnicoPermitida =
+    location.pathname.startsWith("/cameras") ||
+    location.pathname.startsWith("/ordens-servico");
   const unidadesDisponiveis = useMemo(() => unidadesPermitidasUsuario(), []);
   const unidadeSalva = sessionStorage.getItem("unidadeAtiva");
   const unidadeInicial =
@@ -459,36 +461,36 @@ export default function AdminLayout() {
 
               {relatoriosOpen && (
                 <div className={submenuClass}>
-              <Link to="/ocorrencias" className={subItem}>
-                <FileText size={16} />
-                Ocorrências
-              </Link>
-              <Link to="/investigacao" className={subItem}>
-                <Search size={16} />
-                Investigação
-              </Link>
-              <Link to="/eventos" className={subItem}>
-                <CalendarDays size={16} />
-                Eventos
-              </Link>
-              <Link to="/documentos" className={subItem}>
-                <FolderOpen size={16} />
-                Central de Documentos
-              </Link>
-              <Link to="/operacao-soc" className={subItem}>
-                <Activity size={16} />
-                Relatório CCOS
-              </Link>
-              {podeAdministrar() && (
-                <Link to="/relatorio-diario" className={subItem}>
-                  <FileBarChart size={16} />
-                  Relatório Diário Executivo
-                </Link>
-              )}
-              <Link to="/relatos-campo" className={subItem}>
-                <FileText size={16} />
-                Relatos de Campo
-              </Link>
+                  <Link to="/ocorrencias" className={subItem}>
+                    <FileText size={16} />
+                    Ocorrências
+                  </Link>
+                  <Link to="/investigacao" className={subItem}>
+                    <Search size={16} />
+                    Investigação
+                  </Link>
+                  <Link to="/eventos" className={subItem}>
+                    <CalendarDays size={16} />
+                    Eventos
+                  </Link>
+                  <Link to="/documentos" className={subItem}>
+                    <FolderOpen size={16} />
+                    Central de Documentos
+                  </Link>
+                  <Link to="/operacao-soc" className={subItem}>
+                    <Activity size={16} />
+                    Relatório CCOS
+                  </Link>
+                  {podeAdministrar() && (
+                    <Link to="/relatorio-diario" className={subItem}>
+                      <FileBarChart size={16} />
+                      Relatório Diário Executivo
+                    </Link>
+                  )}
+                  <Link to="/relatos-campo" className={subItem}>
+                    <FileText size={16} />
+                    Relatos de Campo
+                  </Link>
                 </div>
               )}
             </>
@@ -504,7 +506,9 @@ export default function AdminLayout() {
                   <FileCheck2 size={20} className="shrink-0" />
                   <span className={menuText}>Treinamentos</span>
                 </div>
-                <span className={menuToggle}>{treinamentosOpen ? "-" : "+"}</span>
+                <span className={menuToggle}>
+                  {treinamentosOpen ? "-" : "+"}
+                </span>
               </button>
 
               {treinamentosOpen && (
@@ -525,6 +529,16 @@ export default function AdminLayout() {
                     <FileCheck2 size={16} />
                     POC-SEP-001
                   </Link>
+                  {["002", "003", "004", "005", "006"].map((codigo) => (
+                    <Link
+                      key={codigo}
+                      to={`/treinamentos-poc-sep-${codigo}`}
+                      className={subItem}
+                    >
+                      <FileCheck2 size={16} />
+                      POC-SEP-{codigo}
+                    </Link>
+                  ))}
                 </div>
               )}
               <Link to="/meus-dados" className={item}>
@@ -544,7 +558,9 @@ export default function AdminLayout() {
                       <FileCheck2 size={20} className="shrink-0" />
                       <span className={menuText}>Treinamentos</span>
                     </div>
-                    <span className={menuToggle}>{treinamentosOpen ? "-" : "+"}</span>
+                    <span className={menuToggle}>
+                      {treinamentosOpen ? "-" : "+"}
+                    </span>
                   </button>
 
                   {treinamentosOpen && (
@@ -565,6 +581,16 @@ export default function AdminLayout() {
                         <FileCheck2 size={16} />
                         POC-SEP-001
                       </Link>
+                      {["002", "003", "004", "005", "006"].map((codigo) => (
+                        <Link
+                          key={codigo}
+                          to={`/treinamentos-poc-sep-${codigo}`}
+                          className={subItem}
+                        >
+                          <FileCheck2 size={16} />
+                          POC-SEP-{codigo}
+                        </Link>
+                      ))}
                     </div>
                   )}
                 </>
@@ -810,48 +836,48 @@ export default function AdminLayout() {
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
               {!portaria && (
-              <Link
-                to="/notificacoes"
-                className="relative shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800"
-              >
-                <Bell size={16} />
-                {notificacoes.length > 0 && (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">
-                    {notificacoes.length}
-                  </span>
-                )}
-              </Link>
+                <Link
+                  to="/notificacoes"
+                  className="relative shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800"
+                >
+                  <Bell size={16} />
+                  {notificacoes.length > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-[10px] font-bold text-white">
+                      {notificacoes.length}
+                    </span>
+                  )}
+                </Link>
               )}
               {!portaria && (
-              <Link
-                to="/meus-dados?aba=mencoes"
-                className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[390px]:inline-flex"
-              >
-                <AtSign size={16} />
-                {mencoesPendentes > 0 && (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
-                    {mencoesPendentes}
-                  </span>
-                )}
-              </Link>
+                <Link
+                  to="/meus-dados?aba=mencoes"
+                  className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[390px]:inline-flex"
+                >
+                  <AtSign size={16} />
+                  {mencoesPendentes > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
+                      {mencoesPendentes}
+                    </span>
+                  )}
+                </Link>
               )}
               {!portaria && (
-              <Link
-                to="/operacao-soc"
-                className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[460px]:inline-flex"
-                title={
-                  passagensAbertas > 0
-                    ? "Há Relatório CCOS em aberto"
-                    : "Relatório CCOS"
-                }
-              >
-                <Activity size={16} />
-                {passagensAbertas > 0 && (
-                  <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
-                    {passagensAbertas}
-                  </span>
-                )}
-              </Link>
+                <Link
+                  to="/operacao-soc"
+                  className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[460px]:inline-flex"
+                  title={
+                    passagensAbertas > 0
+                      ? "Há Relatório CCOS em aberto"
+                      : "Relatório CCOS"
+                  }
+                >
+                  <Activity size={16} />
+                  {passagensAbertas > 0 && (
+                    <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 text-[10px] font-bold text-white">
+                      {passagensAbertas}
+                    </span>
+                  )}
+                </Link>
               )}
               <button
                 type="button"
@@ -917,48 +943,48 @@ export default function AdminLayout() {
 
           <div className="hidden min-w-0 items-center justify-end gap-3 sm:gap-4 md:flex">
             {!portaria && (
-            <Link
-              to="/notificacoes"
-              className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
-            >
-              <Bell size={18} />
-              {notificacoes.length > 0 && (
-                <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
-                  {notificacoes.length}
-                </span>
-              )}
-            </Link>
+              <Link
+                to="/notificacoes"
+                className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
+              >
+                <Bell size={18} />
+                {notificacoes.length > 0 && (
+                  <span className="absolute -right-1 -top-1 rounded-full bg-red-600 px-1.5 text-xs font-bold text-white">
+                    {notificacoes.length}
+                  </span>
+                )}
+              </Link>
             )}
             {!portaria && (
-            <Link
-              to="/meus-dados?aba=mencoes"
-              className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
-            >
-              <AtSign size={18} />
-              {mencoesPendentes > 0 && (
-                <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-xs font-bold text-white">
-                  {mencoesPendentes}
-                </span>
-              )}
-            </Link>
+              <Link
+                to="/meus-dados?aba=mencoes"
+                className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
+              >
+                <AtSign size={18} />
+                {mencoesPendentes > 0 && (
+                  <span className="absolute -right-1 -top-1 rounded-full bg-blue-600 px-1.5 text-xs font-bold text-white">
+                    {mencoesPendentes}
+                  </span>
+                )}
+              </Link>
             )}
             {!portaria && (
-            <Link
-              to="/operacao-soc"
-              className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
-              title={
-                passagensAbertas > 0
-                  ? "Há Relatório CCOS em aberto"
-                  : "Relatório CCOS"
-              }
-            >
-              <Activity size={18} />
-              {passagensAbertas > 0 && (
-                <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">
-                  {passagensAbertas}
-                </span>
-              )}
-            </Link>
+              <Link
+                to="/operacao-soc"
+                className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
+                title={
+                  passagensAbertas > 0
+                    ? "Há Relatório CCOS em aberto"
+                    : "Relatório CCOS"
+                }
+              >
+                <Activity size={18} />
+                {passagensAbertas > 0 && (
+                  <span className="absolute -right-1 -top-1 rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">
+                    {passagensAbertas}
+                  </span>
+                )}
+              </Link>
             )}
             <button
               type="button"

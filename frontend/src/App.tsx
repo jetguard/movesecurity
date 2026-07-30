@@ -72,6 +72,21 @@ const TreinamentoPocSep007Publico = lazyWithReload(
 const TreinamentoPocSep001Publico = lazyWithReload(
   () => import("./pages/TreinamentoPocSep001Publico"),
 );
+const TreinamentoPocSep002Publico = lazyWithReload(
+  () => import("./pages/TreinamentoPocSep002Publico"),
+);
+const TreinamentoPocSep003Publico = lazyWithReload(
+  () => import("./pages/TreinamentoPocSep003Publico"),
+);
+const TreinamentoPocSep004Publico = lazyWithReload(
+  () => import("./pages/TreinamentoPocSep004Publico"),
+);
+const TreinamentoPocSep005Publico = lazyWithReload(
+  () => import("./pages/TreinamentoPocSep005Publico"),
+);
+const TreinamentoPocSep006Publico = lazyWithReload(
+  () => import("./pages/TreinamentoPocSep006Publico"),
+);
 const IntegracaoTerminalPublico = lazyWithReload(
   () => import("./pages/IntegracaoTerminalPublico"),
 );
@@ -90,6 +105,21 @@ const TreinamentosPocSep007 = lazyWithReload(
 const TreinamentosPocSep001 = lazyWithReload(
   () => import("./pages/TreinamentosPocSep001"),
 );
+const TreinamentosPocSep002 = lazyWithReload(
+  () => import("./pages/TreinamentosPocSep002"),
+);
+const TreinamentosPocSep003 = lazyWithReload(
+  () => import("./pages/TreinamentosPocSep003"),
+);
+const TreinamentosPocSep004 = lazyWithReload(
+  () => import("./pages/TreinamentosPocSep004"),
+);
+const TreinamentosPocSep005 = lazyWithReload(
+  () => import("./pages/TreinamentosPocSep005"),
+);
+const TreinamentosPocSep006 = lazyWithReload(
+  () => import("./pages/TreinamentosPocSep006"),
+);
 const IntegracoesTerminal = lazyWithReload(
   () => import("./pages/IntegracoesTerminal"),
 );
@@ -105,13 +135,54 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
-          <Route path="/treinamento-terminal" element={<TreinamentoTerminalPublico />} />
-          <Route path="/treinamento-poc-sep-007" element={<TreinamentoPocSep007Publico />} />
-          <Route path="/treinamento-poc-sep-001" element={<TreinamentoPocSep001Publico />} />
-          <Route path="/integracao-terminal" element={<IntegracaoTerminalPublico />} />
-          <Route path="/integracao-motoristas" element={<IntegracaoTerminalPublico />} />
-          <Route path="/validar-certificado/:token" element={<ValidarCertificadoTreinamento />} />
-          <Route path="/validar-integracao/:token" element={<ValidarCertificadoIntegracao />} />
+          <Route
+            path="/treinamento-terminal"
+            element={<TreinamentoTerminalPublico />}
+          />
+          <Route
+            path="/treinamento-poc-sep-007"
+            element={<TreinamentoPocSep007Publico />}
+          />
+          <Route
+            path="/treinamento-poc-sep-001"
+            element={<TreinamentoPocSep001Publico />}
+          />
+          <Route
+            path="/treinamento-poc-sep-002"
+            element={<TreinamentoPocSep002Publico />}
+          />
+          <Route
+            path="/treinamento-poc-sep-003"
+            element={<TreinamentoPocSep003Publico />}
+          />
+          <Route
+            path="/treinamento-poc-sep-004"
+            element={<TreinamentoPocSep004Publico />}
+          />
+          <Route
+            path="/treinamento-poc-sep-005"
+            element={<TreinamentoPocSep005Publico />}
+          />
+          <Route
+            path="/treinamento-poc-sep-006"
+            element={<TreinamentoPocSep006Publico />}
+          />
+          <Route
+            path="/integracao-terminal"
+            element={<IntegracaoTerminalPublico />}
+          />
+          <Route
+            path="/integracao-motoristas"
+            element={<IntegracaoTerminalPublico />}
+          />
+          <Route
+            path="/validar-certificado/:token"
+            element={<ValidarCertificadoTreinamento />}
+          />
+          <Route
+            path="/validar-integracao/:token"
+            element={<ValidarCertificadoIntegracao />}
+          />
           <Route
             path="/alterar-senha"
             element={
@@ -211,6 +282,30 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            {[
+              ["treinamentos-poc-sep-002", <TreinamentosPocSep002 />],
+              ["treinamentos-poc-sep-003", <TreinamentosPocSep003 />],
+              ["treinamentos-poc-sep-004", <TreinamentosPocSep004 />],
+              ["treinamentos-poc-sep-005", <TreinamentosPocSep005 />],
+              ["treinamentos-poc-sep-006", <TreinamentosPocSep006 />],
+            ].map(([path, element]) => (
+              <Route
+                key={String(path)}
+                path={String(path)}
+                element={
+                  <ProtectedRoute
+                    perfis={[
+                      PERFIS.SUPER_ADMIN,
+                      PERFIS.ADMINISTRADOR,
+                      PERFIS.ANALISTA,
+                      PERFIS.PORTARIA,
+                    ]}
+                  >
+                    {element}
+                  </ProtectedRoute>
+                }
+              />
+            ))}
             <Route
               path="integracoes-do-terminal"
               element={
@@ -240,9 +335,15 @@ export default function App() {
             <Route path="mapa-operacional" element={<MapaOperacional />} />
             <Route path="planejamento" element={<Planejamento />} />
             <Route path="quadra-seguranca" element={<QuadraSeguranca />} />
-            <Route path="gestao-patrimonial" element={<Navigate to="/riscos" replace />} />
+            <Route
+              path="gestao-patrimonial"
+              element={<Navigate to="/riscos" replace />}
+            />
             <Route path="historico/:tipo/:id" element={<Historico />} />
-            <Route path="inteligencia" element={<Navigate to="/riscos" replace />} />
+            <Route
+              path="inteligencia"
+              element={<Navigate to="/riscos" replace />}
+            />
             <Route
               path="aprovacoes"
               element={
@@ -257,8 +358,14 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="planos-acao" element={<Navigate to="/riscos" replace />} />
-            <Route path="matriz-risco" element={<Navigate to="/riscos" replace />} />
+            <Route
+              path="planos-acao"
+              element={<Navigate to="/riscos" replace />}
+            />
+            <Route
+              path="matriz-risco"
+              element={<Navigate to="/riscos" replace />}
+            />
             <Route
               path="checklists"
               element={
@@ -301,7 +408,10 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="analises-estrategicas" element={<Navigate to="/riscos" replace />} />
+            <Route
+              path="analises-estrategicas"
+              element={<Navigate to="/riscos" replace />}
+            />
             <Route
               path="naturezas"
               element={
@@ -362,7 +472,10 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="integridade" element={<Navigate to="/governanca" replace />} />
+            <Route
+              path="integridade"
+              element={<Navigate to="/governanca" replace />}
+            />
             <Route
               path="sessoes"
               element={

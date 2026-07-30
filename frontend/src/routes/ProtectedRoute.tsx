@@ -29,10 +29,18 @@ export default function ProtectedRoute({ children, perfis }: Props) {
       "/integracoes-do-terminal",
       "/treinamentos-poc-sep-007",
       "/treinamentos-poc-sep-001",
+      "/treinamentos-poc-sep-002",
+      "/treinamentos-poc-sep-003",
+      "/treinamentos-poc-sep-004",
+      "/treinamentos-poc-sep-005",
+      "/treinamentos-poc-sep-006",
       "/meus-dados",
       "/perfil",
       "/alterar-senha",
-    ].some((rota) => location.pathname === rota || location.pathname.startsWith(`${rota}/`))
+    ].some(
+      (rota) =>
+        location.pathname === rota || location.pathname.startsWith(`${rota}/`),
+    )
   ) {
     return <Navigate to="/treinamentos-terminal" replace />;
   }

@@ -43,6 +43,11 @@ import treinamentoTerminalRoutes from "./routes/treinamentoTerminal.routes";
 import integracaoTerminalRoutes from "./routes/integracaoTerminal.routes";
 import treinamentoPocSep007Routes from "./routes/treinamentoPocSep007.routes";
 import treinamentoPocSep001Routes from "./routes/treinamentoPocSep001.routes";
+import treinamentoPocSep002Routes from "./routes/treinamentoPocSep002.routes";
+import treinamentoPocSep003Routes from "./routes/treinamentoPocSep003.routes";
+import treinamentoPocSep004Routes from "./routes/treinamentoPocSep004.routes";
+import treinamentoPocSep005Routes from "./routes/treinamentoPocSep005.routes";
+import treinamentoPocSep006Routes from "./routes/treinamentoPocSep006.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -56,10 +61,12 @@ const httpServer = createServer(app);
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "same-site" },
-  contentSecurityPolicy: false,
-}));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: "same-site" },
+    contentSecurityPolicy: false,
+  }),
+);
 
 function requisicaoLocalDesenvolvimento(ip?: string) {
   return (
@@ -69,9 +76,10 @@ function requisicaoLocalDesenvolvimento(ip?: string) {
 }
 
 function chaveLimitLogin(req: express.Request) {
-  const email = typeof req.body?.email === "string"
-    ? req.body.email.trim().toLowerCase()
-    : "sem-email";
+  const email =
+    typeof req.body?.email === "string"
+      ? req.body.email.trim().toLowerCase()
+      : "sem-email";
   return `${ipKeyGenerator(req.ip || "sem-ip")}::${email}`;
 }
 
@@ -83,7 +91,9 @@ const loginLimiter = rateLimit({
   keyGenerator: chaveLimitLogin,
   skipSuccessfulRequests: true,
   skip: (req) => requisicaoLocalDesenvolvimento(req.ip),
-  message: { error: "Muitas tentativas. Aguarde alguns minutos e tente novamente." },
+  message: {
+    error: "Muitas tentativas. Aguarde alguns minutos e tente novamente.",
+  },
 });
 
 const refreshLimiter = rateLimit({
@@ -93,7 +103,10 @@ const refreshLimiter = rateLimit({
   legacyHeaders: false,
   skipSuccessfulRequests: true,
   skip: (req) => requisicaoLocalDesenvolvimento(req.ip),
-  message: { error: "Muitas tentativas de renovação de sessão. Aguarde alguns minutos e tente novamente." },
+  message: {
+    error:
+      "Muitas tentativas de renovação de sessão. Aguarde alguns minutos e tente novamente.",
+  },
 });
 
 const apiLimiter = rateLimit({
@@ -102,16 +115,26 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   skip: (req) => requisicaoLocalDesenvolvimento(req.ip),
   legacyHeaders: false,
-  message: { error: "Limite de requisições excedido. Tente novamente em instantes." },
+  message: {
+    error: "Limite de requisições excedido. Tente novamente em instantes.",
+  },
 });
 
 app.use((req, res, next) => {
   const origemPermitida = corsOrigin();
-  res.header("Access-Control-Allow-Origin", origemPermitida === "*" ? String(req.headers.origin || "*") : origemPermitida);
+  res.header(
+    "Access-Control-Allow-Origin",
+    origemPermitida === "*"
+      ? String(req.headers.origin || "*")
+      : origemPermitida,
+  );
   res.header("Vary", "Origin");
   res.header("Access-Control-Allow-Credentials", "true");
   res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Unidade-Ativa, X-CSRF-Token");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization, X-Unidade-Ativa, X-CSRF-Token",
+  );
   res.header("X-Content-Type-Options", "nosniff");
   res.header("X-Frame-Options", "SAMEORIGIN");
   res.header("Referrer-Policy", "no-referrer");
@@ -168,6 +191,11 @@ app.use("/api", treinamentoTerminalRoutes);
 app.use("/api", integracaoTerminalRoutes);
 app.use("/api", treinamentoPocSep007Routes);
 app.use("/api", treinamentoPocSep001Routes);
+app.use("/api", treinamentoPocSep002Routes);
+app.use("/api", treinamentoPocSep003Routes);
+app.use("/api", treinamentoPocSep004Routes);
+app.use("/api", treinamentoPocSep005Routes);
+app.use("/api", treinamentoPocSep006Routes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);

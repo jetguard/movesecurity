@@ -3,8 +3,15 @@ import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
-import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
-import { gerarHashPin, validarFormatoPin, validarPinOperacional } from "../services/pinOperacional.service";
+import {
+  normalizarUnidadesPermitidas,
+  serializarUnidadesPermitidas,
+} from "../config/unidades";
+import {
+  gerarHashPin,
+  validarFormatoPin,
+  validarPinOperacional,
+} from "../services/pinOperacional.service";
 
 const selectUsuario = {
   id: true,
@@ -35,9 +42,16 @@ function formatarUsuario(usuario: any) {
   if (!usuario) return usuario;
   return {
     ...usuario,
-    unidadesPermitidas: normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade),
+    unidadesPermitidas: normalizarUnidadesPermitidas(
+      usuario.unidadesPermitidas,
+      usuario.unidade,
+    ),
     pinOperacionalHash: undefined,
-    possuiPinOperacional: Boolean(usuario.pinOperacionalHash || usuario.pinOperacionalCriadoEm || usuario.pinOperacionalAtualizadoEm),
+    possuiPinOperacional: Boolean(
+      usuario.pinOperacionalHash ||
+        usuario.pinOperacionalCriadoEm ||
+        usuario.pinOperacionalAtualizadoEm,
+    ),
   };
 }
 
@@ -72,7 +86,15 @@ function validarStatus(status?: string) {
 
 function validarEquipe(equipe?: string) {
   if (!equipe) return null;
-  return ["Equipe A", "Equipe B", "Equipe C", "Equipe D", "Administrativo"].includes(equipe) ? equipe : null;
+  return [
+    "Equipe A",
+    "Equipe B",
+    "Equipe C",
+    "Equipe D",
+    "Administrativo",
+  ].includes(equipe)
+    ? equipe
+    : null;
 }
 
 function limparCpf(cpf: string) {
@@ -88,23 +110,35 @@ function cpfValido(cpf: string) {
     const soma = digitos
       .slice(0, tamanho)
       .split("")
-      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+      .reduce(
+        (total, numero, index) =>
+          total + Number(numero) * (tamanho + 1 - index),
+        0,
+      );
     const resto = (soma * 10) % 11;
     return resto === 10 ? 0 : resto;
   };
 
-  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+  return (
+    calcularDigito(9) === Number(digitos[9]) &&
+    calcularDigito(10) === Number(digitos[10])
+  );
 }
 
-async function vincularTreinamentosPocSep007(usuario: { id: number; email: string; cpf?: string | null; cargo?: string | null; setor?: string | null; unidade?: string | null; empresa?: string | null }) {
+async function vincularTreinamentosPocSep007(usuario: {
+  id: number;
+  email: string;
+  cpf?: string | null;
+  cargo?: string | null;
+  setor?: string | null;
+  unidade?: string | null;
+  empresa?: string | null;
+}) {
   const cpf = limparCpf(usuario.cpf || "");
   await prisma.treinamentoPocSep007.updateMany({
     where: {
       usuarioId: null,
-      OR: [
-        { email: usuario.email },
-        ...(cpf ? [{ cpf }] : []),
-      ],
+      OR: [{ email: usuario.email }, ...(cpf ? [{ cpf }] : [])],
     },
     data: {
       usuarioId: usuario.id,
@@ -116,15 +150,20 @@ async function vincularTreinamentosPocSep007(usuario: { id: number; email: strin
   });
 }
 
-async function vincularTreinamentosPocSep001(usuario: { id: number; email: string; cpf?: string | null; cargo?: string | null; setor?: string | null; unidade?: string | null; empresa?: string | null }) {
+async function vincularTreinamentosPocSep001(usuario: {
+  id: number;
+  email: string;
+  cpf?: string | null;
+  cargo?: string | null;
+  setor?: string | null;
+  unidade?: string | null;
+  empresa?: string | null;
+}) {
   const cpf = limparCpf(usuario.cpf || "");
   await prisma.treinamentoPocSep001.updateMany({
     where: {
       usuarioId: null,
-      OR: [
-        { email: usuario.email },
-        ...(cpf ? [{ cpf }] : []),
-      ],
+      OR: [{ email: usuario.email }, ...(cpf ? [{ cpf }] : [])],
     },
     data: {
       usuarioId: usuario.id,
@@ -134,6 +173,37 @@ async function vincularTreinamentosPocSep001(usuario: { id: number; email: strin
       empresa: usuario.empresa || "Movecta S/A",
     },
   });
+}
+
+async function vincularTreinamentosPocComplementares(usuario: {
+  id: number;
+  email: string;
+  cpf?: string | null;
+  cargo?: string | null;
+  setor?: string | null;
+  unidade?: string | null;
+  empresa?: string | null;
+}) {
+  const cpf = limparCpf(usuario.cpf || "");
+  const data = {
+    usuarioId: usuario.id,
+    cargo: usuario.cargo,
+    departamento: usuario.setor,
+    unidade: usuario.unidade,
+    empresa: usuario.empresa || "Movecta S/A",
+  };
+  const where = {
+    usuarioId: null,
+    OR: [{ email: usuario.email }, ...(cpf ? [{ cpf }] : [])],
+  };
+
+  await Promise.all([
+    prisma.treinamentoPocSep002.updateMany({ where, data }),
+    prisma.treinamentoPocSep003.updateMany({ where, data }),
+    prisma.treinamentoPocSep004.updateMany({ where, data }),
+    prisma.treinamentoPocSep005.updateMany({ where, data }),
+    prisma.treinamentoPocSep006.updateMany({ where, data }),
+  ]);
 }
 
 export async function listarUsuarios(req: Request, res: Response) {
@@ -164,12 +234,29 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       confirmarSenha,
     } = req.body;
 
-    const unidadesDoUsuario = normalizarUnidadesPermitidas(unidadesPermitidas, unidade);
-    const unidadePrincipal = unidade && unidadesDoUsuario.includes(unidade) ? unidade : unidadesDoUsuario[0];
+    const unidadesDoUsuario = normalizarUnidadesPermitidas(
+      unidadesPermitidas,
+      unidade,
+    );
+    const unidadePrincipal =
+      unidade && unidadesDoUsuario.includes(unidade)
+        ? unidade
+        : unidadesDoUsuario[0];
     const cpfNormalizado = limparCpf(cpf);
 
-    if (!nome || !email || !re || !setor || !cargo || !unidadePrincipal || !perfilAcesso || !senha) {
-      return res.status(400).json({ error: "Preencha todos os campos obrigatórios." });
+    if (
+      !nome ||
+      !email ||
+      !re ||
+      !setor ||
+      !cargo ||
+      !unidadePrincipal ||
+      !perfilAcesso ||
+      !senha
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Preencha todos os campos obrigatórios." });
     }
 
     if (!cpfValido(cpfNormalizado)) {
@@ -182,14 +269,18 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
 
     const existe = await prisma.usuario.findFirst({
       where: {
-        OR: [
-          { email },
-          ...(cpfNormalizado ? [{ cpf: cpfNormalizado }] : []),
-        ],
+        OR: [{ email }, ...(cpfNormalizado ? [{ cpf: cpfNormalizado }] : [])],
       },
     });
     if (existe) {
-      return res.status(400).json({ error: existe.email === email ? "E-mail já cadastrado." : "CPF já cadastrado." });
+      return res
+        .status(400)
+        .json({
+          error:
+            existe.email === email
+              ? "E-mail já cadastrado."
+              : "CPF já cadastrado.",
+        });
     }
 
     const usuario = await prisma.usuario.create({
@@ -202,7 +293,10 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         cargo,
         equipe: validarEquipe(equipe),
         unidade: unidadePrincipal,
-        unidadesPermitidas: serializarUnidadesPermitidas(unidadesDoUsuario, unidadePrincipal),
+        unidadesPermitidas: serializarUnidadesPermitidas(
+          unidadesDoUsuario,
+          unidadePrincipal,
+        ),
         empresa: "Movecta S/A",
         perfilAcesso: normalizarPerfil(perfilAcesso),
         statusUsuario: "ATIVO",
@@ -222,6 +316,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
 
     await vincularTreinamentosPocSep007(usuario);
     await vincularTreinamentosPocSep001(usuario);
+    await vincularTreinamentosPocComplementares(usuario);
 
     return res.status(201).json(formatarUsuario(usuario));
   } catch (error) {
@@ -242,8 +337,13 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Usuário não encontrado" });
     }
 
-    if (usuarioAnterior.perfilAcesso === "SUPER_ADMIN" && req.usuarioPerfil !== "SUPER_ADMIN") {
-      return res.status(403).json({ error: "Somente Super Admin pode alterar outro Super Admin." });
+    if (
+      usuarioAnterior.perfilAcesso === "SUPER_ADMIN" &&
+      req.usuarioPerfil !== "SUPER_ADMIN"
+    ) {
+      return res
+        .status(403)
+        .json({ error: "Somente Super Admin pode alterar outro Super Admin." });
     }
 
     const {
@@ -259,8 +359,14 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       perfilAcesso,
       statusUsuario,
     } = req.body;
-    const unidadesDoUsuario = normalizarUnidadesPermitidas(unidadesPermitidas, unidade || usuarioAnterior.unidade);
-    const unidadePrincipal = unidade && unidadesDoUsuario.includes(unidade) ? unidade : unidadesDoUsuario[0];
+    const unidadesDoUsuario = normalizarUnidadesPermitidas(
+      unidadesPermitidas,
+      unidade || usuarioAnterior.unidade,
+    );
+    const unidadePrincipal =
+      unidade && unidadesDoUsuario.includes(unidade)
+        ? unidade
+        : unidadesDoUsuario[0];
     const cpfNormalizado = limparCpf(cpf);
 
     if (!cpfValido(cpfNormalizado)) {
@@ -290,7 +396,10 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
         cargo,
         equipe: validarEquipe(equipe),
         unidade: unidadePrincipal,
-        unidadesPermitidas: serializarUnidadesPermitidas(unidadesDoUsuario, unidadePrincipal),
+        unidadesPermitidas: serializarUnidadesPermitidas(
+          unidadesDoUsuario,
+          unidadePrincipal,
+        ),
         empresa: "Movecta S/A",
         perfilAcesso: normalizarPerfil(perfilAcesso),
         statusUsuario: validarStatus(statusUsuario),
@@ -312,6 +421,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
 
     await vincularTreinamentosPocSep007(usuario);
     await vincularTreinamentosPocSep001(usuario);
+    await vincularTreinamentosPocComplementares(usuario);
 
     return res.json(formatarUsuario(usuario));
   } catch (error) {
@@ -338,8 +448,16 @@ export async function redefinirSenhaUsuario(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Usuário não encontrado" });
     }
 
-    if (usuarioAnterior.perfilAcesso === "SUPER_ADMIN" && req.usuarioPerfil !== "SUPER_ADMIN") {
-      return res.status(403).json({ error: "Somente Super Admin pode redefinir senha de outro Super Admin." });
+    if (
+      usuarioAnterior.perfilAcesso === "SUPER_ADMIN" &&
+      req.usuarioPerfil !== "SUPER_ADMIN"
+    ) {
+      return res
+        .status(403)
+        .json({
+          error:
+            "Somente Super Admin pode redefinir senha de outro Super Admin.",
+        });
     }
 
     const usuario = await prisma.usuario.update({
@@ -367,7 +485,10 @@ export async function redefinirSenhaUsuario(req: AuthRequest, res: Response) {
   }
 }
 
-export async function resetarDispositivoUsuario(req: AuthRequest, res: Response) {
+export async function resetarDispositivoUsuario(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { id } = req.params;
     const { motivo } = req.body;
@@ -406,7 +527,10 @@ export async function resetarDispositivoUsuario(req: AuthRequest, res: Response)
       },
     });
 
-    return res.json({ mensagem: "Dispositivo resetado. O próximo acesso vinculará um novo computador." });
+    return res.json({
+      mensagem:
+        "Dispositivo resetado. O próximo acesso vinculará um novo computador.",
+    });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao resetar dispositivo" });
@@ -416,7 +540,9 @@ export async function resetarDispositivoUsuario(req: AuthRequest, res: Response)
 export async function resetarPinUsuario(req: AuthRequest, res: Response) {
   try {
     if (req.usuarioPerfil !== "SUPER_ADMIN") {
-      return res.status(403).json({ error: "Somente Super Admin pode resetar PIN operacional." });
+      return res
+        .status(403)
+        .json({ error: "Somente Super Admin pode resetar PIN operacional." });
     }
 
     const { id } = req.params;
@@ -433,7 +559,8 @@ export async function resetarPinUsuario(req: AuthRequest, res: Response) {
       where: { id: Number(id) },
       data: {
         pinOperacionalHash: await gerarHashPin("1234"),
-        pinOperacionalCriadoEm: usuarioAnterior.pinOperacionalCriadoEm || new Date(),
+        pinOperacionalCriadoEm:
+          usuarioAnterior.pinOperacionalCriadoEm || new Date(),
         pinOperacionalAtualizadoEm: new Date(),
         pinTentativasInvalidas: 0,
         pinBloqueadoAte: null,
@@ -449,7 +576,10 @@ export async function resetarPinUsuario(req: AuthRequest, res: Response) {
       dadosAnteriores: {
         id: usuarioAnterior.id,
         email: usuarioAnterior.email,
-        possuiPinOperacional: Boolean(usuarioAnterior.pinOperacionalCriadoEm || usuarioAnterior.pinOperacionalAtualizadoEm),
+        possuiPinOperacional: Boolean(
+          usuarioAnterior.pinOperacionalCriadoEm ||
+            usuarioAnterior.pinOperacionalAtualizadoEm,
+        ),
       },
       dadosNovos: {
         id: usuario.id,
@@ -461,7 +591,8 @@ export async function resetarPinUsuario(req: AuthRequest, res: Response) {
     });
 
     return res.json({
-      mensagem: "PIN operacional restaurado para 1234. O usuario devera alterar o PIN no perfil.",
+      mensagem:
+        "PIN operacional restaurado para 1234. O usuario devera alterar o PIN no perfil.",
       usuario: formatarUsuario(usuario),
     });
   } catch (error) {
@@ -485,7 +616,11 @@ export async function alterarStatusUsuario(req: AuthRequest, res: Response) {
     }
 
     if (usuarioAnterior.perfilAcesso === "SUPER_ADMIN") {
-      return res.status(403).json({ error: "O usuário Super Admin não pode ser bloqueado ou desativado." });
+      return res
+        .status(403)
+        .json({
+          error: "O usuário Super Admin não pode ser bloqueado ou desativado.",
+        });
     }
 
     const usuario = await prisma.usuario.update({
@@ -498,7 +633,10 @@ export async function alterarStatusUsuario(req: AuthRequest, res: Response) {
 
     await registrarLog({
       req,
-      acao: usuario.statusUsuario === "BLOQUEADO" ? "Bloqueio de usuário" : "Desbloqueio/ativação de usuário",
+      acao:
+        usuario.statusUsuario === "BLOQUEADO"
+          ? "Bloqueio de usuário"
+          : "Desbloqueio/ativação de usuário",
       tipoRegistro: "Usuario",
       registroId: usuario.id,
       dadosAnteriores: usuarioAnterior,
@@ -525,7 +663,9 @@ export async function excluirUsuario(req: AuthRequest, res: Response) {
     }
 
     if (usuario.perfilAcesso === "SUPER_ADMIN") {
-      return res.status(403).json({ error: "O usuário Super Admin não pode ser excluído." });
+      return res
+        .status(403)
+        .json({ error: "O usuário Super Admin não pode ser excluído." });
     }
 
     await prisma.usuario.delete({ where: { id: Number(id) } });
@@ -630,7 +770,9 @@ export async function atualizarPerfil(req: AuthRequest, res: Response) {
     if (usuarioAnterior.fotoPerfil !== usuario.fotoPerfil) {
       await registrarLog({
         req,
-        acao: usuario.fotoPerfil ? "Alteração de foto de perfil" : "Remoção de foto de perfil",
+        acao: usuario.fotoPerfil
+          ? "Alteração de foto de perfil"
+          : "Remoção de foto de perfil",
         tipoRegistro: "Usuario",
         registroId: usuario.id,
         dadosAnteriores: { fotoPerfil: usuarioAnterior.fotoPerfil },
@@ -653,15 +795,24 @@ export async function atualizarPinOperacional(req: AuthRequest, res: Response) {
     const { pinAtual, senhaAtual, novoPin, confirmarNovoPin } = req.body;
 
     if (!novoPin || !confirmarNovoPin) {
-      return res.status(400).json({ error: "Informe e confirme o novo PIN de segurança." });
+      return res
+        .status(400)
+        .json({ error: "Informe e confirme o novo PIN de segurança." });
     }
 
     if (novoPin !== confirmarNovoPin) {
-      return res.status(400).json({ error: "Os PINs de segurança não coincidem." });
+      return res
+        .status(400)
+        .json({ error: "Os PINs de segurança não coincidem." });
     }
 
     if (!validarFormatoPin(String(novoPin))) {
-      return res.status(400).json({ error: "O PIN de segurança deve possuir exatamente 4 dígitos numéricos." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "O PIN de segurança deve possuir exatamente 4 dígitos numéricos.",
+        });
     }
 
     const usuario = await prisma.usuario.findUnique({
@@ -682,15 +833,24 @@ export async function atualizarPinOperacional(req: AuthRequest, res: Response) {
 
     if (usuario.pinOperacionalHash) {
       if (!pinAtual) {
-        return res.status(400).json({ error: "Informe o PIN atual para cadastrar um novo PIN." });
+        return res
+          .status(400)
+          .json({ error: "Informe o PIN atual para cadastrar um novo PIN." });
       }
       await validarPinOperacional(usuario.id, String(pinAtual));
     } else {
       if (!senhaAtual) {
-        return res.status(400).json({ error: "Informe sua senha atual para criar o PIN de segurança." });
+        return res
+          .status(400)
+          .json({
+            error: "Informe sua senha atual para criar o PIN de segurança.",
+          });
       }
 
-      const senhaValida = await bcrypt.compare(String(senhaAtual), usuario.senha);
+      const senhaValida = await bcrypt.compare(
+        String(senhaAtual),
+        usuario.senha,
+      );
       if (!senhaValida) {
         return res.status(400).json({ error: "Senha atual inválida." });
       }
@@ -710,7 +870,9 @@ export async function atualizarPinOperacional(req: AuthRequest, res: Response) {
 
     await registrarLog({
       req,
-      acao: usuario.pinOperacionalHash ? "Atualização de PIN operacional" : "Criação de PIN operacional",
+      acao: usuario.pinOperacionalHash
+        ? "Atualização de PIN operacional"
+        : "Criação de PIN operacional",
       tipoRegistro: "Usuario",
       registroId: usuario.id,
       dadosNovos: {
@@ -723,7 +885,8 @@ export async function atualizarPinOperacional(req: AuthRequest, res: Response) {
     return res.json(formatarUsuario(atualizado));
   } catch (error: any) {
     const status = error?.status || 500;
-    return res.status(status).json({ error: error?.message || "Erro ao atualizar PIN operacional" });
+    return res
+      .status(status)
+      .json({ error: error?.message || "Erro ao atualizar PIN operacional" });
   }
 }
-
