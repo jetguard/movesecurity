@@ -29,10 +29,13 @@ const Perfil = lazyWithReload(() => import("./pages/Perfil"));
 const MeusDados = lazyWithReload(() => import("./pages/MeusDados"));
 const Logs = lazyWithReload(() => import("./pages/Logs"));
 const Usuarios = lazyWithReload(() => import("./pages/Usuarios"));
-const Riscos = lazyWithReload(() => import("./pages/Riscos"));
 const RiscosCadastroGeral = lazyWithReload(
   () => import("./pages/RiscosCadastroGeral"),
 );
+const RiscosModuloEmConstrucao = lazyWithReload(
+  () => import("./pages/RiscosModuloEmConstrucao"),
+);
+const PlanosAcao = lazyWithReload(() => import("./pages/PlanosAcao"));
 const APRs = lazyWithReload(() => import("./pages/APRs"));
 const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
 const Pendencias = lazyWithReload(() => import("./pages/Pendencias"));
@@ -382,7 +385,17 @@ export default function App() {
             />
             <Route
               path="planos-acao"
-              element={<Navigate to="/riscos" replace />}
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <PlanosAcao />
+                </ProtectedRoute>
+              }
             />
             <Route
               path="matriz-risco"
@@ -404,17 +417,7 @@ export default function App() {
             />
             <Route
               path="riscos"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <Riscos />
-                </ProtectedRoute>
-              }
+              element={<Navigate to="/riscos/cadastro-geral" replace />}
             />
             <Route
               path="riscos/cadastro-geral"
@@ -427,6 +430,34 @@ export default function App() {
                   ]}
                 >
                   <RiscosCadastroGeral />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="riscos/analise-completa"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <RiscosModuloEmConstrucao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="riscos/analise-simplificada"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <RiscosModuloEmConstrucao />
                 </ProtectedRoute>
               }
             />

@@ -22,7 +22,6 @@ import {
   ListChecks,
   CheckCircle2,
   Paperclip,
-  ClipboardCheck,
   Users,
   Video,
   Menu,
@@ -667,7 +666,7 @@ export default function AdminLayout() {
               >
                 <div className="flex items-center gap-3">
                   <BrainCircuit size={20} className="shrink-0" />
-                  <span className={menuText}>Gestão Avançada</span>
+                  <span className={menuText}>Análise de Riscos</span>
                 </div>
                 <span className={menuToggle}>
                   {gestaoAvancadaOpen ? "-" : "+"}
@@ -676,21 +675,21 @@ export default function AdminLayout() {
 
               {gestaoAvancadaOpen && (
                 <div className={submenuClass}>
-                  <Link to="/riscos" className={subItem}>
-                    <ShieldAlert size={16} />
-                    Análise de Riscos
-                  </Link>
                   <Link to="/riscos/cadastro-geral" className={subItem}>
                     <Columns3 size={16} />
                     Cadastro Geral
                   </Link>
-                  <Link to="/aprs" className={subItem}>
-                    <FileCheck2 size={16} />
-                    APR Operacional
+                  <Link to="/riscos/analise-completa" className={subItem}>
+                    <FileBarChart size={16} />
+                    Análise Completa
                   </Link>
-                  <Link to="/checklists" className={subItem}>
-                    <ClipboardCheck size={16} />
-                    Checklist Inspeção Preventiva
+                  <Link to="/riscos/analise-simplificada" className={subItem}>
+                    <ShieldAlert size={16} />
+                    Análise Simplificada
+                  </Link>
+                  <Link to="/planos-acao" className={subItem}>
+                    <ListChecks size={16} />
+                    Plano de ação 5W2H
                   </Link>
                 </div>
               )}
