@@ -318,6 +318,7 @@ function emailValido(email: string) {
 export default function TreinamentoPocSep007Publico() {
   const [indiceSecao, setIndiceSecao] = useState(0);
   const [respostas, setRespostas] = useState<Array<number | null>>(quiz.map(() => null));
+  const [indicePerguntaQuiz, setIndicePerguntaQuiz] = useState(0);
   const [mostrarResultado, setMostrarResultado] = useState(false);
   const [form, setForm] = useState(formInicial);
   const [unidades, setUnidades] = useState<string[]>([]);
@@ -464,6 +465,7 @@ export default function TreinamentoPocSep007Publico() {
     if (!treinamento) return;
     if (respostas.some((resposta) => resposta === null)) {
       setMostrarResultado(true);
+      setIndicePerguntaQuiz(Math.max(0, respostas.findIndex((resposta) => resposta === null)));
       setMensagem("Responda todas as questões antes de validar.");
       return;
     }
@@ -477,6 +479,10 @@ export default function TreinamentoPocSep007Publico() {
       setTreinamento(response.data.treinamento);
       setMostrarResultado(true);
       setIndiceSecao(indiceResultado);
+      if (!response.data.aprovado) {
+        const primeiraIncorreta = respostas.findIndex((resposta, index) => resposta !== quiz[index].correta);
+        setIndicePerguntaQuiz(Math.max(0, primeiraIncorreta));
+      }
       setMensagem(response.data.aprovado ? "Você atingiu a nota mínima. Avance para assinatura e emissão do certificado." : "Você não atingiu a nota mínima de 80%. Revise as perguntas e tente novamente.");
     } catch (error: any) {
       setMensagem(error.response?.data?.error || "Não foi possível validar a avaliação.");
@@ -753,6 +759,7 @@ export default function TreinamentoPocSep007Publico() {
 
             <div className="mt-6 grid gap-4">
               {quiz.map((item, perguntaIndex) => {
+                if (perguntaIndex !== indicePerguntaQuiz) return null;
                 const resposta = respostas[perguntaIndex];
                 const respondida = resposta !== null;
                 const incorreta = mostrarResultado && resposta !== item.correta;
@@ -788,6 +795,26 @@ export default function TreinamentoPocSep007Publico() {
               })}
             </div>
 
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setIndicePerguntaQuiz((atual) => Math.max(0, atual - 1))}
+                disabled={indicePerguntaQuiz === 0}
+                className="terminal-secondary-action inline-flex items-center gap-2 rounded-xl border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ArrowLeft size={16} /> Pergunta anterior
+              </button>
+              <span>Questão {indicePerguntaQuiz + 1} de {quiz.length}</span>
+              <button
+                type="button"
+                onClick={() => setIndicePerguntaQuiz((atual) => Math.min(quiz.length - 1, atual + 1))}
+                disabled={indicePerguntaQuiz === quiz.length - 1}
+                className="terminal-secondary-action inline-flex items-center gap-2 rounded-xl border px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Próxima pergunta <ArrowRight size={16} />
+              </button>
+            </div>
+
             <div className="mt-6 flex flex-wrap gap-3">
               <button type="button" onClick={voltar} className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto">
                 <ArrowLeft size={18} /> Voltar às etapas
@@ -801,8 +828,8 @@ export default function TreinamentoPocSep007Publico() {
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Resultado</p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">Resultado da avaliação</h2>
-            <div className={`mt-6 rounded-2xl border-2 bg-white p-5 shadow-xl ${resultadoQuiz?.aprovado ? "border-emerald-500 text-emerald-950" : "border-amber-500 text-amber-950"}`}>
-              <p className={`text-sm font-black uppercase tracking-[0.18em] ${resultadoQuiz?.aprovado ? "text-emerald-700" : "text-amber-700"}`}>{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
+            <div className={`terminal-result-card mt-6 rounded-2xl border-2 bg-white p-5 shadow-xl ${resultadoQuiz?.aprovado ? "border-emerald-500" : "border-blue-500"}`}>
+              <p className={`text-sm font-black uppercase tracking-[0.18em] ${resultadoQuiz?.aprovado ? "text-emerald-700" : "text-blue-700"}`}>{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
               <p className="mt-3 text-4xl font-black text-slate-950">{resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos</p>
               <p className="mt-2 text-xl font-black text-slate-900">Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%</p>
               <p className="mt-3 text-base font-bold text-slate-800">

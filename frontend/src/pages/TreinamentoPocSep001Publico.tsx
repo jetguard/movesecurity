@@ -822,7 +822,7 @@ export default function TreinamentoPocSep001Publico() {
               ))}
             </div>
 
-            <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-black leading-6 text-amber-950 shadow-sm">
+            <div className="terminal-attention mt-5 rounded-xl border px-4 py-3 text-sm font-black leading-6 shadow-sm">
               Atenção: {secaoAtual.atencao}
             </div>
 
@@ -917,8 +917,8 @@ export default function TreinamentoPocSep001Publico() {
           <div className="terminal-panel rounded-2xl border p-4 shadow-2xl sm:p-6">
             <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">Resultado</p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">Resultado da avaliação</h2>
-            <div className={`mt-6 rounded-2xl border-2 bg-white p-5 shadow-xl ${resultadoQuiz?.aprovado ? "border-emerald-500 text-emerald-950" : "border-amber-500 text-amber-950"}`}>
-              <p className={`text-sm font-black uppercase tracking-[0.18em] ${resultadoQuiz?.aprovado ? "text-emerald-700" : "text-amber-700"}`}>{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
+            <div className={`terminal-result-card mt-6 rounded-2xl border-2 bg-white p-5 shadow-xl ${resultadoQuiz?.aprovado ? "border-emerald-500" : "border-blue-500"}`}>
+              <p className={`text-sm font-black uppercase tracking-[0.18em] ${resultadoQuiz?.aprovado ? "text-emerald-700" : "text-blue-700"}`}>{resultadoQuiz?.aprovado ? "Aprovado" : "Revisão necessária"}</p>
               <p className="mt-3 text-4xl font-black text-slate-950">{resultadoQuiz?.acertos ?? acertos} de {quiz.length} acertos</p>
               <p className="mt-2 text-xl font-black text-slate-900">Nota: {resultadoQuiz?.nota ?? Math.round((acertos / quiz.length) * 100)}%</p>
               <p className="mt-3 text-base font-bold text-slate-800">

@@ -317,6 +317,33 @@
       inset 0 1px 0 rgb(255 255 255 / 0.9) !important;
   }
 
+  .treinamento-terminal-publico .terminal-panel .text-slate-500,
+  .treinamento-terminal-publico .terminal-panel .text-slate-600,
+  .treinamento-terminal-publico .terminal-panel .text-slate-700,
+  .treinamento-terminal-publico .terminal-panel .text-amber-700,
+  .dark .treinamento-terminal-publico .terminal-panel .text-slate-500,
+  .dark .treinamento-terminal-publico .terminal-panel .text-slate-600,
+  .dark .treinamento-terminal-publico .terminal-panel .text-slate-700,
+  .dark .treinamento-terminal-publico .terminal-panel .text-amber-700 {
+    color: #102a56 !important;
+  }
+
+  .treinamento-terminal-publico .terminal-result-card,
+  .dark .treinamento-terminal-publico .terminal-result-card {
+    background-color: #ffffff !important;
+    color: #07132f !important;
+  }
+
+  .treinamento-terminal-publico .terminal-attention,
+  .dark .treinamento-terminal-publico .terminal-attention {
+    background-color: #ffffff !important;
+    border-color: #93c5fd !important;
+    color: #07132f !important;
+    box-shadow:
+      0 12px 28px rgb(15 23 42 / 0.06),
+      inset 4px 0 0 #1d4ed8 !important;
+  }
+
   .treinamento-terminal-publico .terminal-message,
   .dark .treinamento-terminal-publico .terminal-message {
     background-color: #ffffff !important;
