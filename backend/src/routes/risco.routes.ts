@@ -21,6 +21,7 @@ import {
   criarRisco,
   criarSetorRisco,
   excluirCatalogoRisco,
+  excluirAnaliseCompletaRisco,
   excluirControlePreventivoCadastro,
   excluirFatorRiscoCadastro,
   excluirMacroProcessoRisco,
@@ -100,6 +101,12 @@ router.patch(
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   atualizarControlesAnaliseCompletaRisco,
+);
+router.delete(
+  "/analise-completa/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  excluirAnaliseCompletaRisco,
 );
 router.post(
   "/cadastro-geral/macro-processos",

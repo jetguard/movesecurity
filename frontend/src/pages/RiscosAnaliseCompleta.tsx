@@ -6,6 +6,7 @@ import {
   Edit3,
   Plus,
   Save,
+  Trash2,
   X,
 } from "lucide-react";
 import { api } from "../services/api";
@@ -72,6 +73,13 @@ type AnaliseCompleta = {
   preventivos: ControleSelecionado[];
   detectivos: ControleSelecionado[];
   corretivos: ControleSelecionado[];
+  probabilidadeResidual?: number | null;
+  nivelProbabilidadeResidual?: string | null;
+  consequenciaResidual?: number | null;
+  nivelConsequenciaResidual?: string | null;
+  resultadoResidual?: number | null;
+  nivelRiscoResidual?: string | null;
+  classificacaoResidual?: string | null;
   createdAt: string;
 };
 
@@ -197,6 +205,31 @@ function classificar(resultado: number) {
   };
 }
 
+function corNivel(texto?: string | null) {
+  const valor = String(texto || "").toUpperCase();
+  if (["BAIXO", "MENOR", "REMOTO"].includes(valor))
+    return "bg-emerald-300 text-slate-950";
+  if (["POSSÍVEL", "POSSÃVEL", "MODERADO"].includes(valor))
+    return "bg-yellow-300 text-slate-950";
+  if (["ALTO", "MAIOR", "PROVÁVEL", "PROVÃVEL", "SEVERO"].includes(valor))
+    return "bg-orange-500 text-white";
+  if (["EXTREMO", "CRÍTICO", "CRÃTICO", "FREQUENTE"].includes(valor))
+    return "bg-red-600 text-white";
+  return "bg-slate-700 text-slate-100";
+}
+
+function BadgeNivel({ children }: { children: string }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-black ${corNivel(
+        children,
+      )}`}
+    >
+      {children || "-"}
+    </span>
+  );
+}
+
 function etiquetaControle(item: ControleSelecionado) {
   return item.codigo ? `${item.codigo} - ${item.nome}` : item.nome;
 }
@@ -214,6 +247,8 @@ export default function RiscosAnaliseCompleta() {
   const [preventivos, setPreventivos] = useState<string[]>([]);
   const [detectivos, setDetectivos] = useState<string[]>([]);
   const [corretivos, setCorretivos] = useState<string[]>([]);
+  const [probabilidadeResidual, setProbabilidadeResidual] = useState("");
+  const [consequenciaResidual, setConsequenciaResidual] = useState("");
 
   useEffect(() => {
     carregar();
@@ -265,6 +300,30 @@ export default function RiscosAnaliseCompleta() {
       ...classificar(resultado),
     };
   }, [form]);
+
+  const previaResidual = useMemo(() => {
+    const prob = probabilidadeResidual
+      ? Number(String(probabilidadeResidual).replace(",", "."))
+      : null;
+    const cons = consequenciaResidual
+      ? Number(String(consequenciaResidual).replace(",", "."))
+      : null;
+    const probValido = prob !== null && Number.isFinite(prob);
+    const consValido = cons !== null && Number.isFinite(cons);
+    const resultado =
+      probValido && consValido ? arredondar(Number(prob) * Number(cons)) : null;
+    const classificacao = resultado !== null ? classificar(resultado) : null;
+
+    return {
+      probabilidade: probValido ? Number(prob) : null,
+      nivelProbabilidade: probValido ? nivelProbabilidade(Number(prob)) : "-",
+      consequencia: consValido ? Number(cons) : null,
+      nivelConsequencia: consValido ? nivelConsequencia(Number(cons)) : "-",
+      resultado,
+      classificacao: classificacao?.nivel || "-",
+      cor: classificacao?.cor || "bg-slate-700 text-slate-100",
+    };
+  }, [probabilidadeResidual, consequenciaResidual]);
 
   function alterarNota(campo: CampoNota, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: pontuacao(Number(valor)) }));
@@ -339,6 +398,14 @@ export default function RiscosAnaliseCompleta() {
     setPreventivos(analise.preventivos.map((item) => String(item.id || "")));
     setDetectivos(analise.detectivos.map((item) => String(item.id || "")));
     setCorretivos(analise.corretivos.map((item) => String(item.id || "")));
+    setProbabilidadeResidual(
+      analise.probabilidadeResidual
+        ? String(analise.probabilidadeResidual)
+        : "",
+    );
+    setConsequenciaResidual(
+      analise.consequenciaResidual ? String(analise.consequenciaResidual) : "",
+    );
   }
 
   function alternarControle(
@@ -361,6 +428,8 @@ export default function RiscosAnaliseCompleta() {
           preventivos: itensSelecionados(preventivos),
           detectivos: itensSelecionados(detectivos),
           corretivos: itensSelecionados(corretivos),
+          probabilidadeResidual,
+          consequenciaResidual,
         },
       );
       setControlesEditando(null);
@@ -372,6 +441,25 @@ export default function RiscosAnaliseCompleta() {
       );
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function excluirAnalise(analise: AnaliseCompleta) {
+    const confirmar = window.confirm(
+      `Excluir definitivamente a análise ${analise.codigo}? Esta ação não poderá ser desfeita.`,
+    );
+    if (!confirmar) return;
+
+    setErro("");
+    setMensagem("");
+    try {
+      await api.delete(`/riscos/analise-completa/${analise.id}`);
+      setMensagem("Análise excluída com sucesso.");
+      await carregar();
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error || "Não foi possível excluir a análise.",
+      );
     }
   }
 
@@ -442,7 +530,7 @@ export default function RiscosAnaliseCompleta() {
 
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-slate-950 px-4 py-6 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-[1800px]">
         <header className="border-b border-slate-800 pb-6">
           <p className="text-xs font-black uppercase tracking-[0.35em] text-blue-300">
             Análise de Riscos
@@ -476,7 +564,7 @@ export default function RiscosAnaliseCompleta() {
 
         <form
           onSubmit={salvarAnalise}
-          className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-black/20"
+          className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-2xl shadow-black/20 sm:p-5"
         >
           <div className="flex items-center gap-3">
             <BrainCircuit className="text-blue-300" size={22} />
@@ -485,7 +573,7 @@ export default function RiscosAnaliseCompleta() {
             </h2>
           </div>
 
-          <div className="mt-5 grid gap-4 lg:grid-cols-3">
+          <div className="mt-5 grid gap-4 xl:grid-cols-3">
             <label className="text-sm font-black text-slate-200">
               Macro Processo
               <select
@@ -583,7 +671,7 @@ export default function RiscosAnaliseCompleta() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1.4fr]">
+          <div className="mt-5 grid gap-5 2xl:grid-cols-[0.9fr_1.5fr]">
             <section>
               <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
                 Probabilidade
@@ -607,7 +695,7 @@ export default function RiscosAnaliseCompleta() {
             </section>
           </div>
 
-          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 md:grid-cols-4 xl:grid-cols-8">
+          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
             <div>
               <p className="text-xs font-black uppercase text-blue-200">Nota</p>
               <p className="mt-1 text-xl font-black text-white">
@@ -638,9 +726,7 @@ export default function RiscosAnaliseCompleta() {
               </p>
             </div>
             <div>
-              <p className="text-xs font-black uppercase text-blue-200">
-                MPI
-              </p>
+              <p className="text-xs font-black uppercase text-blue-200">MPI</p>
               <p className="mt-1 text-xl font-black text-white">
                 {previa.mediaConsequencia}
               </p>
@@ -702,7 +788,7 @@ export default function RiscosAnaliseCompleta() {
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[1240px] border-separate border-spacing-y-2">
+            <table className="w-full min-w-[1480px] border-separate border-spacing-y-2">
               <thead>
                 <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
                   <th className="px-3 py-2">Código</th>
@@ -713,6 +799,7 @@ export default function RiscosAnaliseCompleta() {
                   <th className="px-3 py-2 text-center">Cons.</th>
                   <th className="px-3 py-2 text-center">NRI</th>
                   <th className="px-3 py-2">Classificação</th>
+                  <th className="px-3 py-2">Residual</th>
                   <th className="px-3 py-2">Controles</th>
                   <th className="px-3 py-2 text-right">Ações</th>
                 </tr>
@@ -740,8 +827,8 @@ export default function RiscosAnaliseCompleta() {
                     </td>
                     <td className="px-3 py-4 text-center">
                       {analise.mediaProbabilidade}
-                      <p className="text-xs text-slate-400">
-                        {analise.nivelProbabilidade}
+                      <p className="mt-1">
+                        <BadgeNivel>{analise.nivelProbabilidade}</BadgeNivel>
                       </p>
                     </td>
                     <td className="px-3 py-4 text-center font-black">
@@ -750,23 +837,43 @@ export default function RiscosAnaliseCompleta() {
                     </td>
                     <td className="px-3 py-4 text-center">
                       {analise.mediaConsequencia}
-                      <p className="text-xs text-slate-400">
-                        {analise.nivelConsequencia}
+                      <p className="mt-1">
+                        <BadgeNivel>{analise.nivelConsequencia}</BadgeNivel>
                       </p>
                     </td>
                     <td className="px-3 py-4 text-center font-black">
                       {analise.resultadoInerente}
                     </td>
                     <td className="px-3 py-4">
-                      <span
-                        className={`rounded-full px-3 py-1 text-xs font-black ${
-                          classificar(analise.resultadoInerente).cor
-                        }`}
-                      >
-                        {analise.classificacaoRisco}
-                      </span>
+                      <BadgeNivel>{analise.classificacaoRisco}</BadgeNivel>
                       <p className="mt-1 text-xs text-slate-400">
                         {analise.periodicidadeAcao}
+                      </p>
+                    </td>
+                    <td className="px-3 py-4 text-xs text-slate-300">
+                      <p>
+                        Prob.:{" "}
+                        <span className="font-black text-white">
+                          {analise.probabilidadeResidual ?? "-"}
+                        </span>{" "}
+                        <BadgeNivel>
+                          {analise.nivelProbabilidadeResidual || "-"}
+                        </BadgeNivel>
+                      </p>
+                      <p className="mt-1">
+                        Cons.:{" "}
+                        <span className="font-black text-white">
+                          {analise.consequenciaResidual ?? "-"}
+                        </span>{" "}
+                        <BadgeNivel>
+                          {analise.nivelConsequenciaResidual || "-"}
+                        </BadgeNivel>
+                      </p>
+                      <p className="mt-1">
+                        Class.:{" "}
+                        <BadgeNivel>
+                          {analise.classificacaoResidual || "-"}
+                        </BadgeNivel>
                       </p>
                     </td>
                     <td className="px-3 py-4 text-xs text-slate-300">
@@ -775,21 +882,31 @@ export default function RiscosAnaliseCompleta() {
                       <p>Corr.: {analise.corretivos.length}</p>
                     </td>
                     <td className="rounded-r-xl px-3 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={() => abrirControles(analise)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
-                      >
-                        <Edit3 size={14} />
-                        Controles
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => abrirControles(analise)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
+                        >
+                          <Edit3 size={14} />
+                          Controles
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => excluirAnalise(analise)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/20"
+                        >
+                          <Trash2 size={14} />
+                          Excluir
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
                 {!analises.length && (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={11}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
                       Nenhuma análise completa cadastrada.
@@ -804,11 +921,11 @@ export default function RiscosAnaliseCompleta() {
 
       {controlesEditando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
-          <div className="max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+          <div className="max-h-[92vh] w-full max-w-7xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-blue-300">
-                  Controles
+                  Controles e Avaliação Residual
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-white">
                   {controlesEditando.codigo}
@@ -830,15 +947,99 @@ export default function RiscosAnaliseCompleta() {
             <div className="mt-5 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-50">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" />
               <p className="text-sm font-semibold leading-6">
-                Os controles selecionados serão considerados na etapa residual
-                da análise quando a fórmula final for ativada.
+                Selecione os controles e preencha a avaliação residual. O
+                sistema calcula automaticamente os níveis e a classificação
+                residual conforme as faixas da planilha.
               </p>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-3">
-              {renderListaControles("Preventivo", preventivos, setPreventivos)}
-              {renderListaControles("Detectivo", detectivos, setDetectivos)}
-              {renderListaControles("Corretivo", corretivos, setCorretivos)}
+            <div className="mt-5 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+              <div className="grid gap-4 lg:grid-cols-3">
+                {renderListaControles(
+                  "Preventivo",
+                  preventivos,
+                  setPreventivos,
+                )}
+                {renderListaControles("Detectivo", detectivos, setDetectivos)}
+                {renderListaControles("Corretivo", corretivos, setCorretivos)}
+              </div>
+
+              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
+                  Avaliação Residual
+                </h3>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="text-sm font-black text-slate-200">
+                    Probabilidade residual
+                    <input
+                      className={`${inputClass} mt-2 w-full`}
+                      type="number"
+                      min="1"
+                      max="5"
+                      step="0.01"
+                      value={probabilidadeResidual}
+                      onChange={(event) =>
+                        setProbabilidadeResidual(event.target.value)
+                      }
+                      placeholder="Ex: 3.51"
+                    />
+                  </label>
+                  <label className="text-sm font-black text-slate-200">
+                    Consequência residual
+                    <input
+                      className={`${inputClass} mt-2 w-full`}
+                      type="number"
+                      min="1"
+                      max="5"
+                      step="0.01"
+                      value={consequenciaResidual}
+                      onChange={(event) =>
+                        setConsequenciaResidual(event.target.value)
+                      }
+                      placeholder="Ex: 2.40"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                    <p className="text-xs font-black uppercase text-slate-400">
+                      Nível de Probabilidade
+                    </p>
+                    <div className="mt-2">
+                      <BadgeNivel>
+                        {previaResidual.nivelProbabilidade}
+                      </BadgeNivel>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                    <p className="text-xs font-black uppercase text-slate-400">
+                      Nível de Consequência
+                    </p>
+                    <div className="mt-2">
+                      <BadgeNivel>
+                        {previaResidual.nivelConsequencia}
+                      </BadgeNivel>
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                    <p className="text-xs font-black uppercase text-slate-400">
+                      Nível de Risco
+                    </p>
+                    <p className="mt-2 text-2xl font-black text-white">
+                      {previaResidual.resultado ?? "-"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                    <p className="text-xs font-black uppercase text-slate-400">
+                      Classificação do Risco
+                    </p>
+                    <div className="mt-2">
+                      <BadgeNivel>{previaResidual.classificacao}</BadgeNivel>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-end">

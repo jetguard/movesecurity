@@ -1058,6 +1058,53 @@ function calcularAnaliseCompleta(body: Record<string, unknown>) {
   };
 }
 
+function numeroResidual(valor: unknown) {
+  if (valor === null || valor === undefined || valor === "") return null;
+  const numero = Number(String(valor).replace(",", "."));
+  if (!Number.isFinite(numero)) return null;
+  return Math.min(Math.max(numero, 0), 5);
+}
+
+function calcularResidualCompleta(body: Record<string, unknown>) {
+  const probabilidadeResidual = numeroResidual(body.probabilidadeResidual);
+  const consequenciaResidual = numeroResidual(body.consequenciaResidual);
+
+  if (probabilidadeResidual === null || consequenciaResidual === null) {
+    return {
+      probabilidadeResidual,
+      nivelProbabilidadeResidual:
+        probabilidadeResidual === null
+          ? null
+          : nivelProbabilidadeCompleta(probabilidadeResidual),
+      consequenciaResidual,
+      nivelConsequenciaResidual:
+        consequenciaResidual === null
+          ? null
+          : nivelConsequenciaCompleta(consequenciaResidual),
+      resultadoResidual: null,
+      nivelRiscoResidual: null,
+      classificacaoResidual: null,
+    };
+  }
+
+  const resultadoResidual = arredondarRisco(
+    probabilidadeResidual * consequenciaResidual,
+  );
+  const classificacao = classificacaoCompleta(resultadoResidual);
+
+  return {
+    probabilidadeResidual,
+    nivelProbabilidadeResidual: nivelProbabilidadeCompleta(
+      probabilidadeResidual,
+    ),
+    consequenciaResidual,
+    nivelConsequenciaResidual: nivelConsequenciaCompleta(consequenciaResidual),
+    resultadoResidual,
+    nivelRiscoResidual: classificacao.nivel,
+    classificacaoResidual: classificacao.classificacao,
+  };
+}
+
 function normalizarListaJson<T>(
   valor: unknown,
   normalizar: (item: Record<string, unknown>) => T | null,
@@ -1307,6 +1354,7 @@ export async function atualizarControlesAnaliseCompletaRisco(
         corretivosJson: JSON.stringify(
           normalizarControles(req.body.corretivos),
         ),
+        ...calcularResidualCompleta(req.body),
       },
     });
 
@@ -1325,6 +1373,37 @@ export async function atualizarControlesAnaliseCompletaRisco(
     return res
       .status(500)
       .json({ error: "Erro ao atualizar controles da análise completa." });
+  }
+}
+
+export async function excluirAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+
+    await prisma.analiseRiscoCompleta.delete({ where: { id } });
+
+    await registrarLog({
+      req,
+      acao: "Exclusão de análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: id,
+      dadosAnteriores: anterior,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir análise completa." });
   }
 }
 
