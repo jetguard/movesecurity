@@ -9,10 +9,10 @@ import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
 import { enviarEmail } from "../services/email.service";
 
-const TOTAL_ETAPAS_CONTEUDO = 6;
-const TOTAL_ETAPAS = 7;
+const TOTAL_ETAPAS_CONTEUDO = 12;
+const TOTAL_ETAPAS = 13;
 const NOTA_MINIMA = 80;
-const respostasCorretas = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const respostasCorretas = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 function texto(valor: unknown) {
   return String(valor || "").trim();

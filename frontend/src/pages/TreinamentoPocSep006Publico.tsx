@@ -56,272 +56,341 @@ const formInicial = {
 
 const secoes: SecaoTreinamento[] = [
   {
-    numero: "5",
-    titulo: "Descrição",
-    objetivo: "Apresentar o papel do CCOS nas operações de segurança.",
+    numero: "1",
+    titulo: "Atuação do CCOS",
+    objetivo: "Apresentar a atuação do Centro de Controle Operacional de Segurança.",
     resumo:
-      "O CCOS é a central de monitoramento das instalações, responsável por acompanhar operações de segurança por CFTV, alarmes e sensores eletrônicos em regime 24/7.",
+      "O CCOS acompanha as instalações por meio do CFTV, alarmes, sensores e demais recursos eletrônicos, funcionando continuamente 24 horas por dia e 7 dias por semana.",
     responsabilidades: [
-      "Monitorar áreas internas e perímetros.",
-      "Identificar eventos e situações suspeitas.",
-      "Acionar equipes de segurança e apoiar investigações.",
+      "Apoiar as equipes de campo.",
+      "Contribuir para prevenção de riscos e identificação de situações suspeitas.",
+      "Comunicar eventos, acompanhar ocorrências e preservar evidências.",
     ],
     pontos: [
-      "O CCOS coordena segurança eletrônica e apoia equipes de campo.",
-      "Registra e acompanha ocorrências.",
-      "Apoia rondas físicas conforme POC-SEP-002.",
+      "O monitoramento deve ser feito com atenção constante.",
+      "As ações executadas precisam ter resposta rápida e rastreabilidade.",
+      "O CCOS também presta suporte às investigações.",
     ],
-    atencao: "O CCOS deve operar de forma contínua, coordenada e registrada.",
+    atencao: "O CCOS é uma área crítica de monitoramento e suporte às operações de segurança.",
   },
   {
-    numero: "5.1",
+    numero: "2",
     titulo: "Passagem de posto",
-    objetivo: "Padronizar a troca de turno no CCOS.",
+    objetivo: "Garantir continuidade do monitoramento entre turnos.",
     resumo:
-      "Ao assumir o turno, o Assistente de Segurança - CFTV realiza rendição formal, verifica relatórios anteriores, câmeras, equipamentos e meios de comunicação.",
+      "Ao assumir o turno, o Assistente de Segurança - CFTV deve realizar rendição formal com o profissional do turno anterior, preservando informações importantes.",
     responsabilidades: [
-      "Realizar rendição formal do turno anterior.",
-      "Verificar relatórios operacionais anteriores.",
-      "Confirmar funcionamento de câmeras, HT, telefone e sistemas internos.",
+      "Ler relatórios anteriores e conhecer ocorrências em andamento.",
+      "Verificar câmeras, equipamentos de monitoramento, rádios HT, telefones e sistemas internos.",
+      "Comunicar falhas ou pendências identificadas.",
     ],
     pontos: [
-      "A passagem garante continuidade do monitoramento.",
-      "As informações operacionais devem permanecer íntegras.",
-      "Falhas devem ser conhecidas no início do turno.",
+      "A passagem de posto evita perda de informações operacionais.",
+      "A troca de turno deve ser formal e rastreável.",
+      "Pendências precisam ser conhecidas antes do início das atividades.",
     ],
-    atencao:
-      "Troca de turno sem rendição compromete continuidade e rastreabilidade.",
+    atencao: "Falhas na passagem de posto podem comprometer a continuidade da segurança.",
   },
   {
-    numero: "5.2",
+    numero: "3",
     titulo: "Monitoramento operacional",
-    objetivo: "Orientar o monitoramento durante o turno.",
+    objetivo: "Orientar o acompanhamento contínuo do sistema de CFTV.",
     resumo:
-      "Durante o turno, o Assistente de Segurança - CFTV monitora CFTV, verifica falhas de câmeras, faz varredura visual, identifica situações suspeitas e mantém comunicação com a equipe.",
+      "Durante o turno, o operador deve acompanhar o CFTV, realizar varreduras periódicas, observar áreas críticas, identificar situações suspeitas e manter comunicação com as equipes.",
     responsabilidades: [
-      "Monitorar continuamente o CFTV.",
       "Verificar falhas ou interrupções de câmeras.",
-      "Comunicar imediatamente a equipe responsável quando houver evento relevante.",
+      "Manter a câmera focada ao identificar evento relevante.",
+      "Comunicar a equipe responsável e registrar o evento adequadamente.",
     ],
     pontos: [
-      "Ao identificar evento, manter câmera focada.",
-      "Acionar câmeras adjacentes para ampliar visão.",
-      "Registrar evento conforme POC-SEP-001.",
+      "Câmeras adjacentes devem ser utilizadas para ampliar a visão.",
+      "O desenvolvimento da situação deve ser acompanhado.",
+      "Eventos relevantes exigem comunicação imediata.",
     ],
-    atencao:
-      "Evento relevante deve ser acompanhado, comunicado e registrado imediatamente.",
+    atencao: "Ao identificar um evento relevante, a primeira ação é manter a câmera focada.",
   },
   {
-    numero: "5.3",
-    titulo: "Ronda eletrônica",
-    objetivo: "Definir critérios da ronda eletrônica por CFTV.",
+    numero: "4",
+    titulo: "Ronda eletrônica e apoio às rondas físicas",
+    objetivo: "Padronizar a ronda eletrônica e o apoio às equipes em campo.",
     resumo:
-      "O operador realiza rondas eletrônicas observando perímetro, áreas restritas, iluminação, objetos ou veículos suspeitos e sinais de incidentes ou sinistros.",
+      "As rondas eletrônicas são realizadas por CFTV com caráter preventivo. O CCOS também acompanha rondas físicas, observa riscos no trajeto e registra irregularidades.",
     responsabilidades: [
-      "Realizar ronda eletrônica preventiva.",
-      "Observar integridade de muros, cercas e portões.",
-      "Verificar movimentação em áreas restritas e áreas críticas.",
+      "Observar muros, cercas, portões, áreas restritas e iluminação de pontos críticos.",
+      "Identificar veículos suspeitos, objetos abandonados e sinais de incidentes ou sinistros.",
+      "Manter comunicação com os agentes durante as rondas físicas.",
     ],
     pontos: [
       "A ronda eletrônica complementa a ronda física.",
-      "Deve seguir princípios definidos no POC-SEP-002.",
-      "Deve observar iluminação e sinais de sinistro.",
+      "O acompanhamento aumenta a capacidade de prevenção.",
+      "Irregularidades identificadas devem ser registradas.",
     ],
-    atencao: "Ronda eletrônica não é apenas visualização; é prevenção ativa.",
+    atencao: "Ronda eletrônica não substitui integralmente a ronda física; ela complementa a prevenção.",
   },
   {
-    numero: "5.4",
-    titulo: "Apoio às rondas de segurança",
-    objetivo: "Orientar apoio do CCOS às equipes em ronda física.",
-    resumo:
-      "Quando houver equipes em ronda física, o CCOS acompanha deslocamento por CFTV, observa riscos, mantém comunicação e registra irregularidades.",
-    responsabilidades: [
-      "Acompanhar deslocamento das equipes por CFTV.",
-      "Manter comunicação permanente com agentes.",
-      "Registrar irregularidades identificadas durante a ronda.",
-    ],
-    pontos: [
-      "O CFTV apoia a segurança do agente em campo.",
-      "Riscos nas áreas percorridas devem ser observados.",
-      "O apoio segue diretrizes do POC-SEP-002.",
-    ],
-    atencao:
-      "O CCOS deve proteger e orientar a equipe de campo durante a ronda.",
-  },
-  {
-    numero: "5.5",
+    numero: "5",
     titulo: "Gestão de ocorrências",
-    objetivo: "Definir conduta do CCOS ao identificar ocorrência.",
+    objetivo: "Definir a atuação do CCOS ao identificar uma ocorrência.",
     resumo:
-      "Ao identificar ocorrência, o Assistente de Segurança - CFTV registra o fato, informa a liderança, aciona equipe responsável, acompanha pelas câmeras e registra evidências.",
+      "Ao identificar uma ocorrência, o Assistente de Segurança - CFTV deve registrar o fato, informar a liderança, acionar a equipe responsável, acompanhar por câmeras e preservar evidências.",
     responsabilidades: [
-      "Registrar fato em relatório operacional.",
-      "Informar imediatamente o Líder de Segurança.",
-      "Acionar equipe responsável e acompanhar pelas câmeras.",
+      "Registrar, comunicar e acompanhar a ocorrência.",
+      "Preservar e registrar evidências disponíveis.",
+      "Acionar gestores ou órgãos competentes conforme gravidade e natureza da ocorrência.",
     ],
     pontos: [
-      "Evidências disponíveis devem ser registradas.",
-      "A liderança deve ser informada sem demora.",
-      "A equipe de segurança responsável deve ser acionada.",
+      "Podem ser acionados Brigada de Incêndio, Polícia Militar, Polícia Federal, Bombeiros, Guarda Portuária ou outros órgãos competentes.",
+      "O acionamento deve seguir a gravidade da ocorrência.",
+      "A comunicação à liderança deve ser imediata.",
     ],
-    atencao:
-      "Ocorrência identificada pelo CCOS exige registro, comunicação e acompanhamento por imagem.",
+    atencao: "Ocorrências exigem registro, comunicação, acompanhamento e preservação de evidências.",
+  },
+  {
+    numero: "6",
+    titulo: "Registro das ocorrências",
+    objetivo: "Garantir registros completos e rastreáveis.",
+    resumo:
+      "Todos os registros devem permitir rastreabilidade das ações realizadas, contendo dados essenciais sobre a ocorrência, evidências, câmeras utilizadas e ações adotadas.",
+    responsabilidades: [
+      "Registrar data, horário, local e descrição detalhada.",
+      "Registrar evidências disponíveis e identificação das câmeras utilizadas.",
+      "Informar ações adotadas pelo CCOS e pela equipe de segurança.",
+    ],
+    pontos: [
+      "A classificação da criticidade deve constar no relatório.",
+      "Registros completos apoiam investigações e auditorias.",
+      "Registros incompletos prejudicam análises posteriores.",
+    ],
+    atencao: "Um registro incompleto pode comprometer investigações, auditorias e análises.",
+  },
+  {
+    numero: "7",
+    titulo: "Quadra de Segurança",
+    objetivo: "Apresentar os controles relacionados à Quadra de Segurança.",
+    resumo:
+      "O controle da Quadra de Segurança inclui relatório semanal, acompanhamento dos contêineres armazenados, controles de armazenamento, rondas aleatórias quando necessárias e monitoramento por CFTV.",
+    responsabilidades: [
+      "Preencher relatório semanal.",
+      "Acompanhar contêineres armazenados e controles de armazenamento.",
+      "Preservar a rastreabilidade operacional.",
+    ],
+    pontos: [
+      "Nem todas as unidades possuem Quadra de Segurança.",
+      "O conteúdo faz parte do procedimento corporativo.",
+      "O tema deve ser conhecido por todos os participantes do treinamento.",
+    ],
+    atencao: "A Quadra de Segurança exige controle, monitoramento e rastreabilidade.",
+  },
+  {
+    numero: "8",
+    titulo: "Controle e gestão de lacres",
+    objetivo: "Orientar a vistoria e lacração de contêineres vazios.",
+    resumo:
+      "Os contêineres vazios são vistoriados e lacrados tanto na entrada quanto na saída.",
+    responsabilidades: [
+      "Contribuir para segurança das operações.",
+      "Controlar acesso, integridade e rastreabilidade dos contêineres.",
+      "Permitir a identificação do lacre utilizado e da etapa em que foi aplicado.",
+    ],
+    pontos: [
+      "A lacração apoia a prevenção de violações.",
+      "O controle deve permitir rastreabilidade.",
+      "A vistoria e a lacração são etapas de segurança operacional.",
+    ],
+    atencao: "A finalidade da lacração é garantir segurança, integridade e rastreabilidade.",
+  },
+  {
+    numero: "9",
+    titulo: "Controle de lacres",
+    objetivo: "Padronizar a retirada e o registro de lacres.",
+    resumo:
+      "A retirada de lacres ocorre mediante solicitação formal da área operacional.",
+    responsabilidades: [
+      "Receber solicitação com quantidade necessária, tipo de lacre e operação relacionada.",
+      "Registrar a numeração na planilha F-2020.",
+      "Identificar lacres disponibilizados e coletar assinatura da pessoa responsável pelo recebimento.",
+    ],
+    pontos: [
+      "A sequência numérica crescente deve ser mantida preferencialmente.",
+      "O controle garante organização e rastreabilidade.",
+      "A retirada de lacres não deve ocorrer apenas por comunicação verbal.",
+    ],
+    atencao: "Antes da retirada de lacres deve existir solicitação formal da área operacional.",
+  },
+  {
+    numero: "10",
+    titulo: "Conferência de lacres",
+    objetivo: "Orientar a conferência de lacres em operações de saída.",
+    resumo:
+      "O controle é realizado quando um contêiner carregado deixa a operação. A documentação deve ser conferida e a numeração do lacre verificada.",
+    responsabilidades: [
+      "Solicitar ao motorista a documentação para conferência.",
+      "Verificar a numeração do lacre e identificar possíveis divergências.",
+      "Impedir a liberação até a correção quando houver erro.",
+    ],
+    pontos: [
+      "Havendo divergência, o motorista deve retornar à balança para correção.",
+      "Quando o contêiner retorna vazio após entrega, deve ser aplicado novo lacre quando aplicável.",
+      "O objetivo é garantir rastreabilidade e controle operacional.",
+    ],
+    atencao: "Divergências de lacre devem ser corrigidas antes da liberação.",
+  },
+  {
+    numero: "11",
+    titulo: "Controle de acesso ao CCOS",
+    objetivo: "Definir regras de acesso ao CCOS.",
+    resumo:
+      "O acesso ao CCOS é restrito aos profissionais autorizados da Segurança Patrimonial e demais pessoas autorizadas pela gestão.",
+    responsabilidades: [
+      "Autorizar e registrar acessos ao CCOS.",
+      "Permitir acesso de manutenção, auditores, órgãos reguladores ou visitantes autorizados quando aprovado.",
+      "Impedir entrada sem autorização e registro.",
+    ],
+    pontos: [
+      "Todo acesso deve ser registrado em relatório operacional.",
+      "Nenhuma pessoa deve entrar no CCOS sem autorização.",
+      "O controle de acesso protege a operação e as informações monitoradas.",
+    ],
+    atencao: "Somente pessoas autorizadas e com acesso registrado podem entrar no CCOS.",
+  },
+  {
+    numero: "12",
+    titulo: "Disponibilização de imagens e particularidades regionais",
+    objetivo: "Orientar a disponibilização de imagens do CFTV.",
+    resumo:
+      "As imagens do CFTV somente podem ser disponibilizadas mediante autorização da gestão de Segurança Patrimonial. Solicitações formais devem ser apresentadas por documento oficial quando aplicável.",
+    responsabilidades: [
+      "Disponibilizar imagens apenas com autorização da gestão.",
+      "Exigir documento oficial para órgãos públicos ou investigações formais.",
+      "Observar particularidades regionais reconhecidas pelo procedimento.",
+    ],
+    pontos: [
+      "No Sul, algumas atribuições podem ser exercidas pelo Líder de Segurança.",
+      "No Sudeste, devem ser observadas as instruções locais do CCOS.",
+      "No Nordeste, podem existir adaptações relacionadas à infraestrutura.",
+    ],
+    atencao: "Imagens de CFTV não devem ser disponibilizadas livremente por solicitação verbal.",
   },
 ];
 
 const quizBase: PerguntaQuiz[] = [
   {
-    pergunta: "Qual é o foco da etapa 5 - Descrição?",
+    pergunta: "Qual é uma das principais atribuições do CCOS?",
     opcoes: [
-      "Apresentar o papel do CCOS nas operações de segurança.",
-      "Apenas comunicação informal sem registro.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Atividade sem relação com segurança patrimonial.",
+      "Monitorar as instalações e apoiar as equipes de segurança.",
+      "Administrar contratos comerciais.",
+      "Controlar pagamentos de fornecedores.",
+      "Emitir documentos fiscais.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Na etapa Descrição, qual ponto deve ser observado?",
+    pergunta: "Qual é o objetivo principal da passagem de posto?",
     opcoes: [
-      "O CCOS coordena segurança eletrônica e apoia equipes de campo.",
-      "Ação opcional sem necessidade de evidências.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Procedimento externo sem aplicação operacional.",
+      "Garantir a continuidade do monitoramento e das informações operacionais.",
+      "Encerrar todas as ocorrências abertas.",
+      "Desligar os equipamentos do turno anterior.",
+      "Liberar o acesso de visitantes.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Qual é o foco da etapa 5.1 - Passagem de posto?",
+    pergunta: "Ao identificar um evento relevante, qual deve ser a primeira ação do operador?",
     opcoes: [
-      "Padronizar a troca de turno no CCOS.",
-      "Apenas comunicação informal sem registro.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Atividade sem relação com segurança patrimonial.",
+      "Manter a câmera focada no evento.",
+      "Desligar a câmera.",
+      "Encerrar o turno.",
+      "Esperar a confirmação do próximo operador.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Na etapa Passagem de posto, qual ponto deve ser observado?",
+    pergunta: "Qual é a finalidade da ronda eletrônica?",
     opcoes: [
-      "A passagem garante continuidade do monitoramento.",
-      "Ação opcional sem necessidade de evidências.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Procedimento externo sem aplicação operacional.",
+      "Complementar preventivamente as atividades de segurança.",
+      "Substituir integralmente a ronda física.",
+      "Controlar somente o estacionamento.",
+      "Registrar apenas falhas de iluminação.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Qual é o foco da etapa 5.2 - Monitoramento operacional?",
+    pergunta: "Ao identificar uma ocorrência, o operador deve:",
     opcoes: [
-      "Orientar o monitoramento durante o turno.",
-      "Apenas comunicação informal sem registro.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Atividade sem relação com segurança patrimonial.",
+      "Registrar, comunicar a liderança, acompanhar e preservar evidências.",
+      "Apenas comunicar verbalmente.",
+      "Aguardar o encerramento para registrar.",
+      "Acionar sempre todos os órgãos externos.",
     ],
     correta: 0,
   },
   {
-    pergunta:
-      "Na etapa Monitoramento operacional, qual ponto deve ser observado?",
+    pergunta: "Qual conjunto de informações deve constar no registro de uma ocorrência?",
     opcoes: [
-      "Ao identificar evento, manter câmera focada.",
-      "Ação opcional sem necessidade de evidências.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Procedimento externo sem aplicação operacional.",
+      "Data, horário, local, descrição, evidências, câmeras e ações adotadas.",
+      "Apenas nome do operador e horário.",
+      "Somente imagens.",
+      "Apenas o nome das pessoas envolvidas.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Qual é o foco da etapa 5.3 - Ronda eletrônica?",
+    pergunta: "Qual atividade está relacionada ao controle da Quadra de Segurança?",
     opcoes: [
-      "Definir critérios da ronda eletrônica por CFTV.",
-      "Apenas comunicação informal sem registro.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Atividade sem relação com segurança patrimonial.",
+      "Relatórios semanais, acompanhamento dos contêineres e rondas no local.",
+      "Controle de folha de pagamento.",
+      "Emissão de notas fiscais.",
+      "Controle exclusivo de visitantes.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Na etapa Ronda eletrônica, qual ponto deve ser observado?",
+    pergunta: "Qual é uma finalidade da lacração dos contêineres vazios?",
     opcoes: [
-      "A ronda eletrônica complementa a ronda física.",
-      "Ação opcional sem necessidade de evidências.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Procedimento externo sem aplicação operacional.",
+      "Garantir segurança, integridade e rastreabilidade.",
+      "Controlar o peso da carga.",
+      "Substituir a vistoria.",
+      "Registrar a presença do motorista.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Qual é o foco da etapa 5.4 - Apoio às rondas de segurança?",
+    pergunta: "O que deve ocorrer antes da retirada dos lacres?",
     opcoes: [
-      "Orientar apoio do CCOS às equipes em ronda física.",
-      "Apenas comunicação informal sem registro.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Atividade sem relação com segurança patrimonial.",
+      "Solicitação formal da área operacional, com quantidade e tipo de lacre.",
+      "Apenas uma comunicação verbal do motorista.",
+      "Autorização de qualquer colaborador.",
+      "Nenhum registro é necessário.",
     ],
     correta: 0,
   },
   {
-    pergunta:
-      "Na etapa Apoio às rondas de segurança, qual ponto deve ser observado?",
+    pergunta: "O que deve acontecer quando houver divergência na numeração do lacre?",
     opcoes: [
-      "O CFTV apoia a segurança do agente em campo.",
-      "Ação opcional sem necessidade de evidências.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Procedimento externo sem aplicação operacional.",
+      "O motorista deve retornar à balança para correção.",
+      "O veículo deve ser liberado normalmente.",
+      "O lacre deve ser ignorado.",
+      "A ocorrência deve ser registrada somente no final do mês.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Qual é o foco da etapa 5.5 - Gestão de ocorrências?",
+    pergunta: "Quem pode acessar o CCOS?",
     opcoes: [
-      "Definir conduta do CCOS ao identificar ocorrência.",
-      "Apenas comunicação informal sem registro.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Atividade sem relação com segurança patrimonial.",
+      "Somente pessoas autorizadas e com acesso registrado.",
+      "Qualquer colaborador.",
+      "Apenas motoristas.",
+      "Qualquer fornecedor.",
     ],
     correta: 0,
   },
   {
-    pergunta: "Na etapa Gestão de ocorrências, qual ponto deve ser observado?",
+    pergunta: "Como deve ocorrer a disponibilização de imagens do CFTV?",
     opcoes: [
-      "Evidências disponíveis devem ser registradas.",
-      "Ação opcional sem necessidade de evidências.",
-      "Somente acompanhamento financeiro do contrato.",
-      "Procedimento externo sem aplicação operacional.",
-    ],
-    correta: 0,
-  },
-  {
-    pergunta:
-      "Conforme a Descrição, qual responsabilidade faz parte do procedimento?",
-    opcoes: [
-      "Monitorar áreas internas e perímetros.",
-      "Atividade sem relação com segurança patrimonial.",
-      "Apenas comunicação informal sem registro.",
-      "Procedimento externo sem aplicação operacional.",
-    ],
-    correta: 0,
-  },
-  {
-    pergunta:
-      "Conforme a Passagem de posto, qual responsabilidade faz parte do procedimento?",
-    opcoes: [
-      "Realizar rendição formal do turno anterior.",
-      "Atividade sem relação com segurança patrimonial.",
-      "Apenas comunicação informal sem registro.",
-      "Procedimento externo sem aplicação operacional.",
-    ],
-    correta: 0,
-  },
-  {
-    pergunta:
-      "Conforme a Monitoramento operacional, qual responsabilidade faz parte do procedimento?",
-    opcoes: [
-      "Monitorar continuamente o CFTV.",
-      "Atividade sem relação com segurança patrimonial.",
-      "Apenas comunicação informal sem registro.",
-      "Procedimento externo sem aplicação operacional.",
+      "Somente com autorização da gestão ou documento oficial quando aplicável.",
+      "Livremente, mediante solicitação verbal.",
+      "Para qualquer colaborador da empresa.",
+      "Apenas após cinco anos.",
     ],
     correta: 0,
   },
@@ -915,7 +984,7 @@ export default function TreinamentoPocSep006Publico() {
             </button>
             <button
               type="button"
-              disabled={(treinamento?.etapaAtual || 1) < 7}
+              disabled={(treinamento?.etapaAtual || 1) <= secoes.length}
               onClick={() => setIndiceSecao(indiceQuiz)}
               className={`terminal-step rounded-2xl border px-4 py-3 text-sm font-black shadow-lg shadow-slate-900/10 ${
                 etapaQuiz ? "terminal-step-active" : "terminal-step-idle"
@@ -1046,7 +1115,7 @@ export default function TreinamentoPocSep006Publico() {
                 </p>
                 <h2 className="mt-2 text-2xl font-black">Quiz POC-SEP-006</h2>
                 <p className="mt-2 text-sm font-bold text-slate-700">
-                  Responda as 15 questões com base no procedimento estudado.
+                  Responda as {quiz.length} questões com base no procedimento estudado.
                 </p>
               </div>
               <FileText className="h-10 w-10 text-blue-700" />
