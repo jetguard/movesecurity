@@ -976,11 +976,12 @@ function nivelProbabilidadeCompleta(media: number) {
 }
 
 function nivelConsequenciaCompleta(media: number) {
-  if (media <= 1.5) return "Menor";
-  if (media <= 2.5) return "Moderado";
-  if (media <= 3.5) return "Alto";
-  if (media <= 4.5) return "Severo";
-  return "Crítico";
+  if (media >= 4.51) return "CRÍTICO";
+  if (media >= 3.51) return "SEVERO";
+  if (media >= 2.51) return "MAIOR";
+  if (media >= 1.51) return "MODERADO";
+  if (media >= 1) return "MENOR";
+  return "-";
 }
 
 function classificacaoCompleta(resultado: number) {
@@ -1025,9 +1026,9 @@ function calcularAnaliseCompleta(body: Record<string, unknown>) {
   const notaProbabilidade = sc * 5 + fe * 4 + intervalo * 3;
   const mediaProbabilidade = arredondarRisco(notaProbabilidade / 12);
   const percentualProbabilidade = arredondarRisco(mediaProbabilidade / 5);
-  const impactos = [sse, ope, fin, adm, img, lc];
-  const notaConsequencia = impactos.reduce((total, valor) => total + valor, 0);
-  const mediaConsequencia = arredondarRisco(notaConsequencia / impactos.length);
+  const notaConsequencia =
+    sse * 3 + ope * 5 + fin * 3 + adm * 1 + img * 2 + lc * 3;
+  const mediaConsequencia = arredondarRisco(notaConsequencia / 17);
   const resultadoInerente = arredondarRisco(
     mediaProbabilidade * mediaConsequencia,
   );

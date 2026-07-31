@@ -137,7 +137,7 @@ const camposConsequencia: Array<{
   { campo: "sse", label: "SSE", ajuda: "Segurança / Saúde / Meio ambiente" },
   { campo: "ope", label: "OPE", ajuda: "Operação" },
   { campo: "fin", label: "FIN", ajuda: "Financeiro" },
-  { campo: "adm", label: "ADM", ajuda: "Administrativo" },
+  { campo: "adm", label: "AMB", ajuda: "Ambiental" },
   { campo: "img", label: "IMG", ajuda: "Imagem da empresa" },
   { campo: "lc", label: "L&C", ajuda: "Legal e Compliance" },
 ];
@@ -163,11 +163,12 @@ function nivelProbabilidade(media: number) {
 }
 
 function nivelConsequencia(media: number) {
-  if (media <= 1.5) return "Menor";
-  if (media <= 2.5) return "Moderado";
-  if (media <= 3.5) return "Alto";
-  if (media <= 4.5) return "Severo";
-  return "Crítico";
+  if (media >= 4.51) return "CRÍTICO";
+  if (media >= 3.51) return "SEVERO";
+  if (media >= 2.51) return "MAIOR";
+  if (media >= 1.51) return "MODERADO";
+  if (media >= 1) return "MENOR";
+  return "-";
 }
 
 function classificar(resultado: number) {
@@ -240,25 +241,24 @@ export default function RiscosAnaliseCompleta() {
     const sc = pontuacao(form.sc);
     const fe = pontuacao(form.fe);
     const intervalo = pontuacao(form.intervalo);
-    const impactos = [
-      form.sse,
-      form.ope,
-      form.fin,
-      form.adm,
-      form.img,
-      form.lc,
-    ].map(pontuacao);
+    const sse = pontuacao(form.sse);
+    const ope = pontuacao(form.ope);
+    const fin = pontuacao(form.fin);
+    const adm = pontuacao(form.adm);
+    const img = pontuacao(form.img);
+    const lc = pontuacao(form.lc);
     const notaProbabilidade = sc * 5 + fe * 4 + intervalo * 3;
     const mediaProbabilidade = arredondar(notaProbabilidade / 12);
     const percentualProbabilidade = arredondar(mediaProbabilidade / 5);
-    const mediaConsequencia = arredondar(
-      impactos.reduce((total, item) => total + item, 0) / impactos.length,
-    );
+    const notaConsequencia =
+      sse * 3 + ope * 5 + fin * 3 + adm * 1 + img * 2 + lc * 3;
+    const mediaConsequencia = arredondar(notaConsequencia / 17);
     const resultado = arredondar(mediaProbabilidade * mediaConsequencia);
     return {
       mediaProbabilidade,
       percentualProbabilidade,
       nivelProbabilidade: nivelProbabilidade(mediaProbabilidade),
+      notaConsequencia,
       mediaConsequencia,
       nivelConsequencia: nivelConsequencia(mediaConsequencia),
       resultado,
@@ -607,7 +607,7 @@ export default function RiscosAnaliseCompleta() {
             </section>
           </div>
 
-          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 md:grid-cols-4 xl:grid-cols-7">
+          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 md:grid-cols-4 xl:grid-cols-8">
             <div>
               <p className="text-xs font-black uppercase text-blue-200">Nota</p>
               <p className="mt-1 text-xl font-black text-white">
@@ -631,7 +631,15 @@ export default function RiscosAnaliseCompleta() {
             </div>
             <div>
               <p className="text-xs font-black uppercase text-blue-200">
-                Consequência
+                Nota Conseq.
+              </p>
+              <p className="mt-1 text-xl font-black text-white">
+                {previa.notaConsequencia}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase text-blue-200">
+                MPI
               </p>
               <p className="mt-1 text-xl font-black text-white">
                 {previa.mediaConsequencia}
