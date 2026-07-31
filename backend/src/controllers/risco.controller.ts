@@ -1524,11 +1524,13 @@ export async function atualizarControlesAnaliseCompletaRisco(
     });
 
     return res.json(apresentarAnaliseCompleta(registro));
-  } catch (error) {
+  } catch (error: any) {
+    const mensagem =
+      error?.message || "Erro ao atualizar controles da análise completa.";
     console.error(error);
     return res
       .status(500)
-      .json({ error: "Erro ao atualizar controles da análise completa." });
+      .json({ error: mensagem });
   }
 }
 

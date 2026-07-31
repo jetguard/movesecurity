@@ -324,6 +324,8 @@ export default function RiscosAnaliseCompleta() {
   const [buscaCorretivo, setBuscaCorretivo] = useState("");
   const [residual, setResidual] =
     useState<ResidualFormulario>(residualInicial);
+  const [mensagemControles, setMensagemControles] = useState("");
+  const [erroControles, setErroControles] = useState("");
   const [filtroFatores, setFiltroFatores] = useState("");
   const [analisesSelecionadas, setAnalisesSelecionadas] = useState<number[]>(
     [],
@@ -616,6 +618,8 @@ export default function RiscosAnaliseCompleta() {
 
   function abrirControles(analise: AnaliseCompleta) {
     setControlesEditando(analise);
+    setMensagemControles("");
+    setErroControles("");
     setPreventivos(analise.preventivos.map((item) => String(item.id || "")));
     setDetectivos(analise.detectivos.map((item) => String(item.id || "")));
     setCorretivos(analise.corretivos.map((item) => String(item.id || "")));
@@ -673,8 +677,10 @@ export default function RiscosAnaliseCompleta() {
   async function salvarControles() {
     if (!controlesEditando) return;
     setSalvando(true);
+    setMensagemControles("");
+    setErroControles("");
     try {
-      await api.patch(
+      const response = await api.patch(
         `/riscos/analise-completa/${controlesEditando.id}/controles`,
         {
           preventivos: itensSelecionados(preventivos),
@@ -682,10 +688,12 @@ export default function RiscosAnaliseCompleta() {
           corretivos: itensSelecionados(corretivos),
         },
       );
+      setControlesEditando(response.data);
+      setMensagemControles("Controles salvos com sucesso.");
       setMensagem("Controles atualizados com sucesso.");
-      await carregar();
+      carregar().catch(() => undefined);
     } catch (error: any) {
-      setErro(
+      setErroControles(
         error?.response?.data?.error || "Não foi possível salvar os controles.",
       );
     } finally {
@@ -696,16 +704,24 @@ export default function RiscosAnaliseCompleta() {
   async function salvarAvaliacaoResidual() {
     if (!controlesEditando) return;
     setSalvando(true);
+    setMensagemControles("");
+    setErroControles("");
     try {
-      await api.patch(
+      const response = await api.patch(
         `/riscos/analise-completa/${controlesEditando.id}/controles`,
-        residual,
+        {
+          preventivos: itensSelecionados(preventivos),
+          detectivos: itensSelecionados(detectivos),
+          corretivos: itensSelecionados(corretivos),
+          ...residual,
+        },
       );
-      setControlesEditando(null);
+      setControlesEditando(response.data);
+      setMensagemControles("Avaliação residual salva com sucesso.");
       setMensagem("Avaliação residual salva com sucesso.");
-      await carregar();
+      carregar().catch(() => undefined);
     } catch (error: any) {
-      setErro(
+      setErroControles(
         error?.response?.data?.error ||
           "Não foi possível salvar a avaliação residual.",
       );
@@ -1454,6 +1470,18 @@ export default function RiscosAnaliseCompleta() {
                 <X size={18} />
               </button>
             </div>
+
+            {(mensagemControles || erroControles) && (
+              <div
+                className={`mt-5 rounded-xl border px-4 py-3 text-sm font-black shadow-lg ${
+                  erroControles
+                    ? "border-red-400/50 bg-red-500/15 text-red-100"
+                    : "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
+                }`}
+              >
+                {erroControles || mensagemControles}
+              </div>
+            )}
 
             <div className="mt-5 grid gap-5">
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
