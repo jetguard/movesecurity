@@ -96,11 +96,15 @@ function dataPorExtenso(data: Date) {
 async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
   await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('movecta_integracao_terminal_certificado_${ano}'))`);
-  const ultimo = await tx.integracaoTerminal.findFirst({
+  const certificados = await tx.integracaoTerminal.findMany({
     where: { codigo: { endsWith: `/${ano}` } },
-    orderBy: { id: "desc" },
+    select: { codigo: true },
   });
-  const numero = ultimo?.codigo ? Number(ultimo.codigo.match(/INT-(\d+)\//)?.[1] || 0) + 1 : 1;
+  const maiorNumero = certificados.reduce((maior: number, item: { codigo: string | null }) => {
+    const numero = Number(item.codigo?.match(/INT-(\d+)\//)?.[1] || 0);
+    return Math.max(maior, numero);
+  }, 0);
+  const numero = maiorNumero + 1;
   return `INT-${String(numero).padStart(5, "0")}/${ano}`;
 }
 
