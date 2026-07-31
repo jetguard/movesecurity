@@ -13,7 +13,10 @@ const resumoPortaria = [
   "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdição da Alfândega da Receita Federal do Brasil do Porto de Santos à conclusão do curso básico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
 ];
 
-const assinaturaSegurancaPatrimonial = path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png");
+const assinaturasSegurancaPatrimonial = [
+  path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png"),
+  path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.jpeg"),
+];
 
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
@@ -128,12 +131,18 @@ function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, 
 }
 
 function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: number, largura: number) {
-  if (fs.existsSync(assinaturaSegurancaPatrimonial)) {
-    doc.image(assinaturaSegurancaPatrimonial, x + 45, y - 58, {
-      fit: [largura - 90, 54],
-      align: "center",
-      valign: "center",
-    });
+  for (const assinatura of assinaturasSegurancaPatrimonial) {
+    if (!fs.existsSync(assinatura)) continue;
+    try {
+      doc.image(assinatura, x + 45, y - 58, {
+        fit: [largura - 90, 54],
+        align: "center",
+        valign: "center",
+      });
+      break;
+    } catch (error) {
+      console.error("Falha ao inserir assinatura institucional no certificado:", error);
+    }
   }
 
   doc.moveTo(x, y).lineTo(x + largura, y).strokeColor("#2f6bb2").lineWidth(1).stroke();
@@ -188,9 +197,12 @@ async function gerarCertificadoPdf(treinamento: any) {
     if (assinaturaBase64) {
       const buffer = Buffer.from(assinaturaBase64, "base64");
       const assinaturaPng = path.join(path.dirname(destino), `assinatura-${treinamento.token}.png`);
-      fs.writeFileSync(assinaturaPng, buffer);
-      doc.image(assinaturaPng, 176, 356, { fit: [240, 52], align: "center" });
-      fs.rmSync(assinaturaPng, { force: true });
+      try {
+        fs.writeFileSync(assinaturaPng, buffer);
+        doc.image(assinaturaPng, 176, 356, { fit: [240, 52], align: "center" });
+      } finally {
+        fs.rmSync(assinaturaPng, { force: true });
+      }
     }
   }
 
