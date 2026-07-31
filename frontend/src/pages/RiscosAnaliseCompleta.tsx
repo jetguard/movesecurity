@@ -2,7 +2,6 @@
 import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import {
-  AlertTriangle,
   BarChart3,
   BrainCircuit,
   FileText,
@@ -1454,15 +1453,6 @@ export default function RiscosAnaliseCompleta() {
               >
                 <X size={18} />
               </button>
-            </div>
-
-            <div className="mt-5 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-50">
-              <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" />
-              <p className="text-sm font-semibold leading-6">
-                Os controles preventivos, detectivos e corretivos ficam
-                registrados separadamente. A avaliação residual é preenchida em
-                outro bloco e calculada automaticamente conforme a planilha.
-              </p>
             </div>
 
             <div className="mt-5 grid gap-5">

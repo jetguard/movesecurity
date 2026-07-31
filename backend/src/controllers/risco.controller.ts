@@ -1162,6 +1162,14 @@ function calcularResidualCompleta(body: Record<string, unknown>, anterior?: any)
     };
   }
 
+  const temResidualSimples =
+    body.probabilidadeResidual !== undefined ||
+    body.consequenciaResidual !== undefined;
+
+  if (!temResidualSimples) {
+    return {};
+  }
+
   const probabilidadeResidual = numeroResidual(body.probabilidadeResidual);
   const consequenciaResidual = numeroResidual(body.consequenciaResidual);
 
