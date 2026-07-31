@@ -309,6 +309,7 @@ export default function RiscosAnaliseCompleta() {
   const [corretivos, setCorretivos] = useState<string[]>([]);
   const [residual, setResidual] =
     useState<ResidualFormulario>(residualInicial);
+  const [filtroFatores, setFiltroFatores] = useState("");
   const [analisesSelecionadas, setAnalisesSelecionadas] = useState<number[]>(
     [],
   );
@@ -415,6 +416,14 @@ export default function RiscosAnaliseCompleta() {
       ),
     };
   }, [controlesEditando, residual]);
+
+  const fatoresFiltrados = useMemo(() => {
+    const termo = filtroFatores.trim().toLowerCase();
+    if (!termo) return cadastro.fatores;
+    return cadastro.fatores.filter((item) =>
+      `${item.codigo} ${item.nome}`.toLowerCase().includes(termo),
+    );
+  }, [cadastro.fatores, filtroFatores]);
 
   function alterarNota(campo: CampoNota, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: pontuacao(Number(valor)) }));
@@ -806,8 +815,19 @@ export default function RiscosAnaliseCompleta() {
               Selecione quantos fatores forem necessÃ¡rios. O sistema nÃ£o limita
               a trÃªs fatores como a planilha.
             </p>
-            <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-              {cadastro.fatores.map((item) => (
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <input
+                className={`${inputClass} w-full sm:max-w-md`}
+                value={filtroFatores}
+                onChange={(event) => setFiltroFatores(event.target.value)}
+                placeholder="Buscar por código, número ou palavra"
+              />
+              <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100">
+                {fatoresFiltrados.length} de {cadastro.fatores.length} fatores
+              </span>
+            </div>
+            <div className="mt-3 grid max-h-[456px] gap-2 overflow-y-auto pr-2 md:grid-cols-2 xl:grid-cols-3">
+              {fatoresFiltrados.map((item) => (
                 <label
                   key={item.id}
                   className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm font-bold transition ${
@@ -825,6 +845,11 @@ export default function RiscosAnaliseCompleta() {
                   {item.codigo} - {item.nome}
                 </label>
               ))}
+              {!fatoresFiltrados.length && (
+                <p className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-sm font-bold text-slate-300 md:col-span-2 xl:col-span-3">
+                  Nenhum fator encontrado para o filtro informado.
+                </p>
+              )}
             </div>
           </div>
 
