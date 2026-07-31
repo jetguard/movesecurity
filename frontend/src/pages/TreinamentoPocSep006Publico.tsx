@@ -54,7 +54,7 @@ const formInicial = {
   terceirizado: false,
 };
 
-const secoes: SecaoTreinamento[] = [
+const secoesBase: SecaoTreinamento[] = [
   {
     numero: "1",
     titulo: "Atuação do CCOS",
@@ -273,6 +273,10 @@ const secoes: SecaoTreinamento[] = [
   },
 ];
 
+const secoes = [...secoesBase].sort(
+  (a, b) => Number(a.numero) - Number(b.numero),
+);
+
 const quizBase: PerguntaQuiz[] = [
   {
     pergunta: "Qual é uma das principais atribuições do CCOS?",
@@ -446,9 +450,7 @@ function embaralhar<T>(itens: T[]) {
 }
 
 function embaralharQuiz(perguntas: PerguntaQuiz[]) {
-  return embaralhar(
-    perguntas.map((pergunta, baseIndex) => ({ ...pergunta, baseIndex })),
-  ).map((pergunta) => {
+  return perguntas.map((pergunta, baseIndex) => {
     const opcoes = embaralhar(
       pergunta.opcoes.map((texto, index) => ({
         texto,
@@ -460,7 +462,7 @@ function embaralharQuiz(perguntas: PerguntaQuiz[]) {
       pergunta: pergunta.pergunta,
       opcoes: opcoes.map((opcao) => opcao.texto),
       correta: opcoes.findIndex((opcao) => opcao.correta),
-      baseIndex: pergunta.baseIndex,
+      baseIndex,
       opcoesOriginais: opcoes.map((opcao) => opcao.originalIndex),
     };
   });
