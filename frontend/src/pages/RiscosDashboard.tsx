@@ -61,12 +61,12 @@ function corClassificacao(valor?: string | null) {
 }
 
 function corCalor(valor: number, maximo: number) {
-  if (!valor) return "bg-emerald-100 text-slate-900 border-emerald-200";
+  if (!valor) return "bg-slate-950 text-slate-400 border-slate-800";
   const intensidade = maximo ? valor / maximo : 0;
   if (intensidade >= 0.78) return "bg-red-600 text-white border-red-300";
   if (intensidade >= 0.55) return "bg-orange-500 text-white border-orange-300";
   if (intensidade >= 0.32) return "bg-yellow-300 text-slate-950 border-yellow-100";
-  return "bg-lime-200 text-slate-950 border-lime-100";
+  return "bg-emerald-600 text-white border-emerald-300";
 }
 
 function prioridadePorClassificacao(classificacao: string) {
