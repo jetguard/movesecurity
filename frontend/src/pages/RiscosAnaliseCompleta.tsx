@@ -3,7 +3,6 @@ import type { FormEvent } from "react";
 import {
   AlertTriangle,
   BrainCircuit,
-  Edit3,
   Plus,
   Save,
   Trash2,
@@ -247,6 +246,9 @@ export default function RiscosAnaliseCompleta() {
   const [corretivos, setCorretivos] = useState<string[]>([]);
   const [probabilidadeResidual, setProbabilidadeResidual] = useState("");
   const [consequenciaResidual, setConsequenciaResidual] = useState("");
+  const [analisesSelecionadas, setAnalisesSelecionadas] = useState<number[]>(
+    [],
+  );
 
   useEffect(() => {
     carregar();
@@ -260,6 +262,7 @@ export default function RiscosAnaliseCompleta() {
     ]);
     setCadastro(cadastroResponse.data);
     setAnalises(analisesResponse.data);
+    setAnalisesSelecionadas([]);
     setCarregando(false);
   }
 
@@ -442,22 +445,45 @@ export default function RiscosAnaliseCompleta() {
     }
   }
 
-  async function excluirAnalise(analise: AnaliseCompleta) {
+  function alternarAnaliseSelecionada(id: number) {
+    setAnalisesSelecionadas((atuais) =>
+      atuais.includes(id)
+        ? atuais.filter((item) => item !== id)
+        : [...atuais, id],
+    );
+  }
+
+  function alternarTodasAnalises() {
+    setAnalisesSelecionadas((atuais) =>
+      atuais.length === analises.length ? [] : analises.map((item) => item.id),
+    );
+  }
+
+  async function excluirAnalisesSelecionadas() {
+    if (!analisesSelecionadas.length) return;
     const confirmar = window.confirm(
-      `Excluir definitivamente a análise ${analise.codigo}? Esta ação não poderá ser desfeita.`,
+      `Excluir definitivamente ${analisesSelecionadas.length} análise(s) selecionada(s)? Esta ação não poderá ser desfeita.`,
     );
     if (!confirmar) return;
 
     setErro("");
     setMensagem("");
+    setSalvando(true);
     try {
-      await api.delete(`/riscos/analise-completa/${analise.id}`);
-      setMensagem("Análise excluída com sucesso.");
+      await Promise.all(
+        analisesSelecionadas.map((id) =>
+          api.delete(`/riscos/analise-completa/${id}`),
+        ),
+      );
+      setMensagem("Análises selecionadas excluídas com sucesso.");
       await carregar();
     } catch (error: any) {
       setErro(
-        error?.response?.data?.error || "Não foi possível excluir a análise.",
+        error?.response?.data?.error ||
+          "Não foi possível excluir as análises selecionadas.",
       );
+    } finally {
+      setSalvando(false);
     }
   }
 
@@ -789,10 +815,40 @@ export default function RiscosAnaliseCompleta() {
             </span>
           </div>
 
-          <div className="mt-4 overflow-x-auto">
+          <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/50 p-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-bold text-slate-300">
+              Clique em uma linha para abrir os controles. Use a primeira coluna
+              para selecionar registros.
+            </p>
+            {analisesSelecionadas.length > 0 && (
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={excluirAnalisesSelecionadas}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-red-500/20 disabled:opacity-60"
+              >
+                <Trash2 size={16} />
+                Excluir selecionadas ({analisesSelecionadas.length})
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800">
             <table className="w-full min-w-[1480px] border-separate border-spacing-y-2">
               <thead>
                 <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
+                  <th className="px-3 py-2 text-center">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4"
+                      checked={
+                        analises.length > 0 &&
+                        analisesSelecionadas.length === analises.length
+                      }
+                      onChange={alternarTodasAnalises}
+                      aria-label="Selecionar todas as análises"
+                    />
+                  </th>
                   <th className="px-3 py-2">Código</th>
                   <th className="px-3 py-2">Identificação</th>
                   <th className="px-3 py-2">Fatores</th>
@@ -803,16 +859,28 @@ export default function RiscosAnaliseCompleta() {
                   <th className="px-3 py-2">Classificação</th>
                   <th className="px-3 py-2">Residual</th>
                   <th className="px-3 py-2">Controles</th>
-                  <th className="px-3 py-2 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {analises.map((analise) => (
                   <tr
                     key={analise.id}
-                    className="bg-slate-950/70 text-sm font-semibold text-slate-100"
+                    onClick={() => abrirControles(analise)}
+                    className="cursor-pointer bg-slate-950/70 text-sm font-semibold text-slate-100 transition hover:bg-slate-900"
                   >
-                    <td className="rounded-l-xl px-3 py-4 font-black text-blue-100">
+                    <td
+                      className="rounded-l-xl px-3 py-4 text-center"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4"
+                        checked={analisesSelecionadas.includes(analise.id)}
+                        onChange={() => alternarAnaliseSelecionada(analise.id)}
+                        aria-label={`Selecionar ${analise.codigo}`}
+                      />
+                    </td>
+                    <td className="px-3 py-4 font-black text-blue-100">
                       {analise.codigo}
                     </td>
                     <td className="px-3 py-4">
@@ -824,7 +892,7 @@ export default function RiscosAnaliseCompleta() {
                         {analise.macroProcessoNome} / {analise.setorNome}
                       </p>
                     </td>
-                    <td className="px-3 py-4 text-xs text-slate-300">
+                    <td className="rounded-r-xl px-3 py-4 text-xs text-slate-300">
                       {analise.fatoresRisco.map(etiquetaControle).join(", ")}
                     </td>
                     <td className="px-3 py-4 text-center">
@@ -882,26 +950,6 @@ export default function RiscosAnaliseCompleta() {
                       <p>Prev.: {analise.preventivos.length}</p>
                       <p>Det.: {analise.detectivos.length}</p>
                       <p>Corr.: {analise.corretivos.length}</p>
-                    </td>
-                    <td className="rounded-r-xl px-3 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => abrirControles(analise)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
-                        >
-                          <Edit3 size={14} />
-                          Controles
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => excluirAnalise(analise)}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/20"
-                        >
-                          <Trash2 size={14} />
-                          Excluir
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 ))}
