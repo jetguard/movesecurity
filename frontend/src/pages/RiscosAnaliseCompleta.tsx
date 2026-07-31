@@ -659,7 +659,7 @@ export default function RiscosAnaliseCompleta() {
     return (
       <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
         <h3 className="text-sm font-black text-white">{titulo}</h3>
-        <div className="mt-3 grid max-h-56 gap-2 overflow-auto pr-1">
+        <div className="mt-3 grid max-h-44 gap-2 overflow-auto pr-1">
           {cadastro.controles.map((controle) => (
             <label
               key={controle.id}
@@ -1162,7 +1162,7 @@ export default function RiscosAnaliseCompleta() {
               </p>
             </div>
 
-            <div className="mt-5 grid gap-4 xl:grid-cols-[1.5fr_1fr]">
+            <div className="mt-5 grid gap-5">
               <div className="grid gap-4 lg:grid-cols-3">
                 {renderListaControles(
                   "Preventivo",
@@ -1174,15 +1174,24 @@ export default function RiscosAnaliseCompleta() {
               </div>
 
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-                  AvaliaÃ§Ã£o Residual
-                </h3>
-                <div className="mt-4 grid gap-4">
+                <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
+                      AvaliaÃ§Ã£o Residual
+                    </h3>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                      Probabilidade, consequÃªncia e desempenho dos controles
+                    </p>
+                  </div>
+                  <BadgeNivel>{previaResidual.classificacao}</BadgeNivel>
+                </div>
+
+                <div className="mt-4 grid gap-4 xl:grid-cols-[0.72fr_1.28fr]">
                   <div>
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
                       Probabilidade
                     </p>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                    <div className="mt-2 grid gap-3 sm:grid-cols-3">
                       {camposProbabilidadeResidual.map((item) =>
                         renderCampoNotaResidual(item.campo, item.label),
                       )}
@@ -1192,7 +1201,7 @@ export default function RiscosAnaliseCompleta() {
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
                       Consequência
                     </p>
-                    <div className="mt-2 grid gap-2 sm:grid-cols-3 2xl:grid-cols-6">
+                    <div className="mt-2 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
                       {camposConsequenciaResidual.map((item) =>
                         renderCampoNotaResidual(item.campo, item.label),
                       )}
@@ -1200,7 +1209,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
                     <p className="text-xs font-black uppercase text-blue-200">
                       Nota / MPP / %P
@@ -1239,7 +1248,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
                       NÃ­vel de Probabilidade
