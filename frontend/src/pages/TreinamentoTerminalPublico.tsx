@@ -319,6 +319,18 @@ export default function TreinamentoTerminalPublico() {
     setAssinaturaVazia(true);
   }
 
+  function exportarAssinatura() {
+    const canvas = canvasRef.current!;
+    const assinaturaCanvas = document.createElement("canvas");
+    assinaturaCanvas.width = canvas.width;
+    assinaturaCanvas.height = canvas.height;
+    const ctx = assinaturaCanvas.getContext("2d")!;
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, assinaturaCanvas.width, assinaturaCanvas.height);
+    ctx.drawImage(canvas, 0, 0);
+    return assinaturaCanvas.toDataURL("image/jpeg", 0.82);
+  }
+
   async function concluir() {
     if (!treinamento || !aceite || assinaturaVazia) {
       setMensagem("Confirme a declaração e registre sua assinatura.");
@@ -326,7 +338,7 @@ export default function TreinamentoTerminalPublico() {
     }
     setCarregando(true);
     try {
-      const assinaturaDataUrl = canvasRef.current!.toDataURL("image/jpeg", 0.82);
+      const assinaturaDataUrl = exportarAssinatura();
       const response = await api.post(`/public/treinamento-terminal/${treinamento.token}/concluir`, {
         aceiteDeclaracao: aceite,
         assinaturaDataUrl,
