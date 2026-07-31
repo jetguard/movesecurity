@@ -1,7 +1,7 @@
-import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import { ArrowLeft, CheckCircle2, Clock3, Download, FastForward, FileCheck2, FileText, Maximize2, Pause, Play, RotateCcw, ShieldCheck, X } from "lucide-react";
+import { api } from "../services/api";
 
 type Config = {
   titulo: string;
@@ -139,7 +139,7 @@ export default function TreinamentoTerminalPublico() {
   const ultimoEnvioRef = useRef(0);
 
   useEffect(() => {
-    axios.get("/api/public/treinamento-terminal/config").then((response) => setConfig(response.data));
+    api.get("/public/treinamento-terminal/config").then((response) => setConfig(response.data));
   }, []);
 
   useEffect(() => {
@@ -163,7 +163,7 @@ export default function TreinamentoTerminalPublico() {
     ultimoEnvioRef.current = agora;
     const progressoSegundos = Math.floor(maiorTempoRef.current);
     const duracaoSegundos = Math.floor(duracao || videoRef.current?.duration || 0);
-    const response = await axios.put(`/api/public/treinamento-terminal/${treinamento.token}/progresso`, {
+    const response = await api.put(`/public/treinamento-terminal/${treinamento.token}/progresso`, {
       progressoSegundos,
       duracaoSegundos,
       videoConcluido,
@@ -201,7 +201,7 @@ export default function TreinamentoTerminalPublico() {
     setCarregando(true);
     setMensagem("");
     try {
-      const response = await axios.post("/api/public/treinamento-terminal/iniciar", form);
+      const response = await api.post("/public/treinamento-terminal/iniciar", form);
       setTreinamento(response.data.treinamento);
       if (response.data.concluido) {
         setMensagem("Treinamento já concluído. Certificado disponível para download.");
@@ -327,7 +327,7 @@ export default function TreinamentoTerminalPublico() {
     setCarregando(true);
     try {
       const assinaturaDataUrl = canvasRef.current!.toDataURL("image/png");
-      const response = await axios.post(`/api/public/treinamento-terminal/${treinamento.token}/concluir`, {
+      const response = await api.post(`/public/treinamento-terminal/${treinamento.token}/concluir`, {
         aceiteDeclaracao: aceite,
         assinaturaDataUrl,
       });
@@ -497,7 +497,7 @@ export default function TreinamentoTerminalPublico() {
               <button type="button" onClick={() => voltarPara(2)} className={botaoSecundarioClasse()}>
                 <ArrowLeft size={18} /> Voltar para vídeo
               </button>
-              <button disabled={carregando} onClick={concluir} className={botaoSucessoClasse()}>
+              <button type="button" disabled={carregando} onClick={concluir} className={botaoSucessoClasse()}>
                 <FileCheck2 size={18} /> Emitir certificado
               </button>
             </div>
