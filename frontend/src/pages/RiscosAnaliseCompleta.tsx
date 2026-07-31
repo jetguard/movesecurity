@@ -1,9 +1,12 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { Link } from "react-router-dom";
 import {
   AlertTriangle,
+  BarChart3,
   BrainCircuit,
   FileText,
+  LayoutDashboard,
   Pencil,
   Plus,
   Save,
@@ -438,6 +441,29 @@ export default function RiscosAnaliseCompleta() {
     );
   }, [cadastro.fatores, filtroFatores]);
 
+  const resumoAnalises = useMemo(() => {
+    const extremos = analises.filter(
+      (item) => item.classificacaoRisco === "EXTREMO",
+    ).length;
+    const altos = analises.filter((item) => item.classificacaoRisco === "ALTO")
+      .length;
+    const residuais = analises.filter(
+      (item) =>
+        item.resultadoResidual !== null && item.resultadoResidual !== undefined,
+    ).length;
+    const comControles = analises.filter(
+      (item) =>
+        item.preventivos.length || item.detectivos.length || item.corretivos.length,
+    ).length;
+    return {
+      total: analises.length,
+      extremos,
+      altos,
+      residuais,
+      comControles,
+    };
+  }, [analises]);
+
   function alterarNota(campo: CampoNota, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: pontuacao(Number(valor)) }));
   }
@@ -863,18 +889,63 @@ export default function RiscosAnaliseCompleta() {
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-slate-950 px-4 py-6 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1800px]">
-        <header className="border-b border-slate-800 pb-6">
-          <p className="text-xs font-black uppercase tracking-[0.35em] text-blue-300">
-            Análise de Riscos
-          </p>
-          <h1 className="mt-2 text-3xl font-black text-white">
-            Análise Completa
-          </h1>
-          <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-300">
-            Cadastre a análise preenchendo macro processo, setor, risco, fatores
-            de risco e notas de probabilidade/consequência. Os demais campos são
-            calculados automaticamente.
-          </p>
+        <header className="overflow-hidden rounded-3xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/20">
+          <div className="border-b border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.28),transparent_35%),linear-gradient(135deg,rgba(15,23,42,1),rgba(2,6,23,1))] p-6 sm:p-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.35em] text-blue-300">
+                  Análise de Riscos
+                </p>
+                <h1 className="mt-2 text-3xl font-black text-white sm:text-4xl">
+                  Análise Completa
+                </h1>
+                <p className="mt-3 max-w-4xl text-sm font-semibold leading-6 text-slate-300">
+                  Cadastre a matriz completa, acompanhe os cálculos inerentes,
+                  registre controles e avalie o residual sem perder a leitura
+                  executiva do risco.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  to="/riscos/dashboard"
+                  className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 hover:bg-blue-500/20"
+                >
+                  <LayoutDashboard size={16} />
+                  Dashboard
+                </Link>
+                <Link
+                  to="/riscos/cadastro-geral"
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/60 px-4 py-3 text-sm font-black text-slate-100 hover:border-blue-400/50"
+                >
+                  <Settings size={16} />
+                  Cadastro Geral
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+            {[
+              ["Total", resumoAnalises.total, "Registros cadastrados"],
+              ["Extremos", resumoAnalises.extremos, "Prioridade máxima"],
+              ["Altos", resumoAnalises.altos, "Acompanhamento crítico"],
+              ["Com residual", resumoAnalises.residuais, "Avaliação preenchida"],
+              ["Com controles", resumoAnalises.comControles, "CPs vinculados"],
+            ].map(([titulo, valor, detalhe]) => (
+              <div
+                key={String(titulo)}
+                className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4"
+              >
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">
+                  {titulo}
+                </p>
+                <p className="mt-2 text-2xl font-black text-white">{valor}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  {detalhe}
+                </p>
+              </div>
+            ))}
+          </div>
         </header>
 
         {carregando && (
@@ -896,15 +967,29 @@ export default function RiscosAnaliseCompleta() {
 
         <form
           onSubmit={salvarAnalise}
-          className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-2xl shadow-black/20 sm:p-5"
+          className="mt-6 rounded-3xl border border-slate-800 bg-slate-900/90 p-4 shadow-2xl shadow-black/20 sm:p-5"
         >
-          <div className="flex items-center gap-3">
-            <BrainCircuit className="text-blue-300" size={22} />
-            <h2 className="text-xl font-black text-white">
-              {analiseEditando
-                ? `Editando ${analiseEditando.codigo}`
-                : "Nova análise completa"}
-            </h2>
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <span className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3 text-blue-200">
+                <BrainCircuit size={22} />
+              </span>
+              <div>
+                <h2 className="text-xl font-black text-white">
+                  {analiseEditando
+                    ? `Editando ${analiseEditando.codigo}`
+                    : "Nova análise completa"}
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  Identificação, fatores e pontuação inerente em um fluxo único.
+                </p>
+              </div>
+            </div>
+            <span
+              className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
+            >
+              Prévia: {previa.nivel} / NRI {previa.resultado}
+            </span>
           </div>
 
           <div className="mt-5 grid gap-4 xl:grid-cols-3">
@@ -1050,7 +1135,7 @@ export default function RiscosAnaliseCompleta() {
             </div>
           </section>
 
-          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-[linear-gradient(135deg,rgba(37,99,235,0.14),rgba(15,23,42,0.7))] p-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
             <div>
               <p className="text-xs font-black uppercase text-blue-200">Nota</p>
               <p className="mt-1 text-xl font-black text-white">
@@ -1135,12 +1220,15 @@ export default function RiscosAnaliseCompleta() {
           </div>
         </form>
 
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-2xl shadow-black/20">
+        <section className="mt-6 rounded-3xl border border-slate-800 bg-slate-900/90 p-5 shadow-2xl shadow-black/20">
           <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-xl font-black text-white">
-                Análises cadastradas
-              </h2>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="text-blue-300" size={20} />
+                <h2 className="text-xl font-black text-white">
+                  Análises cadastradas
+                </h2>
+              </div>
               <p className="text-sm font-semibold text-slate-300">
                 Após o cadastro, edite os controles preventivos, detectivos e
                 corretivos.
@@ -1169,8 +1257,8 @@ export default function RiscosAnaliseCompleta() {
             )}
           </div>
 
-          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800">
-            <table className="w-full min-w-[1480px] border-separate border-spacing-y-2">
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
+            <table className="w-full min-w-[1480px] border-separate border-spacing-y-2 p-2">
               <thead>
                 <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
                   <th className="px-3 py-2 text-center">
@@ -1202,7 +1290,8 @@ export default function RiscosAnaliseCompleta() {
                 {analises.map((analise) => (
                   <tr
                     key={analise.id}
-                    className="bg-slate-950/70 text-sm font-semibold text-slate-100 transition hover:bg-slate-900"
+                    className="cursor-pointer bg-slate-950/80 text-sm font-semibold text-slate-100 transition hover:bg-slate-900"
+                    onClick={() => abrirControles(analise)}
                   >
                     <td
                       className="rounded-l-xl px-3 py-4 text-center"
@@ -1291,7 +1380,10 @@ export default function RiscosAnaliseCompleta() {
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => iniciarEdicaoAnalise(analise)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            iniciarEdicaoAnalise(analise);
+                          }}
                           className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
                         >
                           <Pencil size={14} />
@@ -1299,7 +1391,10 @@ export default function RiscosAnaliseCompleta() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => abrirControles(analise)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            abrirControles(analise);
+                          }}
                           className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 hover:bg-emerald-500/20"
                         >
                           <Settings size={14} />
@@ -1307,7 +1402,10 @@ export default function RiscosAnaliseCompleta() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => abrirPdfAnalise(analise)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            abrirPdfAnalise(analise);
+                          }}
                           className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/20"
                         >
                           <FileText size={14} />

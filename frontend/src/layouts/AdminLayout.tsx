@@ -676,6 +676,10 @@ export default function AdminLayout() {
 
               {gestaoAvancadaOpen && (
                 <div className={submenuClass}>
+                  <Link to="/riscos/dashboard" className={subItem}>
+                    <LayoutDashboard size={16} />
+                    Dashboard
+                  </Link>
                   <Link to="/riscos/cadastro-geral" className={subItem}>
                     <Columns3 size={16} />
                     Cadastro Geral
