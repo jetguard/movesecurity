@@ -130,24 +130,22 @@ const formularioInicial: Formulario = {
 const camposProbabilidade: Array<{
   campo: CampoNota;
   label: string;
-  ajuda: string;
 }> = [
-  { campo: "sc", label: "SC", ajuda: "Controle" },
-  { campo: "fe", label: "FE", ajuda: "Frequência / Exposição" },
-  { campo: "intervalo", label: "INT", ajuda: "Intervalo" },
+  { campo: "sc", label: "SC" },
+  { campo: "fe", label: "FE" },
+  { campo: "intervalo", label: "INT" },
 ];
 
 const camposConsequencia: Array<{
   campo: CampoNota;
   label: string;
-  ajuda: string;
 }> = [
-  { campo: "sse", label: "SSE", ajuda: "Segurança / Saúde / Meio ambiente" },
-  { campo: "ope", label: "OPE", ajuda: "Operação" },
-  { campo: "fin", label: "FIN", ajuda: "Financeiro" },
-  { campo: "adm", label: "AMB", ajuda: "Ambiental" },
-  { campo: "img", label: "IMG", ajuda: "Imagem da empresa" },
-  { campo: "lc", label: "L&C", ajuda: "Legal e Compliance" },
+  { campo: "sse", label: "SSE" },
+  { campo: "ope", label: "OPE" },
+  { campo: "fin", label: "FIN" },
+  { campo: "adm", label: "AMB" },
+  { campo: "img", label: "IMG" },
+  { campo: "lc", label: "L&C" },
 ];
 
 const inputClass =
@@ -463,15 +461,14 @@ export default function RiscosAnaliseCompleta() {
     }
   }
 
-  function renderCampoNota(campo: CampoNota, label: string, ajuda: string) {
+  function renderCampoNota(campo: CampoNota, label: string) {
     return (
-      <label className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <span className="block text-sm font-black text-white">{label}</span>
-        <span className="mt-1 block min-h-10 text-xs font-semibold text-slate-300">
-          {ajuda}
+      <label className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+        <span className="block text-center text-sm font-black text-white">
+          {label}
         </span>
         <select
-          className={`${inputClass} mt-3 w-full`}
+          className={`${inputClass} mt-3 w-full text-center`}
           value={form[campo]}
           onChange={(event) => alterarNota(campo, event.target.value)}
         >
@@ -671,14 +668,18 @@ export default function RiscosAnaliseCompleta() {
             </div>
           </div>
 
-          <div className="mt-5 grid gap-5 2xl:grid-cols-[0.9fr_1.5fr]">
-            <section>
+          <section className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
+            <h3 className="text-sm font-black uppercase tracking-[0.28em] text-blue-200">
+              Análise e Avaliação Inerente
+            </h3>
+            <div className="mt-4 grid gap-4 2xl:grid-cols-[0.72fr_1.28fr]">
+              <section>
               <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
                 Probabilidade
               </h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 {camposProbabilidade.map((item) =>
-                  renderCampoNota(item.campo, item.label, item.ajuda),
+                  renderCampoNota(item.campo, item.label),
                 )}
               </div>
             </section>
@@ -687,13 +688,14 @@ export default function RiscosAnaliseCompleta() {
               <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
                 Consequência
               </h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-3 grid gap-3 sm:grid-cols-3 2xl:grid-cols-6">
                 {camposConsequencia.map((item) =>
-                  renderCampoNota(item.campo, item.label, item.ajuda),
+                  renderCampoNota(item.campo, item.label),
                 )}
               </div>
             </section>
-          </div>
+            </div>
+          </section>
 
           <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
             <div>
