@@ -307,6 +307,9 @@ export default function RiscosAnaliseCompleta() {
   const [preventivos, setPreventivos] = useState<string[]>([]);
   const [detectivos, setDetectivos] = useState<string[]>([]);
   const [corretivos, setCorretivos] = useState<string[]>([]);
+  const [buscaPreventivo, setBuscaPreventivo] = useState("");
+  const [buscaDetectivo, setBuscaDetectivo] = useState("");
+  const [buscaCorretivo, setBuscaCorretivo] = useState("");
   const [residual, setResidual] =
     useState<ResidualFormulario>(residualInicial);
   const [filtroFatores, setFiltroFatores] = useState("");
@@ -458,6 +461,25 @@ export default function RiscosAnaliseCompleta() {
       }));
   }
 
+  function localizarControle(valor: string) {
+    const termo = valor.trim().toLowerCase();
+    if (!termo) return null;
+    return (
+      cadastro.controles.find((item) => {
+        const etiqueta = `${item.codigo} - ${item.nome}`.toLowerCase();
+        return (
+          etiqueta === termo ||
+          item.codigo.toLowerCase() === termo ||
+          item.nome.toLowerCase() === termo
+        );
+      }) ||
+      cadastro.controles.find((item) =>
+        `${item.codigo} ${item.nome}`.toLowerCase().includes(termo),
+      ) ||
+      null
+    );
+  }
+
   function fatoresSelecionados() {
     return form.fatoresIds
       .map((id) => cadastro.fatores.find((item) => String(item.id) === id))
@@ -507,6 +529,9 @@ export default function RiscosAnaliseCompleta() {
     setPreventivos(analise.preventivos.map((item) => String(item.id || "")));
     setDetectivos(analise.detectivos.map((item) => String(item.id || "")));
     setCorretivos(analise.corretivos.map((item) => String(item.id || "")));
+    setBuscaPreventivo("");
+    setBuscaDetectivo("");
+    setBuscaCorretivo("");
     setResidual({
       scResidual: pontuacao(analise.scResidual || residualInicial.scResidual),
       feResidual: pontuacao(analise.feResidual || residualInicial.feResidual),
@@ -532,14 +557,27 @@ export default function RiscosAnaliseCompleta() {
     });
   }
 
-  function alternarControle(
-    lista: string[],
-    setLista: (ids: string[]) => void,
-    id: string,
+  function adicionarControle(
+    busca: string,
+    setBusca: (valor: string) => void,
+    selecionados: string[],
+    setSelecionados: (ids: string[]) => void,
   ) {
-    setLista(
-      lista.includes(id) ? lista.filter((item) => item !== id) : [...lista, id],
-    );
+    const controle = localizarControle(busca);
+    if (!controle) return;
+    const id = String(controle.id);
+    if (!selecionados.includes(id)) {
+      setSelecionados([...selecionados, id]);
+    }
+    setBusca("");
+  }
+
+  function removerControleSelecionado(
+    id: string,
+    selecionados: string[],
+    setSelecionados: (ids: string[]) => void,
+  ) {
+    setSelecionados(selecionados.filter((item) => item !== id));
   }
 
   async function salvarControles() {
@@ -655,38 +693,82 @@ export default function RiscosAnaliseCompleta() {
     titulo: string,
     selecionados: string[],
     setSelecionados: (ids: string[]) => void,
+    busca: string,
+    setBusca: (valor: string) => void,
   ) {
+    const controlesSelecionados = itensSelecionados(selecionados);
+    const datalistId = `controles-${titulo.toLowerCase()}`;
+
     return (
       <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-        <h3 className="text-sm font-black text-white">{titulo}</h3>
-        <div className="mt-3 grid max-h-44 gap-2 overflow-auto pr-1">
-          {cadastro.controles.map((controle) => (
-            <label
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-sm font-black text-white">{titulo}</h3>
+          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-2 py-1 text-[11px] font-black text-blue-100">
+            {controlesSelecionados.length}
+          </span>
+        </div>
+        <div className="mt-3 flex gap-2">
+          <input
+            className={`${inputClass} min-w-0 flex-1`}
+            list={datalistId}
+            value={busca}
+            onChange={(event) => setBusca(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                adicionarControle(busca, setBusca, selecionados, setSelecionados);
+              }
+            }}
+            placeholder="Digite CP001 ou o nome"
+          />
+          <datalist id={datalistId}>
+            {cadastro.controles.map((controle) => (
+              <option
+                key={controle.id}
+                value={`${controle.codigo} - ${controle.nome}`}
+              />
+            ))}
+          </datalist>
+          <button
+            type="button"
+            onClick={() =>
+              adicionarControle(busca, setBusca, selecionados, setSelecionados)
+            }
+            className="rounded-xl bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-500"
+          >
+            Adicionar
+          </button>
+        </div>
+        <div className="mt-3 grid max-h-36 gap-2 overflow-auto pr-1">
+          {controlesSelecionados.map((controle) => (
+            <div
               key={controle.id}
-              className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm font-bold transition ${
-                selecionados.includes(String(controle.id))
-                  ? "border-blue-400 bg-blue-600 text-white"
-                  : "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-500"
-              }`}
+              className="flex items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm font-bold text-slate-100"
             >
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={selecionados.includes(String(controle.id))}
-                onChange={() =>
-                  alternarControle(
+              <span>{etiquetaControle(controle)}</span>
+              <button
+                type="button"
+                onClick={() =>
+                  removerControleSelecionado(
+                    String(controle.id),
                     selecionados,
                     setSelecionados,
-                    String(controle.id),
                   )
                 }
-              />
-              {controle.codigo} - {controle.nome}
-            </label>
+                className="rounded-lg border border-slate-700 p-1 text-slate-300 transition hover:border-red-400 hover:text-red-200"
+              >
+                <X size={14} />
+              </button>
+            </div>
           ))}
           {!cadastro.controles.length && (
             <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-300">
               Nenhum CP cadastrado em Cadastro Geral.
+            </p>
+          )}
+          {cadastro.controles.length > 0 && !controlesSelecionados.length && (
+            <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-300">
+              Nenhum controle selecionado.
             </p>
           )}
         </div>
@@ -1168,9 +1250,23 @@ export default function RiscosAnaliseCompleta() {
                   "Preventivo",
                   preventivos,
                   setPreventivos,
+                  buscaPreventivo,
+                  setBuscaPreventivo,
                 )}
-                {renderListaControles("Detectivo", detectivos, setDetectivos)}
-                {renderListaControles("Corretivo", corretivos, setCorretivos)}
+                {renderListaControles(
+                  "Detectivo",
+                  detectivos,
+                  setDetectivos,
+                  buscaDetectivo,
+                  setBuscaDetectivo,
+                )}
+                {renderListaControles(
+                  "Corretivo",
+                  corretivos,
+                  setCorretivos,
+                  buscaCorretivo,
+                  setBuscaCorretivo,
+                )}
               </div>
 
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
