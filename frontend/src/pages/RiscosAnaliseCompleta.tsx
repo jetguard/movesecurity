@@ -655,15 +655,34 @@ export default function RiscosAnaliseCompleta() {
           preventivos: itensSelecionados(preventivos),
           detectivos: itensSelecionados(detectivos),
           corretivos: itensSelecionados(corretivos),
-          ...residual,
         },
       );
-      setControlesEditando(null);
       setMensagem("Controles atualizados com sucesso.");
       await carregar();
     } catch (error: any) {
       setErro(
         error?.response?.data?.error || "Não foi possível salvar os controles.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarAvaliacaoResidual() {
+    if (!controlesEditando) return;
+    setSalvando(true);
+    try {
+      await api.patch(
+        `/riscos/analise-completa/${controlesEditando.id}/controles`,
+        residual,
+      );
+      setControlesEditando(null);
+      setMensagem("Avaliação residual salva com sucesso.");
+      await carregar();
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error ||
+          "Não foi possível salvar a avaliação residual.",
       );
     } finally {
       setSalvando(false);
@@ -1358,27 +1377,38 @@ export default function RiscosAnaliseCompleta() {
                   forem necessários em cada categoria.
                 </p>
                 <div className="mt-4 grid gap-4 lg:grid-cols-3">
-                {renderListaControles(
-                  "Preventivo",
-                  preventivos,
-                  setPreventivos,
-                  buscaPreventivo,
-                  setBuscaPreventivo,
-                )}
-                {renderListaControles(
-                  "Detectivo",
-                  detectivos,
-                  setDetectivos,
-                  buscaDetectivo,
-                  setBuscaDetectivo,
-                )}
-                {renderListaControles(
-                  "Corretivo",
-                  corretivos,
-                  setCorretivos,
-                  buscaCorretivo,
-                  setBuscaCorretivo,
-                )}
+                  {renderListaControles(
+                    "Preventivo",
+                    preventivos,
+                    setPreventivos,
+                    buscaPreventivo,
+                    setBuscaPreventivo,
+                  )}
+                  {renderListaControles(
+                    "Detectivo",
+                    detectivos,
+                    setDetectivos,
+                    buscaDetectivo,
+                    setBuscaDetectivo,
+                  )}
+                  {renderListaControles(
+                    "Corretivo",
+                    corretivos,
+                    setCorretivos,
+                    buscaCorretivo,
+                    setBuscaCorretivo,
+                  )}
+                </div>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    disabled={salvando}
+                    onClick={salvarControles}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-5 py-3 text-sm font-black text-blue-100 hover:border-blue-300 hover:bg-blue-500/20 disabled:opacity-60"
+                  >
+                    <Save size={16} />
+                    Salvar controles
+                  </button>
                 </div>
               </section>
 
@@ -1509,11 +1539,11 @@ export default function RiscosAnaliseCompleta() {
               <button
                 type="button"
                 disabled={salvando}
-                onClick={salvarControles}
+                onClick={salvarAvaliacaoResidual}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:opacity-60"
               >
                 <Save size={16} />
-                Salvar controles
+                Salvar avaliação residual
               </button>
             </div>
           </div>

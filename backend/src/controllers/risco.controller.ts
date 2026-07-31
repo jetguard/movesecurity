@@ -1490,15 +1490,18 @@ export async function atualizarControlesAnaliseCompletaRisco(
     const registro = await prisma.analiseRiscoCompleta.update({
       where: { id },
       data: {
-        preventivosJson: JSON.stringify(
-          normalizarControles(req.body.preventivos),
-        ),
-        detectivosJson: JSON.stringify(
-          normalizarControles(req.body.detectivos),
-        ),
-        corretivosJson: JSON.stringify(
-          normalizarControles(req.body.corretivos),
-        ),
+        preventivosJson:
+          req.body.preventivos !== undefined
+            ? JSON.stringify(normalizarControles(req.body.preventivos))
+            : anterior.preventivosJson,
+        detectivosJson:
+          req.body.detectivos !== undefined
+            ? JSON.stringify(normalizarControles(req.body.detectivos))
+            : anterior.detectivosJson,
+        corretivosJson:
+          req.body.corretivos !== undefined
+            ? JSON.stringify(normalizarControles(req.body.corretivos))
+            : anterior.corretivosJson,
         ...calcularResidualCompleta(req.body, anterior),
       },
     });
