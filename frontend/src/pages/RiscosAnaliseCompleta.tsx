@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
   AlertTriangle,
@@ -72,13 +72,29 @@ type AnaliseCompleta = {
   preventivos: ControleSelecionado[];
   detectivos: ControleSelecionado[];
   corretivos: ControleSelecionado[];
+  scResidual?: number | null;
+  feResidual?: number | null;
+  intervaloResidual?: number | null;
+  sseResidual?: number | null;
+  opeResidual?: number | null;
+  finResidual?: number | null;
+  admResidual?: number | null;
+  imgResidual?: number | null;
+  lcResidual?: number | null;
+  notaProbabilidadeResidual?: number | null;
   probabilidadeResidual?: number | null;
+  percentualProbabilidadeResidual?: number | null;
   nivelProbabilidadeResidual?: string | null;
+  notaConsequenciaResidual?: number | null;
   consequenciaResidual?: number | null;
   nivelConsequenciaResidual?: string | null;
   resultadoResidual?: number | null;
   nivelRiscoResidual?: string | null;
   classificacaoResidual?: string | null;
+  desempenhoNota?: number | null;
+  desempenhoProbabilidade?: number | null;
+  desempenhoConsequencia?: number | null;
+  desempenhoNivelRisco?: number | null;
   createdAt: string;
 };
 
@@ -103,6 +119,20 @@ type CampoNota = keyof Pick<
   "sc" | "fe" | "intervalo" | "sse" | "ope" | "fin" | "adm" | "img" | "lc"
 >;
 
+type ResidualFormulario = {
+  scResidual: number;
+  feResidual: number;
+  intervaloResidual: number;
+  sseResidual: number;
+  opeResidual: number;
+  finResidual: number;
+  admResidual: number;
+  imgResidual: number;
+  lcResidual: number;
+};
+
+type CampoResidual = keyof ResidualFormulario;
+
 const cadastroVazio: CadastroGeral = {
   macroProcessos: [],
   riscos: [],
@@ -126,6 +156,18 @@ const formularioInicial: Formulario = {
   lc: 1,
 };
 
+const residualInicial: ResidualFormulario = {
+  scResidual: 1,
+  feResidual: 1,
+  intervaloResidual: 1,
+  sseResidual: 1,
+  opeResidual: 1,
+  finResidual: 1,
+  admResidual: 1,
+  imgResidual: 1,
+  lcResidual: 1,
+};
+
 const camposProbabilidade: Array<{
   campo: CampoNota;
   label: string;
@@ -147,6 +189,27 @@ const camposConsequencia: Array<{
   { campo: "lc", label: "L&C" },
 ];
 
+const camposProbabilidadeResidual: Array<{
+  campo: CampoResidual;
+  label: string;
+}> = [
+  { campo: "scResidual", label: "SC" },
+  { campo: "feResidual", label: "FE" },
+  { campo: "intervaloResidual", label: "INT" },
+];
+
+const camposConsequenciaResidual: Array<{
+  campo: CampoResidual;
+  label: string;
+}> = [
+  { campo: "sseResidual", label: "SSE" },
+  { campo: "opeResidual", label: "OPE" },
+  { campo: "finResidual", label: "FIN" },
+  { campo: "admResidual", label: "AMB" },
+  { campo: "imgResidual", label: "IMG" },
+  { campo: "lcResidual", label: "L&C" },
+];
+
 const inputClass =
   "h-12 rounded-xl border border-slate-700 bg-slate-950 px-4 text-sm font-bold text-white outline-none transition focus:border-blue-400";
 
@@ -160,15 +223,15 @@ function arredondar(valor: number) {
 
 function nivelProbabilidade(media: number) {
   if (media >= 4.51) return "FREQUENTE";
-  if (media >= 3.51) return "PROVÁVEL";
-  if (media >= 2.51) return "POSSÍVEL";
-  if (media >= 1.51) return "IMPROVÁVEL";
+  if (media >= 3.51) return "PROVÃVEL";
+  if (media >= 2.51) return "POSSÃVEL";
+  if (media >= 1.51) return "IMPROVÃVEL";
   if (media >= 1) return "REMOTO";
   return "-";
 }
 
 function nivelConsequencia(media: number) {
-  if (media >= 4.51) return "CRÍTICO";
+  if (media >= 4.51) return "CRÃTICO";
   if (media >= 3.51) return "SEVERO";
   if (media >= 2.51) return "MAIOR";
   if (media >= 1.51) return "MODERADO";
@@ -180,24 +243,24 @@ function classificar(resultado: number) {
   if (resultado <= 5)
     return {
       nivel: "BAIXO",
-      periodicidade: "Revisão a cada 24 meses",
+      periodicidade: "RevisÃ£o a cada 24 meses",
       cor: "bg-emerald-500 text-slate-950",
     };
   if (resultado <= 10)
     return {
       nivel: "MENOR",
-      periodicidade: "Revisão a cada 12 meses",
+      periodicidade: "RevisÃ£o a cada 12 meses",
       cor: "bg-lime-300 text-slate-950",
     };
   if (resultado <= 15)
     return {
       nivel: "ALTO",
-      periodicidade: "Revisão a cada 180 dias",
+      periodicidade: "RevisÃ£o a cada 180 dias",
       cor: "bg-amber-300 text-slate-950",
     };
   return {
     nivel: "EXTREMO",
-    periodicidade: "Revisão a cada 90 dias",
+    periodicidade: "RevisÃ£o a cada 90 dias",
     cor: "bg-red-600 text-white",
   };
 }
@@ -206,11 +269,11 @@ function corNivel(texto?: string | null) {
   const valor = String(texto || "").toUpperCase();
   if (["BAIXO", "MENOR", "REMOTO"].includes(valor))
     return "bg-emerald-300 text-slate-950";
-  if (["POSSÍVEL", "POSSÃVEL", "MODERADO"].includes(valor))
+  if (["POSSÃVEL", "POSSÃƒÂVEL", "MODERADO"].includes(valor))
     return "bg-yellow-300 text-slate-950";
-  if (["ALTO", "MAIOR", "PROVÁVEL", "PROVÃVEL", "SEVERO"].includes(valor))
+  if (["ALTO", "MAIOR", "PROVÃVEL", "PROVÃƒÂVEL", "SEVERO"].includes(valor))
     return "bg-orange-500 text-white";
-  if (["EXTREMO", "CRÍTICO", "CRÃTICO", "FREQUENTE"].includes(valor))
+  if (["EXTREMO", "CRÃTICO", "CRÃƒÂTICO", "FREQUENTE"].includes(valor))
     return "bg-red-600 text-white";
   return "bg-slate-700 text-slate-100";
 }
@@ -244,8 +307,8 @@ export default function RiscosAnaliseCompleta() {
   const [preventivos, setPreventivos] = useState<string[]>([]);
   const [detectivos, setDetectivos] = useState<string[]>([]);
   const [corretivos, setCorretivos] = useState<string[]>([]);
-  const [probabilidadeResidual, setProbabilidadeResidual] = useState("");
-  const [consequenciaResidual, setConsequenciaResidual] = useState("");
+  const [residual, setResidual] =
+    useState<ResidualFormulario>(residualInicial);
   const [analisesSelecionadas, setAnalisesSelecionadas] = useState<number[]>(
     [],
   );
@@ -303,31 +366,67 @@ export default function RiscosAnaliseCompleta() {
   }, [form]);
 
   const previaResidual = useMemo(() => {
-    const prob = probabilidadeResidual
-      ? Number(String(probabilidadeResidual).replace(",", "."))
-      : null;
-    const cons = consequenciaResidual
-      ? Number(String(consequenciaResidual).replace(",", "."))
-      : null;
-    const probValido = prob !== null && Number.isFinite(prob);
-    const consValido = cons !== null && Number.isFinite(cons);
-    const resultado =
-      probValido && consValido ? arredondar(Number(prob) * Number(cons)) : null;
+    const sc = pontuacao(residual.scResidual);
+    const fe = pontuacao(residual.feResidual);
+    const intervalo = pontuacao(residual.intervaloResidual);
+    const sse = pontuacao(residual.sseResidual);
+    const ope = pontuacao(residual.opeResidual);
+    const fin = pontuacao(residual.finResidual);
+    const adm = pontuacao(residual.admResidual);
+    const img = pontuacao(residual.imgResidual);
+    const lc = pontuacao(residual.lcResidual);
+    const notaProbabilidade = sc * 5 + fe * 4 + intervalo * 3;
+    const probabilidade = arredondar(notaProbabilidade / 12);
+    const percentualProbabilidade = arredondar(probabilidade / 5);
+    const notaConsequencia =
+      sse * 3 + ope * 5 + fin * 3 + adm * 1 + img * 2 + lc * 3;
+    const consequencia = arredondar(notaConsequencia / 17);
+    const resultado = arredondar(probabilidade * consequencia);
     const classificacao = resultado !== null ? classificar(resultado) : null;
+    const desempenho = (atual: number, base?: number | null) =>
+      base ? arredondar((atual - Number(base)) / Number(base)) : null;
 
     return {
-      probabilidade: probValido ? Number(prob) : null,
-      nivelProbabilidade: probValido ? nivelProbabilidade(Number(prob)) : "-",
-      consequencia: consValido ? Number(cons) : null,
-      nivelConsequencia: consValido ? nivelConsequencia(Number(cons)) : "-",
+      notaProbabilidade,
+      probabilidade,
+      percentualProbabilidade,
+      nivelProbabilidade: nivelProbabilidade(probabilidade),
+      notaConsequencia,
+      consequencia,
+      nivelConsequencia: nivelConsequencia(consequencia),
       resultado,
       classificacao: classificacao?.nivel || "-",
       cor: classificacao?.cor || "bg-slate-700 text-slate-100",
+      desempenhoNota: desempenho(
+        probabilidade,
+        controlesEditando?.mediaProbabilidade,
+      ),
+      desempenhoProbabilidade: desempenho(
+        percentualProbabilidade,
+        controlesEditando?.percentualProbabilidade,
+      ),
+      desempenhoConsequencia: desempenho(
+        consequencia,
+        controlesEditando?.mediaConsequencia,
+      ),
+      desempenhoNivelRisco: desempenho(
+        resultado,
+        controlesEditando?.resultadoInerente,
+      ),
     };
-  }, [probabilidadeResidual, consequenciaResidual]);
+  }, [controlesEditando, residual]);
 
   function alterarNota(campo: CampoNota, valor: string) {
     setForm((atual) => ({ ...atual, [campo]: pontuacao(Number(valor)) }));
+  }
+
+  function alterarNotaResidual(campo: CampoResidual, valor: string) {
+    setResidual((atual) => ({ ...atual, [campo]: pontuacao(Number(valor)) }));
+  }
+
+  function formatarVariacao(valor?: number | null) {
+    if (valor === null || valor === undefined) return "-";
+    return `${Math.round(valor * 100)}%`;
   }
 
   function alternarFator(id: string) {
@@ -383,11 +482,11 @@ export default function RiscosAnaliseCompleta() {
         lc: form.lc,
       });
       setForm(formularioInicial);
-      setMensagem("Análise completa cadastrada com sucesso.");
+      setMensagem("AnÃ¡lise completa cadastrada com sucesso.");
       await carregar();
     } catch (error: any) {
       setErro(
-        error?.response?.data?.error || "Não foi possível salvar a análise.",
+        error?.response?.data?.error || "NÃ£o foi possÃ­vel salvar a anÃ¡lise.",
       );
     } finally {
       setSalvando(false);
@@ -399,14 +498,29 @@ export default function RiscosAnaliseCompleta() {
     setPreventivos(analise.preventivos.map((item) => String(item.id || "")));
     setDetectivos(analise.detectivos.map((item) => String(item.id || "")));
     setCorretivos(analise.corretivos.map((item) => String(item.id || "")));
-    setProbabilidadeResidual(
-      analise.probabilidadeResidual
-        ? String(analise.probabilidadeResidual)
-        : "",
-    );
-    setConsequenciaResidual(
-      analise.consequenciaResidual ? String(analise.consequenciaResidual) : "",
-    );
+    setResidual({
+      scResidual: pontuacao(analise.scResidual || residualInicial.scResidual),
+      feResidual: pontuacao(analise.feResidual || residualInicial.feResidual),
+      intervaloResidual: pontuacao(
+        analise.intervaloResidual || residualInicial.intervaloResidual,
+      ),
+      sseResidual: pontuacao(
+        analise.sseResidual || residualInicial.sseResidual,
+      ),
+      opeResidual: pontuacao(
+        analise.opeResidual || residualInicial.opeResidual,
+      ),
+      finResidual: pontuacao(
+        analise.finResidual || residualInicial.finResidual,
+      ),
+      admResidual: pontuacao(
+        analise.admResidual || residualInicial.admResidual,
+      ),
+      imgResidual: pontuacao(
+        analise.imgResidual || residualInicial.imgResidual,
+      ),
+      lcResidual: pontuacao(analise.lcResidual || residualInicial.lcResidual),
+    });
   }
 
   function alternarControle(
@@ -429,8 +543,7 @@ export default function RiscosAnaliseCompleta() {
           preventivos: itensSelecionados(preventivos),
           detectivos: itensSelecionados(detectivos),
           corretivos: itensSelecionados(corretivos),
-          probabilidadeResidual,
-          consequenciaResidual,
+          ...residual,
         },
       );
       setControlesEditando(null);
@@ -438,7 +551,7 @@ export default function RiscosAnaliseCompleta() {
       await carregar();
     } catch (error: any) {
       setErro(
-        error?.response?.data?.error || "Não foi possível salvar os controles.",
+        error?.response?.data?.error || "NÃ£o foi possÃ­vel salvar os controles.",
       );
     } finally {
       setSalvando(false);
@@ -462,7 +575,7 @@ export default function RiscosAnaliseCompleta() {
   async function excluirAnalisesSelecionadas() {
     if (!analisesSelecionadas.length) return;
     const confirmar = window.confirm(
-      `Excluir definitivamente ${analisesSelecionadas.length} análise(s) selecionada(s)? Esta ação não poderá ser desfeita.`,
+      `Excluir definitivamente ${analisesSelecionadas.length} anÃ¡lise(s) selecionada(s)? Esta aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.`,
     );
     if (!confirmar) return;
 
@@ -475,12 +588,12 @@ export default function RiscosAnaliseCompleta() {
           api.delete(`/riscos/analise-completa/${id}`),
         ),
       );
-      setMensagem("Análises selecionadas excluídas com sucesso.");
+      setMensagem("AnÃ¡lises selecionadas excluÃ­das com sucesso.");
       await carregar();
     } catch (error: any) {
       setErro(
         error?.response?.data?.error ||
-          "Não foi possível excluir as análises selecionadas.",
+          "NÃ£o foi possÃ­vel excluir as anÃ¡lises selecionadas.",
       );
     } finally {
       setSalvando(false);
@@ -497,6 +610,27 @@ export default function RiscosAnaliseCompleta() {
           className={`${inputClass} mt-3 w-full text-center`}
           value={form[campo]}
           onChange={(event) => alterarNota(campo, event.target.value)}
+        >
+          {[1, 2, 3, 4, 5].map((valor) => (
+            <option key={valor} value={valor}>
+              {valor}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  function renderCampoNotaResidual(campo: CampoResidual, label: string) {
+    return (
+      <label className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+        <span className="block text-center text-sm font-black text-white">
+          {label}
+        </span>
+        <select
+          className={`${inputClass} mt-3 w-full text-center`}
+          value={residual[campo]}
+          onChange={(event) => alterarNotaResidual(campo, event.target.value)}
         >
           {[1, 2, 3, 4, 5].map((valor) => (
             <option key={valor} value={valor}>
@@ -556,21 +690,21 @@ export default function RiscosAnaliseCompleta() {
       <div className="mx-auto max-w-[1800px]">
         <header className="border-b border-slate-800 pb-6">
           <p className="text-xs font-black uppercase tracking-[0.35em] text-blue-300">
-            Análise de Riscos
+            AnÃ¡lise de Riscos
           </p>
           <h1 className="mt-2 text-3xl font-black text-white">
-            Análise Completa
+            AnÃ¡lise Completa
           </h1>
           <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-300">
-            Cadastre a análise preenchendo macro processo, setor, risco, fatores
-            de risco e notas de probabilidade/consequência. Os demais campos são
+            Cadastre a anÃ¡lise preenchendo macro processo, setor, risco, fatores
+            de risco e notas de probabilidade/consequÃªncia. Os demais campos sÃ£o
             calculados automaticamente.
           </p>
         </header>
 
         {carregando && (
           <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-5 text-sm font-black text-slate-300">
-            Carregando dados da análise...
+            Carregando dados da anÃ¡lise...
           </div>
         )}
 
@@ -592,7 +726,7 @@ export default function RiscosAnaliseCompleta() {
           <div className="flex items-center gap-3">
             <BrainCircuit className="text-blue-300" size={22} />
             <h2 className="text-xl font-black text-white">
-              Nova análise completa
+              Nova anÃ¡lise completa
             </h2>
           </div>
 
@@ -669,8 +803,8 @@ export default function RiscosAnaliseCompleta() {
           <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
             <p className="text-sm font-black text-white">Fatores de Risco</p>
             <p className="mt-1 text-xs font-semibold text-slate-300">
-              Selecione quantos fatores forem necessários. O sistema não limita
-              a três fatores como a planilha.
+              Selecione quantos fatores forem necessÃ¡rios. O sistema nÃ£o limita
+              a trÃªs fatores como a planilha.
             </p>
             <div className="mt-3 grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {cadastro.fatores.map((item) => (
@@ -696,7 +830,7 @@ export default function RiscosAnaliseCompleta() {
 
           <section className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <h3 className="text-sm font-black uppercase tracking-[0.28em] text-blue-200">
-              Análise e Avaliação Inerente
+              AnÃ¡lise e AvaliaÃ§Ã£o Inerente
             </h3>
             <div className="mt-4 grid gap-4 2xl:grid-cols-[0.72fr_1.28fr]">
               <section>
@@ -712,7 +846,7 @@ export default function RiscosAnaliseCompleta() {
 
             <section>
               <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-                Consequência
+                ConsequÃªncia
               </h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-3 2xl:grid-cols-6">
                 {camposConsequencia.map((item) =>
@@ -770,7 +904,7 @@ export default function RiscosAnaliseCompleta() {
             </div>
             <div>
               <p className="text-xs font-black uppercase text-blue-200">
-                Classificação
+                ClassificaÃ§Ã£o
               </p>
               <span
                 className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
@@ -794,7 +928,7 @@ export default function RiscosAnaliseCompleta() {
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:opacity-60"
             >
               <Plus size={16} />
-              Cadastrar análise
+              Cadastrar anÃ¡lise
             </button>
           </div>
         </form>
@@ -803,10 +937,10 @@ export default function RiscosAnaliseCompleta() {
           <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-black text-white">
-                Análises cadastradas
+                AnÃ¡lises cadastradas
               </h2>
               <p className="text-sm font-semibold text-slate-300">
-                Após o cadastro, edite os controles preventivos, detectivos e
+                ApÃ³s o cadastro, edite os controles preventivos, detectivos e
                 corretivos.
               </p>
             </div>
@@ -846,17 +980,17 @@ export default function RiscosAnaliseCompleta() {
                         analisesSelecionadas.length === analises.length
                       }
                       onChange={alternarTodasAnalises}
-                      aria-label="Selecionar todas as análises"
+                      aria-label="Selecionar todas as anÃ¡lises"
                     />
                   </th>
-                  <th className="px-3 py-2">Código</th>
-                  <th className="px-3 py-2">Identificação</th>
+                  <th className="px-3 py-2">CÃ³digo</th>
+                  <th className="px-3 py-2">IdentificaÃ§Ã£o</th>
                   <th className="px-3 py-2">Fatores</th>
                   <th className="px-3 py-2 text-center">Prob.</th>
                   <th className="px-3 py-2 text-center">%P</th>
                   <th className="px-3 py-2 text-center">Cons.</th>
                   <th className="px-3 py-2 text-center">NRI</th>
-                  <th className="px-3 py-2">Classificação</th>
+                  <th className="px-3 py-2">ClassificaÃ§Ã£o</th>
                   <th className="px-3 py-2">Residual</th>
                   <th className="px-3 py-2">Controles</th>
                 </tr>
@@ -959,7 +1093,7 @@ export default function RiscosAnaliseCompleta() {
                       colSpan={11}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
-                      Nenhuma análise completa cadastrada.
+                      Nenhuma anÃ¡lise completa cadastrada.
                     </td>
                   </tr>
                 )}
@@ -975,7 +1109,7 @@ export default function RiscosAnaliseCompleta() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-blue-300">
-                  Controles e Avaliação Residual
+                  Controles e AvaliaÃ§Ã£o Residual
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-white">
                   {controlesEditando.codigo}
@@ -997,8 +1131,8 @@ export default function RiscosAnaliseCompleta() {
             <div className="mt-5 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-50">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" />
               <p className="text-sm font-semibold leading-6">
-                Selecione os controles e preencha a avaliação residual. O
-                sistema calcula automaticamente os níveis e a classificação
+                Selecione os controles e preencha a avaliaÃ§Ã£o residual. O
+                sistema calcula automaticamente os nÃ­veis e a classificaÃ§Ã£o
                 residual conforme as faixas da planilha.
               </p>
             </div>
@@ -1016,45 +1150,74 @@ export default function RiscosAnaliseCompleta() {
 
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
                 <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-                  Avaliação Residual
+                  AvaliaÃ§Ã£o Residual
                 </h3>
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <label className="text-sm font-black text-slate-200">
-                    Probabilidade residual
-                    <input
-                      className={`${inputClass} mt-2 w-full`}
-                      type="number"
-                      min="1"
-                      max="5"
-                      step="0.01"
-                      value={probabilidadeResidual}
-                      onChange={(event) =>
-                        setProbabilidadeResidual(event.target.value)
-                      }
-                      placeholder="Ex: 3.51"
-                    />
-                  </label>
-                  <label className="text-sm font-black text-slate-200">
-                    Consequência residual
-                    <input
-                      className={`${inputClass} mt-2 w-full`}
-                      type="number"
-                      min="1"
-                      max="5"
-                      step="0.01"
-                      value={consequenciaResidual}
-                      onChange={(event) =>
-                        setConsequenciaResidual(event.target.value)
-                      }
-                      placeholder="Ex: 2.40"
-                    />
-                  </label>
+                <div className="mt-4 grid gap-4">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                      Probabilidade
+                    </p>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                      {camposProbabilidadeResidual.map((item) =>
+                        renderCampoNotaResidual(item.campo, item.label),
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                      Consequência
+                    </p>
+                    <div className="mt-2 grid gap-2 sm:grid-cols-3 2xl:grid-cols-6">
+                      {camposConsequenciaResidual.map((item) =>
+                        renderCampoNotaResidual(item.campo, item.label),
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
+                    <p className="text-xs font-black uppercase text-blue-200">
+                      Nota / MPP / %P
+                    </p>
+                    <p className="mt-2 text-lg font-black text-white">
+                      {previaResidual.notaProbabilidade} /{" "}
+                      {previaResidual.probabilidade} /{" "}
+                      {Math.round(previaResidual.percentualProbabilidade * 100)}
+                      %
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
+                    <p className="text-xs font-black uppercase text-blue-200">
+                      Nota Conseq. / MPI
+                    </p>
+                    <p className="mt-2 text-lg font-black text-white">
+                      {previaResidual.notaConsequencia} /{" "}
+                      {previaResidual.consequencia}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
+                    <p className="text-xs font-black uppercase text-blue-200">
+                      Desemp. Prob.
+                    </p>
+                    <p className="mt-2 text-lg font-black text-white">
+                      {formatarVariacao(previaResidual.desempenhoProbabilidade)}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-blue-400/30 bg-blue-500/10 p-4">
+                    <p className="text-xs font-black uppercase text-blue-200">
+                      Desemp. Risco
+                    </p>
+                    <p className="mt-2 text-lg font-black text-white">
+                      {formatarVariacao(previaResidual.desempenhoNivelRisco)}
+                    </p>
+                  </div>
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      Nível de Probabilidade
+                      NÃ­vel de Probabilidade
                     </p>
                     <div className="mt-2">
                       <BadgeNivel>
@@ -1064,7 +1227,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      Nível de Consequência
+                      NÃ­vel de ConsequÃªncia
                     </p>
                     <div className="mt-2">
                       <BadgeNivel>
@@ -1074,7 +1237,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      Nível de Risco
+                      NÃ­vel de Risco
                     </p>
                     <p className="mt-2 text-2xl font-black text-white">
                       {previaResidual.resultado ?? "-"}
@@ -1082,7 +1245,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      Classificação do Risco
+                      ClassificaÃ§Ã£o do Risco
                     </p>
                     <div className="mt-2">
                       <BadgeNivel>{previaResidual.classificacao}</BadgeNivel>

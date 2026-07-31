@@ -1,0 +1,17 @@
+ALTER TABLE "AnaliseRiscoCompleta"
+ADD COLUMN "scResidual" INTEGER,
+ADD COLUMN "feResidual" INTEGER,
+ADD COLUMN "intervaloResidual" INTEGER,
+ADD COLUMN "sseResidual" INTEGER,
+ADD COLUMN "opeResidual" INTEGER,
+ADD COLUMN "finResidual" INTEGER,
+ADD COLUMN "admResidual" INTEGER,
+ADD COLUMN "imgResidual" INTEGER,
+ADD COLUMN "lcResidual" INTEGER,
+ADD COLUMN "notaProbabilidadeResidual" DOUBLE PRECISION,
+ADD COLUMN "percentualProbabilidadeResidual" DOUBLE PRECISION,
+ADD COLUMN "notaConsequenciaResidual" DOUBLE PRECISION,
+ADD COLUMN "desempenhoNota" DOUBLE PRECISION,
+ADD COLUMN "desempenhoProbabilidade" DOUBLE PRECISION,
+ADD COLUMN "desempenhoConsequencia" DOUBLE PRECISION,
+ADD COLUMN "desempenhoNivelRisco" DOUBLE PRECISION;

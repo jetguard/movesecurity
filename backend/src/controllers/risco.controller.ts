@@ -1065,17 +1065,127 @@ function numeroResidual(valor: unknown) {
   return Math.min(Math.max(numero, 0), 5);
 }
 
-function calcularResidualCompleta(body: Record<string, unknown>) {
+function calcularDesempenhoResidual(
+  residual: number | null,
+  inerente: number | null | undefined,
+) {
+  if (residual === null || !inerente) return null;
+  return arredondarRisco((residual - Number(inerente)) / Number(inerente));
+}
+
+function calcularResidualCompleta(body: Record<string, unknown>, anterior?: any) {
+  const temPontuacaoResidual =
+    body.scResidual !== undefined ||
+    body.feResidual !== undefined ||
+    body.intervaloResidual !== undefined ||
+    body.sseResidual !== undefined ||
+    body.opeResidual !== undefined ||
+    body.finResidual !== undefined ||
+    body.admResidual !== undefined ||
+    body.imgResidual !== undefined ||
+    body.lcResidual !== undefined;
+
+  if (temPontuacaoResidual) {
+    const scResidual = pontuacaoCompleta(body.scResidual);
+    const feResidual = pontuacaoCompleta(body.feResidual);
+    const intervaloResidual = pontuacaoCompleta(
+      body.intervaloResidual || body.intResidual,
+    );
+    const sseResidual = pontuacaoCompleta(body.sseResidual);
+    const opeResidual = pontuacaoCompleta(body.opeResidual);
+    const finResidual = pontuacaoCompleta(body.finResidual);
+    const admResidual = pontuacaoCompleta(body.admResidual);
+    const imgResidual = pontuacaoCompleta(body.imgResidual);
+    const lcResidual = pontuacaoCompleta(body.lcResidual);
+    const notaProbabilidadeResidual =
+      scResidual * 5 + feResidual * 4 + intervaloResidual * 3;
+    const probabilidadeResidual = arredondarRisco(
+      notaProbabilidadeResidual / 12,
+    );
+    const percentualProbabilidadeResidual = arredondarRisco(
+      probabilidadeResidual / 5,
+    );
+    const notaConsequenciaResidual =
+      sseResidual * 3 +
+      opeResidual * 5 +
+      finResidual * 3 +
+      admResidual * 1 +
+      imgResidual * 2 +
+      lcResidual * 3;
+    const consequenciaResidual = arredondarRisco(
+      notaConsequenciaResidual / 17,
+    );
+    const resultadoResidual = arredondarRisco(
+      probabilidadeResidual * consequenciaResidual,
+    );
+    const classificacao = classificacaoCompleta(resultadoResidual);
+
+    return {
+      scResidual,
+      feResidual,
+      intervaloResidual,
+      sseResidual,
+      opeResidual,
+      finResidual,
+      admResidual,
+      imgResidual,
+      lcResidual,
+      notaProbabilidadeResidual,
+      probabilidadeResidual,
+      percentualProbabilidadeResidual,
+      nivelProbabilidadeResidual:
+        nivelProbabilidadeCompleta(probabilidadeResidual),
+      notaConsequenciaResidual,
+      consequenciaResidual,
+      nivelConsequenciaResidual:
+        nivelConsequenciaCompleta(consequenciaResidual),
+      resultadoResidual,
+      nivelRiscoResidual: classificacao.nivel,
+      classificacaoResidual: classificacao.classificacao,
+      desempenhoNota: calcularDesempenhoResidual(
+        probabilidadeResidual,
+        anterior?.mediaProbabilidade,
+      ),
+      desempenhoProbabilidade: calcularDesempenhoResidual(
+        percentualProbabilidadeResidual,
+        anterior?.percentualProbabilidade,
+      ),
+      desempenhoConsequencia: calcularDesempenhoResidual(
+        consequenciaResidual,
+        anterior?.mediaConsequencia,
+      ),
+      desempenhoNivelRisco: calcularDesempenhoResidual(
+        resultadoResidual,
+        anterior?.resultadoInerente,
+      ),
+    };
+  }
+
   const probabilidadeResidual = numeroResidual(body.probabilidadeResidual);
   const consequenciaResidual = numeroResidual(body.consequenciaResidual);
 
   if (probabilidadeResidual === null || consequenciaResidual === null) {
     return {
+      scResidual: null,
+      feResidual: null,
+      intervaloResidual: null,
+      sseResidual: null,
+      opeResidual: null,
+      finResidual: null,
+      admResidual: null,
+      imgResidual: null,
+      lcResidual: null,
+      notaProbabilidadeResidual: null,
       probabilidadeResidual,
+      percentualProbabilidadeResidual:
+        probabilidadeResidual === null
+          ? null
+          : arredondarRisco(probabilidadeResidual / 5),
       nivelProbabilidadeResidual:
         probabilidadeResidual === null
           ? null
           : nivelProbabilidadeCompleta(probabilidadeResidual),
+      notaConsequenciaResidual: null,
       consequenciaResidual,
       nivelConsequenciaResidual:
         consequenciaResidual === null
@@ -1084,6 +1194,10 @@ function calcularResidualCompleta(body: Record<string, unknown>) {
       resultadoResidual: null,
       nivelRiscoResidual: null,
       classificacaoResidual: null,
+      desempenhoNota: null,
+      desempenhoProbabilidade: null,
+      desempenhoConsequencia: null,
+      desempenhoNivelRisco: null,
     };
   }
 
@@ -1093,15 +1207,45 @@ function calcularResidualCompleta(body: Record<string, unknown>) {
   const classificacao = classificacaoCompleta(resultadoResidual);
 
   return {
+    scResidual: null,
+    feResidual: null,
+    intervaloResidual: null,
+    sseResidual: null,
+    opeResidual: null,
+    finResidual: null,
+    admResidual: null,
+    imgResidual: null,
+    lcResidual: null,
+    notaProbabilidadeResidual: null,
     probabilidadeResidual,
+    percentualProbabilidadeResidual: arredondarRisco(
+      probabilidadeResidual / 5,
+    ),
     nivelProbabilidadeResidual: nivelProbabilidadeCompleta(
       probabilidadeResidual,
     ),
+    notaConsequenciaResidual: null,
     consequenciaResidual,
     nivelConsequenciaResidual: nivelConsequenciaCompleta(consequenciaResidual),
     resultadoResidual,
     nivelRiscoResidual: classificacao.nivel,
     classificacaoResidual: classificacao.classificacao,
+    desempenhoNota: calcularDesempenhoResidual(
+      probabilidadeResidual,
+      anterior?.mediaProbabilidade,
+    ),
+    desempenhoProbabilidade: calcularDesempenhoResidual(
+      arredondarRisco(probabilidadeResidual / 5),
+      anterior?.percentualProbabilidade,
+    ),
+    desempenhoConsequencia: calcularDesempenhoResidual(
+      consequenciaResidual,
+      anterior?.mediaConsequencia,
+    ),
+    desempenhoNivelRisco: calcularDesempenhoResidual(
+      resultadoResidual,
+      anterior?.resultadoInerente,
+    ),
   };
 }
 
@@ -1354,7 +1498,7 @@ export async function atualizarControlesAnaliseCompletaRisco(
         corretivosJson: JSON.stringify(
           normalizarControles(req.body.corretivos),
         ),
-        ...calcularResidualCompleta(req.body),
+        ...calcularResidualCompleta(req.body, anterior),
       },
     });
 

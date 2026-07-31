@@ -941,13 +941,29 @@ model AnaliseRiscoCompleta {
   preventivosJson            String   @default("[]")
   detectivosJson             String   @default("[]")
   corretivosJson             String   @default("[]")
+  scResidual                 Int?
+  feResidual                 Int?
+  intervaloResidual          Int?
+  sseResidual                Int?
+  opeResidual                Int?
+  finResidual                Int?
+  admResidual                Int?
+  imgResidual                Int?
+  lcResidual                 Int?
+  notaProbabilidadeResidual  Float?
   probabilidadeResidual      Float?
+  percentualProbabilidadeResidual Float?
   nivelProbabilidadeResidual String?
+  notaConsequenciaResidual   Float?
   consequenciaResidual       Float?
   nivelConsequenciaResidual  String?
   resultadoResidual          Float?
   nivelRiscoResidual         String?
   classificacaoResidual      String?
+  desempenhoNota             Float?
+  desempenhoProbabilidade    Float?
+  desempenhoConsequencia     Float?
+  desempenhoNivelRisco       Float?
   responsavelId              Int?
   status                     String   @default("Ativo")
   createdAt                  DateTime @default(now())
