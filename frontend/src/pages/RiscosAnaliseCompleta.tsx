@@ -290,12 +290,34 @@ function corNivel(texto?: string | null) {
 function BadgeNivel({ children }: { children: string }) {
   return (
     <span
-      className={`inline-flex items-center justify-center rounded-full px-3 py-1 text-xs font-black ${corNivel(
+      className={`inline-flex whitespace-nowrap items-center justify-center rounded-full px-3 py-1 text-xs font-black ${corNivel(
         children,
       )}`}
     >
       {children || "-"}
     </span>
+  );
+}
+
+function MiniMetrica({
+  rotulo,
+  valor,
+  destaque,
+}: {
+  rotulo: string;
+  valor: string | number;
+  destaque?: string | null;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
+        {rotulo}
+      </p>
+      <div className="mt-1 flex min-h-7 items-center gap-2">
+        <span className="text-base font-black text-white">{valor}</span>
+        {destaque && <BadgeNivel>{destaque}</BadgeNivel>}
+      </div>
+    </div>
   );
 }
 
@@ -1273,7 +1295,19 @@ export default function RiscosAnaliseCompleta() {
           </div>
 
           <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
-            <table className="w-full min-w-[1480px] border-separate border-spacing-y-2 p-2">
+            <table className="w-full min-w-[2160px] table-fixed border-separate border-spacing-y-3 p-3">
+              <colgroup>
+                <col className="w-12" />
+                <col className="w-32" />
+                <col className="w-72" />
+                <col className="w-[420px]" />
+                <col className="w-52" />
+                <col className="w-52" />
+                <col className="w-56" />
+                <col className="w-72" />
+                <col className="w-36" />
+                <col className="w-56" />
+              </colgroup>
               <thead>
                 <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
                   <th className="px-3 py-2 text-center">
@@ -1291,11 +1325,9 @@ export default function RiscosAnaliseCompleta() {
                   <th className="px-3 py-2">Código</th>
                   <th className="px-3 py-2">Identificação</th>
                   <th className="px-3 py-2">Fatores</th>
-                  <th className="px-3 py-2 text-center">Prob.</th>
-                  <th className="px-3 py-2 text-center">%P</th>
-                  <th className="px-3 py-2 text-center">Cons.</th>
-                  <th className="px-3 py-2 text-center">NRI</th>
-                  <th className="px-3 py-2">Classificação</th>
+                  <th className="px-3 py-2">Probabilidade</th>
+                  <th className="px-3 py-2">Consequência</th>
+                  <th className="px-3 py-2">Risco inerente</th>
                   <th className="px-3 py-2">Residual</th>
                   <th className="px-3 py-2">Controles</th>
                   <th className="px-3 py-2 text-right">Ações</th>
@@ -1305,11 +1337,11 @@ export default function RiscosAnaliseCompleta() {
                 {analises.map((analise) => (
                   <tr
                     key={analise.id}
-                    className="cursor-pointer bg-slate-950/80 text-sm font-semibold text-slate-100 transition hover:bg-slate-900"
+                    className="cursor-pointer align-top text-sm font-semibold text-slate-100 transition"
                     onClick={() => abrirControles(analise)}
                   >
                     <td
-                      className="rounded-l-xl px-3 py-4 text-center"
+                      className="rounded-l-2xl border-y border-l border-slate-800 bg-slate-950/90 px-3 py-5 text-center"
                       onClick={(event) => event.stopPropagation()}
                     >
                       <input
@@ -1320,86 +1352,109 @@ export default function RiscosAnaliseCompleta() {
                         aria-label={`Selecionar ${analise.codigo}`}
                       />
                     </td>
-                    <td className="px-3 py-4 font-black text-blue-100">
-                      {analise.codigo}
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <span className="inline-flex rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-100">
+                        {analise.codigo}
+                      </span>
                     </td>
-                    <td className="px-3 py-4">
-                      <p className="font-black text-white">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <p className="line-clamp-2 text-sm font-black leading-5 text-white">
                         {analise.riscoCodigo} - {analise.riscoNome}
                       </p>
-                      <p className="mt-1 text-xs text-slate-300">
+                      <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-slate-300">
                         {analise.macroProcessoCodigo} -{" "}
                         {analise.macroProcessoNome} / {analise.setorNome}
                       </p>
                     </td>
-                    <td className="px-3 py-4 text-xs text-slate-300">
-                      {analise.fatoresRisco.map(etiquetaControle).join(", ")}
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <div className="flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
+                        {analise.fatoresRisco.map((fator) => (
+                          <span
+                            key={`${fator.codigo}-${fator.nome}`}
+                            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-bold leading-4 text-slate-200"
+                          >
+                            {etiquetaControle(fator)}
+                          </span>
+                        ))}
+                        {!analise.fatoresRisco.length && (
+                          <span className="text-xs font-bold text-slate-400">
+                            Nenhum fator informado
+                          </span>
+                        )}
+                      </div>
                     </td>
-                    <td className="px-3 py-4 text-center">
-                      {analise.mediaProbabilidade}
-                      <p className="mt-1">
-                        <BadgeNivel>{analise.nivelProbabilidade}</BadgeNivel>
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <MiniMetrica
+                        rotulo="MPP"
+                        valor={analise.mediaProbabilidade}
+                        destaque={analise.nivelProbabilidade}
+                      />
+                      <p className="mt-2 text-xs font-black text-blue-100">
+                        %P:{" "}
+                        {Math.round(
+                          (analise.percentualProbabilidade || 0) * 100,
+                        )}
+                        %
                       </p>
                     </td>
-                    <td className="px-3 py-4 text-center font-black">
-                      {Math.round((analise.percentualProbabilidade || 0) * 100)}
-                      %
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <MiniMetrica
+                        rotulo="MPI"
+                        valor={analise.mediaConsequencia}
+                        destaque={analise.nivelConsequencia}
+                      />
                     </td>
-                    <td className="px-3 py-4 text-center">
-                      {analise.mediaConsequencia}
-                      <p className="mt-1">
-                        <BadgeNivel>{analise.nivelConsequencia}</BadgeNivel>
-                      </p>
-                    </td>
-                    <td className="px-3 py-4 text-center font-black">
-                      {analise.resultadoInerente}
-                    </td>
-                    <td className="px-3 py-4">
-                      <BadgeNivel>{analise.classificacaoRisco}</BadgeNivel>
-                      <p className="mt-1 text-xs text-slate-400">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <MiniMetrica
+                        rotulo="NRI"
+                        valor={analise.resultadoInerente}
+                        destaque={analise.classificacaoRisco}
+                      />
+                      <p className="mt-2 text-xs font-bold leading-5 text-slate-300">
                         {analise.periodicidadeAcao}
                       </p>
                     </td>
-                    <td className="px-3 py-4 text-xs text-slate-300">
-                      <p>
-                        Prob.:{" "}
-                        <span className="font-black text-white">
-                          {analise.probabilidadeResidual ?? "-"}
-                        </span>{" "}
-                        <BadgeNivel>
-                          {analise.nivelProbabilidadeResidual || "-"}
-                        </BadgeNivel>
-                      </p>
-                      <p className="mt-1">
-                        Cons.:{" "}
-                        <span className="font-black text-white">
-                          {analise.consequenciaResidual ?? "-"}
-                        </span>{" "}
-                        <BadgeNivel>
-                          {analise.nivelConsequenciaResidual || "-"}
-                        </BadgeNivel>
-                      </p>
-                      <p className="mt-1">
-                        Class.:{" "}
-                        <BadgeNivel>
-                          {analise.classificacaoResidual || "-"}
-                        </BadgeNivel>
-                      </p>
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <div className="grid gap-2">
+                        <MiniMetrica
+                          rotulo="Prob."
+                          valor={analise.probabilidadeResidual ?? "-"}
+                          destaque={analise.nivelProbabilidadeResidual || "-"}
+                        />
+                        <MiniMetrica
+                          rotulo="Cons."
+                          valor={analise.consequenciaResidual ?? "-"}
+                          destaque={analise.nivelConsequenciaResidual || "-"}
+                        />
+                        <MiniMetrica
+                          rotulo="Class."
+                          valor={analise.resultadoResidual ?? "-"}
+                          destaque={analise.classificacaoResidual || "-"}
+                        />
+                      </div>
                     </td>
-                    <td className="px-3 py-4 text-xs text-slate-300">
-                      <p>Prev.: {analise.preventivos.length}</p>
-                      <p>Det.: {analise.detectivos.length}</p>
-                      <p>Corr.: {analise.corretivos.length}</p>
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                      <div className="grid gap-2 text-xs font-black text-slate-200">
+                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
+                          Preventivo: {analise.preventivos.length}
+                        </span>
+                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
+                          Detectivo: {analise.detectivos.length}
+                        </span>
+                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
+                          Corretivo: {analise.corretivos.length}
+                        </span>
+                      </div>
                     </td>
-                    <td className="rounded-r-xl px-3 py-4">
-                      <div className="flex justify-end gap-2">
+                    <td className="sticky right-0 rounded-r-2xl border-y border-r border-slate-800 bg-slate-950 px-3 py-5 shadow-[-16px_0_22px_rgba(2,6,23,0.75)]">
+                      <div className="grid gap-2">
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             iniciarEdicaoAnalise(analise);
                           }}
-                          className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
                         >
                           <Pencil size={14} />
                           Editar
@@ -1410,7 +1465,7 @@ export default function RiscosAnaliseCompleta() {
                             event.stopPropagation();
                             abrirControles(analise);
                           }}
-                          className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 hover:bg-emerald-500/20"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 hover:bg-emerald-500/20"
                         >
                           <Settings size={14} />
                           Controles
@@ -1421,7 +1476,7 @@ export default function RiscosAnaliseCompleta() {
                             event.stopPropagation();
                             abrirPdfAnalise(analise);
                           }}
-                          className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/20"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/20"
                         >
                           <FileText size={14} />
                           PDF
@@ -1433,7 +1488,7 @@ export default function RiscosAnaliseCompleta() {
                 {!analises.length && (
                   <tr>
                     <td
-                      colSpan={12}
+                      colSpan={10}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
                       Nenhuma análise completa cadastrada.
