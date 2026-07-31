@@ -149,7 +149,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "10mb" }));
 app.use("/api/auth/login", loginLimiter);
 app.use("/api/auth/refresh", refreshLimiter);
 app.use("/api", apiLimiter);

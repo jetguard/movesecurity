@@ -95,6 +95,12 @@ function dataPorExtenso(data: Date) {
   });
 }
 
+function extensaoAssinaturaDataUrl(dataUrl: string) {
+  if (dataUrl.startsWith("data:image/jpeg;base64,")) return "jpg";
+  if (dataUrl.startsWith("data:image/png;base64,")) return "png";
+  return null;
+}
+
 async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
   await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('movecta_treinamento_terminal_certificado_${ano}'))`);
@@ -193,15 +199,19 @@ async function gerarCertificadoPdf(treinamento: any) {
   });
 
   if (treinamento.assinaturaDataUrl) {
-    const assinaturaBase64 = String(treinamento.assinaturaDataUrl).split(",")[1];
+    const assinaturaDataUrl = String(treinamento.assinaturaDataUrl);
+    const assinaturaBase64 = assinaturaDataUrl.split(",")[1];
+    const extensao = extensaoAssinaturaDataUrl(assinaturaDataUrl) || "png";
     if (assinaturaBase64) {
       const buffer = Buffer.from(assinaturaBase64, "base64");
-      const assinaturaPng = path.join(path.dirname(destino), `assinatura-${treinamento.token}.png`);
+      const assinaturaArquivo = path.join(path.dirname(destino), `assinatura-${treinamento.token}.${extensao}`);
       try {
-        fs.writeFileSync(assinaturaPng, buffer);
-        doc.image(assinaturaPng, 176, 356, { fit: [240, 52], align: "center" });
+        fs.writeFileSync(assinaturaArquivo, buffer);
+        doc.image(assinaturaArquivo, 176, 356, { fit: [240, 52], align: "center" });
+      } catch (error) {
+        console.error("Falha ao inserir assinatura do participante no certificado:", error);
       } finally {
-        fs.rmSync(assinaturaPng, { force: true });
+        fs.rmSync(assinaturaArquivo, { force: true });
       }
     }
   }
@@ -216,9 +226,14 @@ async function gerarCertificadoPdf(treinamento: any) {
   doc.circle(206, 505, 3).fill("#86b91d");
   doc.circle(580, 505, 3).fill("#86b91d");
 
-  if (fs.existsSync(pdfAssets.logo)) {
-    doc.image(pdfAssets.logo, 610, 488, { fit: [150, 46], align: "center" });
-  } else {
+  try {
+    if (fs.existsSync(pdfAssets.logo)) {
+      doc.image(pdfAssets.logo, 610, 488, { fit: [150, 46], align: "center" });
+    } else {
+      doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
+    }
+  } catch (error) {
+    console.error("Falha ao inserir logo no certificado:", error);
     doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
   }
 
@@ -360,7 +375,7 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
     if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
     if (!treinamento.videoConcluido) return res.status(400).json({ error: "Conclua o vídeo antes de emitir o certificado." });
     if (!req.body.aceiteDeclaracao) return res.status(400).json({ error: "Confirme a declaração de ciência." });
-    if (!texto(req.body.assinaturaDataUrl).startsWith("data:image/png;base64,")) {
+    if (!extensaoAssinaturaDataUrl(texto(req.body.assinaturaDataUrl))) {
       return res.status(400).json({ error: "Informe a assinatura eletrônica." });
     }
 
@@ -400,9 +415,10 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
     });
 
     return res.json({ treinamento: respostaPublica(atualizado) });
-  } catch (error) {
+  } catch (error: any) {
+    const mensagem = error?.message || "Erro ao concluir treinamento.";
     console.error(error);
-    return res.status(500).json({ error: "Erro ao concluir treinamento." });
+    return res.status(500).json({ error: mensagem });
   }
 }
 

@@ -326,7 +326,7 @@ export default function TreinamentoTerminalPublico() {
     }
     setCarregando(true);
     try {
-      const assinaturaDataUrl = canvasRef.current!.toDataURL("image/png");
+      const assinaturaDataUrl = canvasRef.current!.toDataURL("image/jpeg", 0.82);
       const response = await api.post(`/public/treinamento-terminal/${treinamento.token}/concluir`, {
         aceiteDeclaracao: aceite,
         assinaturaDataUrl,
