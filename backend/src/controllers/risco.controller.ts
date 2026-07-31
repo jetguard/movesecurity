@@ -1,6 +1,7 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
+import { gerarAnaliseCompletaPdf } from "../services/analiseCompletaPdf.service";
 import { registrarLog } from "../services/auditoria.service";
 import { gerarRiscoPdf } from "../services/riscoPdf.service";
 
@@ -1548,6 +1549,28 @@ export async function excluirAnaliseCompletaRisco(
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao excluir análise completa." });
+  }
+}
+
+export async function gerarPdfAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const registro = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
+    });
+
+    if (!registro) {
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+    }
+
+    return gerarAnaliseCompletaPdf(res, apresentarAnaliseCompleta(registro));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao gerar PDF da análise." });
   }
 }
 

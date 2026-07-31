@@ -3,11 +3,15 @@ import type { FormEvent } from "react";
 import {
   AlertTriangle,
   BrainCircuit,
+  FileText,
+  Pencil,
   Plus,
   Save,
+  Settings,
   Trash2,
   X,
 } from "lucide-react";
+import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 
 type Setor = {
@@ -45,9 +49,12 @@ type ControleSelecionado = {
 type AnaliseCompleta = {
   id: number;
   codigo: string;
+  macroProcessoId?: number | null;
   macroProcessoCodigo: string;
   macroProcessoNome: string;
+  setorId?: number | null;
   setorNome: string;
+  riscoId?: number | null;
   riscoCodigo: string;
   riscoNome: string;
   fatoresRisco: ControleSelecionado[];
@@ -223,15 +230,15 @@ function arredondar(valor: number) {
 
 function nivelProbabilidade(media: number) {
   if (media >= 4.51) return "FREQUENTE";
-  if (media >= 3.51) return "PROVÃVEL";
-  if (media >= 2.51) return "POSSÃVEL";
-  if (media >= 1.51) return "IMPROVÃVEL";
+  if (media >= 3.51) return "PROVÁVEL";
+  if (media >= 2.51) return "POSSÍVEL";
+  if (media >= 1.51) return "IMPROVÁVEL";
   if (media >= 1) return "REMOTO";
   return "-";
 }
 
 function nivelConsequencia(media: number) {
-  if (media >= 4.51) return "CRÃTICO";
+  if (media >= 4.51) return "CRÍTICO";
   if (media >= 3.51) return "SEVERO";
   if (media >= 2.51) return "MAIOR";
   if (media >= 1.51) return "MODERADO";
@@ -243,24 +250,24 @@ function classificar(resultado: number) {
   if (resultado <= 5)
     return {
       nivel: "BAIXO",
-      periodicidade: "RevisÃ£o a cada 24 meses",
+      periodicidade: "Revisão a cada 24 meses",
       cor: "bg-emerald-500 text-slate-950",
     };
   if (resultado <= 10)
     return {
       nivel: "MENOR",
-      periodicidade: "RevisÃ£o a cada 12 meses",
+      periodicidade: "Revisão a cada 12 meses",
       cor: "bg-lime-300 text-slate-950",
     };
   if (resultado <= 15)
     return {
       nivel: "ALTO",
-      periodicidade: "RevisÃ£o a cada 180 dias",
+      periodicidade: "Revisão a cada 180 dias",
       cor: "bg-amber-300 text-slate-950",
     };
   return {
     nivel: "EXTREMO",
-    periodicidade: "RevisÃ£o a cada 90 dias",
+    periodicidade: "Revisão a cada 90 dias",
     cor: "bg-red-600 text-white",
   };
 }
@@ -269,11 +276,11 @@ function corNivel(texto?: string | null) {
   const valor = String(texto || "").toUpperCase();
   if (["BAIXO", "MENOR", "REMOTO"].includes(valor))
     return "bg-emerald-300 text-slate-950";
-  if (["POSSÃVEL", "POSSÃƒÂVEL", "MODERADO"].includes(valor))
+  if (["POSSÍVEL", "MODERADO"].includes(valor))
     return "bg-yellow-300 text-slate-950";
-  if (["ALTO", "MAIOR", "PROVÃVEL", "PROVÃƒÂVEL", "SEVERO"].includes(valor))
+  if (["ALTO", "MAIOR", "PROVÁVEL", "SEVERO"].includes(valor))
     return "bg-orange-500 text-white";
-  if (["EXTREMO", "CRÃTICO", "CRÃƒÂTICO", "FREQUENTE"].includes(valor))
+  if (["EXTREMO", "CRÍTICO", "FREQUENTE"].includes(valor))
     return "bg-red-600 text-white";
   return "bg-slate-700 text-slate-100";
 }
@@ -298,10 +305,13 @@ export default function RiscosAnaliseCompleta() {
   const [cadastro, setCadastro] = useState<CadastroGeral>(cadastroVazio);
   const [analises, setAnalises] = useState<AnaliseCompleta[]>([]);
   const [form, setForm] = useState<Formulario>(formularioInicial);
+  const [analiseEditando, setAnaliseEditando] =
+    useState<AnaliseCompleta | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [mensagem, setMensagem] = useState("");
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [controlesEditando, setControlesEditando] =
     useState<AnaliseCompleta | null>(null);
   const [preventivos, setPreventivos] = useState<string[]>([]);
@@ -496,32 +506,87 @@ export default function RiscosAnaliseCompleta() {
     setErro("");
     setMensagem("");
     setSalvando(true);
+    const payload = {
+      macroProcessoId: Number(form.macroProcessoId),
+      setorId: Number(form.setorId),
+      riscoId: Number(form.riscoId),
+      fatoresRisco: fatoresSelecionados(),
+      sc: form.sc,
+      fe: form.fe,
+      intervalo: form.intervalo,
+      sse: form.sse,
+      ope: form.ope,
+      fin: form.fin,
+      adm: form.adm,
+      img: form.img,
+      lc: form.lc,
+    };
     try {
-      await api.post("/riscos/analise-completa", {
-        macroProcessoId: Number(form.macroProcessoId),
-        setorId: Number(form.setorId),
-        riscoId: Number(form.riscoId),
-        fatoresRisco: fatoresSelecionados(),
-        sc: form.sc,
-        fe: form.fe,
-        intervalo: form.intervalo,
-        sse: form.sse,
-        ope: form.ope,
-        fin: form.fin,
-        adm: form.adm,
-        img: form.img,
-        lc: form.lc,
-      });
+      if (analiseEditando) {
+        await api.put(`/riscos/analise-completa/${analiseEditando.id}`, payload);
+      } else {
+        await api.post("/riscos/analise-completa", payload);
+      }
       setForm(formularioInicial);
-      setMensagem("AnÃ¡lise completa cadastrada com sucesso.");
+      setAnaliseEditando(null);
+      setMensagem(
+        analiseEditando
+          ? "Análise completa atualizada com sucesso."
+          : "Análise completa cadastrada com sucesso.",
+      );
       await carregar();
     } catch (error: any) {
       setErro(
-        error?.response?.data?.error || "NÃ£o foi possÃ­vel salvar a anÃ¡lise.",
+        error?.response?.data?.error || "Não foi possível salvar a análise.",
       );
     } finally {
       setSalvando(false);
     }
+  }
+
+  function iniciarEdicaoAnalise(analise: AnaliseCompleta) {
+    setAnaliseEditando(analise);
+    setForm({
+      macroProcessoId: String(analise.macroProcessoId || ""),
+      setorId: String(analise.setorId || ""),
+      riscoId: String(analise.riscoId || ""),
+      fatoresIds: analise.fatoresRisco
+        .map((item) => String(item.id || ""))
+        .filter(Boolean),
+      sc: pontuacao(analise.sc),
+      fe: pontuacao(analise.fe),
+      intervalo: pontuacao(analise.intervalo),
+      sse: pontuacao(analise.sse),
+      ope: pontuacao(analise.ope),
+      fin: pontuacao(analise.fin),
+      adm: pontuacao(analise.adm),
+      img: pontuacao(analise.img),
+      lc: pontuacao(analise.lc),
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicaoAnalise() {
+    setAnaliseEditando(null);
+    setForm(formularioInicial);
+  }
+
+  async function abrirPdfAnalise(analise: AnaliseCompleta) {
+    setErro("");
+    try {
+      const response = await api.get(`/riscos/analise-completa/${analise.id}/pdf`, {
+        responseType: "blob",
+      });
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+      setPdfUrl(URL.createObjectURL(new Blob([response.data], { type: "application/pdf" })));
+    } catch (error: any) {
+      setErro(error?.response?.data?.error || "Não foi possível gerar o PDF.");
+    }
+  }
+
+  function fecharPdfAnalise() {
+    if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    setPdfUrl(null);
   }
 
   function abrirControles(analise: AnaliseCompleta) {
@@ -598,7 +663,7 @@ export default function RiscosAnaliseCompleta() {
       await carregar();
     } catch (error: any) {
       setErro(
-        error?.response?.data?.error || "NÃ£o foi possÃ­vel salvar os controles.",
+        error?.response?.data?.error || "Não foi possível salvar os controles.",
       );
     } finally {
       setSalvando(false);
@@ -622,7 +687,7 @@ export default function RiscosAnaliseCompleta() {
   async function excluirAnalisesSelecionadas() {
     if (!analisesSelecionadas.length) return;
     const confirmar = window.confirm(
-      `Excluir definitivamente ${analisesSelecionadas.length} anÃ¡lise(s) selecionada(s)? Esta aÃ§Ã£o nÃ£o poderÃ¡ ser desfeita.`,
+      `Excluir definitivamente ${analisesSelecionadas.length} análise(s) selecionada(s)? Esta ação não poderá ser desfeita.`,
     );
     if (!confirmar) return;
 
@@ -635,12 +700,12 @@ export default function RiscosAnaliseCompleta() {
           api.delete(`/riscos/analise-completa/${id}`),
         ),
       );
-      setMensagem("AnÃ¡lises selecionadas excluÃ­das com sucesso.");
+      setMensagem("Análises selecionadas excluídas com sucesso.");
       await carregar();
     } catch (error: any) {
       setErro(
         error?.response?.data?.error ||
-          "NÃ£o foi possÃ­vel excluir as anÃ¡lises selecionadas.",
+          "Não foi possível excluir as análises selecionadas.",
       );
     } finally {
       setSalvando(false);
@@ -781,21 +846,21 @@ export default function RiscosAnaliseCompleta() {
       <div className="mx-auto max-w-[1800px]">
         <header className="border-b border-slate-800 pb-6">
           <p className="text-xs font-black uppercase tracking-[0.35em] text-blue-300">
-            AnÃ¡lise de Riscos
+            Análise de Riscos
           </p>
           <h1 className="mt-2 text-3xl font-black text-white">
-            AnÃ¡lise Completa
+            Análise Completa
           </h1>
           <p className="mt-2 max-w-4xl text-sm font-semibold leading-6 text-slate-300">
-            Cadastre a anÃ¡lise preenchendo macro processo, setor, risco, fatores
-            de risco e notas de probabilidade/consequÃªncia. Os demais campos sÃ£o
+            Cadastre a análise preenchendo macro processo, setor, risco, fatores
+            de risco e notas de probabilidade/consequência. Os demais campos são
             calculados automaticamente.
           </p>
         </header>
 
         {carregando && (
           <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-5 text-sm font-black text-slate-300">
-            Carregando dados da anÃ¡lise...
+            Carregando dados da análise...
           </div>
         )}
 
@@ -817,7 +882,9 @@ export default function RiscosAnaliseCompleta() {
           <div className="flex items-center gap-3">
             <BrainCircuit className="text-blue-300" size={22} />
             <h2 className="text-xl font-black text-white">
-              Nova anÃ¡lise completa
+              {analiseEditando
+                ? `Editando ${analiseEditando.codigo}`
+                : "Nova análise completa"}
             </h2>
           </div>
 
@@ -894,8 +961,8 @@ export default function RiscosAnaliseCompleta() {
           <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
             <p className="text-sm font-black text-white">Fatores de Risco</p>
             <p className="mt-1 text-xs font-semibold text-slate-300">
-              Selecione quantos fatores forem necessÃ¡rios. O sistema nÃ£o limita
-              a trÃªs fatores como a planilha.
+              Selecione quantos fatores forem necessários. O sistema não limita
+              a três fatores como a planilha.
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <input
@@ -937,7 +1004,7 @@ export default function RiscosAnaliseCompleta() {
 
           <section className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
             <h3 className="text-sm font-black uppercase tracking-[0.28em] text-blue-200">
-              AnÃ¡lise e AvaliaÃ§Ã£o Inerente
+              Análise e Avaliação Inerente
             </h3>
             <div className="mt-4 grid gap-4 2xl:grid-cols-[0.72fr_1.28fr]">
               <section>
@@ -953,7 +1020,7 @@ export default function RiscosAnaliseCompleta() {
 
             <section>
               <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-                ConsequÃªncia
+                Consequência
               </h3>
               <div className="mt-3 grid gap-3 sm:grid-cols-3 2xl:grid-cols-6">
                 {camposConsequencia.map((item) =>
@@ -1011,7 +1078,7 @@ export default function RiscosAnaliseCompleta() {
             </div>
             <div>
               <p className="text-xs font-black uppercase text-blue-200">
-                ClassificaÃ§Ã£o
+                Classificação
               </p>
               <span
                 className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
@@ -1035,8 +1102,17 @@ export default function RiscosAnaliseCompleta() {
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:opacity-60"
             >
               <Plus size={16} />
-              Cadastrar anÃ¡lise
+              {analiseEditando ? "Atualizar análise" : "Cadastrar análise"}
             </button>
+            {analiseEditando && (
+              <button
+                type="button"
+                onClick={cancelarEdicaoAnalise}
+                className="ml-3 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 hover:text-white"
+              >
+                Cancelar edição
+              </button>
+            )}
           </div>
         </form>
 
@@ -1044,10 +1120,10 @@ export default function RiscosAnaliseCompleta() {
           <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h2 className="text-xl font-black text-white">
-                AnÃ¡lises cadastradas
+                Análises cadastradas
               </h2>
               <p className="text-sm font-semibold text-slate-300">
-                ApÃ³s o cadastro, edite os controles preventivos, detectivos e
+                Após o cadastro, edite os controles preventivos, detectivos e
                 corretivos.
               </p>
             </div>
@@ -1058,8 +1134,8 @@ export default function RiscosAnaliseCompleta() {
 
           <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/50 p-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-bold text-slate-300">
-              Clique em uma linha para abrir os controles. Use a primeira coluna
-              para selecionar registros.
+              Use os botões de ação para editar a análise, ajustar controles ou
+              emitir o PDF.
             </p>
             {analisesSelecionadas.length > 0 && (
               <button
@@ -1087,27 +1163,27 @@ export default function RiscosAnaliseCompleta() {
                         analisesSelecionadas.length === analises.length
                       }
                       onChange={alternarTodasAnalises}
-                      aria-label="Selecionar todas as anÃ¡lises"
+                      aria-label="Selecionar todas as análises"
                     />
                   </th>
-                  <th className="px-3 py-2">CÃ³digo</th>
-                  <th className="px-3 py-2">IdentificaÃ§Ã£o</th>
+                  <th className="px-3 py-2">Código</th>
+                  <th className="px-3 py-2">Identificação</th>
                   <th className="px-3 py-2">Fatores</th>
                   <th className="px-3 py-2 text-center">Prob.</th>
                   <th className="px-3 py-2 text-center">%P</th>
                   <th className="px-3 py-2 text-center">Cons.</th>
                   <th className="px-3 py-2 text-center">NRI</th>
-                  <th className="px-3 py-2">ClassificaÃ§Ã£o</th>
+                  <th className="px-3 py-2">Classificação</th>
                   <th className="px-3 py-2">Residual</th>
                   <th className="px-3 py-2">Controles</th>
+                  <th className="px-3 py-2 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {analises.map((analise) => (
                   <tr
                     key={analise.id}
-                    onClick={() => abrirControles(analise)}
-                    className="cursor-pointer bg-slate-950/70 text-sm font-semibold text-slate-100 transition hover:bg-slate-900"
+                    className="bg-slate-950/70 text-sm font-semibold text-slate-100 transition hover:bg-slate-900"
                   >
                     <td
                       className="rounded-l-xl px-3 py-4 text-center"
@@ -1133,7 +1209,7 @@ export default function RiscosAnaliseCompleta() {
                         {analise.macroProcessoNome} / {analise.setorNome}
                       </p>
                     </td>
-                    <td className="rounded-r-xl px-3 py-4 text-xs text-slate-300">
+                    <td className="px-3 py-4 text-xs text-slate-300">
                       {analise.fatoresRisco.map(etiquetaControle).join(", ")}
                     </td>
                     <td className="px-3 py-4 text-center">
@@ -1192,15 +1268,43 @@ export default function RiscosAnaliseCompleta() {
                       <p>Det.: {analise.detectivos.length}</p>
                       <p>Corr.: {analise.corretivos.length}</p>
                     </td>
+                    <td className="rounded-r-xl px-3 py-4">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => iniciarEdicaoAnalise(analise)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
+                        >
+                          <Pencil size={14} />
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => abrirControles(analise)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 hover:bg-emerald-500/20"
+                        >
+                          <Settings size={14} />
+                          Controles
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => abrirPdfAnalise(analise)}
+                          className="inline-flex items-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/20"
+                        >
+                          <FileText size={14} />
+                          PDF
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {!analises.length && (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={12}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
-                      Nenhuma anÃ¡lise completa cadastrada.
+                      Nenhuma análise completa cadastrada.
                     </td>
                   </tr>
                 )}
@@ -1216,7 +1320,7 @@ export default function RiscosAnaliseCompleta() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.3em] text-blue-300">
-                  Controles e AvaliaÃ§Ã£o Residual
+                  Controles da análise
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-white">
                   {controlesEditando.codigo}
@@ -1238,14 +1342,22 @@ export default function RiscosAnaliseCompleta() {
             <div className="mt-5 flex gap-3 rounded-xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-50">
               <AlertTriangle className="mt-0.5 shrink-0 text-amber-300" />
               <p className="text-sm font-semibold leading-6">
-                Selecione os controles e preencha a avaliaÃ§Ã£o residual. O
-                sistema calcula automaticamente os nÃ­veis e a classificaÃ§Ã£o
-                residual conforme as faixas da planilha.
+                Os controles preventivos, detectivos e corretivos ficam
+                registrados separadamente. A avaliação residual é preenchida em
+                outro bloco e calculada automaticamente conforme a planilha.
               </p>
             </div>
 
             <div className="mt-5 grid gap-5">
-              <div className="grid gap-4 lg:grid-cols-3">
+              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
+                  Controles preventivos, detectivos e corretivos
+                </h3>
+                <p className="mt-1 text-xs font-semibold text-slate-300">
+                  Busque o CP pelo código ou pelo nome e adicione quantos itens
+                  forem necessários em cada categoria.
+                </p>
+                <div className="mt-4 grid gap-4 lg:grid-cols-3">
                 {renderListaControles(
                   "Preventivo",
                   preventivos,
@@ -1267,16 +1379,17 @@ export default function RiscosAnaliseCompleta() {
                   buscaCorretivo,
                   setBuscaCorretivo,
                 )}
-              </div>
+                </div>
+              </section>
 
               <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
                 <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-                      AvaliaÃ§Ã£o Residual
+                      Avaliação Residual
                     </h3>
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
-                      Probabilidade, consequÃªncia e desempenho dos controles
+                      Probabilidade, consequência e desempenho residual
                     </p>
                   </div>
                   <BadgeNivel>{previaResidual.classificacao}</BadgeNivel>
@@ -1347,7 +1460,7 @@ export default function RiscosAnaliseCompleta() {
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      NÃ­vel de Probabilidade
+                      Nível de Probabilidade
                     </p>
                     <div className="mt-2">
                       <BadgeNivel>
@@ -1357,7 +1470,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      NÃ­vel de ConsequÃªncia
+                      Nível de Consequência
                     </p>
                     <div className="mt-2">
                       <BadgeNivel>
@@ -1367,7 +1480,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      NÃ­vel de Risco
+                      Nível de Risco
                     </p>
                     <p className="mt-2 text-2xl font-black text-white">
                       {previaResidual.resultado ?? "-"}
@@ -1375,7 +1488,7 @@ export default function RiscosAnaliseCompleta() {
                   </div>
                   <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                     <p className="text-xs font-black uppercase text-slate-400">
-                      ClassificaÃ§Ã£o do Risco
+                      Classificação do Risco
                     </p>
                     <div className="mt-2">
                       <BadgeNivel>{previaResidual.classificacao}</BadgeNivel>
@@ -1405,6 +1518,15 @@ export default function RiscosAnaliseCompleta() {
             </div>
           </div>
         </div>
+      )}
+
+      {pdfUrl && (
+        <PdfLightbox
+          url={pdfUrl}
+          titulo="PDF da análise completa"
+          nomeArquivo="analise-completa-risco.pdf"
+          onClose={fecharPdfAnalise}
+        />
       )}
     </div>
   );
