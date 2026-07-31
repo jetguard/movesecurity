@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Award, CheckCircle2, Clock3, Download, Mail, PlayCircle, Search, Trash2 } from "lucide-react";
 import { api } from "../services/api";
+import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type Integracao = {
   id: number;
@@ -65,6 +66,9 @@ export default function IntegracoesTerminal() {
   const [lista, setLista] = useState<Integracao[]>([]);
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("Todos");
+  const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
+    perfilAtual(),
+  );
 
   async function carregar() {
     const response = await api.get("/integracoes-do-terminal");
@@ -178,14 +182,20 @@ export default function IntegracoesTerminal() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      onClick={() => excluirIntegracao(item)}
-                      className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-500 hover:text-white dark:text-red-200"
-                      title="Excluir integracao"
-                    >
-                      <Trash2 size={14} /> Excluir
-                    </button>
+                    {podeExcluir ? (
+                      <button
+                        type="button"
+                        onClick={() => excluirIntegracao(item)}
+                        className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-500 hover:text-white dark:text-red-200"
+                        title="Excluir integracao"
+                      >
+                        <Trash2 size={14} /> Excluir
+                      </button>
+                    ) : (
+                      <span className="text-xs font-bold text-slate-500">
+                        Somente leitura
+                      </span>
+                    )}
                   </td>
                 </tr>
               ))}

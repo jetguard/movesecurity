@@ -65,6 +65,7 @@ function normalizarPerfil(perfil: string) {
     Analista: "ANALISTA",
     Operador: "OPERADOR",
     Portaria: "PORTARIA",
+    Cadastro: "CADASTRO",
     "Técnico/Manutenção": "TECNICO_MANUTENCAO",
     "Tecnico/Manutencao": "TECNICO_MANUTENCAO",
     "Técnico Manutenção": "TECNICO_MANUTENCAO",
@@ -79,6 +80,7 @@ function normalizarPerfil(perfil: string) {
     ANALISTA: "ANALISTA",
     OPERADOR: "OPERADOR",
     PORTARIA: "PORTARIA",
+    CADASTRO: "CADASTRO",
     TECNICO_MANUTENCAO: "TECNICO_MANUTENCAO",
   };
 

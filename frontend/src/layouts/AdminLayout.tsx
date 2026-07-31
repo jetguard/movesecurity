@@ -87,6 +87,7 @@ export default function AdminLayout() {
   const [desbloqueando, setDesbloqueando] = useState(false);
   const usuario = usuarioAtual();
   const portaria = usuario?.perfilAcesso === PERFIS.PORTARIA;
+  const cadastro = usuario?.perfilAcesso === PERFIS.CADASTRO;
   const tecnicoManutencao = somenteTecnicoManutencao();
   const podeVerPainelTreinamentos = [
     PERFIS.SUPER_ADMIN,
@@ -203,7 +204,7 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
-    if (portaria) {
+    if (portaria || cadastro) {
       setNotificacoes([]);
       setMencoesPendentes(0);
       setPassagensAbertas(0);
@@ -240,7 +241,7 @@ export default function AdminLayout() {
         "notificacoes-atualizadas",
         carregarNotificacoes,
       );
-  }, [portaria]);
+  }, [portaria, cadastro]);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -446,14 +447,14 @@ export default function AdminLayout() {
           onClick={fecharMenuMobileAoNavegar}
           className="mt-6 flex flex-col gap-2 px-2 pb-6 sm:px-3"
         >
-          {!tecnicoManutencao && !portaria && (
+          {!tecnicoManutencao && !portaria && !cadastro && (
             <Link to="/" className={item}>
               <LayoutDashboard size={20} className="shrink-0" />
               <span className={menuText}>Dashboard</span>
             </Link>
           )}
 
-          {!tecnicoManutencao && !portaria && (
+          {!tecnicoManutencao && !portaria && !cadastro && (
             <>
               <button
                 onClick={() => setRelatoriosOpen(!relatoriosOpen)}
@@ -503,7 +504,35 @@ export default function AdminLayout() {
             </>
           )}
 
-          {portaria ? (
+          {cadastro ? (
+            <>
+              <button
+                onClick={() => setTreinamentosOpen(!treinamentosOpen)}
+                className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+              >
+                <div className="flex items-center gap-3">
+                  <FileCheck2 size={20} className="shrink-0" />
+                  <span className={menuText}>Treinamentos</span>
+                </div>
+                <span className={menuToggle}>
+                  {treinamentosOpen ? "-" : "+"}
+                </span>
+              </button>
+
+              {treinamentosOpen && (
+                <div className={submenuClass}>
+                  <Link to="/integracoes-do-terminal" className={subItem}>
+                    <FileCheck2 size={16} />
+                    Integração de Motorista
+                  </Link>
+                </div>
+              )}
+              <Link to="/meus-dados" className={item}>
+                <Users size={20} className="shrink-0" />
+                <span className={menuText}>Minha Conta</span>
+              </Link>
+            </>
+          ) : portaria ? (
             <>
               <button
                 onClick={() => setTreinamentosOpen(!treinamentosOpen)}

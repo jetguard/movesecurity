@@ -347,6 +347,7 @@ export default function App() {
                     PERFIS.ADMINISTRADOR,
                     PERFIS.ANALISTA,
                     PERFIS.PORTARIA,
+                    PERFIS.CADASTRO,
                   ]}
                 >
                   <IntegracoesTerminal />

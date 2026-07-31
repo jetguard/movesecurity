@@ -45,6 +45,21 @@ export default function ProtectedRoute({ children, perfis }: Props) {
     return <Navigate to="/treinamentos-terminal" replace />;
   }
 
+  if (
+    usuario.perfilAcesso === PERFIS.CADASTRO &&
+    ![
+      "/integracoes-do-terminal",
+      "/meus-dados",
+      "/perfil",
+      "/alterar-senha",
+    ].some(
+      (rota) =>
+        location.pathname === rota || location.pathname.startsWith(`${rota}/`),
+    )
+  ) {
+    return <Navigate to="/integracoes-do-terminal" replace />;
+  }
+
   if (perfis && !temPerfil(perfis)) {
     return <Navigate to="/" />;
   }

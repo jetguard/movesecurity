@@ -188,6 +188,7 @@ export const PERFIS = {
   ANALISTA: "ANALISTA",
   OPERADOR: "OPERADOR",
   PORTARIA: "PORTARIA",
+  CADASTRO: "CADASTRO",
   TECNICO_MANUTENCAO: "TECNICO_MANUTENCAO",
 };
 
@@ -202,6 +203,13 @@ export const acessoTreinamentosTerminal = [
   PERFIS.ADMINISTRADOR,
   PERFIS.ANALISTA,
   PERFIS.PORTARIA,
+];
+export const acessoIntegracoesTerminal = [
+  PERFIS.SUPER_ADMIN,
+  PERFIS.ADMINISTRADOR,
+  PERFIS.ANALISTA,
+  PERFIS.PORTARIA,
+  PERFIS.CADASTRO,
 ];
 export const acessoPainelTreinamentos = [
   PERFIS.SUPER_ADMIN,
