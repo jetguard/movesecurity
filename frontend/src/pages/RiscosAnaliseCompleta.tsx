@@ -61,6 +61,7 @@ type AnaliseCompleta = {
   img: number;
   lc: number;
   mediaProbabilidade: number;
+  percentualProbabilidade: number;
   nivelProbabilidade: string;
   mediaConsequencia: number;
   nivelConsequencia: string;
@@ -153,11 +154,12 @@ function arredondar(valor: number) {
 }
 
 function nivelProbabilidade(media: number) {
-  if (media <= 1.5) return "Possível";
-  if (media <= 2.5) return "Provável";
-  if (media <= 3.5) return "Frequente";
-  if (media <= 4.5) return "Presente";
-  return "Inevitável";
+  if (media >= 4.51) return "FREQUENTE";
+  if (media >= 3.51) return "PROVÁVEL";
+  if (media >= 2.51) return "POSSÍVEL";
+  if (media >= 1.51) return "IMPROVÁVEL";
+  if (media >= 1) return "REMOTO";
+  return "-";
 }
 
 function nivelConsequencia(media: number) {
@@ -246,13 +248,16 @@ export default function RiscosAnaliseCompleta() {
       form.img,
       form.lc,
     ].map(pontuacao);
-    const mediaProbabilidade = arredondar((sc + fe + intervalo) / 3);
+    const notaProbabilidade = sc * 5 + fe * 4 + intervalo * 3;
+    const mediaProbabilidade = arredondar(notaProbabilidade / 12);
+    const percentualProbabilidade = arredondar(mediaProbabilidade / 5);
     const mediaConsequencia = arredondar(
       impactos.reduce((total, item) => total + item, 0) / impactos.length,
     );
     const resultado = arredondar(mediaProbabilidade * mediaConsequencia);
     return {
       mediaProbabilidade,
+      percentualProbabilidade,
       nivelProbabilidade: nivelProbabilidade(mediaProbabilidade),
       mediaConsequencia,
       nivelConsequencia: nivelConsequencia(mediaConsequencia),
@@ -602,16 +607,26 @@ export default function RiscosAnaliseCompleta() {
             </section>
           </div>
 
-          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 md:grid-cols-5">
+          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-4 md:grid-cols-4 xl:grid-cols-7">
             <div>
-              <p className="text-xs font-black uppercase text-blue-200">
-                Probabilidade
+              <p className="text-xs font-black uppercase text-blue-200">Nota</p>
+              <p className="mt-1 text-xl font-black text-white">
+                {form.sc * 5 + form.fe * 4 + form.intervalo * 3}
               </p>
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase text-blue-200">MPP</p>
               <p className="mt-1 text-xl font-black text-white">
                 {previa.mediaProbabilidade}
               </p>
               <p className="text-xs font-bold text-blue-100">
                 {previa.nivelProbabilidade}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase text-blue-200">%P</p>
+              <p className="mt-1 text-xl font-black text-white">
+                {Math.round(previa.percentualProbabilidade * 100)}%
               </p>
             </div>
             <div>
@@ -679,13 +694,14 @@ export default function RiscosAnaliseCompleta() {
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[1180px] border-separate border-spacing-y-2">
+            <table className="w-full min-w-[1240px] border-separate border-spacing-y-2">
               <thead>
                 <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
                   <th className="px-3 py-2">Código</th>
                   <th className="px-3 py-2">Identificação</th>
                   <th className="px-3 py-2">Fatores</th>
                   <th className="px-3 py-2 text-center">Prob.</th>
+                  <th className="px-3 py-2 text-center">%P</th>
                   <th className="px-3 py-2 text-center">Cons.</th>
                   <th className="px-3 py-2 text-center">NRI</th>
                   <th className="px-3 py-2">Classificação</th>
@@ -719,6 +735,10 @@ export default function RiscosAnaliseCompleta() {
                       <p className="text-xs text-slate-400">
                         {analise.nivelProbabilidade}
                       </p>
+                    </td>
+                    <td className="px-3 py-4 text-center font-black">
+                      {Math.round((analise.percentualProbabilidade || 0) * 100)}
+                      %
                     </td>
                     <td className="px-3 py-4 text-center">
                       {analise.mediaConsequencia}
@@ -761,7 +781,7 @@ export default function RiscosAnaliseCompleta() {
                 {!analises.length && (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={10}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
                       Nenhuma análise completa cadastrada.

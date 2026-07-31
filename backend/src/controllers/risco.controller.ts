@@ -967,11 +967,12 @@ function arredondarRisco(valor: number) {
 }
 
 function nivelProbabilidadeCompleta(media: number) {
-  if (media <= 1.5) return "Possível";
-  if (media <= 2.5) return "Provável";
-  if (media <= 3.5) return "Frequente";
-  if (media <= 4.5) return "Presente";
-  return "Inevitável";
+  if (media >= 4.51) return "FREQUENTE";
+  if (media >= 3.51) return "PROVÁVEL";
+  if (media >= 2.51) return "POSSÍVEL";
+  if (media >= 1.51) return "IMPROVÁVEL";
+  if (media >= 1) return "REMOTO";
+  return "-";
 }
 
 function nivelConsequenciaCompleta(media: number) {
@@ -1021,8 +1022,9 @@ function calcularAnaliseCompleta(body: Record<string, unknown>) {
   const adm = pontuacaoCompleta(body.adm);
   const img = pontuacaoCompleta(body.img);
   const lc = pontuacaoCompleta(body.lc);
-  const notaProbabilidade = sc + fe + intervalo;
-  const mediaProbabilidade = arredondarRisco(notaProbabilidade / 3);
+  const notaProbabilidade = sc * 5 + fe * 4 + intervalo * 3;
+  const mediaProbabilidade = arredondarRisco(notaProbabilidade / 12);
+  const percentualProbabilidade = arredondarRisco(mediaProbabilidade / 5);
   const impactos = [sse, ope, fin, adm, img, lc];
   const notaConsequencia = impactos.reduce((total, valor) => total + valor, 0);
   const mediaConsequencia = arredondarRisco(notaConsequencia / impactos.length);
@@ -1043,6 +1045,7 @@ function calcularAnaliseCompleta(body: Record<string, unknown>) {
     lc,
     notaProbabilidade,
     mediaProbabilidade,
+    percentualProbabilidade,
     nivelProbabilidade: nivelProbabilidadeCompleta(mediaProbabilidade),
     notaConsequencia,
     mediaConsequencia,
