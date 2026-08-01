@@ -309,11 +309,11 @@ function MiniMetrica({
   destaque?: string | null;
 }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2">
+    <div className="rounded-xl border border-slate-800 bg-slate-900/80 px-2.5 py-1.5">
       <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">
         {rotulo}
       </p>
-      <div className="mt-1 flex min-h-7 items-center gap-2">
+      <div className="mt-1 flex min-h-6 items-center gap-2">
         <span className="text-base font-black text-white">{valor}</span>
         {destaque && <BadgeNivel>{destaque}</BadgeNivel>}
       </div>
@@ -1295,7 +1295,7 @@ export default function RiscosAnaliseCompleta() {
           </div>
 
           <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
-            <table className="w-full min-w-[2160px] table-fixed border-separate border-spacing-y-3 p-3">
+            <table className="w-full min-w-[2160px] table-fixed border-separate border-spacing-y-2 p-2">
               <colgroup>
                 <col className="w-12" />
                 <col className="w-32" />
@@ -1341,7 +1341,7 @@ export default function RiscosAnaliseCompleta() {
                     onClick={() => abrirControles(analise)}
                   >
                     <td
-                      className="rounded-l-2xl border-y border-l border-slate-800 bg-slate-950/90 px-3 py-5 text-center"
+                      className="rounded-l-2xl border-y border-l border-slate-800 bg-slate-950/90 px-3 py-3 text-center"
                       onClick={(event) => event.stopPropagation()}
                     >
                       <input
@@ -1352,26 +1352,26 @@ export default function RiscosAnaliseCompleta() {
                         aria-label={`Selecionar ${analise.codigo}`}
                       />
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
-                      <span className="inline-flex rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-sm font-black text-blue-100">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                      <span className="inline-flex rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-1.5 text-sm font-black text-blue-100">
                         {analise.codigo}
                       </span>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
                       <p className="line-clamp-2 text-sm font-black leading-5 text-white">
                         {analise.riscoCodigo} - {analise.riscoNome}
                       </p>
-                      <p className="mt-2 line-clamp-2 text-xs font-bold leading-5 text-slate-300">
+                      <p className="mt-1.5 line-clamp-2 text-xs font-bold leading-5 text-slate-300">
                         {analise.macroProcessoCodigo} -{" "}
                         {analise.macroProcessoNome} / {analise.setorNome}
                       </p>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
-                      <div className="flex max-h-24 flex-wrap gap-2 overflow-y-auto pr-1">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                      <div className="flex max-h-[76px] flex-wrap gap-1.5 overflow-y-auto pr-1">
                         {analise.fatoresRisco.map((fator) => (
                           <span
                             key={`${fator.codigo}-${fator.nome}`}
-                            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1.5 text-xs font-bold leading-4 text-slate-200"
+                            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-bold leading-4 text-slate-200"
                           >
                             {etiquetaControle(fator)}
                           </span>
@@ -1383,13 +1383,13 @@ export default function RiscosAnaliseCompleta() {
                         )}
                       </div>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
                       <MiniMetrica
                         rotulo="MPP"
                         valor={analise.mediaProbabilidade}
                         destaque={analise.nivelProbabilidade}
                       />
-                      <p className="mt-2 text-xs font-black text-blue-100">
+                      <p className="mt-1.5 text-xs font-black text-blue-100">
                         %P:{" "}
                         {Math.round(
                           (analise.percentualProbabilidade || 0) * 100,
@@ -1397,25 +1397,25 @@ export default function RiscosAnaliseCompleta() {
                         %
                       </p>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
                       <MiniMetrica
                         rotulo="MPI"
                         valor={analise.mediaConsequencia}
                         destaque={analise.nivelConsequencia}
                       />
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
                       <MiniMetrica
                         rotulo="NRI"
                         valor={analise.resultadoInerente}
                         destaque={analise.classificacaoRisco}
                       />
-                      <p className="mt-2 text-xs font-bold leading-5 text-slate-300">
+                      <p className="mt-1.5 text-xs font-bold leading-5 text-slate-300">
                         {analise.periodicidadeAcao}
                       </p>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
-                      <div className="grid gap-2">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                      <div className="grid gap-1.5">
                         <MiniMetrica
                           rotulo="Prob."
                           valor={analise.probabilidadeResidual ?? "-"}
@@ -1433,28 +1433,28 @@ export default function RiscosAnaliseCompleta() {
                         />
                       </div>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-5">
-                      <div className="grid gap-2 text-xs font-black text-slate-200">
-                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                      <div className="grid gap-1.5 text-xs font-black text-slate-200">
+                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5">
                           Preventivo: {analise.preventivos.length}
                         </span>
-                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
+                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5">
                           Detectivo: {analise.detectivos.length}
                         </span>
-                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2">
+                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5">
                           Corretivo: {analise.corretivos.length}
                         </span>
                       </div>
                     </td>
-                    <td className="sticky right-0 rounded-r-2xl border-y border-r border-slate-800 bg-slate-950 px-3 py-5 shadow-[-16px_0_22px_rgba(2,6,23,0.75)]">
-                      <div className="grid gap-2">
+                    <td className="sticky right-0 rounded-r-2xl border-y border-r border-slate-800 bg-slate-950 px-3 py-3 shadow-[-16px_0_22px_rgba(2,6,23,0.75)]">
+                      <div className="grid gap-1.5">
                         <button
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
                             iniciarEdicaoAnalise(analise);
                           }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-500/20"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-1.5 text-xs font-black text-blue-100 hover:bg-blue-500/20"
                         >
                           <Pencil size={14} />
                           Editar
@@ -1465,7 +1465,7 @@ export default function RiscosAnaliseCompleta() {
                             event.stopPropagation();
                             abrirControles(analise);
                           }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-100 hover:bg-emerald-500/20"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-black text-emerald-100 hover:bg-emerald-500/20"
                         >
                           <Settings size={14} />
                           Controles
@@ -1476,7 +1476,7 @@ export default function RiscosAnaliseCompleta() {
                             event.stopPropagation();
                             abrirPdfAnalise(analise);
                           }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/20"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-xs font-black text-red-100 hover:bg-red-500/20"
                         >
                           <FileText size={14} />
                           PDF
