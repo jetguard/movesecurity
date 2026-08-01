@@ -328,7 +328,7 @@ export default function TreinamentoTerminalPublico() {
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, assinaturaCanvas.width, assinaturaCanvas.height);
     ctx.drawImage(canvas, 0, 0);
-    return assinaturaCanvas.toDataURL("image/jpeg", 0.82);
+    return assinaturaCanvas.toDataURL("image/png");
   }
 
   async function concluir() {
