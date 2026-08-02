@@ -320,13 +320,15 @@ async function proximoCodigo(tx: any) {
   await tx.$executeRawUnsafe(
     `SELECT pg_advisory_xact_lock(hashtext('movecta_poc_sep_005_certificado_${ano}'))`,
   );
-  const ultimo = await tx.treinamentoPocSep005.findFirst({
+  const certificados = await tx.treinamentoPocSep005.findMany({
     where: { codigo: { endsWith: `/${ano}` } },
-    orderBy: { id: "desc" },
+    select: { codigo: true },
   });
-  const numero = ultimo?.codigo
-    ? Number(ultimo.codigo.match(/POC005-(\d+)\//)?.[1] || 0) + 1
-    : 1;
+  const maiorNumero = certificados.reduce((maior: number, item: { codigo: string | null }) => {
+    const numero = Number(item.codigo?.match(/POC005-(\d+)\//)?.[1] || 0);
+    return Math.max(maior, numero);
+  }, 0);
+  const numero = maiorNumero + 1;
   return `POC005-${String(numero).padStart(5, "0")}/${ano}`;
 }
 
@@ -665,11 +667,13 @@ export async function concluirTreinamentoPocSep005(
         : "Certificado emitido. O envio por e-mail não foi confirmado.",
       treinamento: respostaPublica(atualizado),
     });
-  } catch (error) {
+  } catch (error: any) {
+    const mensagem =
+      error?.message || "Erro ao concluir treinamento POC-SEP-005.";
     console.error(error);
     return res
       .status(500)
-      .json({ error: "Erro ao concluir treinamento POC-SEP-005." });
+      .json({ error: mensagem });
   }
 }
 
