@@ -1654,3 +1654,115 @@ model TreinamentoPocSep006 {
   @@index([cpf])
   @@index([status, updatedAt])
 }
+
+model TreinamentoModelo {
+  id                Int       @id @default(autoincrement())
+  codigo            String    @unique
+  slug              String    @unique
+  tipo              String
+  nome              String
+  descricao         String?
+  subtitulo         String?
+  notaMinima        Int       @default(80)
+  validadeMeses     Int       @default(24)
+  textoCertificado  String?
+  status            String    @default("Rascunho")
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  etapas        TreinamentoModeloEtapa[]
+  perguntas     TreinamentoModeloPergunta[]
+  participantes TreinamentoModeloParticipante[]
+
+  @@index([status, updatedAt])
+}
+
+model TreinamentoModeloEtapa {
+  id            Int      @id @default(autoincrement())
+  treinamentoId Int
+  ordem         Int
+  titulo        String
+  objetivo      String?
+  conteudo      String
+  topicosJson   String   @default("[]")
+  atencao       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  treinamento TreinamentoModelo           @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
+  perguntas    TreinamentoModeloPergunta[]
+
+  @@unique([treinamentoId, ordem])
+  @@index([treinamentoId])
+}
+
+model TreinamentoModeloPergunta {
+  id            Int      @id @default(autoincrement())
+  treinamentoId Int
+  etapaId       Int?
+  ordem         Int
+  pergunta      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  treinamento TreinamentoModelo              @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
+  etapa       TreinamentoModeloEtapa?        @relation(fields: [etapaId], references: [id], onDelete: SetNull)
+  alternativas TreinamentoModeloAlternativa[]
+
+  @@unique([treinamentoId, ordem])
+  @@index([treinamentoId])
+  @@index([etapaId])
+}
+
+model TreinamentoModeloAlternativa {
+  id         Int      @id @default(autoincrement())
+  perguntaId Int
+  ordem      Int
+  texto      String
+  correta    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  pergunta TreinamentoModeloPergunta @relation(fields: [perguntaId], references: [id], onDelete: Cascade)
+
+  @@index([perguntaId])
+}
+
+model TreinamentoModeloParticipante {
+  id                 Int       @id @default(autoincrement())
+  treinamentoId      Int
+  token              String    @unique
+  usuarioId          Int?
+  codigo             String?   @unique
+  nomeCompleto       String
+  cpf                String?
+  email              String
+  cargo              String?
+  departamento       String?
+  unidade            String?
+  empresa            String?
+  etapaAtual         Int       @default(1)
+  status             String    @default("Em andamento")
+  porcentagem        Int       @default(0)
+  nota               Float?
+  tentativas         Int       @default(0)
+  respostasQuiz      String?
+  assinaturaDataUrl  String?
+  certificadoArquivo String?
+  emailStatus        String?
+  emailEnviadoEm     DateTime?
+  ipInicio           String?
+  navegador          String?
+  sistema            String?
+  dataInicio         DateTime  @default(now())
+  dataConclusao      DateTime?
+  ultimoAcessoEm     DateTime  @default(now())
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  treinamento TreinamentoModelo @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
+
+  @@index([treinamentoId, status, updatedAt])
+  @@index([email])
+  @@index([cpf])
+}

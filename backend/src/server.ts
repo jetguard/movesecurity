@@ -49,6 +49,7 @@ import treinamentoPocSep003Routes from "./routes/treinamentoPocSep003.routes";
 import treinamentoPocSep004Routes from "./routes/treinamentoPocSep004.routes";
 import treinamentoPocSep005Routes from "./routes/treinamentoPocSep005.routes";
 import treinamentoPocSep006Routes from "./routes/treinamentoPocSep006.routes";
+import treinamentoModeloRoutes from "./routes/treinamentoModelo.routes";
 import { garantirSuperAdmin } from "./services/superAdmin.service";
 import { corsOrigin } from "./config/security";
 import { iniciarRealtime } from "./services/realtime.service";
@@ -198,6 +199,7 @@ app.use("/api", treinamentoPocSep003Routes);
 app.use("/api", treinamentoPocSep004Routes);
 app.use("/api", treinamentoPocSep005Routes);
 app.use("/api", treinamentoPocSep006Routes);
+app.use("/api", treinamentoModeloRoutes);
 
 app.use("/api/ocorrencias", ocorrenciaRoutes);
 app.use("/api/eventos", eventoRoutes);

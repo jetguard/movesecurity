@@ -569,6 +569,10 @@ export default function AdminLayout() {
                       </Link>
                     ),
                   )}
+                  <Link to="/treinamentos-dinamicos" className={subItem}>
+                    <FileCheck2 size={16} />
+                    Criador de Treinamentos
+                  </Link>
                 </div>
               )}
               <Link to="/meus-dados" className={item}>
@@ -621,6 +625,10 @@ export default function AdminLayout() {
                           </Link>
                         ),
                       )}
+                      <Link to="/treinamentos-dinamicos" className={subItem}>
+                        <FileCheck2 size={16} />
+                        Criador de Treinamentos
+                      </Link>
                     </div>
                   )}
                 </>

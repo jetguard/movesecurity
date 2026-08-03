@@ -1,0 +1,847 @@
+import { randomUUID } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import { Request, Response } from "express";
+import PDFDocument from "pdfkit";
+import QRCode from "qrcode";
+import { prisma } from "../lib/prisma";
+import { AuthRequest } from "../middlewares/auth";
+import { UNIDADES_SISTEMA } from "../config/unidades";
+import { enviarEmail } from "../services/email.service";
+
+const db = prisma as any;
+
+function texto(valor: unknown) {
+  return String(valor || "").trim();
+}
+
+function limparCpf(cpf: string) {
+  return String(cpf || "").replace(/\D/g, "");
+}
+
+function cpfValido(cpf: string) {
+  const digitos = limparCpf(cpf);
+  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
+
+  const calcular = (tamanho: number) => {
+    const soma = digitos
+      .slice(0, tamanho)
+      .split("")
+      .reduce(
+        (total, numero, index) => total + Number(numero) * (tamanho + 1 - index),
+        0,
+      );
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+
+  return calcular(9) === Number(digitos[9]) && calcular(10) === Number(digitos[10]);
+}
+
+function emailValido(email: string) {
+  const normalizado = texto(email).toLowerCase();
+  if (!normalizado || normalizado.length > 254 || normalizado.includes(".."))
+    return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
+}
+
+function unidadeValida(unidade: string) {
+  return UNIDADES_SISTEMA.includes(unidade);
+}
+
+function userAgent(req: Request) {
+  return texto(req.headers["user-agent"]);
+}
+
+function appPublicUrl() {
+  return String(
+    process.env.PUBLIC_APP_URL ||
+      process.env.APP_URL ||
+      process.env.FRONTEND_URL ||
+      "https://movecta.jetguard.com.br",
+  ).replace(/\/$/, "");
+}
+
+function slugify(valor: string) {
+  const base = texto(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return base || `treinamento-${Date.now()}`;
+}
+
+function normalizarCodigo(valor: string) {
+  return texto(valor).toUpperCase().replace(/\s+/g, "-");
+}
+
+function gerarTextoCertificado(modelo: any, participante: any) {
+  const data = dataPtBr(participante.dataConclusao || new Date());
+  const template = texto(modelo.textoCertificado);
+  if (template) {
+    return template
+      .replace(/\{\{nome\}\}/gi, participante.nomeCompleto)
+      .replace(/\{\{cpf\}\}/gi, formatarCpf(participante.cpf || ""))
+      .replace(/\{\{data\}\}/gi, data)
+      .replace(/\{\{codigo\}\}/gi, modelo.codigo)
+      .replace(/\{\{treinamento\}\}/gi, modelo.nome);
+  }
+
+  return `Certificamos que ${participante.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(
+    participante.cpf || "",
+  )}, concluiu com aproveitamento o treinamento ${modelo.codigo} - ${modelo.nome} na data de ${data}.`;
+}
+
+function formatarCpf(cpf: string) {
+  const digitos = limparCpf(cpf);
+  if (digitos.length !== 11) return cpf;
+  return `${digitos.slice(0, 3)}.${digitos.slice(3, 6)}.${digitos.slice(
+    6,
+    9,
+  )}-${digitos.slice(9)}`;
+}
+
+function dataPtBr(data?: Date | string | null) {
+  if (!data) return "-";
+  return new Date(data).toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+  });
+}
+
+function parseJsonArray(valor: unknown) {
+  if (Array.isArray(valor)) return valor;
+  try {
+    const convertido = JSON.parse(String(valor || "[]"));
+    return Array.isArray(convertido) ? convertido : [];
+  } catch {
+    return [];
+  }
+}
+
+function arquivoCertificado(token: string) {
+  const pasta = path.resolve(process.cwd(), "uploads", "certificados-modelos");
+  fs.mkdirSync(pasta, { recursive: true });
+  return path.join(pasta, `certificado-treinamento-${token}.pdf`);
+}
+
+function certificadoUrl(token: string) {
+  return `/api/public/treinamentos-dinamicos/${token}/certificado`;
+}
+
+function caminhoFundoCertificado() {
+  const caminhos = [
+    path.resolve(process.cwd(), "assets", "fundo-para-desktop.jpeg"),
+    path.resolve(
+      process.cwd(),
+      "..",
+      "frontend",
+      "public",
+      "images",
+      "treinamento-terminal",
+      "fundo-para-desktop.jpeg",
+    ),
+    path.resolve(
+      process.cwd(),
+      "..",
+      "frontend",
+      "dist",
+      "images",
+      "treinamento-terminal",
+      "fundo-para-desktop.jpeg",
+    ),
+  ];
+  return caminhos.find((item) => fs.existsSync(item));
+}
+
+function porcentagem(etapaAtual: number, totalEtapas: number, status?: string | null) {
+  if (String(status || "").toLowerCase().startsWith("conclu")) return 100;
+  const total = Math.max(totalEtapas + 2, 2);
+  return Math.max(0, Math.min(99, Math.round(((etapaAtual - 1) / total) * 100)));
+}
+
+function treinamentoConcluido(status?: string | null) {
+  return String(status || "").toLowerCase().startsWith("conclu");
+}
+
+function respostaParticipante(registro: any) {
+  return {
+    token: registro.token,
+    treinamentoId: registro.treinamentoId,
+    codigo: registro.codigo,
+    nomeCompleto: registro.nomeCompleto,
+    cpf: registro.cpf,
+    email: registro.email,
+    cargo: registro.cargo,
+    departamento: registro.departamento,
+    unidade: registro.unidade,
+    empresa: registro.empresa,
+    etapaAtual: registro.etapaAtual,
+    status: registro.status,
+    porcentagem: registro.porcentagem,
+    nota: registro.nota,
+    tentativas: registro.tentativas,
+    dataConclusao: registro.dataConclusao,
+    emailStatus: registro.emailStatus,
+    certificadoUrl: registro.certificadoArquivo ? certificadoUrl(registro.token) : null,
+  };
+}
+
+function serializarModelo(modelo: any, incluirCorretas = true) {
+  return {
+    ...modelo,
+    publicUrl: `/treinamento/${modelo.slug}`,
+    etapas: (modelo.etapas || []).map((etapa: any) => ({
+      ...etapa,
+      topicos: parseJsonArray(etapa.topicosJson),
+      topicosJson: undefined,
+    })),
+    perguntas: (modelo.perguntas || []).map((pergunta: any) => ({
+      ...pergunta,
+      alternativas: (pergunta.alternativas || []).map((alternativa: any) => ({
+        ...alternativa,
+        correta: incluirCorretas ? alternativa.correta : undefined,
+      })),
+    })),
+  };
+}
+
+async function carregarModeloPorSlug(slug: string) {
+  return db.treinamentoModelo.findUnique({
+    where: { slug },
+    include: {
+      etapas: { orderBy: { ordem: "asc" } },
+      perguntas: {
+        orderBy: { ordem: "asc" },
+        include: { alternativas: { orderBy: { ordem: "asc" } } },
+      },
+    },
+  });
+}
+
+async function proximoCodigoCertificado(tx: any, modelo: any) {
+  const ano = new Date().getFullYear();
+  const prefixo = normalizarCodigo(modelo.codigo).replace(/[^A-Z0-9]/g, "");
+  await tx.$executeRawUnsafe(
+    `SELECT pg_advisory_xact_lock(hashtext('movecta_treinamento_modelo_${prefixo}_${ano}'))`,
+  );
+  const certificados = await tx.treinamentoModeloParticipante.findMany({
+    where: {
+      treinamentoId: modelo.id,
+      codigo: { endsWith: `/${ano}` },
+    },
+    select: { codigo: true },
+  });
+  const maior = certificados.reduce((atual: number, item: any) => {
+    const numero = Number(String(item.codigo || "").match(/-(\d+)\//)?.[1] || 0);
+    return Math.max(atual, numero);
+  }, 0);
+  return `${prefixo}-${String(maior + 1).padStart(5, "0")}/${ano}`;
+}
+
+async function gerarCertificado(modelo: any, participante: any) {
+  const destino = arquivoCertificado(participante.token);
+  const temporario = `${destino}.tmp`;
+  fs.rmSync(temporario, { force: true });
+
+  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0 });
+  const stream = fs.createWriteStream(temporario);
+  doc.pipe(stream);
+
+  const pageWidth = doc.page.width;
+  const pageHeight = doc.page.height;
+  const fundo = caminhoFundoCertificado();
+  const validacaoUrl = `${appPublicUrl()}${certificadoUrl(participante.token)}`;
+  const qrDataUrl = await QRCode.toDataURL(validacaoUrl, {
+    width: 220,
+    margin: 1,
+    color: { dark: "#0f172a", light: "#ffffff" },
+  });
+  const qrCode = Buffer.from(String(qrDataUrl).split(",")[1], "base64");
+
+  doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
+  if (fundo) {
+    doc.save();
+    doc.opacity(0.12);
+    doc.image(fundo, 0, 0, { width: pageWidth, height: pageHeight });
+    doc.restore();
+  }
+
+  doc.roundedRect(42, 38, pageWidth - 84, pageHeight - 76, 26)
+    .lineWidth(1.4)
+    .strokeColor("#93c5fd")
+    .stroke();
+  doc.roundedRect(54, 50, pageWidth - 108, pageHeight - 100, 20)
+    .lineWidth(0.7)
+    .strokeColor("#dbeafe")
+    .stroke();
+
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(11)
+    .text(participante.codigo || "CERTIFICADO", pageWidth - 220, 64, {
+      width: 158,
+      align: "right",
+    });
+  doc.fillColor("#07142f").font("Helvetica-Bold").fontSize(34)
+    .text(modelo.codigo, 92, 86, { width: pageWidth - 184, align: "center" });
+  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15)
+    .text(modelo.nome, 110, 132, { width: pageWidth - 220, align: "center" });
+  if (modelo.subtitulo) {
+    doc.fillColor("#334155").font("Helvetica-Bold").fontSize(11)
+      .text(modelo.subtitulo, 118, 156, { width: pageWidth - 236, align: "center" });
+  }
+
+  doc.moveTo(190, 184).lineTo(pageWidth - 190, 184)
+    .strokeColor("#7ed321").lineWidth(2).stroke();
+
+  doc.fillColor("#111827").font("Helvetica").fontSize(19)
+    .text(gerarTextoCertificado(modelo, participante), 104, 220, {
+      width: pageWidth - 208,
+      align: "center",
+      lineGap: 8,
+    });
+
+  doc.image(qrCode, 84, 424, { width: 78, height: 78 });
+  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(7)
+    .text("VALIDAÇÃO", 70, 508, { width: 102, align: "center" });
+
+  if (participante.assinaturaDataUrl) {
+    const assinaturaBase64 = String(participante.assinaturaDataUrl).split(",")[1];
+    if (assinaturaBase64) {
+      const assinaturaPng = path.join(
+        path.dirname(destino),
+        `assinatura-modelo-${participante.token}.png`,
+      );
+      fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
+      doc.image(assinaturaPng, 292, 374, { fit: [258, 62], align: "center" });
+      fs.rmSync(assinaturaPng, { force: true });
+    }
+  }
+
+  doc.moveTo(256, 448).lineTo(586, 448)
+    .strokeColor("#1d4ed8").lineWidth(1.2).stroke();
+  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10.5)
+    .text(participante.nomeCompleto, 256, 464, { width: 330, align: "center" });
+  doc.fillColor("#334155").font("Helvetica").fontSize(9)
+    .text("Participante", 256, 480, { width: 330, align: "center" });
+
+  doc.fillColor("#64748b").font("Helvetica").fontSize(7.5)
+    .text(`Validação: ${validacaoUrl}`, 170, pageHeight - 70, {
+      width: pageWidth - 340,
+      align: "center",
+    });
+  doc.end();
+
+  await new Promise<void>((resolve, reject) => {
+    stream.on("finish", resolve);
+    stream.on("error", reject);
+  });
+  fs.renameSync(temporario, destino);
+  return destino;
+}
+
+async function enviarCertificado(modelo: any, participante: any, certificadoArquivo: string) {
+  return enviarEmail({
+    to: participante.email,
+    subject: `Certificado ${modelo.codigo} - ${participante.codigo}`,
+    text: `Olá, ${participante.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento ${modelo.codigo}.`,
+    html: `<p>Olá, <strong>${participante.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong>.</p>`,
+    attachments: [
+      {
+        filename: `certificado-${String(participante.codigo || modelo.codigo).replace("/", "-")}.pdf`,
+        path: certificadoArquivo,
+        contentType: "application/pdf",
+      },
+    ],
+  });
+}
+
+function validarPayloadModelo(body: any) {
+  const codigo = normalizarCodigo(body.codigo);
+  const nome = texto(body.nome);
+  const tipo = texto(body.tipo);
+  const etapas = Array.isArray(body.etapas) ? body.etapas : [];
+  const perguntas = Array.isArray(body.perguntas) ? body.perguntas : [];
+
+  if (!codigo || !nome || !tipo) {
+    return { error: "Informe tipo, código e nome do treinamento." };
+  }
+  if (!etapas.length) {
+    return { error: "Cadastre pelo menos uma etapa de conteúdo." };
+  }
+  if (!perguntas.length) {
+    return { error: "Cadastre pelo menos uma pergunta para avaliação." };
+  }
+  for (const pergunta of perguntas) {
+    const alternativas = Array.isArray(pergunta.alternativas)
+      ? pergunta.alternativas
+      : [];
+    if (!texto(pergunta.pergunta) || alternativas.length < 2) {
+      return { error: "Cada pergunta precisa de texto e pelo menos duas alternativas." };
+    }
+    if (alternativas.filter((item: any) => item.correta === true).length !== 1) {
+      return { error: "Cada pergunta deve ter exatamente uma alternativa correta." };
+    }
+  }
+
+  return { codigo, nome, tipo, etapas, perguntas };
+}
+
+export async function listarTreinamentosModelo(req: AuthRequest, res: Response) {
+  const modelos = await db.treinamentoModelo.findMany({
+    orderBy: { updatedAt: "desc" },
+    include: {
+      etapas: { orderBy: { ordem: "asc" } },
+      perguntas: {
+        orderBy: { ordem: "asc" },
+        include: { alternativas: { orderBy: { ordem: "asc" } } },
+      },
+      participantes: {
+        orderBy: { updatedAt: "desc" },
+        take: 200,
+      },
+    },
+  });
+
+  return res.json(modelos.map((modelo: any) => ({
+    ...serializarModelo(modelo),
+    participantes: modelo.participantes.map((item: any) => ({
+      ...item,
+      assinaturaDataUrl: undefined,
+      certificadoUrl: item.certificadoArquivo ? certificadoUrl(item.token) : null,
+    })),
+  })));
+}
+
+export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id || 0);
+    const validacao = validarPayloadModelo(req.body);
+    if ("error" in validacao) return res.status(400).json({ error: validacao.error });
+
+    const slugBase = slugify(req.body.slug || validacao.codigo);
+    const modelo = await prisma.$transaction(async (tx) => {
+      const repo = tx as any;
+      const salvo = id
+        ? await repo.treinamentoModelo.update({
+            where: { id },
+            data: {
+              codigo: validacao.codigo,
+              slug: slugBase,
+              tipo: validacao.tipo,
+              nome: validacao.nome,
+              descricao: texto(req.body.descricao) || null,
+              subtitulo: texto(req.body.subtitulo) || null,
+              notaMinima: Number(req.body.notaMinima) || 80,
+              validadeMeses: Number(req.body.validadeMeses) || 24,
+              textoCertificado: texto(req.body.textoCertificado) || null,
+              status: texto(req.body.status) || "Rascunho",
+            },
+          })
+        : await repo.treinamentoModelo.create({
+            data: {
+              codigo: validacao.codigo,
+              slug: slugBase,
+              tipo: validacao.tipo,
+              nome: validacao.nome,
+              descricao: texto(req.body.descricao) || null,
+              subtitulo: texto(req.body.subtitulo) || null,
+              notaMinima: Number(req.body.notaMinima) || 80,
+              validadeMeses: Number(req.body.validadeMeses) || 24,
+              textoCertificado: texto(req.body.textoCertificado) || null,
+              status: texto(req.body.status) || "Rascunho",
+            },
+          });
+
+      await repo.treinamentoModeloPergunta.deleteMany({
+        where: { treinamentoId: salvo.id },
+      });
+      await repo.treinamentoModeloEtapa.deleteMany({
+        where: { treinamentoId: salvo.id },
+      });
+
+      const etapasCriadas: Record<number, number> = {};
+      for (const [index, etapa] of validacao.etapas.entries()) {
+        const criada = await repo.treinamentoModeloEtapa.create({
+          data: {
+            treinamentoId: salvo.id,
+            ordem: index + 1,
+            titulo: texto(etapa.titulo) || `Etapa ${index + 1}`,
+            objetivo: texto(etapa.objetivo) || null,
+            conteudo: texto(etapa.conteudo),
+            topicosJson: JSON.stringify(
+              Array.isArray(etapa.topicos)
+                ? etapa.topicos.map(texto).filter(Boolean)
+                : [],
+            ),
+            atencao: texto(etapa.atencao) || null,
+          },
+        });
+        etapasCriadas[index + 1] = criada.id;
+      }
+
+      for (const [index, pergunta] of validacao.perguntas.entries()) {
+        const criada = await repo.treinamentoModeloPergunta.create({
+          data: {
+            treinamentoId: salvo.id,
+            etapaId: etapasCriadas[Number(pergunta.etapaOrdem)] || null,
+            ordem: index + 1,
+            pergunta: texto(pergunta.pergunta),
+          },
+        });
+        for (const [altIndex, alternativa] of pergunta.alternativas.entries()) {
+          await repo.treinamentoModeloAlternativa.create({
+            data: {
+              perguntaId: criada.id,
+              ordem: altIndex + 1,
+              texto: texto(alternativa.texto),
+              correta: alternativa.correta === true,
+            },
+          });
+        }
+      }
+
+      return repo.treinamentoModelo.findUnique({
+        where: { id: salvo.id },
+        include: {
+          etapas: { orderBy: { ordem: "asc" } },
+          perguntas: {
+            orderBy: { ordem: "asc" },
+            include: { alternativas: { orderBy: { ordem: "asc" } } },
+          },
+          participantes: true,
+        },
+      });
+    });
+
+    return res.status(id ? 200 : 201).json(serializarModelo(modelo));
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao salvar treinamento." });
+  }
+}
+
+export async function excluirTreinamentoModelo(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+    await db.treinamentoModelo.delete({ where: { id } });
+    return res.status(204).send();
+  } catch (error: any) {
+    return res.status(500).json({ error: error?.message || "Erro ao excluir treinamento." });
+  }
+}
+
+export async function buscarTreinamentoPublico(req: Request, res: Response) {
+  const modelo = await carregarModeloPorSlug(texto(req.params.slug));
+  if (!modelo || modelo.status !== "Publicado") {
+    return res.status(404).json({ error: "Treinamento não encontrado." });
+  }
+  return res.json({ treinamento: serializarModelo(modelo, false) });
+}
+
+export async function listarUnidadesTreinamentoModelo(req: Request, res: Response) {
+  return res.json({ unidades: UNIDADES_SISTEMA });
+}
+
+export async function localizarParticipanteTreinamentoModelo(req: Request, res: Response) {
+  const identificador = texto(req.query.identificador).toLowerCase();
+  const cpf = limparCpf(identificador);
+  const email = emailValido(identificador) ? identificador : "";
+  if (!email && !cpfValido(cpf)) return res.json({ participante: null });
+
+  const usuario = await prisma.usuario.findFirst({
+    where: { OR: [...(email ? [{ email }] : []), ...(cpfValido(cpf) ? [{ cpf }] : [])] },
+    select: {
+      nome: true,
+      cpf: true,
+      email: true,
+      cargo: true,
+      setor: true,
+      unidade: true,
+      empresa: true,
+      statusUsuario: true,
+    },
+  });
+  if (!usuario || usuario.statusUsuario !== "ATIVO") return res.json({ participante: null });
+
+  return res.json({
+    participante: {
+      nomeCompleto: usuario.nome,
+      cpf: usuario.cpf,
+      email: usuario.email,
+      cargo: usuario.cargo,
+      departamento: usuario.setor,
+      unidade: usuario.unidade,
+      empresa: usuario.empresa,
+    },
+  });
+}
+
+export async function iniciarTreinamentoModelo(req: Request, res: Response) {
+  try {
+    const modelo = await carregarModeloPorSlug(texto(req.params.slug));
+    if (!modelo || modelo.status !== "Publicado")
+      return res.status(404).json({ error: "Treinamento não encontrado." });
+
+    const nomeCompleto = texto(req.body.nomeCompleto);
+    const cpf = limparCpf(req.body.cpf);
+    const email = texto(req.body.email).toLowerCase();
+    const unidade = texto(req.body.unidade);
+    if (!nomeCompleto || !cpfValido(cpf) || !emailValido(email) || !unidadeValida(unidade)) {
+      return res.status(400).json({
+        error: "Informe nome completo, CPF válido, e-mail válido e unidade para iniciar.",
+      });
+    }
+
+    const usuario = await prisma.usuario.findFirst({ where: { OR: [{ cpf }, { email }] } });
+    const existente = await db.treinamentoModeloParticipante.findFirst({
+      where: { treinamentoId: modelo.id, OR: [{ cpf }, { email }] },
+      orderBy: { updatedAt: "desc" },
+    });
+
+    const data = {
+      usuarioId: usuario?.id || existente?.usuarioId,
+      nomeCompleto,
+      cpf,
+      email,
+      cargo: usuario?.cargo || texto(req.body.cargo) || existente?.cargo || null,
+      departamento: usuario?.setor || texto(req.body.departamento) || existente?.departamento || null,
+      unidade,
+      empresa: usuario?.empresa || texto(req.body.empresa) || existente?.empresa || null,
+      ultimoAcessoEm: new Date(),
+      navegador: userAgent(req),
+      sistema: userAgent(req),
+    };
+    const participante = existente
+      ? await db.treinamentoModeloParticipante.update({
+          where: { id: existente.id },
+          data,
+        })
+      : await db.treinamentoModeloParticipante.create({
+          data: {
+            treinamentoId: modelo.id,
+            token: randomUUID(),
+            ...data,
+            ipInicio: req.ip,
+          },
+        });
+
+    return res.status(existente ? 200 : 201).json({
+      treinamento: serializarModelo(modelo, false),
+      participante: respostaParticipante(participante),
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: error?.message || "Erro ao iniciar treinamento." });
+  }
+}
+
+export async function concluirEtapaTreinamentoModelo(req: Request, res: Response) {
+  try {
+    const token = texto(req.params.token);
+    const etapa = Number(req.body.etapa);
+    const participante = await db.treinamentoModeloParticipante.findUnique({
+      where: { token },
+      include: { treinamento: { include: { etapas: true } } },
+    });
+    if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
+    const totalEtapas = participante.treinamento.etapas.length;
+    if (!Number.isInteger(etapa) || etapa < 1 || etapa > totalEtapas) {
+      return res.status(400).json({ error: "Etapa inválida." });
+    }
+    if (etapa > participante.etapaAtual) {
+      return res.status(403).json({ error: "Conclua as etapas anteriores antes de avançar." });
+    }
+    const proxima = Math.max(participante.etapaAtual, etapa + 1);
+    const atualizado = await db.treinamentoModeloParticipante.update({
+      where: { id: participante.id },
+      data: {
+        etapaAtual: proxima,
+        porcentagem: porcentagem(proxima, totalEtapas, participante.status),
+        ultimoAcessoEm: new Date(),
+        navegador: userAgent(req),
+      },
+    });
+    return res.json({ participante: respostaParticipante(atualizado) });
+  } catch (error: any) {
+    return res.status(500).json({ error: error?.message || "Erro ao salvar etapa." });
+  }
+}
+
+export async function responderQuizTreinamentoModelo(req: Request, res: Response) {
+  try {
+    const token = texto(req.params.token);
+    const respostas: Record<string, number> = req.body.respostas || {};
+    const participante = await db.treinamentoModeloParticipante.findUnique({
+      where: { token },
+      include: {
+        treinamento: {
+          include: {
+            etapas: true,
+            perguntas: { include: { alternativas: true } },
+          },
+        },
+      },
+    });
+    if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
+    const perguntas = participante.treinamento.perguntas || [];
+    if (perguntas.length === 0) return res.status(400).json({ error: "Treinamento sem avaliação." });
+    if (Object.keys(respostas).length < perguntas.length) {
+      return res.status(400).json({ error: "Responda todas as questões." });
+    }
+
+    const detalhes = perguntas.map((pergunta: any) => {
+      const correta = pergunta.alternativas.find((item: any) => item.correta);
+      const marcada = Number(respostas[String(pergunta.id)]);
+      return {
+        perguntaId: pergunta.id,
+        alternativaId: marcada,
+        corretaId: correta?.id,
+        correto: marcada === correta?.id,
+      };
+    });
+    const acertos = detalhes.filter((item: any) => item.correto).length;
+    const nota = Math.round((acertos / perguntas.length) * 100);
+    const aprovado = nota >= participante.treinamento.notaMinima;
+    const etapaAssinatura = participante.treinamento.etapas.length + 2;
+
+    const atualizado = await db.treinamentoModeloParticipante.update({
+      where: { id: participante.id },
+      data: {
+        nota,
+        respostasQuiz: JSON.stringify(detalhes),
+        tentativas: { increment: 1 },
+        status: aprovado ? "Aguardando assinatura" : "Reprovado",
+        etapaAtual: aprovado ? etapaAssinatura : participante.treinamento.etapas.length + 1,
+        porcentagem: aprovado ? 99 : porcentagem(participante.treinamento.etapas.length + 1, participante.treinamento.etapas.length),
+        ultimoAcessoEm: new Date(),
+        navegador: userAgent(req),
+      },
+    });
+
+    return res.json({ aprovado, acertos, nota, detalhes, participante: respostaParticipante(atualizado) });
+  } catch (error: any) {
+    return res.status(500).json({ error: error?.message || "Erro ao validar avaliação." });
+  }
+}
+
+export async function concluirTreinamentoModelo(req: Request, res: Response) {
+  try {
+    const token = texto(req.params.token);
+    const assinaturaDataUrl = texto(req.body.assinaturaDataUrl);
+    if (!assinaturaDataUrl.startsWith("data:image/")) {
+      return res.status(400).json({ error: "Assinatura inválida." });
+    }
+
+    const participante = await db.treinamentoModeloParticipante.findUnique({
+      where: { token },
+      include: { treinamento: true },
+    });
+    if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if ((participante.nota || 0) < participante.treinamento.notaMinima) {
+      return res.status(400).json({ error: "A nota mínima ainda não foi atingida." });
+    }
+
+    const comCodigo = await prisma.$transaction(async (tx) => {
+      const repo = tx as any;
+      const codigo = participante.codigo || (await proximoCodigoCertificado(repo, participante.treinamento));
+      return repo.treinamentoModeloParticipante.update({
+        where: { id: participante.id },
+        data: {
+          codigo,
+          assinaturaDataUrl,
+          status: "Concluido",
+          porcentagem: 100,
+          dataConclusao: participante.dataConclusao || new Date(),
+          ultimoAcessoEm: new Date(),
+          navegador: userAgent(req),
+        },
+      });
+    });
+
+    const certificadoArquivo = await gerarCertificado(participante.treinamento, comCodigo);
+    const email = await enviarCertificado(participante.treinamento, comCodigo, certificadoArquivo);
+    const atualizado = await db.treinamentoModeloParticipante.update({
+      where: { id: comCodigo.id },
+      data: {
+        certificadoArquivo,
+        emailStatus: email.status,
+        emailEnviadoEm: email.enviado ? new Date() : comCodigo.emailEnviadoEm,
+      },
+    });
+
+    return res.json({
+      mensagem: email.enviado
+        ? "Certificado emitido e enviado por e-mail."
+        : "Certificado emitido. O envio por e-mail não foi confirmado.",
+      participante: respostaParticipante(atualizado),
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({ error: error?.message || "Erro ao concluir treinamento." });
+  }
+}
+
+export async function baixarCertificadoTreinamentoModelo(req: Request, res: Response) {
+  try {
+    const token = texto(req.params.token);
+    const participante = await db.treinamentoModeloParticipante.findUnique({
+      where: { token },
+      include: { treinamento: true },
+    });
+    if (!participante || !treinamentoConcluido(participante.status)) {
+      return res.status(404).json({ error: "Certificado não encontrado." });
+    }
+    const certificadoArquivo =
+      participante.certificadoArquivo && fs.existsSync(participante.certificadoArquivo)
+        ? participante.certificadoArquivo
+        : await gerarCertificado(participante.treinamento, participante);
+    if (!participante.certificadoArquivo) {
+      await db.treinamentoModeloParticipante.update({
+        where: { id: participante.id },
+        data: { certificadoArquivo },
+      });
+    }
+    return res.download(
+      certificadoArquivo,
+      `certificado-${String(participante.codigo || participante.treinamento.codigo).replace("/", "-")}.pdf`,
+    );
+  } catch (error: any) {
+    return res.status(500).json({ error: error?.message || "Erro ao baixar certificado." });
+  }
+}
+
+export async function reenviarEmailTreinamentoModelo(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const participante = await db.treinamentoModeloParticipante.findUnique({
+      where: { id },
+      include: { treinamento: true },
+    });
+    if (!participante) return res.status(404).json({ error: "Registro não encontrado." });
+    if (!treinamentoConcluido(participante.status)) {
+      return res.status(400).json({ error: "Só é possível enviar após a conclusão." });
+    }
+    const certificadoArquivo =
+      participante.certificadoArquivo && fs.existsSync(participante.certificadoArquivo)
+        ? participante.certificadoArquivo
+        : await gerarCertificado(participante.treinamento, participante);
+    const email = await enviarCertificado(participante.treinamento, participante, certificadoArquivo);
+    const atualizado = await db.treinamentoModeloParticipante.update({
+      where: { id },
+      data: {
+        certificadoArquivo,
+        emailStatus: email.status,
+        emailEnviadoEm: email.enviado ? new Date() : participante.emailEnviadoEm,
+      },
+    });
+    return res.json({
+      mensagem: email.enviado ? "E-mail enviado com sucesso." : "Envio registrado. Verifique o SMTP.",
+      participante: { ...atualizado, assinaturaDataUrl: undefined, certificadoUrl: certificadoUrl(atualizado.token) },
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error?.message || "Erro ao reenviar e-mail." });
+  }
+}

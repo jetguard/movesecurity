@@ -103,6 +103,9 @@ const TreinamentoPocSep005Publico = lazyWithReload(
 const TreinamentoPocSep006Publico = lazyWithReload(
   () => import("./pages/TreinamentoPocSep006Publico"),
 );
+const TreinamentoDinamicoPublico = lazyWithReload(
+  () => import("./pages/TreinamentoDinamicoPublico"),
+);
 const IntegracaoTerminalPublico = lazyWithReload(
   () => import("./pages/IntegracaoTerminalPublico"),
 );
@@ -135,6 +138,9 @@ const TreinamentosPocSep005 = lazyWithReload(
 );
 const TreinamentosPocSep006 = lazyWithReload(
   () => import("./pages/TreinamentosPocSep006"),
+);
+const TreinamentosDinamicos = lazyWithReload(
+  () => import("./pages/TreinamentosDinamicos"),
 );
 const IntegracoesTerminal = lazyWithReload(
   () => import("./pages/IntegracoesTerminal"),
@@ -182,6 +188,10 @@ export default function App() {
           <Route
             path="/treinamento-poc-sep-006"
             element={<TreinamentoPocSep006Publico />}
+          />
+          <Route
+            path="/treinamento/:slug"
+            element={<TreinamentoDinamicoPublico />}
           />
           <Route
             path="/integracao-terminal"
@@ -338,6 +348,21 @@ export default function App() {
                 }
               />
             ))}
+            <Route
+              path="treinamentos-dinamicos"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.PORTARIA,
+                  ]}
+                >
+                  <TreinamentosDinamicos />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="integracoes-do-terminal"
               element={
