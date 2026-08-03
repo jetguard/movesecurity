@@ -181,6 +181,7 @@ function respostaParticipante(registro: any) {
     porcentagem: registro.porcentagem,
     nota: registro.nota,
     tentativas: registro.tentativas,
+    versao: registro.versao,
     dataConclusao: registro.dataConclusao,
     emailStatus: registro.emailStatus,
     certificadoUrl: registro.certificadoArquivo ? certificadoUrl(registro.token) : null,
@@ -204,6 +205,37 @@ function serializarModelo(modelo: any, incluirCorretas = true) {
       })),
     })),
   };
+}
+
+function removerGabarito(modelo: any) {
+  return {
+    ...modelo,
+    perguntas: (modelo.perguntas || []).map((pergunta: any) => ({
+      ...pergunta,
+      alternativas: (pergunta.alternativas || []).map((alternativa: any) => ({
+        ...alternativa,
+        correta: undefined,
+      })),
+    })),
+  };
+}
+
+function criarSnapshot(modelo: any) {
+  return JSON.stringify(serializarModelo(modelo, true));
+}
+
+function lerSnapshot(participante: any, modeloFallback?: any, incluirCorretas = true) {
+  if (participante?.snapshotJson) {
+    try {
+      const snapshot = JSON.parse(participante.snapshotJson);
+      return incluirCorretas ? snapshot : removerGabarito(snapshot);
+    } catch {
+      // Se o snapshot estiver inválido, usa o modelo atual.
+    }
+  }
+
+  const serializado = serializarModelo(modeloFallback || participante?.treinamento || {}, incluirCorretas);
+  return incluirCorretas ? serializado : removerGabarito(serializado);
 }
 
 async function carregarModeloPorSlug(slug: string) {
@@ -434,6 +466,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               notaMinima: Number(req.body.notaMinima) || 80,
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
+              versao: { increment: 1 },
               status: texto(req.body.status) || "Rascunho",
             },
           })
@@ -614,6 +647,7 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
       navegador: userAgent(req),
       sistema: userAgent(req),
     };
+    const snapshotAtual = criarSnapshot(modelo);
     const participante = existente
       ? await db.treinamentoModeloParticipante.update({
           where: { id: existente.id },
@@ -623,13 +657,27 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
           data: {
             treinamentoId: modelo.id,
             token: randomUUID(),
+            versao: modelo.versao,
+            snapshotJson: snapshotAtual,
             ...data,
             ipInicio: req.ip,
           },
         });
 
+    if (existente && !existente.snapshotJson) {
+      await db.treinamentoModeloParticipante.update({
+        where: { id: existente.id },
+        data: {
+          versao: modelo.versao,
+          snapshotJson: snapshotAtual,
+        },
+      });
+      participante.versao = modelo.versao;
+      participante.snapshotJson = snapshotAtual;
+    }
+
     return res.status(existente ? 200 : 201).json({
-      treinamento: serializarModelo(modelo, false),
+      treinamento: lerSnapshot(participante, modelo, false),
       participante: respostaParticipante(participante),
     });
   } catch (error: any) {
@@ -644,10 +692,21 @@ export async function concluirEtapaTreinamentoModelo(req: Request, res: Response
     const etapa = Number(req.body.etapa);
     const participante = await db.treinamentoModeloParticipante.findUnique({
       where: { token },
-      include: { treinamento: { include: { etapas: true } } },
+      include: {
+        treinamento: {
+          include: {
+            etapas: { orderBy: { ordem: "asc" } },
+            perguntas: {
+              orderBy: { ordem: "asc" },
+              include: { alternativas: { orderBy: { ordem: "asc" } } },
+            },
+          },
+        },
+      },
     });
     if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
-    const totalEtapas = participante.treinamento.etapas.length;
+    const snapshot = lerSnapshot(participante, participante.treinamento, true);
+    const totalEtapas = snapshot.etapas.length;
     if (!Number.isInteger(etapa) || etapa < 1 || etapa > totalEtapas) {
       return res.status(400).json({ error: "Etapa inválida." });
     }
@@ -679,14 +738,18 @@ export async function responderQuizTreinamentoModelo(req: Request, res: Response
       include: {
         treinamento: {
           include: {
-            etapas: true,
-            perguntas: { include: { alternativas: true } },
+            etapas: { orderBy: { ordem: "asc" } },
+            perguntas: {
+              orderBy: { ordem: "asc" },
+              include: { alternativas: { orderBy: { ordem: "asc" } } },
+            },
           },
         },
       },
     });
     if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
-    const perguntas = participante.treinamento.perguntas || [];
+    const snapshot = lerSnapshot(participante, participante.treinamento, true);
+    const perguntas = snapshot.perguntas || [];
     if (perguntas.length === 0) return res.status(400).json({ error: "Treinamento sem avaliação." });
     if (Object.keys(respostas).length < perguntas.length) {
       return res.status(400).json({ error: "Responda todas as questões." });
@@ -704,8 +767,8 @@ export async function responderQuizTreinamentoModelo(req: Request, res: Response
     });
     const acertos = detalhes.filter((item: any) => item.correto).length;
     const nota = Math.round((acertos / perguntas.length) * 100);
-    const aprovado = nota >= participante.treinamento.notaMinima;
-    const etapaAssinatura = participante.treinamento.etapas.length + 2;
+    const aprovado = nota >= snapshot.notaMinima;
+    const etapaAssinatura = snapshot.etapas.length + 2;
 
     const atualizado = await db.treinamentoModeloParticipante.update({
       where: { id: participante.id },
@@ -714,8 +777,8 @@ export async function responderQuizTreinamentoModelo(req: Request, res: Response
         respostasQuiz: JSON.stringify(detalhes),
         tentativas: { increment: 1 },
         status: aprovado ? "Aguardando assinatura" : "Reprovado",
-        etapaAtual: aprovado ? etapaAssinatura : participante.treinamento.etapas.length + 1,
-        porcentagem: aprovado ? 99 : porcentagem(participante.treinamento.etapas.length + 1, participante.treinamento.etapas.length),
+        etapaAtual: aprovado ? etapaAssinatura : snapshot.etapas.length + 1,
+        porcentagem: aprovado ? 99 : porcentagem(snapshot.etapas.length + 1, snapshot.etapas.length),
         ultimoAcessoEm: new Date(),
         navegador: userAgent(req),
       },
@@ -737,16 +800,27 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
 
     const participante = await db.treinamentoModeloParticipante.findUnique({
       where: { token },
-      include: { treinamento: true },
+      include: {
+        treinamento: {
+          include: {
+            etapas: { orderBy: { ordem: "asc" } },
+            perguntas: {
+              orderBy: { ordem: "asc" },
+              include: { alternativas: { orderBy: { ordem: "asc" } } },
+            },
+          },
+        },
+      },
     });
     if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
-    if ((participante.nota || 0) < participante.treinamento.notaMinima) {
+    const snapshot = lerSnapshot(participante, participante.treinamento, true);
+    if ((participante.nota || 0) < snapshot.notaMinima) {
       return res.status(400).json({ error: "A nota mínima ainda não foi atingida." });
     }
 
     const comCodigo = await prisma.$transaction(async (tx) => {
       const repo = tx as any;
-      const codigo = participante.codigo || (await proximoCodigoCertificado(repo, participante.treinamento));
+      const codigo = participante.codigo || (await proximoCodigoCertificado(repo, snapshot));
       return repo.treinamentoModeloParticipante.update({
         where: { id: participante.id },
         data: {
@@ -761,8 +835,8 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
       });
     });
 
-    const certificadoArquivo = await gerarCertificado(participante.treinamento, comCodigo);
-    const email = await enviarCertificado(participante.treinamento, comCodigo, certificadoArquivo);
+    const certificadoArquivo = await gerarCertificado(snapshot, comCodigo);
+    const email = await enviarCertificado(snapshot, comCodigo, certificadoArquivo);
     const atualizado = await db.treinamentoModeloParticipante.update({
       where: { id: comCodigo.id },
       data: {
@@ -789,7 +863,17 @@ export async function baixarCertificadoTreinamentoModelo(req: Request, res: Resp
     const token = texto(req.params.token);
     const participante = await db.treinamentoModeloParticipante.findUnique({
       where: { token },
-      include: { treinamento: true },
+      include: {
+        treinamento: {
+          include: {
+            etapas: { orderBy: { ordem: "asc" } },
+            perguntas: {
+              orderBy: { ordem: "asc" },
+              include: { alternativas: { orderBy: { ordem: "asc" } } },
+            },
+          },
+        },
+      },
     });
     if (!participante || !treinamentoConcluido(participante.status)) {
       return res.status(404).json({ error: "Certificado não encontrado." });
@@ -797,7 +881,7 @@ export async function baixarCertificadoTreinamentoModelo(req: Request, res: Resp
     const certificadoArquivo =
       participante.certificadoArquivo && fs.existsSync(participante.certificadoArquivo)
         ? participante.certificadoArquivo
-        : await gerarCertificado(participante.treinamento, participante);
+        : await gerarCertificado(lerSnapshot(participante, participante.treinamento, true), participante);
     if (!participante.certificadoArquivo) {
       await db.treinamentoModeloParticipante.update({
         where: { id: participante.id },
@@ -818,7 +902,17 @@ export async function reenviarEmailTreinamentoModelo(req: AuthRequest, res: Resp
     const id = Number(req.params.id);
     const participante = await db.treinamentoModeloParticipante.findUnique({
       where: { id },
-      include: { treinamento: true },
+      include: {
+        treinamento: {
+          include: {
+            etapas: { orderBy: { ordem: "asc" } },
+            perguntas: {
+              orderBy: { ordem: "asc" },
+              include: { alternativas: { orderBy: { ordem: "asc" } } },
+            },
+          },
+        },
+      },
     });
     if (!participante) return res.status(404).json({ error: "Registro não encontrado." });
     if (!treinamentoConcluido(participante.status)) {
@@ -827,8 +921,12 @@ export async function reenviarEmailTreinamentoModelo(req: AuthRequest, res: Resp
     const certificadoArquivo =
       participante.certificadoArquivo && fs.existsSync(participante.certificadoArquivo)
         ? participante.certificadoArquivo
-        : await gerarCertificado(participante.treinamento, participante);
-    const email = await enviarCertificado(participante.treinamento, participante, certificadoArquivo);
+        : await gerarCertificado(lerSnapshot(participante, participante.treinamento, true), participante);
+    const email = await enviarCertificado(
+      lerSnapshot(participante, participante.treinamento, true),
+      participante,
+      certificadoArquivo,
+    );
     const atualizado = await db.treinamentoModeloParticipante.update({
       where: { id },
       data: {

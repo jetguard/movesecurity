@@ -37,6 +37,7 @@ type ModeloForm = {
   subtitulo: string;
   notaMinima: number;
   validadeMeses: number;
+  versao?: number;
   status: string;
   textoCertificado: string;
   etapas: EtapaForm[];
@@ -54,6 +55,7 @@ type Participante = {
   porcentagem: number;
   nota?: number | null;
   tentativas: number;
+  versao?: number;
   certificadoUrl?: string | null;
   updatedAt: string;
 };
@@ -559,6 +561,9 @@ export default function TreinamentosDinamicos() {
                   <button type="button" onClick={() => editar(modelo)} className="block w-full text-left">
                     <p className="font-black text-slate-900 dark:text-white">{modelo.codigo}</p>
                     <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{modelo.nome}</p>
+                    <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-300">
+                      Versão publicada: {modelo.versao || 1}
+                    </p>
                   </button>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <a
@@ -617,6 +622,9 @@ export default function TreinamentosDinamicos() {
                         <p className="text-xs font-semibold text-slate-500">{item.email}</p>
                         <p className="mt-1 text-xs font-bold text-slate-600 dark:text-slate-300">
                           {item.codigo || "Sem certificado"} · {item.porcentagem}% · nota {item.nota ?? "-"} · {item.tentativas} tentativa(s)
+                        </p>
+                        <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-300">
+                          Versão do participante: {item.versao || 1}
                         </p>
                       </div>
                       {concluido(item.status) ? (

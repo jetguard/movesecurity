@@ -1666,6 +1666,7 @@ model TreinamentoModelo {
   notaMinima        Int       @default(80)
   validadeMeses     Int       @default(24)
   textoCertificado  String?
+  versao            Int       @default(1)
   status            String    @default("Rascunho")
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -1747,6 +1748,8 @@ model TreinamentoModeloParticipante {
   nota               Float?
   tentativas         Int       @default(0)
   respostasQuiz      String?
+  versao             Int       @default(1)
+  snapshotJson       String?
   assinaturaDataUrl  String?
   certificadoArquivo String?
   emailStatus        String?
