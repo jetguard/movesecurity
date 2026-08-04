@@ -550,6 +550,50 @@
     color: #07132f !important;
   }
 
+  .dark .treinamento-dinamico-publico .bg-white,
+  .dark .treinamento-dinamico-publico .bg-white\/90,
+  .dark .treinamento-dinamico-publico .bg-white\/94,
+  .dark .treinamento-dinamico-publico .bg-white\/96,
+  .dark .treinamento-dinamico-publico .bg-white\/97,
+  .dark .treinamento-dinamico-publico .bg-blue-50,
+  .dark .treinamento-dinamico-publico .bg-amber-50 {
+    background-color: #ffffff !important;
+    color: #07132f !important;
+  }
+
+  .dark .treinamento-dinamico-publico .text-blue-950,
+  .dark .treinamento-dinamico-publico .text-amber-950,
+  .dark .treinamento-dinamico-publico .text-blue-700,
+  .dark .treinamento-dinamico-publico .text-blue-600 {
+    color: #07132f !important;
+  }
+
+  .dark .treinamento-dinamico-publico .bg-blue-600,
+  .dark .treinamento-dinamico-publico .bg-emerald-600 {
+    color: #ffffff !important;
+  }
+
+  .dark .treinamento-dinamico-publico .border-blue-200,
+  .dark .treinamento-dinamico-publico .border-slate-200,
+  .dark .treinamento-dinamico-publico .border-amber-200 {
+    border-color: #93c5fd !important;
+  }
+
+  .dark .treinamentos-dinamicos-admin .bg-white,
+  .dark .treinamentos-dinamicos-admin .bg-slate-50,
+  .dark .treinamentos-dinamicos-admin .bg-blue-50 {
+    background-color: #ffffff !important;
+    color: #07132f !important;
+  }
+
+  .dark .treinamentos-dinamicos-admin .text-slate-900,
+  .dark .treinamentos-dinamicos-admin .text-slate-800,
+  .dark .treinamentos-dinamicos-admin .text-slate-700,
+  .dark .treinamentos-dinamicos-admin .text-slate-600,
+  .dark .treinamentos-dinamicos-admin .text-slate-500 {
+    color: #07132f !important;
+  }
+
   .treinamento-terminal-publico .terminal-integration-video,
   .dark .treinamento-terminal-publico .terminal-integration-video {
     aspect-ratio: 9 / 16;

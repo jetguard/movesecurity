@@ -295,7 +295,7 @@ export default function TreinamentosDinamicos() {
         </div>
       )}
 
-      <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
+      <section className="space-y-5">
         <form
           onSubmit={salvar}
           className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 [&_input]:bg-white [&_input]:text-slate-950 [&_input]:placeholder:text-slate-500 [&_select]:bg-white [&_select]:text-slate-950 [&_textarea]:bg-white [&_textarea]:text-slate-950 [&_textarea]:placeholder:text-slate-500 dark:[&_input]:bg-white dark:[&_input]:text-slate-950 dark:[&_input]:placeholder:text-slate-500 dark:[&_select]:bg-white dark:[&_select]:text-slate-950 dark:[&_textarea]:bg-white dark:[&_textarea]:text-slate-950 dark:[&_textarea]:placeholder:text-slate-500"
@@ -552,6 +552,25 @@ export default function TreinamentosDinamicos() {
         <aside className="space-y-5">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h2 className="text-lg font-black text-slate-900 dark:text-white">Treinamentos criados</h2>
+            <label className="mt-4 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+              Selecione o treinamento
+              <select
+                value={selecionadoId || ""}
+                onChange={(event) => {
+                  const id = Number(event.target.value);
+                  setSelecionadoId(id || null);
+                  setBusca("");
+                }}
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-black normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
+              >
+                <option value="">Selecione um treinamento criado</option>
+                {modelos.map((modelo) => (
+                  <option key={modelo.id} value={modelo.id}>
+                    {modelo.codigo} - {modelo.nome || modelo.slug}
+                  </option>
+                ))}
+              </select>
+            </label>
             <div className="mt-4 space-y-3">
               {modelos.map((modelo) => (
                 <div
@@ -613,7 +632,90 @@ export default function TreinamentosDinamicos() {
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
                 />
               </div>
-              <div className="mt-4 max-h-[520px] space-y-3 overflow-auto pr-1">
+              <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-700">
+                <table className="w-full min-w-[980px] text-left text-sm">
+                  <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.14em] text-slate-600">
+                    <tr>
+                      <th className="px-4 py-3">Participante</th>
+                      <th className="px-4 py-3">CPF / E-mail</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Progresso</th>
+                      <th className="px-4 py-3">Nota</th>
+                      <th className="px-4 py-3">Tentativas</th>
+                      <th className="px-4 py-3">Certificado</th>
+                      <th className="px-4 py-3">Último acesso</th>
+                      <th className="px-4 py-3 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {filtrados.map((item) => (
+                      <tr key={item.id} className="bg-white align-top text-slate-950">
+                        <td className="px-4 py-3">
+                          <div className="flex items-start gap-2">
+                            {concluido(item.status) ? (
+                              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+                            ) : (
+                              <FileCheck2 className="mt-0.5 h-4 w-4 text-blue-500" />
+                            )}
+                            <div>
+                              <p className="font-black">{item.nomeCompleto}</p>
+                              <p className="mt-1 text-xs font-bold text-slate-500">
+                                Versão {item.versao || 1}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="font-bold">{item.cpf || "-"}</p>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">{item.email}</p>
+                        </td>
+                        <td className="px-4 py-3 font-black">{item.status}</td>
+                        <td className="px-4 py-3">
+                          <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-200">
+                            <div className="h-full rounded-full bg-blue-600" style={{ width: `${item.porcentagem}%` }} />
+                          </div>
+                          <p className="mt-1 text-xs font-black">{item.porcentagem}%</p>
+                        </td>
+                        <td className="px-4 py-3 font-black">{item.nota ?? "-"}</td>
+                        <td className="px-4 py-3 font-black">{item.tentativas}</td>
+                        <td className="px-4 py-3 font-black">{item.codigo || "Sem certificado"}</td>
+                        <td className="px-4 py-3 text-xs font-bold text-slate-600">{data(item.updatedAt)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2">
+                            {item.certificadoUrl && (
+                              <a
+                                href={item.certificadoUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-black text-white"
+                              >
+                                Certificado
+                              </a>
+                            )}
+                            {concluido(item.status) && (
+                              <button
+                                type="button"
+                                onClick={() => reenviarEmail(item)}
+                                className="inline-flex items-center gap-1 rounded-lg border border-emerald-200 bg-white px-2.5 py-1.5 text-xs font-black text-emerald-700"
+                              >
+                                <Mail size={14} /> Reenviar
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                    {!filtrados.length && (
+                      <tr>
+                        <td colSpan={9} className="bg-white px-4 py-10 text-center text-sm font-black text-slate-600">
+                          Nenhum participante encontrado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="hidden">
                 {filtrados.map((item) => (
                   <div key={item.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
                     <div className="flex items-start justify-between gap-3">
