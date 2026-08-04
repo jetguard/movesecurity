@@ -1,5 +1,5 @@
 import axios from "axios";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import { useParams } from "react-router-dom";
 import { Award, CheckCircle2, FileSignature, ShieldCheck } from "lucide-react";
@@ -97,13 +97,6 @@ function emailValido(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 }
 
-function embaralhar<T>(lista: T[]) {
-  return [...lista]
-    .map((item) => ({ item, ordem: Math.random() }))
-    .sort((a, b) => a.ordem - b.ordem)
-    .map(({ item }) => item);
-}
-
 export default function TreinamentoDinamicoPublico() {
   const { slug = "" } = useParams();
   const [modelo, setModelo] = useState<Modelo | null>(null);
@@ -120,14 +113,7 @@ export default function TreinamentoDinamicoPublico() {
   const [assinando, setAssinando] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const perguntas = useMemo(
-    () =>
-      embaralhar(modelo?.perguntas || []).map((pergunta) => ({
-        ...pergunta,
-        alternativas: embaralhar(pergunta.alternativas || []),
-      })),
-    [modelo?.id],
-  );
+  const perguntas = modelo?.perguntas || [];
   const totalEtapas = modelo?.etapas.length || 0;
   const indiceQuiz = totalEtapas;
   const indiceResultado = totalEtapas + 1;
@@ -325,7 +311,7 @@ export default function TreinamentoDinamicoPublico() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
+    <main className="treinamento-dinamico-publico relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
       <picture className="fixed inset-0 z-0 block h-full w-full">
         <source media="(min-width: 768px)" srcSet={fundoDesktopUrl} />
         <img src={fundoMobileUrl} alt="" aria-hidden="true" className="h-full w-full object-cover object-center" />
