@@ -181,21 +181,21 @@ const camposProbabilidade: Array<{
   campo: CampoNota;
   label: string;
 }> = [
-  { campo: "sc", label: "SC" },
-  { campo: "fe", label: "FE" },
-  { campo: "intervalo", label: "INT" },
+  { campo: "sc", label: "Controle" },
+  { campo: "fe", label: "Frequência / Exposição" },
+  { campo: "intervalo", label: "Intervalo" },
 ];
 
 const camposConsequencia: Array<{
   campo: CampoNota;
   label: string;
 }> = [
-  { campo: "sse", label: "SSE" },
-  { campo: "ope", label: "OPE" },
-  { campo: "fin", label: "FIN" },
-  { campo: "adm", label: "AMB" },
-  { campo: "img", label: "IMG" },
-  { campo: "lc", label: "L&C" },
+  { campo: "sse", label: "Segurança / Saúde / Meio ambiente" },
+  { campo: "ope", label: "Operação" },
+  { campo: "fin", label: "Financeiro" },
+  { campo: "adm", label: "Ambiental" },
+  { campo: "img", label: "Imagem da empresa" },
+  { campo: "lc", label: "Legal e Compliance" },
 ];
 
 const camposProbabilidadeResidual: Array<{
@@ -796,12 +796,12 @@ export default function RiscosAnaliseCompleta() {
 
   function renderCampoNota(campo: CampoNota, label: string) {
     return (
-      <label className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-        <span className="block text-center text-sm font-black text-white">
+      <label className="group rounded-xl border border-slate-700/70 bg-slate-900/80 p-2.5 shadow-sm shadow-slate-950/20 transition hover:border-blue-400/70 hover:bg-slate-900">
+        <span className="flex min-h-9 items-center text-[11px] font-black leading-4 text-slate-100">
           {label}
         </span>
         <select
-          className={`${inputClass} mt-3 w-full text-center`}
+          className={`${inputClass} mt-2 h-10 w-full rounded-lg px-2 text-center text-sm`}
           value={form[campo]}
           onChange={(event) => alterarNota(campo, event.target.value)}
         >
@@ -1143,32 +1143,53 @@ export default function RiscosAnaliseCompleta() {
             </div>
           </div>
 
-          <section className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/40 p-4">
-            <h3 className="text-sm font-black uppercase tracking-[0.28em] text-blue-200">
-              Análise e Avaliação Inerente
-            </h3>
-            <div className="mt-4 grid gap-4 2xl:grid-cols-[0.72fr_1.28fr]">
-              <section>
-              <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-                Probabilidade
-              </h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                {camposProbabilidade.map((item) =>
-                  renderCampoNota(item.campo, item.label),
-                )}
+          <section className="mt-5 rounded-2xl border border-slate-800 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(15,23,42,0.72))] p-4 shadow-xl shadow-slate-950/20">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-[0.28em] text-blue-100">
+                  Análise e Avaliação Inerente
+                </h3>
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  Preencha os critérios de probabilidade e consequência para o cálculo automático do risco.
+                </p>
               </div>
-            </section>
+              <span className={`rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}>
+                {previa.nivel}
+              </span>
+            </div>
 
-            <section>
-              <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
-                Consequência
-              </h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3 2xl:grid-cols-6">
-                {camposConsequencia.map((item) =>
-                  renderCampoNota(item.campo, item.label),
-                )}
-              </div>
-            </section>
+            <div className="mt-4 grid gap-3 xl:grid-cols-[0.78fr_1.22fr]">
+              <section className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-3">
+                <div className="flex items-center justify-between gap-3 border-b border-blue-400/15 pb-2">
+                  <h4 className="text-xs font-black uppercase tracking-[0.22em] text-blue-100">
+                    Probabilidade
+                  </h4>
+                  <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-blue-100">
+                    MPP {previa.mediaProbabilidade}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                  {camposProbabilidade.map((item) =>
+                    renderCampoNota(item.campo, item.label),
+                  )}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.05] p-3">
+                <div className="flex items-center justify-between gap-3 border-b border-cyan-400/15 pb-2">
+                  <h4 className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">
+                    Consequência
+                  </h4>
+                  <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-cyan-100">
+                    MPI {previa.mediaConsequencia}
+                  </span>
+                </div>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                  {camposConsequencia.map((item) =>
+                    renderCampoNota(item.campo, item.label),
+                  )}
+                </div>
+              </section>
             </div>
           </section>
 
