@@ -202,21 +202,21 @@ const camposProbabilidadeResidual: Array<{
   campo: CampoResidual;
   label: string;
 }> = [
-  { campo: "scResidual", label: "SC" },
-  { campo: "feResidual", label: "FE" },
-  { campo: "intervaloResidual", label: "INT" },
+  { campo: "scResidual", label: "Controle" },
+  { campo: "feResidual", label: "Frequência / Exposição" },
+  { campo: "intervaloResidual", label: "Intervalo" },
 ];
 
 const camposConsequenciaResidual: Array<{
   campo: CampoResidual;
   label: string;
 }> = [
-  { campo: "sseResidual", label: "SSE" },
-  { campo: "opeResidual", label: "OPE" },
-  { campo: "finResidual", label: "FIN" },
-  { campo: "admResidual", label: "AMB" },
-  { campo: "imgResidual", label: "IMG" },
-  { campo: "lcResidual", label: "L&C" },
+  { campo: "sseResidual", label: "Segurança / Saúde / Meio ambiente" },
+  { campo: "opeResidual", label: "Operação" },
+  { campo: "finResidual", label: "Financeiro" },
+  { campo: "admResidual", label: "Ambiental" },
+  { campo: "imgResidual", label: "Imagem da empresa" },
+  { campo: "lcResidual", label: "Legal e Compliance" },
 ];
 
 const inputClass =
@@ -817,12 +817,12 @@ export default function RiscosAnaliseCompleta() {
 
   function renderCampoNotaResidual(campo: CampoResidual, label: string) {
     return (
-      <label className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
-        <span className="block text-center text-sm font-black text-white">
+      <label className="group rounded-xl border border-slate-700/70 bg-slate-900/80 p-2.5 shadow-sm shadow-slate-950/20 transition hover:border-cyan-400/70 hover:bg-slate-900">
+        <span className="flex min-h-9 items-center text-[11px] font-black leading-4 text-slate-100">
           {label}
         </span>
         <select
-          className={`${inputClass} mt-3 w-full text-center`}
+          className={`${inputClass} mt-2 h-10 w-full rounded-lg px-2 text-center text-sm`}
           value={residual[campo]}
           onChange={(event) => alterarNotaResidual(campo, event.target.value)}
         >
@@ -1604,40 +1604,51 @@ export default function RiscosAnaliseCompleta() {
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+              <section className="rounded-2xl border border-slate-800 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(15,23,42,0.74))] p-4 shadow-xl shadow-slate-950/20">
                 <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-200">
+                    <h3 className="text-sm font-black uppercase tracking-[0.18em] text-blue-100">
                       Avaliação Residual
                     </h3>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
-                      Probabilidade, consequência e desempenho residual
+                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                      Informe os critérios após os controles para calcular o risco residual e o desempenho.
                     </p>
                   </div>
                   <BadgeNivel>{previaResidual.classificacao}</BadgeNivel>
                 </div>
 
-                <div className="mt-4 grid gap-4 xl:grid-cols-[0.72fr_1.28fr]">
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
-                      Probabilidade
-                    </p>
-                    <div className="mt-2 grid gap-3 sm:grid-cols-3">
+                <div className="mt-4 grid gap-3 xl:grid-cols-[0.78fr_1.22fr]">
+                  <section className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-3">
+                    <div className="flex items-center justify-between gap-3 border-b border-blue-400/15 pb-2">
+                      <h4 className="text-xs font-black uppercase tracking-[0.22em] text-blue-100">
+                        Probabilidade
+                      </h4>
+                      <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-blue-100">
+                        MPP {previaResidual.probabilidade}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
                       {camposProbabilidadeResidual.map((item) =>
                         renderCampoNotaResidual(item.campo, item.label),
                       )}
                     </div>
-                  </div>
-                  <div>
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
-                      Consequência
-                    </p>
-                    <div className="mt-2 grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+                  </section>
+
+                  <section className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.05] p-3">
+                    <div className="flex items-center justify-between gap-3 border-b border-cyan-400/15 pb-2">
+                      <h4 className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">
+                        Consequência
+                      </h4>
+                      <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-cyan-100">
+                        MPI {previaResidual.consequencia}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
                       {camposConsequenciaResidual.map((item) =>
                         renderCampoNotaResidual(item.campo, item.label),
                       )}
                     </div>
-                  </div>
+                  </section>
                 </div>
 
                 <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
