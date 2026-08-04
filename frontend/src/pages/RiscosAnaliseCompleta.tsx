@@ -817,12 +817,12 @@ export default function RiscosAnaliseCompleta() {
 
   function renderCampoNotaResidual(campo: CampoResidual, label: string) {
     return (
-      <label className="group rounded-xl border border-slate-700/70 bg-slate-900/80 p-2.5 shadow-sm shadow-slate-950/20 transition hover:border-cyan-400/70 hover:bg-slate-900">
-        <span className="flex min-h-9 items-center text-[11px] font-black leading-4 text-slate-100">
+      <label className="group flex min-h-[106px] flex-col rounded-xl border border-slate-700/70 bg-slate-900/80 p-2.5 shadow-sm shadow-slate-950/20 transition hover:border-cyan-400/70 hover:bg-slate-900">
+        <span className="flex min-h-10 items-start text-[10px] font-black leading-3 text-slate-100">
           {label}
         </span>
         <select
-          className={`${inputClass} mt-2 h-10 w-full rounded-lg px-2 text-center text-sm`}
+          className={`${inputClass} mt-auto h-10 w-full rounded-lg px-2 text-center text-sm`}
           value={residual[campo]}
           onChange={(event) => alterarNotaResidual(campo, event.target.value)}
         >
