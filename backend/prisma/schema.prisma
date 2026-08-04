@@ -1748,6 +1748,8 @@ model TreinamentoModeloParticipante {
   nota               Float?
   tentativas         Int       @default(0)
   respostasQuiz      String?
+  avaliacaoTreinamentoJson String?
+  avaliacaoTreinamentoEm   DateTime?
   versao             Int       @default(1)
   snapshotJson       String?
   assinaturaDataUrl  String?

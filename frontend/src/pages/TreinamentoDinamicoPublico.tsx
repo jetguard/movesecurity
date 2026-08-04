@@ -64,6 +64,51 @@ const formInicial = {
   empresa: "",
 };
 
+const perguntasAvaliacaoTreinamento = [
+  {
+    id: "satisfacao",
+    titulo: "Satisfação com o treinamento",
+    pergunta: "Como você avalia sua satisfação com o treinamento?",
+    opcoes: ["Muito satisfeito(a)", "Satisfeito(a)", "Neutro(a)", "Insatisfeito(a)", "Muito insatisfeito(a)"],
+  },
+  {
+    id: "aprendizado",
+    titulo: "Aprendizado",
+    pergunta: "Você considera que aprendeu algo novo durante o treinamento?",
+    opcoes: ["Sim, aprendi muito.", "Sim, aprendi um pouco.", "Não aprendi nada novo.", "Já conhecia todo o conteúdo."],
+  },
+  {
+    id: "aplicacao",
+    titulo: "Aplicação do conhecimento",
+    pergunta: "Você acredita que conseguirá aplicar o que aprendeu no seu trabalho?",
+    opcoes: ["Sim, totalmente.", "Sim, parcialmente.", "Ainda tenho dúvidas.", "Não."],
+  },
+  {
+    id: "qualidade",
+    titulo: "Qualidade do conteúdo",
+    pergunta: "O conteúdo apresentado foi claro e fácil de entender?",
+    opcoes: ["Muito claro.", "Claro.", "Regular.", "Pouco claro.", "Nada claro."],
+  },
+  {
+    id: "instrutor",
+    titulo: "Avaliação do instrutor",
+    pergunta: "Como você avalia a condução do instrutor?",
+    opcoes: ["Excelente.", "Boa.", "Regular.", "Ruim.", "Péssima."],
+  },
+  {
+    id: "duracao",
+    titulo: "Duração do treinamento",
+    pergunta: "A duração do treinamento foi adequada?",
+    opcoes: ["Sim.", "Poderia ser um pouco maior.", "Poderia ser um pouco menor."],
+  },
+  {
+    id: "avaliacaoGeral",
+    titulo: "Avaliação geral",
+    pergunta: "De forma geral, como você avalia este treinamento?",
+    opcoes: ["Excelente.", "Bom.", "Regular.", "Ruim.", "Péssimo."],
+  },
+];
+
 function limparCpf(cpf: string) {
   return cpf.replace(/\D/g, "");
 }
@@ -109,6 +154,8 @@ export default function TreinamentoDinamicoPublico() {
   const [perguntaAtual, setPerguntaAtual] = useState(0);
   const [respostas, setRespostas] = useState<Record<string, number>>({});
   const [resultado, setResultado] = useState<{ aprovado: boolean; nota: number; acertos: number } | null>(null);
+  const [avaliacaoTreinamento, setAvaliacaoTreinamento] = useState<Record<string, string>>({});
+  const [comentarioAvaliacao, setComentarioAvaliacao] = useState("");
   const [assinaturaVazia, setAssinaturaVazia] = useState(true);
   const [assinando, setAssinando] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -117,7 +164,8 @@ export default function TreinamentoDinamicoPublico() {
   const totalEtapas = modelo?.etapas.length || 0;
   const indiceQuiz = totalEtapas;
   const indiceResultado = totalEtapas + 1;
-  const indiceAssinatura = totalEtapas + 2;
+  const indiceAvaliacaoTreinamento = totalEtapas + 2;
+  const indiceAssinatura = totalEtapas + 3;
   const etapa = modelo?.etapas[indice];
 
   useEffect(() => {
@@ -174,7 +222,7 @@ export default function TreinamentoDinamicoPublico() {
       setModelo(treinamentoRecebido);
       const registro = response.data.participante as Participante;
       setParticipante(registro);
-      const etapaAssinaturaRecebida = (treinamentoRecebido.etapas?.length || 0) + 2;
+      const etapaAssinaturaRecebida = (treinamentoRecebido.etapas?.length || 0) + 3;
       setIndice(Math.max(0, Math.min(etapaAssinaturaRecebida, (registro.etapaAtual || 1) - 1)));
     } catch (error: any) {
       setMensagem(error.response?.data?.error || "Não foi possível iniciar o treinamento.");
@@ -227,11 +275,36 @@ export default function TreinamentoDinamicoPublico() {
       rolarTopo();
       setMensagem(
         response.data.aprovado
-          ? "Você atingiu a nota mínima. Avance para assinar e emitir o certificado."
+          ? "Você atingiu a nota mínima. Avance para avaliar o treinamento."
           : "Você não atingiu a nota mínima. Revise as perguntas e tente novamente.",
       );
     } catch (error: any) {
       setMensagem(error.response?.data?.error || "Não foi possível validar a avaliação.");
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function salvarAvaliacaoTreinamento() {
+    if (!participante) return;
+    const faltantes = perguntasAvaliacaoTreinamento.filter((pergunta) => !avaliacaoTreinamento[pergunta.id]);
+    if (faltantes.length) {
+      setMensagem("Responda todos os itens obrigatórios da avaliação do treinamento.");
+      return;
+    }
+    setCarregando(true);
+    setMensagem("");
+    try {
+      const response = await axios.post(`/api/public/treinamentos-dinamicos/${participante.token}/avaliacao`, {
+        respostas: avaliacaoTreinamento,
+        comentario: comentarioAvaliacao,
+      });
+      setParticipante(response.data.participante);
+      setMensagem(response.data.mensagem || "Avaliação do treinamento registrada com sucesso.");
+      setIndice(indiceAssinatura);
+      rolarTopo();
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível salvar a avaliação do treinamento.");
     } finally {
       setCarregando(false);
     }
@@ -363,13 +436,14 @@ export default function TreinamentoDinamicoPublico() {
 
         {participante && modelo && (
           <div className="space-y-5">
-            <div className="grid gap-2 md:grid-cols-4">
-              {["Etapas", "Avaliação", "Resultado", "Assinatura"].map((label, pos) => {
+            <div className="grid gap-2 md:grid-cols-5">
+              {["Etapas", "Avaliação", "Resultado", "Opinião", "Assinatura"].map((label, pos) => {
                 const ativo =
                   (pos === 0 && indice < indiceQuiz) ||
                   (pos === 1 && indice === indiceQuiz) ||
                   (pos === 2 && indice === indiceResultado) ||
-                  (pos === 3 && indice >= indiceAssinatura);
+                  (pos === 3 && indice === indiceAvaliacaoTreinamento) ||
+                  (pos === 4 && indice >= indiceAssinatura);
                 return (
                   <div key={label} className={`rounded-2xl px-4 py-3 text-sm font-black shadow ${ativo ? "bg-blue-600 text-white" : "bg-white/90 text-blue-950"}`}>
                     {label}
@@ -457,14 +531,91 @@ export default function TreinamentoDinamicoPublico() {
                   {resultado?.acertos || 0} acertos · nota {resultado?.nota || participante.nota || 0}% · mínimo {modelo.notaMinima}%
                 </p>
                 {resultado?.aprovado ? (
-                  <button onClick={() => setIndice(indiceAssinatura)} className="mt-6 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white">
-                    Avançar para assinatura
+                  <button onClick={() => setIndice(indiceAvaliacaoTreinamento)} className="mt-6 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white">
+                    Avaliar treinamento
                   </button>
                 ) : (
                   <button onClick={() => { setIndice(indiceQuiz); setPerguntaAtual(0); }} className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white">
                     Revisar perguntas
                   </button>
                 )}
+              </section>
+            )}
+
+            {indice === indiceAvaliacaoTreinamento && (
+              <section className="rounded-2xl border border-blue-200 bg-white/96 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-6">
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">Avaliação do treinamento</p>
+                <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <h2 className="text-3xl font-black text-slate-950">Conte como foi sua experiência</h2>
+                    <p className="mt-2 max-w-3xl text-sm font-bold leading-6 text-slate-700">
+                      Sua opinião ajuda a melhorar os próximos treinamentos. Responda os itens abaixo para liberar a assinatura e emissão do certificado.
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
+                    {Object.keys(avaliacaoTreinamento).length}/{perguntasAvaliacaoTreinamento.length} respondidas
+                  </div>
+                </div>
+
+                <div className="mt-6 grid gap-4">
+                  {perguntasAvaliacaoTreinamento.map((item, index) => (
+                    <article key={item.id} className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-base font-black text-slate-950">{item.titulo}</h3>
+                          <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{item.pergunta}</p>
+                          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            {item.opcoes.map((opcao) => {
+                              const ativo = avaliacaoTreinamento[item.id] === opcao;
+                              return (
+                                <button
+                                  key={opcao}
+                                  type="button"
+                                  onClick={() =>
+                                    setAvaliacaoTreinamento((atual) => ({
+                                      ...atual,
+                                      [item.id]: opcao,
+                                    }))
+                                  }
+                                  className={`min-h-12 rounded-2xl border px-4 py-3 text-left text-sm font-black shadow-sm transition ${
+                                    ativo
+                                      ? "border-blue-600 bg-blue-600 text-white shadow-blue-200"
+                                      : "border-blue-200 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
+                                  }`}
+                                >
+                                  {opcao}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+
+                <label className="mt-5 block rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+                  <span className="text-sm font-black text-slate-950">Comentários ou sugestões, opcional</span>
+                  <textarea
+                    value={comentarioAvaliacao}
+                    onChange={(event) => setComentarioAvaliacao(event.target.value)}
+                    rows={4}
+                    placeholder="Escreva aqui alguma sugestão para melhorar os próximos treinamentos."
+                    className="mt-3 w-full resize-none rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                  />
+                </label>
+
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <button type="button" onClick={() => setIndice(indiceResultado)} className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700">
+                    Voltar ao resultado
+                  </button>
+                  <button type="button" disabled={carregando} onClick={salvarAvaliacaoTreinamento} className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-emerald-700 disabled:opacity-60">
+                    Salvar avaliação e assinar
+                  </button>
+                </div>
               </section>
             )}
 

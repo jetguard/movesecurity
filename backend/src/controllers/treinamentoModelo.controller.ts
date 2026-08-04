@@ -156,7 +156,7 @@ function caminhoFundoCertificado() {
 
 function porcentagem(etapaAtual: number, totalEtapas: number, status?: string | null) {
   if (String(status || "").toLowerCase().startsWith("conclu")) return 100;
-  const total = Math.max(totalEtapas + 2, 2);
+  const total = Math.max(totalEtapas + 3, 2);
   return Math.max(0, Math.min(99, Math.round(((etapaAtual - 1) / total) * 100)));
 }
 
@@ -790,6 +790,78 @@ export async function responderQuizTreinamentoModelo(req: Request, res: Response
   }
 }
 
+const camposAvaliacaoTreinamento = [
+  "satisfacao",
+  "aprendizado",
+  "aplicacao",
+  "qualidade",
+  "instrutor",
+  "duracao",
+  "avaliacaoGeral",
+];
+
+export async function salvarAvaliacaoTreinamentoModelo(req: Request, res: Response) {
+  try {
+    const token = texto(req.params.token);
+    const respostas = req.body.respostas || {};
+    const comentario = texto(req.body.comentario);
+    const participante = await db.treinamentoModeloParticipante.findUnique({
+      where: { token },
+      include: {
+        treinamento: {
+          include: {
+            etapas: { orderBy: { ordem: "asc" } },
+            perguntas: {
+              orderBy: { ordem: "asc" },
+              include: { alternativas: { orderBy: { ordem: "asc" } } },
+            },
+          },
+        },
+      },
+    });
+    if (!participante) return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
+
+    const snapshot = lerSnapshot(participante, participante.treinamento, true);
+    if ((participante.nota || 0) < snapshot.notaMinima) {
+      return res.status(400).json({ error: "Conclua a avaliaÃ§Ã£o final antes de avaliar o treinamento." });
+    }
+
+    const faltantes = camposAvaliacaoTreinamento.filter((campo) => !texto(respostas[campo]));
+    if (faltantes.length) {
+      return res.status(400).json({ error: "Responda todos os itens obrigatÃ³rios da avaliaÃ§Ã£o do treinamento." });
+    }
+
+    const payload = {
+      respostas: camposAvaliacaoTreinamento.reduce((mapa: Record<string, string>, campo) => {
+        mapa[campo] = texto(respostas[campo]);
+        return mapa;
+      }, {}),
+      comentario: comentario || null,
+      respondidoEm: new Date().toISOString(),
+    };
+    const etapaAssinatura = snapshot.etapas.length + 4;
+    const atualizado = await db.treinamentoModeloParticipante.update({
+      where: { id: participante.id },
+      data: {
+        avaliacaoTreinamentoJson: JSON.stringify(payload),
+        avaliacaoTreinamentoEm: new Date(),
+        etapaAtual: Math.max(participante.etapaAtual || 1, etapaAssinatura),
+        status: "Aguardando assinatura",
+        porcentagem: 99,
+        ultimoAcessoEm: new Date(),
+        navegador: userAgent(req),
+      },
+    });
+
+    return res.json({
+      mensagem: "AvaliaÃ§Ã£o do treinamento registrada com sucesso.",
+      participante: respostaParticipante(atualizado),
+    });
+  } catch (error: any) {
+    return res.status(500).json({ error: error?.message || "Erro ao salvar avaliaÃ§Ã£o do treinamento." });
+  }
+}
+
 export async function concluirTreinamentoModelo(req: Request, res: Response) {
   try {
     const token = texto(req.params.token);
@@ -816,6 +888,10 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     if ((participante.nota || 0) < snapshot.notaMinima) {
       return res.status(400).json({ error: "A nota mínima ainda não foi atingida." });
+    }
+
+    if (!participante.avaliacaoTreinamentoJson) {
+      return res.status(400).json({ error: "Responda a avaliaÃ§Ã£o do treinamento antes de emitir o certificado." });
     }
 
     const comCodigo = await prisma.$transaction(async (tx) => {

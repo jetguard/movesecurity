@@ -11,6 +11,7 @@ import {
   localizarParticipanteTreinamentoModelo,
   reenviarEmailTreinamentoModelo,
   responderQuizTreinamentoModelo,
+  salvarAvaliacaoTreinamentoModelo,
   salvarTreinamentoModelo,
 } from "../controllers/treinamentoModelo.controller";
 import {
@@ -28,6 +29,7 @@ router.get("/public/treinamentos-dinamicos/:slug", buscarTreinamentoPublico);
 router.post("/public/treinamentos-dinamicos/:slug/iniciar", iniciarTreinamentoModelo);
 router.put("/public/treinamentos-dinamicos/:token/etapa", concluirEtapaTreinamentoModelo);
 router.post("/public/treinamentos-dinamicos/:token/quiz", responderQuizTreinamentoModelo);
+router.post("/public/treinamentos-dinamicos/:token/avaliacao", salvarAvaliacaoTreinamentoModelo);
 router.post("/public/treinamentos-dinamicos/:token/concluir", concluirTreinamentoModelo);
 router.get("/public/treinamentos-dinamicos/:token/certificado", baixarCertificadoTreinamentoModelo);
 
