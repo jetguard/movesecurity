@@ -390,7 +390,7 @@ export default function AdminLayout() {
     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-400 transition-colors duration-100 hover:bg-slate-800 hover:text-white";
   const menuText = `whitespace-nowrap ${mostrarTextoMenu ? "max-w-48 opacity-100" : "max-w-0 overflow-hidden opacity-0"}`;
   const menuToggle = `ml-auto ${mostrarTextoMenu ? "max-w-8 opacity-100" : "max-w-0 overflow-hidden opacity-0"}`;
-  const submenuClass = `ml-6 flex flex-col gap-2 overflow-hidden border-l border-slate-800 pl-4 ${mostrarTextoMenu ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"}`;
+  const submenuClass = `ml-6 flex flex-col gap-2 border-l border-slate-800 pl-4 pr-1 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700/70 [&::-webkit-scrollbar-track]:bg-transparent ${mostrarTextoMenu ? "max-h-[calc(100vh-10rem)] overflow-y-auto opacity-100" : "max-h-0 overflow-hidden opacity-0"}`;
 
   if (tecnicoManutencao && !rotaTecnicoPermitida) {
     return <Navigate to="/cameras" replace />;
