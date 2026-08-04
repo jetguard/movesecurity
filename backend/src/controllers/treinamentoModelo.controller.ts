@@ -439,7 +439,7 @@ export async function listarTreinamentosModelo(req: AuthRequest, res: Response) 
     participantes: modelo.participantes.map((item: any) => ({
       ...item,
       assinaturaDataUrl: undefined,
-      certificadoUrl: item.certificadoArquivo ? certificadoUrl(item.token) : null,
+      certificadoUrl: treinamentoConcluido(item.status) || item.certificadoArquivo ? certificadoUrl(item.token) : null,
     })),
   })));
 }
@@ -563,6 +563,22 @@ export async function excluirTreinamentoModelo(req: AuthRequest, res: Response) 
     return res.status(204).send();
   } catch (error: any) {
     return res.status(500).json({ error: error?.message || "Erro ao excluir treinamento." });
+  }
+}
+
+export async function excluirParticipanteTreinamentoModelo(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) return res.status(400).json({ error: "Registro invÃ¡lido." });
+    const participante = await db.treinamentoModeloParticipante.findUnique({ where: { id } });
+    if (!participante) return res.status(404).json({ error: "Registro nÃ£o encontrado." });
+    if (participante.certificadoArquivo) {
+      fs.rmSync(participante.certificadoArquivo, { force: true });
+    }
+    await db.treinamentoModeloParticipante.delete({ where: { id } });
+    return res.status(204).send();
+  } catch (error: any) {
+    return res.status(500).json({ error: error?.message || "Erro ao excluir participante." });
   }
 }
 

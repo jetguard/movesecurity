@@ -4,6 +4,7 @@ import {
   buscarTreinamentoPublico,
   concluirEtapaTreinamentoModelo,
   concluirTreinamentoModelo,
+  excluirParticipanteTreinamentoModelo,
   excluirTreinamentoModelo,
   iniciarTreinamentoModelo,
   listarTreinamentosModelo,
@@ -50,6 +51,12 @@ router.put(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   salvarTreinamentoModelo,
+);
+router.delete(
+  "/treinamentos-dinamicos/participantes/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  excluirParticipanteTreinamentoModelo,
 );
 router.delete(
   "/treinamentos-dinamicos/:id",

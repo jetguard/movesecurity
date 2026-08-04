@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   CheckCircle2,
   Copy,
@@ -115,6 +116,7 @@ function copiarLink(link: string) {
 }
 
 export default function TreinamentosDinamicos() {
+  const [searchParams] = useSearchParams();
   const [modelos, setModelos] = useState<Modelo[]>([]);
   const [selecionadoId, setSelecionadoId] = useState<number | null>(null);
   const [form, setForm] = useState<ModeloForm>(modeloInicial);
@@ -133,6 +135,13 @@ export default function TreinamentosDinamicos() {
   useEffect(() => {
     carregar().catch(() => undefined);
   }, []);
+
+  useEffect(() => {
+    const id = Number(searchParams.get("editar") || 0);
+    if (!id || !modelos.length) return;
+    const modelo = modelos.find((item) => item.id === id);
+    if (modelo) editar(modelo);
+  }, [modelos, searchParams]);
 
   const modeloSelecionado = useMemo(
     () => modelos.find((item) => item.id === selecionadoId) || null,

@@ -4,12 +4,16 @@ import {
   CheckCircle2,
   Clock3,
   Copy,
+  Edit,
   ExternalLink,
   FileText,
   Mail,
   Search,
+  Trash2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
+import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type Participante = {
   id: number;
@@ -62,12 +66,17 @@ function indicadores(lista: Participante[]) {
 }
 
 export default function TreinamentosCriados() {
+  const navigate = useNavigate();
   const [modelos, setModelos] = useState<Modelo[]>([]);
   const [selecionadoId, setSelecionadoId] = useState<number | "">("");
   const [busca, setBusca] = useState("");
   const [status, setStatus] = useState("Todos");
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
+  const [excluindoId, setExcluindoId] = useState<number | null>(null);
+  const podeEditar = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
+    perfilAtual(),
+  );
 
   async function carregar() {
     const response = await api.get("/treinamentos-dinamicos");
@@ -134,6 +143,36 @@ export default function TreinamentosCriados() {
     }
   }
 
+  async function excluirModelo(modelo: Modelo) {
+    if (!podeEditar) return;
+    if (!confirm(`Deseja excluir o treinamento ${modelo.codigo}? Essa ação remove o modelo e seus participantes.`)) return;
+    setMensagem("");
+    try {
+      await api.delete(`/treinamentos-dinamicos/${modelo.id}`);
+      setMensagem("Treinamento excluído com sucesso.");
+      setSelecionadoId("");
+      await carregar();
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível excluir o treinamento.");
+    }
+  }
+
+  async function excluirParticipante(item: Participante) {
+    if (!podeEditar) return;
+    if (!confirm(`Deseja excluir o registro de ${item.nomeCompleto}?`)) return;
+    setExcluindoId(item.id);
+    setMensagem("");
+    try {
+      await api.delete(`/treinamentos-dinamicos/participantes/${item.id}`);
+      setMensagem("Registro excluído com sucesso.");
+      await carregar();
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Não foi possível excluir o registro.");
+    } finally {
+      setExcluindoId(null);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
@@ -150,6 +189,24 @@ export default function TreinamentosCriados() {
         </div>
         {modeloSelecionado && (
           <div className="flex flex-wrap gap-2">
+            {podeEditar && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/treinamentos-dinamicos?editar=${modeloSelecionado.id}`)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-4 py-3 text-sm font-black text-blue-700 hover:bg-blue-50 dark:border-blue-500/30 dark:text-blue-200 dark:hover:bg-blue-500/10"
+                >
+                  <Edit size={18} /> Editar treinamento
+                </button>
+                <button
+                  type="button"
+                  onClick={() => excluirModelo(modeloSelecionado)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-3 text-sm font-black text-red-700 hover:bg-red-50 dark:border-red-500/30 dark:text-red-200 dark:hover:bg-red-500/10"
+                >
+                  <Trash2 size={18} /> Excluir treinamento
+                </button>
+              </>
+            )}
             <a
               href={modeloSelecionado.publicUrl}
               target="_blank"
@@ -299,16 +356,38 @@ export default function TreinamentosCriados() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    {concluido(item.status) && (
-                      <button
-                        type="button"
-                        onClick={() => reenviarEmail(item)}
-                        disabled={enviandoId === item.id}
-                        className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-200"
-                      >
-                        <Mail size={14} /> {enviandoId === item.id ? "Enviando..." : "Enviar"}
-                      </button>
-                    )}
+                    <div className="flex flex-wrap justify-end gap-2">
+                      {item.certificadoUrl && (
+                        <a
+                          href={item.certificadoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 rounded-lg border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-700 transition hover:bg-blue-600 hover:text-white dark:text-blue-200"
+                        >
+                          <FileText size={14} /> PDF
+                        </a>
+                      )}
+                      {concluido(item.status) && (
+                        <button
+                          type="button"
+                          onClick={() => reenviarEmail(item)}
+                          disabled={enviandoId === item.id}
+                          className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-200"
+                        >
+                          <Mail size={14} /> {enviandoId === item.id ? "Enviando..." : "Enviar"}
+                        </button>
+                      )}
+                      {podeEditar && (
+                        <button
+                          type="button"
+                          onClick={() => excluirParticipante(item)}
+                          disabled={excluindoId === item.id}
+                          className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-200"
+                        >
+                          <Trash2 size={14} /> {excluindoId === item.id ? "Excluindo..." : "Excluir"}
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
