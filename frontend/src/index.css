@@ -489,15 +489,9 @@
   .treinamento-dinamico-publico input,
   .treinamento-dinamico-publico textarea,
   .treinamento-dinamico-publico select,
-  .treinamentos-dinamicos-admin input,
-  .treinamentos-dinamicos-admin textarea,
-  .treinamentos-dinamicos-admin select,
   .dark .treinamento-dinamico-publico input,
   .dark .treinamento-dinamico-publico textarea,
-  .dark .treinamento-dinamico-publico select,
-  .dark .treinamentos-dinamicos-admin input,
-  .dark .treinamentos-dinamicos-admin textarea,
-  .dark .treinamentos-dinamicos-admin select {
+  .dark .treinamento-dinamico-publico select {
     background-color: #ffffff !important;
     border-color: #93c5fd !important;
     color: #07132f !important;
@@ -506,19 +500,13 @@
 
   .treinamento-dinamico-publico input::placeholder,
   .treinamento-dinamico-publico textarea::placeholder,
-  .treinamentos-dinamicos-admin input::placeholder,
-  .treinamentos-dinamicos-admin textarea::placeholder,
   .dark .treinamento-dinamico-publico input::placeholder,
-  .dark .treinamento-dinamico-publico textarea::placeholder,
-  .dark .treinamentos-dinamicos-admin input::placeholder,
-  .dark .treinamentos-dinamicos-admin textarea::placeholder {
+  .dark .treinamento-dinamico-publico textarea::placeholder {
     color: #475569 !important;
   }
 
   .treinamento-dinamico-publico option,
-  .treinamentos-dinamicos-admin option,
-  .dark .treinamento-dinamico-publico option,
-  .dark .treinamentos-dinamicos-admin option {
+  .dark .treinamento-dinamico-publico option {
     background-color: #ffffff !important;
     color: #07132f !important;
   }
@@ -526,15 +514,9 @@
   .treinamento-dinamico-publico input:-webkit-autofill,
   .treinamento-dinamico-publico input:-webkit-autofill:hover,
   .treinamento-dinamico-publico input:-webkit-autofill:focus,
-  .treinamentos-dinamicos-admin input:-webkit-autofill,
-  .treinamentos-dinamicos-admin input:-webkit-autofill:hover,
-  .treinamentos-dinamicos-admin input:-webkit-autofill:focus,
   .dark .treinamento-dinamico-publico input:-webkit-autofill,
   .dark .treinamento-dinamico-publico input:-webkit-autofill:hover,
-  .dark .treinamento-dinamico-publico input:-webkit-autofill:focus,
-  .dark .treinamentos-dinamicos-admin input:-webkit-autofill,
-  .dark .treinamentos-dinamicos-admin input:-webkit-autofill:hover,
-  .dark .treinamentos-dinamicos-admin input:-webkit-autofill:focus {
+  .dark .treinamento-dinamico-publico input:-webkit-autofill:focus {
     -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
     -webkit-text-fill-color: #07132f !important;
     caret-color: #07132f !important;
@@ -577,21 +559,6 @@
   .dark .treinamento-dinamico-publico .border-slate-200,
   .dark .treinamento-dinamico-publico .border-amber-200 {
     border-color: #93c5fd !important;
-  }
-
-  .dark .treinamentos-dinamicos-admin .bg-white,
-  .dark .treinamentos-dinamicos-admin .bg-slate-50,
-  .dark .treinamentos-dinamicos-admin .bg-blue-50 {
-    background-color: #ffffff !important;
-    color: #07132f !important;
-  }
-
-  .dark .treinamentos-dinamicos-admin .text-slate-900,
-  .dark .treinamentos-dinamicos-admin .text-slate-800,
-  .dark .treinamentos-dinamicos-admin .text-slate-700,
-  .dark .treinamentos-dinamicos-admin .text-slate-600,
-  .dark .treinamentos-dinamicos-admin .text-slate-500 {
-    color: #07132f !important;
   }
 
   .treinamento-terminal-publico .terminal-integration-video,

@@ -298,7 +298,7 @@ export default function TreinamentosDinamicos() {
       <section className="space-y-5">
         <form
           onSubmit={salvar}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 [&_input]:bg-white [&_input]:text-slate-950 [&_input]:placeholder:text-slate-500 [&_select]:bg-white [&_select]:text-slate-950 [&_textarea]:bg-white [&_textarea]:text-slate-950 [&_textarea]:placeholder:text-slate-500 dark:[&_input]:bg-white dark:[&_input]:text-slate-950 dark:[&_input]:placeholder:text-slate-500 dark:[&_select]:bg-white dark:[&_select]:text-slate-950 dark:[&_textarea]:bg-white dark:[&_textarea]:text-slate-950 dark:[&_textarea]:placeholder:text-slate-500"
+          className="rounded-2xl border border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.18),transparent_34%),linear-gradient(135deg,#0f172a,#020617)] p-5 text-white shadow-xl shadow-slate-950/30 [&_.text-slate-900]:!text-white [&_.text-slate-600]:!text-slate-300 [&_.text-slate-500]:!text-slate-300 [&_input]:!border-slate-700 [&_input]:!bg-slate-950 [&_input]:!text-white [&_input]:placeholder:!text-slate-500 [&_select]:!border-slate-700 [&_select]:!bg-slate-950 [&_select]:!text-white [&_textarea]:!border-slate-700 [&_textarea]:!bg-slate-950 [&_textarea]:!text-white [&_textarea]:placeholder:!text-slate-500"
         >
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
@@ -549,7 +549,7 @@ export default function TreinamentosDinamicos() {
           </button>
         </form>
 
-        <aside className="space-y-5">
+        <aside className="hidden">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
             <h2 className="text-lg font-black text-slate-900 dark:text-white">Treinamentos criados</h2>
             <label className="mt-4 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">

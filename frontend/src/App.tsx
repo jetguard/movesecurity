@@ -142,6 +142,9 @@ const TreinamentosPocSep006 = lazyWithReload(
 const TreinamentosDinamicos = lazyWithReload(
   () => import("./pages/TreinamentosDinamicos"),
 );
+const TreinamentosCriados = lazyWithReload(
+  () => import("./pages/TreinamentosCriados"),
+);
 const IntegracoesTerminal = lazyWithReload(
   () => import("./pages/IntegracoesTerminal"),
 );
@@ -360,6 +363,21 @@ export default function App() {
                   ]}
                 >
                   <TreinamentosDinamicos />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="treinamentos-criados"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.PORTARIA,
+                  ]}
+                >
+                  <TreinamentosCriados />
                 </ProtectedRoute>
               }
             />

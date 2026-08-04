@@ -35,6 +35,7 @@ export default function ProtectedRoute({ children, perfis }: Props) {
       "/treinamentos-poc-sep-005",
       "/treinamentos-poc-sep-006",
       "/treinamentos-dinamicos",
+      "/treinamentos-criados",
       "/meus-dados",
       "/perfil",
       "/alterar-senha",
