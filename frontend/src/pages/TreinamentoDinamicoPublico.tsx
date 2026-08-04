@@ -155,6 +155,7 @@ export default function TreinamentoDinamicoPublico() {
   const [respostas, setRespostas] = useState<Record<string, number>>({});
   const [resultado, setResultado] = useState<{ aprovado: boolean; nota: number; acertos: number } | null>(null);
   const [avaliacaoTreinamento, setAvaliacaoTreinamento] = useState<Record<string, string>>({});
+  const [perguntaAvaliacaoAtual, setPerguntaAvaliacaoAtual] = useState(0);
   const [comentarioAvaliacao, setComentarioAvaliacao] = useState("");
   const [assinaturaVazia, setAssinaturaVazia] = useState(true);
   const [assinando, setAssinando] = useState(false);
@@ -167,6 +168,9 @@ export default function TreinamentoDinamicoPublico() {
   const indiceAvaliacaoTreinamento = totalEtapas + 2;
   const indiceAssinatura = totalEtapas + 3;
   const etapa = modelo?.etapas[indice];
+  const totalAvaliacaoTreinamento = perguntasAvaliacaoTreinamento.length + 1;
+  const perguntaAvaliacao = perguntasAvaliacaoTreinamento[perguntaAvaliacaoAtual];
+  const progressoAvaliacaoTreinamento = Math.round(((perguntaAvaliacaoAtual + 1) / totalAvaliacaoTreinamento) * 100);
 
   useEffect(() => {
     axios
@@ -308,6 +312,25 @@ export default function TreinamentoDinamicoPublico() {
     } finally {
       setCarregando(false);
     }
+  }
+
+  function avancarAvaliacaoTreinamento() {
+    if (perguntaAvaliacaoAtual < perguntasAvaliacaoTreinamento.length) {
+      const atual = perguntasAvaliacaoTreinamento[perguntaAvaliacaoAtual];
+      if (!avaliacaoTreinamento[atual.id]) {
+        setMensagem("Selecione uma opção para avançar.");
+        return;
+      }
+    }
+    setMensagem("");
+    setPerguntaAvaliacaoAtual((atual) => Math.min(totalAvaliacaoTreinamento - 1, atual + 1));
+    rolarTopo();
+  }
+
+  function voltarAvaliacaoTreinamento() {
+    setMensagem("");
+    setPerguntaAvaliacaoAtual((atual) => Math.max(0, atual - 1));
+    rolarTopo();
   }
 
   function prepararCanvas() {
@@ -531,7 +554,7 @@ export default function TreinamentoDinamicoPublico() {
                   {resultado?.acertos || 0} acertos · nota {resultado?.nota || participante.nota || 0}% · mínimo {modelo.notaMinima}%
                 </p>
                 {resultado?.aprovado ? (
-                  <button onClick={() => setIndice(indiceAvaliacaoTreinamento)} className="mt-6 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white">
+                  <button onClick={() => { setPerguntaAvaliacaoAtual(0); setIndice(indiceAvaliacaoTreinamento); }} className="mt-6 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white">
                     Avaliar treinamento
                   </button>
                 ) : (
@@ -552,69 +575,115 @@ export default function TreinamentoDinamicoPublico() {
                       Sua opinião ajuda a melhorar os próximos treinamentos. Responda os itens abaixo para liberar a assinatura e emissão do certificado.
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
-                    {Object.keys(avaliacaoTreinamento).length}/{perguntasAvaliacaoTreinamento.length} respondidas
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
+                    Etapa {perguntaAvaliacaoAtual + 1} de {totalAvaliacaoTreinamento}
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-4">
-                  {perguntasAvaliacaoTreinamento.map((item, index) => (
-                    <article key={item.id} className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-sm font-black text-white">
+                <div className="mt-6">
+                  <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+                    <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${progressoAvaliacaoTreinamento}%` }} />
+                  </div>
+                  <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
+                    {Array.from({ length: totalAvaliacaoTreinamento }).map((_, index) => {
+                      const preenchida =
+                        index < perguntasAvaliacaoTreinamento.length
+                          ? Boolean(avaliacaoTreinamento[perguntasAvaliacaoTreinamento[index].id])
+                          : true;
+                      const atual = index === perguntaAvaliacaoAtual;
+                      return (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => setPerguntaAvaliacaoAtual(index)}
+                          className={`rounded-xl border px-3 py-2 text-xs font-black transition ${
+                            atual
+                              ? "border-blue-600 bg-blue-600 text-white"
+                              : preenchida
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                : "border-blue-100 bg-white text-blue-900"
+                          }`}
+                        >
                           {index + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="text-base font-black text-slate-950">{item.titulo}</h3>
-                          <p className="mt-1 text-sm font-bold leading-6 text-slate-700">{item.pergunta}</p>
-                          <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                            {item.opcoes.map((opcao) => {
-                              const ativo = avaliacaoTreinamento[item.id] === opcao;
-                              return (
-                                <button
-                                  key={opcao}
-                                  type="button"
-                                  onClick={() =>
-                                    setAvaliacaoTreinamento((atual) => ({
-                                      ...atual,
-                                      [item.id]: opcao,
-                                    }))
-                                  }
-                                  className={`min-h-12 rounded-2xl border px-4 py-3 text-left text-sm font-black shadow-sm transition ${
-                                    ativo
-                                      ? "border-blue-600 bg-blue-600 text-white shadow-blue-200"
-                                      : "border-blue-200 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
-                                  }`}
-                                >
-                                  {opcao}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                    </article>
-                  ))}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                <label className="mt-5 block rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
-                  <span className="text-sm font-black text-slate-950">Comentários ou sugestões, opcional</span>
-                  <textarea
-                    value={comentarioAvaliacao}
-                    onChange={(event) => setComentarioAvaliacao(event.target.value)}
-                    rows={4}
-                    placeholder="Escreva aqui alguma sugestão para melhorar os próximos treinamentos."
-                    className="mt-3 w-full resize-none rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
-                  />
-                </label>
+                {perguntaAvaliacao ? (
+                  <article className="mt-6 rounded-3xl border border-blue-100 bg-white p-5 shadow-lg shadow-blue-100/50 sm:p-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white">
+                        {perguntaAvaliacaoAtual + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+                          {perguntaAvaliacao.titulo}
+                        </p>
+                        <h3 className="mt-2 text-2xl font-black leading-tight text-slate-950">
+                          {perguntaAvaliacao.pergunta}
+                        </h3>
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                          {perguntaAvaliacao.opcoes.map((opcao) => {
+                            const ativo = avaliacaoTreinamento[perguntaAvaliacao.id] === opcao;
+                            return (
+                              <button
+                                key={opcao}
+                                type="button"
+                                onClick={() =>
+                                  setAvaliacaoTreinamento((atual) => ({
+                                    ...atual,
+                                    [perguntaAvaliacao.id]: opcao,
+                                  }))
+                                }
+                                className={`min-h-14 rounded-2xl border px-4 py-3 text-left text-sm font-black shadow-sm transition ${
+                                  ativo
+                                    ? "border-blue-600 bg-blue-600 text-white shadow-blue-200"
+                                    : "border-blue-200 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
+                                }`}
+                              >
+                                {opcao}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  </article>
+                ) : (
+                  <article className="mt-6 rounded-3xl border border-blue-100 bg-white p-5 shadow-lg shadow-blue-100/50 sm:p-6">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">Etapa final da opinião</p>
+                    <h3 className="mt-2 text-2xl font-black text-slate-950">Comentários ou sugestões</h3>
+                    <p className="mt-2 text-sm font-bold leading-6 text-slate-700">
+                      Este campo é opcional. Use se quiser registrar alguma ideia para melhorar os próximos treinamentos.
+                    </p>
+                    <textarea
+                      value={comentarioAvaliacao}
+                      onChange={(event) => setComentarioAvaliacao(event.target.value)}
+                      rows={5}
+                      placeholder="Escreva aqui sua sugestão."
+                      className="mt-5 w-full resize-none rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                    <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-black text-slate-700">
+                      Respostas marcadas: {Object.keys(avaliacaoTreinamento).length} de {perguntasAvaliacaoTreinamento.length}
+                    </div>
+                  </article>
+                )}
 
                 <div className="mt-6 flex flex-wrap gap-3">
-                  <button type="button" onClick={() => setIndice(indiceResultado)} className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700">
-                    Voltar ao resultado
+                  <button type="button" onClick={perguntaAvaliacaoAtual === 0 ? () => setIndice(indiceResultado) : voltarAvaliacaoTreinamento} className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700">
+                    {perguntaAvaliacaoAtual === 0 ? "Voltar ao resultado" : "Voltar etapa"}
                   </button>
-                  <button type="button" disabled={carregando} onClick={salvarAvaliacaoTreinamento} className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-emerald-700 disabled:opacity-60">
-                    Salvar avaliação e assinar
-                  </button>
+                  {perguntaAvaliacaoAtual < totalAvaliacaoTreinamento - 1 ? (
+                    <button type="button" onClick={avancarAvaliacaoTreinamento} className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700">
+                      Próxima etapa
+                    </button>
+                  ) : (
+                    <button type="button" disabled={carregando} onClick={salvarAvaliacaoTreinamento} className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-emerald-700 disabled:opacity-60">
+                      Salvar avaliação e assinar
+                    </button>
+                  )}
                 </div>
               </section>
             )}
