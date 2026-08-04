@@ -298,7 +298,7 @@ export default function TreinamentosDinamicos() {
       <section className="grid gap-5 xl:grid-cols-[1.15fr_0.85fr]">
         <form
           onSubmit={salvar}
-          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 [&_input]:bg-white [&_input]:text-slate-950 [&_input]:placeholder:text-slate-500 [&_select]:bg-white [&_select]:text-slate-950 [&_textarea]:bg-white [&_textarea]:text-slate-950 [&_textarea]:placeholder:text-slate-500 dark:[&_input]:bg-white dark:[&_input]:text-slate-950 dark:[&_input]:placeholder:text-slate-500 dark:[&_select]:bg-white dark:[&_select]:text-slate-950 dark:[&_textarea]:bg-white dark:[&_textarea]:text-slate-950 dark:[&_textarea]:placeholder:text-slate-500"
         >
           <div className="grid gap-4 md:grid-cols-2">
             <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
@@ -306,7 +306,7 @@ export default function TreinamentosDinamicos() {
               <select
                 value={form.tipo}
                 onChange={(event) => setForm({ ...form, tipo: event.target.value })}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               >
                 <option>Operacional</option>
                 <option>Procedimento operacional</option>
@@ -329,7 +329,7 @@ export default function TreinamentosDinamicos() {
                       .replace(/^-+|-+$/g, ""),
                   })
                 }
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-black normal-case tracking-normal text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-black normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
             </label>
             <label className="md:col-span-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
@@ -338,7 +338,7 @@ export default function TreinamentosDinamicos() {
                 value={form.nome}
                 onChange={(event) => setForm({ ...form, nome: event.target.value })}
                 placeholder="Ex.: Controle de acesso de pessoas e veículos"
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
             </label>
             <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
@@ -346,7 +346,7 @@ export default function TreinamentosDinamicos() {
               <input
                 value={form.slug}
                 onChange={(event) => setForm({ ...form, slug: event.target.value })}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
             </label>
             <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
@@ -354,7 +354,7 @@ export default function TreinamentosDinamicos() {
               <select
                 value={form.status}
                 onChange={(event) => setForm({ ...form, status: event.target.value })}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               >
                 <option>Publicado</option>
                 <option>Rascunho</option>
@@ -366,7 +366,7 @@ export default function TreinamentosDinamicos() {
                 value={form.textoCertificado}
                 onChange={(event) => setForm({ ...form, textoCertificado: event.target.value })}
                 rows={3}
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold normal-case tracking-normal text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
               <span className="mt-1 block text-[11px] font-bold normal-case tracking-normal text-slate-500">
                 Variáveis: {"{{nome}}"}, {"{{cpf}}"}, {"{{data}}"}, {"{{codigo}}"}, {"{{treinamento}}"}.
@@ -414,20 +414,20 @@ export default function TreinamentosDinamicos() {
                     value={etapa.titulo}
                     onChange={(event) => atualizarEtapa(index, "titulo", event.target.value)}
                     placeholder="Título"
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <input
                     value={etapa.objetivo}
                     onChange={(event) => atualizarEtapa(index, "objetivo", event.target.value)}
                     placeholder="Objetivo"
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <textarea
                     value={etapa.conteudo}
                     onChange={(event) => atualizarEtapa(index, "conteudo", event.target.value)}
                     placeholder="Conteúdo resumido em linguagem simples"
                     rows={4}
-                    className="md:col-span-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="md:col-span-2 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <input
                     value={etapa.topicos.join("; ")}
@@ -439,13 +439,13 @@ export default function TreinamentosDinamicos() {
                       )
                     }
                     placeholder="Pontos importantes separados por ;"
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <input
                     value={etapa.atencao}
                     onChange={(event) => atualizarEtapa(index, "atencao", event.target.value)}
                     placeholder="Caixa de atenção"
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                 </div>
               </div>
@@ -500,7 +500,7 @@ export default function TreinamentosDinamicos() {
                   <select
                     value={pergunta.etapaOrdem}
                     onChange={(event) => atualizarPergunta(index, "etapaOrdem", Number(event.target.value))}
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   >
                     {form.etapas.map((etapa, etapaIndex) => (
                       <option key={etapaIndex} value={etapaIndex + 1}>
@@ -512,13 +512,13 @@ export default function TreinamentosDinamicos() {
                     value={pergunta.pergunta}
                     onChange={(event) => atualizarPergunta(index, "pergunta", event.target.value)}
                     placeholder="Texto da pergunta"
-                    className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <div className="grid gap-2 md:grid-cols-2">
                     {pergunta.alternativas.map((alternativa, altIndex) => (
                       <label
                         key={altIndex}
-                        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-950"
+                        className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white p-2 dark:border-slate-600"
                       >
                         <input
                           type="radio"
@@ -530,7 +530,7 @@ export default function TreinamentosDinamicos() {
                           value={alternativa.texto}
                           onChange={(event) => atualizarAlternativa(index, altIndex, event.target.value)}
                           placeholder={`Alternativa ${altIndex + 1}`}
-                          className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-900 outline-none dark:text-white"
+                          className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none"
                         />
                       </label>
                     ))}

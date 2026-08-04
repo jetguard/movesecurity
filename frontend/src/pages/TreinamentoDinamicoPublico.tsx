@@ -352,22 +352,22 @@ export default function TreinamentoDinamicoPublico() {
         )}
 
         {!participante && modelo && (
-          <form onSubmit={iniciar} className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
+          <form onSubmit={iniciar} className="rounded-2xl border border-blue-200 bg-white/96 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-6 [&_input]:text-slate-950 [&_input]:placeholder:text-slate-500 [&_select]:text-slate-950">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">Acesso ao treinamento</p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">Identificação do participante</h2>
             <p className="mt-2 text-sm font-extrabold leading-6 text-slate-800">
               Preencha seus dados para iniciar ou continuar este treinamento.
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <input value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required placeholder="Nome completo" className="rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold outline-none focus:border-blue-500" />
-              <input value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} onBlur={(e) => buscarCadastro(e.target.value)} required placeholder="CPF" maxLength={14} className="rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold outline-none focus:border-blue-500" />
-              <input value={form.email} onChange={(e) => alterar("email", e.target.value)} onBlur={(e) => buscarCadastro(e.target.value)} required type="email" placeholder="E-mail" className="rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold outline-none focus:border-blue-500" />
-              <select value={form.unidade} onChange={(e) => alterar("unidade", e.target.value)} required className="rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold outline-none focus:border-blue-500">
+              <input value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required placeholder="Nome completo" className="rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500" />
+              <input value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} onBlur={(e) => buscarCadastro(e.target.value)} required placeholder="CPF" maxLength={14} className="rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500" />
+              <input value={form.email} onChange={(e) => alterar("email", e.target.value)} onBlur={(e) => buscarCadastro(e.target.value)} required type="email" placeholder="E-mail" className="rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500" />
+              <select value={form.unidade} onChange={(e) => alterar("unidade", e.target.value)} required className="rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none focus:border-blue-500">
                 <option value="">Selecione sua unidade</option>
                 {unidades.map((unidade) => <option key={unidade}>{unidade}</option>)}
               </select>
-              <input value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} placeholder="Cargo" className="rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold outline-none focus:border-blue-500" />
-              <input value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} placeholder="Empresa" className="rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold outline-none focus:border-blue-500" />
+              <input value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} placeholder="Cargo" className="rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500" />
+              <input value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} placeholder="Empresa" className="rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500" />
             </div>
             <button disabled={carregando} className="mt-6 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700 disabled:opacity-60">
               {carregando ? "Iniciando..." : "Iniciar treinamento"}
@@ -393,15 +393,17 @@ export default function TreinamentoDinamicoPublico() {
             </div>
 
             {etapa && indice < indiceQuiz && (
-              <section className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
+              <section className="rounded-2xl border border-blue-200 bg-white/97 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-6">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">Etapa {indice + 1}</p>
                 <h2 className="mt-2 text-3xl font-black text-slate-950">{etapa.titulo}</h2>
                 {etapa.objetivo && <p className="mt-4 rounded-2xl bg-blue-50 p-4 text-sm font-black text-blue-950">{etapa.objetivo}</p>}
-                <p className="mt-5 whitespace-pre-line text-base font-semibold leading-8 text-slate-900">{etapa.conteudo}</p>
+                <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 text-base font-semibold leading-8 text-slate-950 shadow-sm">
+                  <p className="whitespace-pre-line text-slate-950">{etapa.conteudo}</p>
+                </div>
                 {!!etapa.topicos?.length && (
                   <ul className="mt-5 grid gap-2">
                     {etapa.topicos.map((topico) => (
-                      <li key={topico} className="rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-bold text-slate-900 shadow-sm">
+                      <li key={topico} className="rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 shadow-sm">
                         {topico}
                       </li>
                     ))}
