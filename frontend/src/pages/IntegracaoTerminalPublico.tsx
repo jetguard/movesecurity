@@ -2,6 +2,7 @@ import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, Maximize2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
+import { formatarNomePessoa, nomePessoaValido } from "../utils/nomePessoa";
 
 type Config = {
   titulo: string;
@@ -193,6 +194,14 @@ export default function IntegracaoTerminalPublico() {
   }
 
   function alterar(nome: keyof typeof vazio, valor: string) {
+    if (nome === "nomeCompleto") {
+      if (valor.includes("@")) {
+        setMensagem("Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.");
+        return;
+      }
+      setForm((atual) => ({ ...atual, nomeCompleto: formatarNomePessoa(valor) }));
+      return;
+    }
     if (nome === "cpf") valor = mascararCpf(valor);
     if (nome === "telefone") valor = mascararTelefone(valor);
     setForm((atual) => ({ ...atual, [nome]: valor }));
@@ -200,6 +209,10 @@ export default function IntegracaoTerminalPublico() {
 
   async function iniciar(event: FormEvent) {
     event.preventDefault();
+    if (!nomePessoaValido(form.nomeCompleto)) {
+      setMensagem("Informe nome completo válido, sem e-mail, com nome e sobrenome.");
+      return;
+    }
     if (!cpfValido(form.cpf)) {
       setMensagem("Informe um CPF valido para continuar.");
       return;

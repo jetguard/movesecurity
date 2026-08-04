@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import { useParams } from "react-router-dom";
 import { Award, CheckCircle2, FileSignature, ShieldCheck } from "lucide-react";
+import { formatarNomePessoa, nomePessoaValido } from "../utils/nomePessoa";
 
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
@@ -184,6 +185,14 @@ export default function TreinamentoDinamicoPublico() {
   }, [slug]);
 
   function alterar(campo: keyof typeof formInicial, valor: string) {
+    if (campo === "nomeCompleto") {
+      if (valor.includes("@")) {
+        setMensagem("Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.");
+        return;
+      }
+      setForm((atual) => ({ ...atual, nomeCompleto: formatarNomePessoa(valor) }));
+      return;
+    }
     setForm((atual) => ({ ...atual, [campo]: campo === "cpf" ? mascararCpf(valor) : valor }));
   }
 
@@ -198,7 +207,7 @@ export default function TreinamentoDinamicoPublico() {
       if (!participanteLocalizado) return;
       setForm((atual) => ({
         ...atual,
-        nomeCompleto: participanteLocalizado.nomeCompleto || atual.nomeCompleto,
+        nomeCompleto: formatarNomePessoa(participanteLocalizado.nomeCompleto || atual.nomeCompleto),
         cpf: mascararCpf(participanteLocalizado.cpf || atual.cpf),
         email: participanteLocalizado.email || atual.email,
         cargo: participanteLocalizado.cargo || atual.cargo,
@@ -214,8 +223,8 @@ export default function TreinamentoDinamicoPublico() {
 
   async function iniciar(event: FormEvent) {
     event.preventDefault();
-    if (!form.nomeCompleto.trim() || !cpfValido(form.cpf) || !emailValido(form.email) || !form.unidade) {
-      setMensagem("Informe nome completo, CPF válido, e-mail válido e unidade.");
+    if (!nomePessoaValido(form.nomeCompleto) || !cpfValido(form.cpf) || !emailValido(form.email) || !form.unidade) {
+      setMensagem("Informe nome completo válido, CPF válido, e-mail válido e unidade.");
       return;
     }
     setCarregando(true);
