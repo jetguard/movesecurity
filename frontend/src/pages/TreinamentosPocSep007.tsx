@@ -139,6 +139,9 @@ export default function TreinamentosPocSep007() {
           <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">POC-SEP-007</h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Controle de progresso, avaliação e conclusão do treinamento de controle de acesso.</p>
         </div>
+        <button type="button" onClick={baixarCertificados} disabled={baixandoCertificados || indicadores.concluidos === 0} className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500 px-4 py-3 text-sm font-black text-white transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50">
+          <Download size={18} /> {baixandoCertificados ? "Gerando ZIP..." : "Baixar todos os certificados"}
+        </button>
         <a href="/treinamento-poc-sep-007" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700">
           <PlayCircle size={18} /> Abrir página pública
         </a>
