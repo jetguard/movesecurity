@@ -384,6 +384,14 @@
     color: #07132f !important;
   }
 
+  .treinamento-terminal-publico .terminal-step:disabled,
+  .dark .treinamento-terminal-publico .terminal-step:disabled {
+    background-color: #eff6ff !important;
+    border-color: #bfdbfe !important;
+    color: #1e3a8a !important;
+    opacity: 0.78 !important;
+  }
+
   .treinamento-terminal-publico .terminal-step,
   .dark .treinamento-terminal-publico .terminal-step {
     letter-spacing: 0;

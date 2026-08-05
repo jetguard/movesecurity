@@ -3,6 +3,7 @@ import {
   Award,
   CheckCircle2,
   Clock3,
+  Download,
   FileText,
   Mail,
   PlayCircle,
@@ -77,6 +78,7 @@ export default function TreinamentosPocSep006() {
   const [status, setStatus] = useState("Todos");
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
+  const [baixandoCertificados, setBaixandoCertificados] = useState(false);
   const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
     perfilAtual(),
   );
@@ -120,6 +122,28 @@ export default function TreinamentosPocSep006() {
       atual.filter((treinamento) => treinamento.id !== item.id),
     );
     setMensagem("Treinamento excluído com sucesso.");
+  }
+
+  async function baixarCertificados() {
+    setBaixandoCertificados(true);
+    setMensagem("");
+    try {
+      const response = await api.get("/treinamentos-poc-sep-006/certificados.zip", {
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `certificados-poc-sep-006-${new Date().getFullYear()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setMensagem("Não foi possível baixar os certificados.");
+    } finally {
+      setBaixandoCertificados(false);
+    }
   }
 
   useEffect(() => {
@@ -210,7 +234,7 @@ export default function TreinamentosPocSep006() {
           </div>
         )}
 
-        <div className="mb-4 flex flex-wrap gap-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="relative min-w-72 flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input
@@ -230,6 +254,15 @@ export default function TreinamentosPocSep006() {
             <option>Reprovado</option>
             <option value="Concluido">Concluído</option>
           </select>
+          <button
+            type="button"
+            onClick={baixarCertificados}
+            disabled={baixandoCertificados || indicadores.concluidos === 0}
+            className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-200"
+          >
+            <Download size={18} />{" "}
+            {baixandoCertificados ? "Gerando ZIP..." : "Baixar certificados"}
+          </button>
         </div>
 
         <div className="max-h-[620px] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">

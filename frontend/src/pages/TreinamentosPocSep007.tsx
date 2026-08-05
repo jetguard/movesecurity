@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Award, CheckCircle2, Clock3, FileText, Mail, PlayCircle, Search, Trash2 } from "lucide-react";
+import { Award, CheckCircle2, Clock3, Download, FileText, Mail, PlayCircle, Search, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 import { PERFIS, perfilAtual } from "../utils/permissoes";
 
@@ -61,6 +61,7 @@ export default function TreinamentosPocSep007() {
   const [status, setStatus] = useState("Todos");
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
+  const [baixandoCertificados, setBaixandoCertificados] = useState(false);
   const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(perfilAtual());
 
   async function carregar() {
@@ -92,6 +93,26 @@ export default function TreinamentosPocSep007() {
   useEffect(() => {
     carregar().catch(() => undefined);
   }, []);
+
+  async function baixarCertificados() {
+    setBaixandoCertificados(true);
+    setMensagem("");
+    try {
+      const response = await api.get("/treinamentos-poc-sep-007/certificados.zip", { responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `certificados-poc-sep-007-${new Date().getFullYear()}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setMensagem("Não foi possível baixar os certificados.");
+    } finally {
+      setBaixandoCertificados(false);
+    }
+  }
 
   const filtrados = useMemo(() => {
     const termo = busca.trim().toLowerCase();
@@ -142,7 +163,7 @@ export default function TreinamentosPocSep007() {
           </div>
         )}
 
-        <div className="mb-4 flex flex-wrap gap-3">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <div className="relative min-w-72 flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF, e-mail, cargo, departamento, unidade ou certificado" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
@@ -153,6 +174,9 @@ export default function TreinamentosPocSep007() {
             <option>Reprovado</option>
             <option value="Concluido">Concluido</option>
           </select>
+          <button type="button" onClick={baixarCertificados} disabled={baixandoCertificados || indicadores.concluidos === 0} className="inline-flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-700 transition hover:bg-emerald-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 dark:text-emerald-200">
+            <Download size={18} /> {baixandoCertificados ? "Gerando ZIP..." : "Baixar certificados"}
+          </button>
         </div>
 
         <div className="max-h-[620px] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800">

@@ -1,6 +1,7 @@
 ﻿import { Router } from "express";
 import {
   baixarCertificadoPocSep006,
+  baixarCertificadosPocSep006Zip,
   concluirEtapaTreinamentoPocSep006,
   concluirTreinamentoPocSep006,
   excluirTreinamentoPocSep006,
@@ -53,6 +54,12 @@ router.get(
   autenticarUsuario,
   autorizarPerfis(acessoTreinamentosTerminal),
   listarTreinamentosPocSep006,
+);
+router.get(
+  "/treinamentos-poc-sep-006/certificados.zip",
+  autenticarUsuario,
+  autorizarPerfis(acessoTreinamentosTerminal),
+  baixarCertificadosPocSep006Zip,
 );
 router.post(
   "/treinamentos-poc-sep-006/:id/reenviar-email",

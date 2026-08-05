@@ -1,6 +1,7 @@
 ﻿import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import archiver = require("archiver");
 import { Request, Response } from "express";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
@@ -814,5 +815,76 @@ export async function baixarCertificadoPocSep006(req: Request, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao baixar certificado." });
+  }
+}
+
+export async function baixarCertificadosPocSep006Zip(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const treinamentos = (
+      await prisma.treinamentoPocSep006.findMany({
+        orderBy: [{ dataConclusao: "desc" }, { updatedAt: "desc" }],
+      })
+    ).filter((item) => treinamentoConcluido(item.status));
+
+    if (!treinamentos.length) {
+      return res
+        .status(404)
+        .json({ error: "Nenhum certificado concluído encontrado." });
+    }
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="certificados-poc-sep-006-${new Date().getFullYear()}.zip"`,
+    );
+
+    const arquivoZip = new archiver.ZipArchive({ zlib: { level: 9 } });
+    arquivoZip.on("error", (error: archiver.ArchiverError) => {
+      console.error(error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Erro ao gerar arquivo ZIP." });
+      } else {
+        res.end();
+      }
+    });
+    arquivoZip.pipe(res);
+
+    for (const treinamento of treinamentos) {
+      const certificadoArquivo =
+        treinamento.certificadoArquivo &&
+        fs.existsSync(treinamento.certificadoArquivo)
+          ? treinamento.certificadoArquivo
+          : await gerarCertificadoPocSep006(treinamento);
+
+      if (!treinamento.certificadoArquivo) {
+        await prisma.treinamentoPocSep006.update({
+          where: { id: treinamento.id },
+          data: { certificadoArquivo },
+        });
+      }
+
+      const codigo = String(treinamento.codigo || treinamento.token).replace(
+        /[\\/]/g,
+        "-",
+      );
+      const nome = texto(treinamento.nomeCompleto)
+        .replace(/[^\p{L}\d\s.-]/gu, "")
+        .replace(/\s+/g, "-")
+        .slice(0, 80);
+      arquivoZip.file(certificadoArquivo, {
+        name: `${codigo}-${nome || "participante"}.pdf`,
+      });
+    }
+
+    await arquivoZip.finalize();
+  } catch (error) {
+    console.error(error);
+    if (!res.headersSent) {
+      return res.status(500).json({ error: "Erro ao baixar certificados." });
+    }
+    return res.end();
   }
 }
