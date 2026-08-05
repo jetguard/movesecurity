@@ -3,12 +3,13 @@ export function formatarNomePessoa(valor: string) {
     return "";
   }
 
-  return valor
+  const nomeEmDigitacao = valor
     .replace(/[^\p{L}\s'-]/gu, "")
     .replace(/\s+/g, " ")
-    .trimStart()
+    .trimStart();
+
+  return nomeEmDigitacao
     .split(" ")
-    .filter(Boolean)
     .map(capitalizarPartesNome)
     .join(" ");
 }
