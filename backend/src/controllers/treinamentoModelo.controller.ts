@@ -28,15 +28,42 @@ function emailValido(email: string) {
 
 const GRUPOS_TREINAMENTO = [
   "CCOS",
-  "LideranÃ§a",
-  "BalanÃ§a",
-  "Portaria",
-  "Terceirizado",
+  "LIDERANCA",
+  "BALANCA",
+  "PORTARIA",
+  "TERCEIRIZADO",
 ];
 
+const ALIASES_GRUPOS_TREINAMENTO: Record<string, string> = {
+  ccos: "CCOS",
+  lideranca: "LIDERANCA",
+  liderana: "LIDERANCA",
+  lideranaa: "LIDERANCA",
+  "lideranã§a": "LIDERANCA",
+  "lideranÃ§a": "LIDERANCA",
+  balanca: "BALANCA",
+  balanaa: "BALANCA",
+  "balanã§a": "BALANCA",
+  "balanÃ§a": "BALANCA",
+  portaria: "PORTARIA",
+  terceirizado: "TERCEIRIZADO",
+};
+
 function normalizarGrupoTreinamento(grupo: string) {
-  const valor = texto(grupo).toLowerCase();
-  return GRUPOS_TREINAMENTO.find((item) => item.toLowerCase() === valor) || "";
+  const original = texto(grupo);
+  const chave = original
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  const compacto = chave.replace(/[^a-z0-9]/g, "");
+  const alias =
+    ALIASES_GRUPOS_TREINAMENTO[chave] ||
+    ALIASES_GRUPOS_TREINAMENTO[compacto] ||
+    ALIASES_GRUPOS_TREINAMENTO[original.trim().toLowerCase()];
+  if (alias) return alias;
+  const maiusculo = original.trim().toUpperCase();
+  return GRUPOS_TREINAMENTO.includes(maiusculo) ? maiusculo : "";
 }
 
 function normalizarGruposTreinamento(valor: unknown) {

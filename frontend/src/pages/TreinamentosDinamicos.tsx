@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -79,15 +79,15 @@ const modeloInicial: ModeloForm = {
   validadeMeses: 24,
   status: "Publicado",
   textoCertificado:
-    "Certificamos que {{nome}}, portador(a) do CPF nº {{cpf}}, concluiu com aproveitamento o treinamento {{codigo}} - {{treinamento}} na data de {{data}}.",
+    "Certificamos que {{nome}}, portador(a) do CPF nÂº {{cpf}}, concluiu com aproveitamento o treinamento {{codigo}} - {{treinamento}} na data de {{data}}.",
   gruposPermitidos: [],
   etapas: [
     {
-      titulo: "Introdução",
-      objetivo: "Apresentar o conteúdo principal do treinamento.",
+      titulo: "IntroduÃ§Ã£o",
+      objetivo: "Apresentar o conteÃºdo principal do treinamento.",
       conteudo: "",
       topicos: ["Ponto importante do procedimento"],
-      atencao: "Leia esta etapa com atenção antes de avançar.",
+      atencao: "Leia esta etapa com atenÃ§Ã£o antes de avanÃ§ar.",
     },
   ],
   perguntas: [
@@ -105,12 +105,39 @@ const modeloInicial: ModeloForm = {
 };
 
 const gruposTreinamento = [
-  "CCOS",
-  "Liderança",
-  "Balança",
-  "Portaria",
-  "Terceirizado",
+  { valor: "CCOS", label: "CCOS" },
+  { valor: "LIDERANCA", label: "Liderança" },
+  { valor: "BALANCA", label: "Balança" },
+  { valor: "PORTARIA", label: "Portaria" },
+  { valor: "TERCEIRIZADO", label: "Terceirizado" },
 ];
+
+function normalizarGrupoTreinamento(valor: string) {
+  const semAcento = String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+  const compacto = semAcento.replace(/[^A-Z0-9]/g, "");
+  const mapa: Record<string, string> = {
+    CCOS: "CCOS",
+    LIDERANCA: "LIDERANCA",
+    LIDERANAA: "LIDERANCA",
+    "LIDERANÃ§A": "LIDERANCA",
+    BALANCA: "BALANCA",
+    BALANAA: "BALANCA",
+    "BALANÃ§A": "BALANCA",
+    PORTARIA: "PORTARIA",
+    TERCEIRIZADO: "TERCEIRIZADO",
+  };
+  return mapa[semAcento] || mapa[compacto] || "";
+}
+
+function normalizarGruposTreinamento(valores?: string[]) {
+  return Array.from(
+    new Set((valores || []).map(normalizarGrupoTreinamento).filter(Boolean)),
+  );
+}
 
 function data(valor?: string | null) {
   return valor ? new Date(valor).toLocaleString("pt-BR") : "-";
@@ -189,7 +216,7 @@ export default function TreinamentosDinamicos() {
       status: modelo.status || "Publicado",
       textoCertificado:
         modelo.textoCertificado || modeloInicial.textoCertificado,
-      gruposPermitidos: modelo.gruposPermitidos || [],
+      gruposPermitidos: normalizarGruposTreinamento(modelo.gruposPermitidos),
       etapas: modelo.etapas?.length ? modelo.etapas : modeloInicial.etapas,
       perguntas: modelo.perguntas?.length
         ? modelo.perguntas
@@ -204,11 +231,13 @@ export default function TreinamentosDinamicos() {
   }
 
   function alternarGrupo(grupo: string) {
+    const grupoNormalizado = normalizarGrupoTreinamento(grupo);
+    if (!grupoNormalizado) return;
     setForm((atual) => ({
       ...atual,
-      gruposPermitidos: atual.gruposPermitidos.includes(grupo)
-        ? atual.gruposPermitidos.filter((item) => item !== grupo)
-        : [...atual.gruposPermitidos, grupo],
+      gruposPermitidos: atual.gruposPermitidos.includes(grupoNormalizado)
+        ? atual.gruposPermitidos.filter((item) => item !== grupoNormalizado)
+        : [...atual.gruposPermitidos, grupoNormalizado],
     }));
   }
 
@@ -294,11 +323,12 @@ export default function TreinamentosDinamicos() {
       setForm(modeloParaFormulario(response.data as Modelo));
       setSelecionadoId(response.data.id);
       setMensagem(
-        "Treinamento salvo com sucesso. Use o botão Enviar treinamento para disparar o link aos grupos selecionados.",
+        "Treinamento salvo com sucesso. Use o botÃ£o Enviar treinamento para disparar o link aos grupos selecionados.",
       );
     } catch (error: any) {
       setMensagem(
-        error.response?.data?.error || "Não foi possível salvar o treinamento.",
+        error.response?.data?.error ||
+          "NÃ£o foi possÃ­vel salvar o treinamento.",
       );
     } finally {
       setSalvando(false);
@@ -315,7 +345,7 @@ export default function TreinamentosDinamicos() {
       await carregar();
     } catch (error: any) {
       setMensagem(
-        error.response?.data?.error || "Não foi possível reenviar o e-mail.",
+        error.response?.data?.error || "NÃ£o foi possÃ­vel reenviar o e-mail.",
       );
     }
   }
@@ -335,7 +365,8 @@ export default function TreinamentosDinamicos() {
       await carregar();
     } catch (error: any) {
       setMensagem(
-        error.response?.data?.error || "Não foi possível enviar o treinamento.",
+        error.response?.data?.error ||
+          "NÃ£o foi possÃ­vel enviar o treinamento.",
       );
     } finally {
       setEnviandoId(null);
@@ -346,7 +377,7 @@ export default function TreinamentosDinamicos() {
     if (!podeEditar) return;
     if (!confirm(`Deseja excluir o treinamento ${modelo.codigo}?`)) return;
     await api.delete(`/treinamentos-dinamicos/${modelo.id}`);
-    setMensagem("Treinamento excluído.");
+    setMensagem("Treinamento excluÃ­do.");
     novo();
     await carregar();
   }
@@ -362,8 +393,8 @@ export default function TreinamentosDinamicos() {
             Criador de treinamentos
           </h1>
           <p className="mt-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            Monte etapas, perguntas, link público, assinatura e certificado sem
-            criar uma página fixa nova.
+            Monte etapas, perguntas, link pÃºblico, assinatura e certificado sem
+            criar uma pÃ¡gina fixa nova.
           </p>
         </div>
         <button
@@ -399,12 +430,12 @@ export default function TreinamentosDinamicos() {
                 <option>Operacional</option>
                 <option>Procedimento operacional</option>
                 <option>CCOS</option>
-                <option>Segurança patrimonial</option>
-                <option>Integração</option>
+                <option>SeguranÃ§a patrimonial</option>
+                <option>IntegraÃ§Ã£o</option>
               </select>
             </label>
             <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-              Código
+              CÃ³digo
               <input
                 value={form.codigo}
                 onChange={(event) =>
@@ -427,12 +458,12 @@ export default function TreinamentosDinamicos() {
                 onChange={(event) =>
                   setForm({ ...form, nome: event.target.value })
                 }
-                placeholder="Ex.: Controle de acesso de pessoas e veículos"
+                placeholder="Ex.: Controle de acesso de pessoas e veÃ­culos"
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
             </label>
             <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-              Link público
+              Link pÃºblico
               <input
                 value={form.slug}
                 onChange={(event) =>
@@ -459,25 +490,25 @@ export default function TreinamentosDinamicos() {
                 Grupos liberados
               </p>
               <p className="mt-1 text-sm font-semibold text-slate-300">
-                Selecione os grupos que poderão acessar este treinamento. O link
-                será enviado aos usuários cadastrados nesses grupos.
+                Selecione os grupos que poderÃ£o acessar este treinamento. O
+                link serÃ¡ enviado aos usuÃ¡rios cadastrados nesses grupos.
               </p>
               <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
                 {gruposTreinamento.map((grupo) => (
                   <label
-                    key={grupo}
+                    key={grupo.valor}
                     className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-black ${
-                      form.gruposPermitidos.includes(grupo)
+                      form.gruposPermitidos.includes(grupo.valor)
                         ? "border-blue-400 bg-blue-500 text-white"
                         : "border-slate-700 bg-slate-900 text-slate-200"
                     }`}
                   >
                     <input
                       type="checkbox"
-                      checked={form.gruposPermitidos.includes(grupo)}
-                      onChange={() => alternarGrupo(grupo)}
+                      checked={form.gruposPermitidos.includes(grupo.valor)}
+                      onChange={() => alternarGrupo(grupo.valor)}
                     />
-                    {grupo}
+                    {grupo.label}
                   </label>
                 ))}
               </div>
@@ -493,7 +524,7 @@ export default function TreinamentosDinamicos() {
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
               <span className="mt-1 block text-[11px] font-bold normal-case tracking-normal text-slate-500">
-                Variáveis: {"{{nome}}"}, {"{{cpf}}"}, {"{{data}}"},{" "}
+                VariÃ¡veis: {"{{nome}}"}, {"{{cpf}}"}, {"{{data}}"},{" "}
                 {"{{codigo}}"}, {"{{treinamento}}"}.
               </span>
             </label>
@@ -556,7 +587,7 @@ export default function TreinamentosDinamicos() {
                     onChange={(event) =>
                       atualizarEtapa(index, "titulo", event.target.value)
                     }
-                    placeholder="Título"
+                    placeholder="TÃ­tulo"
                     className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <input
@@ -572,7 +603,7 @@ export default function TreinamentosDinamicos() {
                     onChange={(event) =>
                       atualizarEtapa(index, "conteudo", event.target.value)
                     }
-                    placeholder="Conteúdo resumido em linguagem simples"
+                    placeholder="ConteÃºdo resumido em linguagem simples"
                     rows={4}
                     className="md:col-span-2 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
@@ -596,7 +627,7 @@ export default function TreinamentosDinamicos() {
                     onChange={(event) =>
                       atualizarEtapa(index, "atencao", event.target.value)
                     }
-                    placeholder="Caixa de atenção"
+                    placeholder="Caixa de atenÃ§Ã£o"
                     className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                 </div>
@@ -674,7 +705,7 @@ export default function TreinamentosDinamicos() {
                   >
                     {form.etapas.map((etapa, etapaIndex) => (
                       <option key={etapaIndex} value={etapaIndex + 1}>
-                        Etapa {etapaIndex + 1} - {etapa.titulo || "Sem título"}
+                        Etapa {etapaIndex + 1} - {etapa.titulo || "Sem tÃ­tulo"}
                       </option>
                     ))}
                   </select>
@@ -783,7 +814,7 @@ export default function TreinamentosDinamicos() {
                       {modelo.nome}
                     </p>
                     <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-300">
-                      Versão publicada: {modelo.versao || 1}
+                      VersÃ£o publicada: {modelo.versao || 1}
                     </p>
                   </button>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -827,7 +858,7 @@ export default function TreinamentosDinamicos() {
               ))}
               {!modelos.length && (
                 <p className="rounded-xl bg-slate-50 p-3 text-sm font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
-                  Nenhum treinamento dinâmico criado.
+                  Nenhum treinamento dinÃ¢mico criado.
                 </p>
               )}
             </div>
@@ -858,8 +889,8 @@ export default function TreinamentosDinamicos() {
                       <th className="px-4 py-3">Nota</th>
                       <th className="px-4 py-3">Tentativas</th>
                       <th className="px-4 py-3">Certificado</th>
-                      <th className="px-4 py-3">Último acesso</th>
-                      <th className="px-4 py-3 text-right">Ações</th>
+                      <th className="px-4 py-3">Ãšltimo acesso</th>
+                      <th className="px-4 py-3 text-right">AÃ§Ãµes</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
@@ -878,7 +909,7 @@ export default function TreinamentosDinamicos() {
                             <div>
                               <p className="font-black">{item.nomeCompleto}</p>
                               <p className="mt-1 text-xs font-bold text-slate-500">
-                                Versão {item.versao || 1}
+                                VersÃ£o {item.versao || 1}
                               </p>
                             </div>
                           </div>
@@ -966,12 +997,12 @@ export default function TreinamentosDinamicos() {
                           {item.email}
                         </p>
                         <p className="mt-1 text-xs font-bold text-slate-600 dark:text-slate-300">
-                          {item.codigo || "Sem certificado"} ·{" "}
-                          {item.porcentagem}% · nota {item.nota ?? "-"} ·{" "}
+                          {item.codigo || "Sem certificado"} Â·{" "}
+                          {item.porcentagem}% Â· nota {item.nota ?? "-"} Â·{" "}
                           {item.tentativas} tentativa(s)
                         </p>
                         <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-300">
-                          Versão do participante: {item.versao || 1}
+                          VersÃ£o do participante: {item.versao || 1}
                         </p>
                       </div>
                       {concluido(item.status) ? (
@@ -981,7 +1012,7 @@ export default function TreinamentosDinamicos() {
                       )}
                     </div>
                     <p className="mt-2 text-xs font-bold text-slate-500">
-                      {item.status} · {data(item.updatedAt)}
+                      {item.status} Â· {data(item.updatedAt)}
                     </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {item.certificadoUrl && (
