@@ -306,8 +306,8 @@ export default function TreinamentosDinamicos() {
     }));
   }
 
-  async function salvar(event: FormEvent) {
-    event.preventDefault();
+  async function salvar(event?: FormEvent, statusForcado?: string) {
+    event?.preventDefault();
     if (!podeEditar) return;
     setSalvando(true);
     setMensagem("");
@@ -316,12 +316,15 @@ export default function TreinamentosDinamicos() {
         ? `/treinamentos-dinamicos/${form.id}`
         : "/treinamentos-dinamicos";
       const method = form.id ? api.put : api.post;
-      const response = await method(url, form);
+      const payload = statusForcado ? { ...form, status: statusForcado } : form;
+      const response = await method(url, payload);
       await carregar();
       setForm(modeloParaFormulario(response.data as Modelo));
       setSelecionadoId(response.data.id);
       setMensagem(
-        "Treinamento salvo com sucesso. Use o botão Enviar treinamento para disparar o link aos grupos selecionados.",
+        response.data.status === "Rascunho"
+          ? "Rascunho salvo com sucesso. Você pode completar e publicar depois."
+          : "Treinamento salvo com sucesso. Use o botão Enviar treinamento para disparar o link aos grupos selecionados.",
       );
     } catch (error: any) {
       setMensagem(
@@ -746,6 +749,14 @@ export default function TreinamentosDinamicos() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => salvar(undefined, "Rascunho")}
+              disabled={!podeEditar || salvando}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-black text-slate-800 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+            >
+              <Save size={18} /> {salvando ? "Salvando..." : "Salvar rascunho"}
+            </button>
             <button
               type="submit"
               disabled={!podeEditar || salvando}

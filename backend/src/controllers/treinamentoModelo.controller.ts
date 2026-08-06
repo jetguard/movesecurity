@@ -535,31 +535,57 @@ async function enviarConvitesTreinamento(modelo: any, grupos: string[]) {
 }
 
 function validarPayloadModelo(body: any) {
-  const codigo = normalizarCodigo(body.codigo);
-  const nome = texto(body.nome);
-  const tipo = texto(body.tipo);
-  const etapas = Array.isArray(body.etapas) ? body.etapas : [];
-  const perguntas = Array.isArray(body.perguntas) ? body.perguntas : [];
+  const status = texto(body.status) || "Rascunho";
+  const rascunho = status !== "Publicado";
+  const codigo =
+    normalizarCodigo(body.codigo) || (rascunho ? `RASCUNHO-${Date.now()}` : "");
+  const nome = texto(body.nome) || (rascunho ? "Treinamento em rascunho" : "");
+  const tipo = texto(body.tipo) || (rascunho ? "Rascunho" : "");
+  const etapas = Array.isArray(body.etapas)
+    ? body.etapas.filter((etapa: any) =>
+        [
+          etapa?.titulo,
+          etapa?.objetivo,
+          etapa?.conteudo,
+          etapa?.atencao,
+          ...(Array.isArray(etapa?.topicos) ? etapa.topicos : []),
+        ].some((valor) => Boolean(texto(valor))),
+      )
+    : [];
+  const perguntas = Array.isArray(body.perguntas)
+    ? body.perguntas.filter((pergunta: any) => {
+        const alternativas = Array.isArray(pergunta?.alternativas)
+          ? pergunta.alternativas
+          : [];
+        return (
+          Boolean(texto(pergunta?.pergunta)) ||
+          alternativas.some((alternativa: any) => texto(alternativa?.texto))
+        );
+      })
+    : [];
   const gruposPermitidos = normalizarGruposTreinamento(
     body.gruposPermitidos ??
       body.gruposTreinamento ??
       body.gruposPermitidosJson,
   );
 
-  if (!codigo || !nome || !tipo) {
+  if (!rascunho && (!codigo || !nome || !tipo)) {
     return { error: "Informe tipo, código e nome do treinamento." };
   }
-  if (!etapas.length) {
+  if (!rascunho && !etapas.length) {
     return { error: "Cadastre pelo menos uma etapa de conteúdo." };
   }
-  if (!perguntas.length) {
+  if (!rascunho && !perguntas.length) {
     return { error: "Cadastre pelo menos uma pergunta para avaliação." };
   }
   for (const pergunta of perguntas) {
     const alternativas = Array.isArray(pergunta.alternativas)
-      ? pergunta.alternativas
+      ? pergunta.alternativas.filter((alternativa: any) =>
+          texto(alternativa?.texto),
+        )
       : [];
     if (!texto(pergunta.pergunta) || alternativas.length < 2) {
+      if (rascunho) continue;
       return {
         error: "Cada pergunta precisa de texto e pelo menos duas alternativas.",
       };
@@ -567,13 +593,15 @@ function validarPayloadModelo(body: any) {
     if (
       alternativas.filter((item: any) => item.correta === true).length !== 1
     ) {
+      if (rascunho) continue;
       return {
         error: "Cada pergunta deve ter exatamente uma alternativa correta.",
       };
     }
+    pergunta.alternativas = alternativas;
   }
 
-  return { codigo, nome, tipo, etapas, perguntas, gruposPermitidos };
+  return { codigo, nome, tipo, etapas, perguntas, gruposPermitidos, status };
 }
 
 export async function listarTreinamentosModelo(
@@ -635,7 +663,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               textoCertificado: texto(req.body.textoCertificado) || null,
               gruposPermitidosJson: JSON.stringify(validacao.gruposPermitidos),
               versao: { increment: 1 },
-              status: texto(req.body.status) || "Rascunho",
+              status: validacao.status,
             },
           })
         : await repo.treinamentoModelo.create({
@@ -650,7 +678,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
               gruposPermitidosJson: JSON.stringify(validacao.gruposPermitidos),
-              status: texto(req.body.status) || "Rascunho",
+              status: validacao.status,
             },
           });
 
