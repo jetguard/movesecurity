@@ -171,7 +171,12 @@ export default function TreinamentosDinamicos() {
 
   function editar(modelo: Modelo) {
     setSelecionadoId(modelo.id);
-    setForm({
+    setForm(modeloParaFormulario(modelo));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function modeloParaFormulario(modelo: Modelo): ModeloForm {
+    return {
       id: modelo.id,
       codigo: modelo.codigo,
       slug: modelo.slug,
@@ -189,8 +194,7 @@ export default function TreinamentosDinamicos() {
       perguntas: modelo.perguntas?.length
         ? modelo.perguntas
         : modeloInicial.perguntas,
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    };
   }
 
   function novo() {
@@ -287,7 +291,7 @@ export default function TreinamentosDinamicos() {
       const method = form.id ? api.put : api.post;
       const response = await method(url, form);
       await carregar();
-      setForm((atual) => ({ ...atual, id: response.data.id }));
+      setForm(modeloParaFormulario(response.data as Modelo));
       setSelecionadoId(response.data.id);
       setMensagem(
         "Treinamento salvo com sucesso. Use o botão Enviar treinamento para disparar o link aos grupos selecionados.",
@@ -322,10 +326,13 @@ export default function TreinamentosDinamicos() {
     setEnviandoId(id);
     setMensagem("");
     try {
-      const response = await api.post(`/treinamentos-dinamicos/${id}/enviar`);
+      const response = await api.post(`/treinamentos-dinamicos/${id}/enviar`, {
+        gruposPermitidos: modelo ? undefined : form.gruposPermitidos,
+      });
       setMensagem(
         response.data?.mensagem || "Treinamento enviado com sucesso.",
       );
+      await carregar();
     } catch (error: any) {
       setMensagem(
         error.response?.data?.error || "Não foi possível enviar o treinamento.",

@@ -517,7 +517,11 @@ function validarPayloadModelo(body: any) {
   const tipo = texto(body.tipo);
   const etapas = Array.isArray(body.etapas) ? body.etapas : [];
   const perguntas = Array.isArray(body.perguntas) ? body.perguntas : [];
-  const gruposPermitidos = normalizarGruposTreinamento(body.gruposPermitidos);
+  const gruposPermitidos = normalizarGruposTreinamento(
+    body.gruposPermitidos ??
+      body.gruposTreinamento ??
+      body.gruposPermitidosJson,
+  );
 
   if (!codigo || !nome || !tipo) {
     return { error: "Informe tipo, cÃ³digo e nome do treinamento." };
@@ -707,9 +711,16 @@ export async function enviarConvitesTreinamentoModelo(
       return res.status(400).json({ error: "Treinamento inválido." });
     }
 
-    const modelo = await db.treinamentoModelo.findUnique({ where: { id } });
+    const gruposBody = normalizarGruposTreinamento(req.body?.gruposPermitidos);
+    let modelo = await db.treinamentoModelo.findUnique({ where: { id } });
     if (!modelo) {
       return res.status(404).json({ error: "Treinamento não encontrado." });
+    }
+    if (gruposBody.length) {
+      modelo = await db.treinamentoModelo.update({
+        where: { id },
+        data: { gruposPermitidosJson: JSON.stringify(gruposBody) },
+      });
     }
     if (modelo.status !== "Publicado") {
       return res.status(400).json({
