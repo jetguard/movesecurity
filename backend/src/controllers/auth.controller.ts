@@ -1,15 +1,32 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { prisma } from "../lib/prisma";
-import { jwtExpiresIn, jwtSecret, loginPolicy, sessionPolicy } from "../config/security";
+import {
+  jwtExpiresIn,
+  jwtSecret,
+  loginPolicy,
+  sessionPolicy,
+} from "../config/security";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
-import { normalizarUnidadesPermitidas, serializarUnidadesPermitidas } from "../config/unidades";
+import {
+  normalizarUnidadesPermitidas,
+  serializarUnidadesPermitidas,
+} from "../config/unidades";
 import { hashIdentificadorDispositivo } from "../utils/arquivoHash";
-import { aplicarCookieCsrf, cookieSeguro, lerCookie, limparCookieCsrf } from "../utils/csrf";
-import { gerarHashPin, validarFormatoPin, validarPinOperacional } from "../services/pinOperacional.service";
+import {
+  aplicarCookieCsrf,
+  cookieSeguro,
+  lerCookie,
+  limparCookieCsrf,
+} from "../utils/csrf";
+import {
+  gerarHashPin,
+  validarFormatoPin,
+  validarPinOperacional,
+} from "../services/pinOperacional.service";
 
 type TentativaLogin = {
   quantidade: number;
@@ -87,11 +104,9 @@ function cookieOptions(req: Request, maxAge: number) {
 }
 
 function criarAccessToken(usuarioId: number, sessaoId: string) {
-  return jwt.sign(
-    { id: usuarioId, sessaoId },
-    jwtSecret(),
-    { expiresIn: jwtExpiresIn() as jwt.SignOptions["expiresIn"] }
-  );
+  return jwt.sign({ id: usuarioId, sessaoId }, jwtSecret(), {
+    expiresIn: jwtExpiresIn() as jwt.SignOptions["expiresIn"],
+  });
 }
 
 function criarRefreshToken() {
@@ -102,9 +117,22 @@ function refreshExpiraEm() {
   return new Date(Date.now() + sessionPolicy.refreshDays * 24 * 60 * 60 * 1000);
 }
 
-function aplicarCookiesSessao(req: Request, res: Response, accessToken: string, refreshToken: string) {
-  res.cookie("jetguard_access", accessToken, cookieOptions(req, 15 * 60 * 1000));
-  res.cookie("jetguard_refresh", refreshToken, cookieOptions(req, sessionPolicy.refreshDays * 24 * 60 * 60 * 1000));
+function aplicarCookiesSessao(
+  req: Request,
+  res: Response,
+  accessToken: string,
+  refreshToken: string,
+) {
+  res.cookie(
+    "jetguard_access",
+    accessToken,
+    cookieOptions(req, 15 * 60 * 1000),
+  );
+  res.cookie(
+    "jetguard_refresh",
+    refreshToken,
+    cookieOptions(req, sessionPolicy.refreshDays * 24 * 60 * 60 * 1000),
+  );
   aplicarCookieCsrf(req, res);
 }
 
@@ -118,7 +146,10 @@ function perfilSessaoUnica(perfil?: string) {
   return perfil === "SUPER_ADMIN" || perfil === "ADMINISTRADOR";
 }
 
-async function encerrarSessoesAdministrativasAnteriores(usuario: { id: number; perfilAcesso: string }) {
+async function encerrarSessoesAdministrativasAnteriores(usuario: {
+  id: number;
+  perfilAcesso: string;
+}) {
   if (!perfilSessaoUnica(usuario.perfilAcesso)) return;
 
   await prisma.sessaoUsuario.updateMany({
@@ -131,16 +162,22 @@ async function encerrarSessoesAdministrativasAnteriores(usuario: { id: number; p
       encerradaEm: new Date(),
       encerradaPor: "Sistema",
       encerradaPorId: usuario.id,
-      motivoEncerramento: "Sessão encerrada automaticamente por novo login administrativo.",
+      motivoEncerramento:
+        "Sessão encerrada automaticamente por novo login administrativo.",
     },
   });
 }
 
-async function validarDispositivoAutorizado(req: Request, usuario: { id: number; perfilAcesso: string }) {
+async function validarDispositivoAutorizado(
+  req: Request,
+  usuario: { id: number; perfilAcesso: string },
+) {
   if (!perfilExigeDispositivo(usuario.perfilAcesso)) return null;
 
   try {
-    const deviceId = String(req.body.deviceId || req.headers["x-device-id"] || "").trim();
+    const deviceId = String(
+      req.body.deviceId || req.headers["x-device-id"] || "",
+    ).trim();
     const userAgent = String(req.headers["user-agent"] || "");
     const sistema = userAgent.includes("Windows")
       ? "Windows"
@@ -166,7 +203,7 @@ async function validarDispositivoAutorizado(req: Request, usuario: { id: number;
     }
 
     const identificador = hashIdentificadorDispositivo(
-      deviceId || `${usuario.id}:${userAgent}:${req.ip || "sem-ip"}`
+      deviceId || `${usuario.id}:${userAgent}:${req.ip || "sem-ip"}`,
     );
 
     if (dispositivos.length === 0) {
@@ -184,7 +221,9 @@ async function validarDispositivoAutorizado(req: Request, usuario: { id: number;
       return null;
     }
 
-    const dispositivo = dispositivos.find((item) => item.identificador === identificador);
+    const dispositivo = dispositivos.find(
+      (item) => item.identificador === identificador,
+    );
     if (!dispositivo) {
       return "Dispositivo não autorizado. Solicite reset de acesso ao administrador.";
     }
@@ -205,7 +244,11 @@ async function validarDispositivoAutorizado(req: Request, usuario: { id: number;
     return null;
   }
 }
-async function registrarFalhaAuditoria(req: Request, email: string, motivo: string) {
+async function registrarFalhaAuditoria(
+  req: Request,
+  email: string,
+  motivo: string,
+) {
   try {
     await prisma.logAuditoria.create({
       data: {
@@ -270,7 +313,6 @@ export async function register(req: Request, res: Response) {
     });
 
     return res.json(usuario);
-
   } catch (error) {
     return res.status(500).json({
       error: "Erro ao cadastrar usuário",
@@ -307,16 +349,17 @@ export async function login(req: Request, res: Response) {
     }
 
     if (usuario.statusUsuario !== "ATIVO") {
-      await registrarFalhaAuditoria(req, emailLogin, "usuário bloqueado ou inativo");
+      await registrarFalhaAuditoria(
+        req,
+        emailLogin,
+        "usuário bloqueado ou inativo",
+      );
       return res.status(403).json({
         error: "Usuário bloqueado ou inativo",
       });
     }
 
-    const senhaCorreta = await bcrypt.compare(
-      senha,
-      usuario.senha
-    );
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
 
     if (!senhaCorreta) {
       registrarFalhaLogin(emailLogin, req.ip);
@@ -338,7 +381,13 @@ export async function login(req: Request, res: Response) {
     limparTentativas(emailLogin, req.ip);
 
     const userAgent = String(req.headers["user-agent"] || "");
-    const unidadeAtiva = normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade)[0] || usuario.unidade || "GJA-T1";
+    const unidadeAtiva =
+      normalizarUnidadesPermitidas(
+        usuario.unidadesPermitidas,
+        usuario.unidade,
+      )[0] ||
+      usuario.unidade ||
+      "GJA-T1";
     await encerrarSessoesAdministrativasAnteriores(usuario);
 
     const sessao = await prisma.sessaoUsuario.create({
@@ -405,12 +454,14 @@ export async function login(req: Request, res: Response) {
         perfilAcesso: usuario.perfilAcesso,
         equipe: usuario.equipe,
         unidade: usuario.unidade,
-        unidadesPermitidas: normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade),
+        unidadesPermitidas: normalizarUnidadesPermitidas(
+          usuario.unidadesPermitidas,
+          usuario.unidade,
+        ),
         deveAlterarSenha: usuario.deveAlterarSenha,
         possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
       },
     });
-
   } catch (error) {
     console.error("Erro ao fazer login:", error);
     return res.status(500).json({
@@ -421,9 +472,21 @@ export async function login(req: Request, res: Response) {
 
 export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
   try {
-    const { senhaAtual, novaSenha, confirmarSenha, pinOperacional, confirmarPinOperacional } = req.body;
+    const {
+      senhaAtual,
+      novaSenha,
+      confirmarSenha,
+      pinOperacional,
+      confirmarPinOperacional,
+    } = req.body;
 
-    if (!senhaAtual || !novaSenha || !confirmarSenha || !pinOperacional || !confirmarPinOperacional) {
+    if (
+      !senhaAtual ||
+      !novaSenha ||
+      !confirmarSenha ||
+      !pinOperacional ||
+      !confirmarPinOperacional
+    ) {
       return res.status(400).json({ error: "Preencha todos os campos." });
     }
 
@@ -432,15 +495,24 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
     }
 
     if (String(novaSenha).length < 8) {
-      return res.status(400).json({ error: "A nova senha deve possuir pelo menos 8 caracteres." });
+      return res
+        .status(400)
+        .json({ error: "A nova senha deve possuir pelo menos 8 caracteres." });
     }
 
     if (pinOperacional !== confirmarPinOperacional) {
-      return res.status(400).json({ error: "Os PINs de segurança não coincidem." });
+      return res
+        .status(400)
+        .json({ error: "Os PINs de segurança não coincidem." });
     }
 
     if (!validarFormatoPin(String(pinOperacional))) {
-      return res.status(400).json({ error: "O PIN de segurança deve possuir exatamente 4 dígitos numéricos." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "O PIN de segurança deve possuir exatamente 4 dígitos numéricos.",
+        });
     }
 
     const usuario = await prisma.usuario.findUnique({
@@ -458,7 +530,11 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
 
     const mesmaSenha = await bcrypt.compare(novaSenha, usuario.senha);
     if (mesmaSenha) {
-      return res.status(400).json({ error: "A nova senha deve ser diferente da senha provisória." });
+      return res
+        .status(400)
+        .json({
+          error: "A nova senha deve ser diferente da senha provisória.",
+        });
     }
 
     const atualizado = await prisma.usuario.update({
@@ -496,7 +572,9 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
       dadosNovos: {
         id: usuario.id,
         email: usuario.email,
-        senhaAlteradaEm: atualizado.deveAlterarSenha ? null : new Date().toISOString(),
+        senhaAlteradaEm: atualizado.deveAlterarSenha
+          ? null
+          : new Date().toISOString(),
         pinOperacionalCriado: true,
       },
     });
@@ -507,7 +585,10 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
         ...atualizado,
         possuiPinOperacional: Boolean(atualizado.pinOperacionalHash),
         pinOperacionalHash: undefined,
-        unidadesPermitidas: normalizarUnidadesPermitidas(atualizado.unidadesPermitidas, atualizado.unidade),
+        unidadesPermitidas: normalizarUnidadesPermitidas(
+          atualizado.unidadesPermitidas,
+          atualizado.unidade,
+        ),
       },
     });
   } catch (error) {
@@ -520,7 +601,11 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
     const { senha, pinOperacional } = req.body;
 
     if (!senha && !pinOperacional) {
-      return res.status(400).json({ error: "Informe seu PIN operacional para desbloquear o sistema." });
+      return res
+        .status(400)
+        .json({
+          error: "Informe seu PIN operacional para desbloquear o sistema.",
+        });
     }
 
     const usuario = await prisma.usuario.findUnique({
@@ -532,8 +617,14 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
     }
 
     if (usuario.pinOperacionalHash) {
-      await validarPinOperacional(usuario.id, String(pinOperacional || senha || ""));
-    } else if (usuario.perfilAcesso === "SUPER_ADMIN" && String(pinOperacional || senha || "").trim() === "1234") {
+      await validarPinOperacional(
+        usuario.id,
+        String(pinOperacional || senha || ""),
+      );
+    } else if (
+      usuario.perfilAcesso === "SUPER_ADMIN" &&
+      String(pinOperacional || senha || "").trim() === "1234"
+    ) {
       await prisma.usuario.update({
         where: { id: usuario.id },
         data: {
@@ -548,9 +639,10 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
       const senhaInformada = String(senha || "").trim();
       if (!senhaInformada) {
         return res.status(400).json({
-          error: usuario.perfilAcesso === "SUPER_ADMIN"
-            ? "PIN operacional ainda nao cadastrado. Use 1234 para recuperar o acesso e altere o PIN no perfil."
-            : "PIN operacional ainda nao cadastrado. Acesse seu perfil e crie um PIN para desbloquear a sessao.",
+          error:
+            usuario.perfilAcesso === "SUPER_ADMIN"
+              ? "PIN operacional ainda nao cadastrado. Use 1234 para recuperar o acesso e altere o PIN no perfil."
+              : "PIN operacional ainda nao cadastrado. Acesse seu perfil e crie um PIN para desbloquear a sessao.",
         });
       }
 
@@ -573,7 +665,9 @@ export async function desbloquearSessao(req: AuthRequest, res: Response) {
 
     return res.json({ mensagem: "Sessao desbloqueada com sucesso." });
   } catch (error: any) {
-    return res.status(error?.status || 500).json({ error: error?.message || "Erro ao desbloquear sessao" });
+    return res
+      .status(error?.status || 500)
+      .json({ error: error?.message || "Erro ao desbloquear sessao" });
   }
 }
 
@@ -641,7 +735,10 @@ export async function renovarSessao(req: Request, res: Response) {
         perfilAcesso: sessao.usuario.perfilAcesso,
         equipe: sessao.usuario.equipe,
         unidade: sessao.usuario.unidade,
-        unidadesPermitidas: normalizarUnidadesPermitidas(sessao.usuario.unidadesPermitidas, sessao.usuario.unidade),
+        unidadesPermitidas: normalizarUnidadesPermitidas(
+          sessao.usuario.unidadesPermitidas,
+          sessao.usuario.unidade,
+        ),
         deveAlterarSenha: sessao.usuario.deveAlterarSenha,
         possuiPinOperacional: Boolean(sessao.usuario.pinOperacionalHash),
       },
@@ -686,4 +783,3 @@ export async function logout(req: AuthRequest, res: Response) {
   limparCookiesSessao(req, res);
   return res.status(204).send();
 }
-

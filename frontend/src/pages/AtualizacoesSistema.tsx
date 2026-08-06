@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { CalendarClock, RefreshCcw, Rocket, Tags } from "lucide-react";
 import { api } from "../services/api";
 import { SkeletonPage } from "../components/ui/Skeleton";
@@ -47,8 +47,12 @@ export default function AtualizacoesSistema() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Sistema</p>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Últimas atualizações</h1>
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+            Sistema
+          </p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            Últimas atualizações
+          </h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
             Histórico de versões, melhorias e correções do JetGuard.
           </p>
@@ -70,15 +74,21 @@ export default function AtualizacoesSistema() {
             <Rocket size={22} />
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">Sistema</p>
-          <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{dados?.sistema || "JetGuard"}</p>
+          <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+            {dados?.sistema || "JetGuard"}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
             <Tags size={22} />
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Versão atual</p>
-          <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">v{dados?.versaoAtual || "..."}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Versão atual
+          </p>
+          <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+            v{dados?.versaoAtual || "..."}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
@@ -87,7 +97,9 @@ export default function AtualizacoesSistema() {
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">Consulta</p>
           <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-            {dados?.atualizadoEm ? new Date(dados.atualizadoEm).toLocaleString() : "..."}
+            {dados?.atualizadoEm
+              ? new Date(dados.atualizadoEm).toLocaleString()
+              : "..."}
           </p>
         </div>
       </section>
@@ -100,20 +112,29 @@ export default function AtualizacoesSistema() {
           >
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4 dark:border-slate-800">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">Versão {versao.versao}</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{versao.data}</p>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  Versão {versao.versao}
+                </h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {versao.data}
+                </p>
               </div>
               {versao.versao === dados.versaoAtual && (
                 <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
-                  VERSÃO ATUAL
+                  VERSÃƒO ATUAL
                 </span>
               )}
             </div>
 
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               {versao.secoes.map((secao) => (
-                <div key={`${versao.versao}-${secao.titulo}`} className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950">
-                  <h3 className="mb-3 font-bold text-slate-900 dark:text-white">{secao.titulo}</h3>
+                <div
+                  key={`${versao.versao}-${secao.titulo}`}
+                  className="rounded-xl bg-slate-50 p-4 dark:bg-slate-950"
+                >
+                  <h3 className="mb-3 font-bold text-slate-900 dark:text-white">
+                    {secao.titulo}
+                  </h3>
                   <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
                     {secao.itens.map((item) => (
                       <li key={item} className="flex gap-2">

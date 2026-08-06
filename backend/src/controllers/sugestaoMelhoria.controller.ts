@@ -1,9 +1,15 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 
-const STATUS_SUGESTAO = ["Recebida", "Em análise", "Aprovada", "Implementada", "Recusada"];
+const STATUS_SUGESTAO = [
+  "Recebida",
+  "Em análise",
+  "Aprovada",
+  "Implementada",
+  "Recusada",
+];
 
 function podeGerenciarSugestoes(perfil?: string) {
   return perfil === PERFIS.SUPER_ADMIN || perfil === PERFIS.ADMINISTRADOR;
@@ -46,7 +52,9 @@ export async function listarSugestoesMelhoria(req: AuthRequest, res: Response) {
     return res.json(sugestoes);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar sugestões de melhoria" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar sugestões de melhoria" });
   }
 }
 
@@ -97,14 +105,23 @@ export async function criarSugestaoMelhoria(req: AuthRequest, res: Response) {
     return res.status(201).json(registro);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao registrar sugestão de melhoria" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao registrar sugestão de melhoria" });
   }
 }
 
-export async function atualizarStatusSugestaoMelhoria(req: AuthRequest, res: Response) {
+export async function atualizarStatusSugestaoMelhoria(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     if (!podeGerenciarSugestoes(req.usuarioPerfil)) {
-      return res.status(403).json({ error: "Apenas administradores podem alterar o status da sugestão." });
+      return res
+        .status(403)
+        .json({
+          error: "Apenas administradores podem alterar o status da sugestão.",
+        });
     }
 
     const anterior = await prisma.sugestaoMelhoria.findFirst({
@@ -158,6 +175,8 @@ export async function atualizarStatusSugestaoMelhoria(req: AuthRequest, res: Res
     return res.json(atualizada);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao atualizar sugestão de melhoria" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar sugestão de melhoria" });
   }
 }

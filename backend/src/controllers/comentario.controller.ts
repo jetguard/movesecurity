@@ -24,7 +24,8 @@ export async function criarComentario(req: AuthRequest, res: Response) {
     const modulo = String(req.params.modulo);
     const registroId = String(req.params.registroId);
     const { comentario } = req.body;
-    if (!comentario) return res.status(400).json({ error: "Informe o comentario." });
+    if (!comentario)
+      return res.status(400).json({ error: "Informe o comentario." });
 
     const novo = await prisma.comentarioInterno.create({
       data: {
@@ -51,4 +52,3 @@ export async function criarComentario(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: "Erro ao criar comentario interno" });
   }
 }
-

@@ -1,8 +1,14 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
-import { criarUrlPublicaPdf, gerarRelatorioPdf } from "../services/relatorioPdf.service";
-import { assinaturaValidaDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
+import {
+  criarUrlPublicaPdf,
+  gerarRelatorioPdf,
+} from "../services/relatorioPdf.service";
+import {
+  assinaturaValidaDocumento,
+  criarUrlValidacaoAssinatura,
+} from "../services/assinaturaDocumento.service";
 import { registrarLog } from "../services/auditoria.service";
 import { emitirRealtime } from "../services/realtime.service";
 import { estaAprovado } from "../utils/status";
@@ -22,11 +28,13 @@ async function validarLocalAtivo(local: string, unidade?: string) {
 }
 
 function ehImpactoOperacionalExterno(natureza?: string) {
-  return String(natureza || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase() === "impacto operacional externo";
+  return (
+    String(natureza || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase() === "impacto operacional externo"
+  );
 }
 
 function prepararImpactoOperacional(valor: unknown, dataInicio: string) {
@@ -45,25 +53,39 @@ function prepararImpactoOperacional(valor: unknown, dataInicio: string) {
       dados.dataHoraTermino &&
       new Date(dados.dataHoraTermino).getTime() < new Date(dataInicio).getTime()
     ) {
-      throw new Error("A data/hora de término não pode ser anterior ao início do impacto.");
+      throw new Error(
+        "A data/hora de término não pode ser anterior ao início do impacto.",
+      );
     }
     if (
       dados.dataHoraIdentificacaoUltimoVeiculo &&
-      new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime() < new Date(dataInicio).getTime()
+      new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime() <
+        new Date(dataInicio).getTime()
     ) {
-      throw new Error("A data/hora de identificação da placa não pode ser anterior ao início do impacto.");
+      throw new Error(
+        "A data/hora de identificação da placa não pode ser anterior ao início do impacto.",
+      );
     }
     if (
       dados.dataHoraIdentificacaoUltimoVeiculo &&
       dados.dataHoraChegadaBalanca &&
-      new Date(dados.dataHoraChegadaBalanca).getTime() < new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime()
+      new Date(dados.dataHoraChegadaBalanca).getTime() <
+        new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime()
     ) {
-      throw new Error("A chegada na balança não pode ser anterior à identificação da placa no final da fila.");
+      throw new Error(
+        "A chegada na balança não pode ser anterior à identificação da placa no final da fila.",
+      );
     }
 
     return JSON.stringify(impacto);
   } catch (error) {
-    if (error instanceof Error && (error.message.includes("término") || error.message.includes("placa") || error.message.includes("balança"))) throw error;
+    if (
+      error instanceof Error &&
+      (error.message.includes("término") ||
+        error.message.includes("placa") ||
+        error.message.includes("balança"))
+    )
+      throw error;
     throw new Error("Os dados do impacto operacional são inválidos.");
   }
 }
@@ -171,7 +193,10 @@ export async function criarOcorrencia(req: AuthRequest, res: Response) {
     });
 
     const autor = req.usuarioId
-      ? await prisma.usuario.findUnique({ where: { id: req.usuarioId }, select: { nome: true, apelido: true } })
+      ? await prisma.usuario.findUnique({
+          where: { id: req.usuarioId },
+          select: { nome: true, apelido: true },
+        })
       : null;
     emitirRealtime({
       tipo: "ocorrencia.criada",
@@ -213,8 +238,10 @@ export async function listarOcorrencias(req: AuthRequest, res: Response) {
     const ocorrenciasComAssinatura = await Promise.all(
       ocorrencias.map(async (ocorrencia) => ({
         ...ocorrencia,
-        assinaturaAprovacaoValida: Boolean(await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id)),
-      }))
+        assinaturaAprovacaoValida: Boolean(
+          await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id),
+        ),
+      })),
     );
 
     return res.json(ocorrenciasComAssinatura);
@@ -340,7 +367,8 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
       : null;
     if (estaAprovado(ocorrenciaExiste) && assinaturaAprovacao) {
       return res.status(403).json({
-        error: "Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.",
+        error:
+          "Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.",
       });
     }
 
@@ -379,7 +407,9 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
           dataOcorrencia: new Date(dataOcorrencia),
 
           envolvidos: {
-            create: envolvidosFormatados.map(({ id, ocorrenciaId, ...envolvido }) => envolvido),
+            create: envolvidosFormatados.map(
+              ({ id, ocorrenciaId, ...envolvido }) => envolvido,
+            ),
           },
 
           anexos: {
@@ -497,7 +527,9 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
           unidade: ocorrencia.unidade,
           OR: [
             { ocorrenciaId: ocorrencia.id },
-            ...(ocorrencia.investigacao ? [{ investigacaoId: ocorrencia.investigacao.id }] : []),
+            ...(ocorrencia.investigacao
+              ? [{ investigacaoId: ocorrencia.investigacao.id }]
+              : []),
           ],
         },
         orderBy: { createdAt: "asc" },
@@ -510,7 +542,9 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
           unidade: ocorrencia.unidade,
           OR: [
             { ocorrenciaId: ocorrencia.id },
-            ...(ocorrencia.investigacao ? [{ investigacaoId: ocorrencia.investigacao.id }] : []),
+            ...(ocorrencia.investigacao
+              ? [{ investigacaoId: ocorrencia.investigacao.id }]
+              : []),
           ],
         },
         orderBy: { createdAt: "asc" },
@@ -520,12 +554,27 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
       }),
     ]);
 
-    const assinaturaAprovacao = await assinaturaValidaDocumento("Ocorrencia", ocorrencia.id);
+    const assinaturaAprovacao = await assinaturaValidaDocumento(
+      "Ocorrencia",
+      ocorrencia.id,
+    );
     const assinatura =
       assinaturaAprovacao ||
-      (ocorrencia.analise ? await assinaturaValidaDocumento("AnaliseOcorrencia", ocorrencia.analise.id) : null) ||
-      (ocorrencia.investigacao ? await assinaturaValidaDocumento("Investigacao", ocorrencia.investigacao.id) : null);
-    const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
+      (ocorrencia.analise
+        ? await assinaturaValidaDocumento(
+            "AnaliseOcorrencia",
+            ocorrencia.analise.id,
+          )
+        : null) ||
+      (ocorrencia.investigacao
+        ? await assinaturaValidaDocumento(
+            "Investigacao",
+            ocorrencia.investigacao.id,
+          )
+        : null);
+    const validacaoUrl = assinatura
+      ? criarUrlValidacaoAssinatura(req, assinatura.token)
+      : pdfUrl;
 
     return gerarRelatorioPdf(
       res,
@@ -552,7 +601,7 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
       },
       usuario,
       validacaoUrl,
-      assinatura?.token
+      assinatura?.token,
     );
   } catch (error) {
     console.error(error);
@@ -562,4 +611,3 @@ export async function gerarPdfOcorrencia(req: AuthRequest, res: Response) {
     });
   }
 }
-

@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
@@ -7,9 +7,16 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { emitirRealtime } from "../services/realtime.service";
-import { assinarDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
+import {
+  assinarDocumento,
+  criarUrlValidacaoAssinatura,
+} from "../services/assinaturaDocumento.service";
 import { jwtSecret } from "../config/security";
-import { criarQrCodeValidacao, desenharCabecalhoPadrao, desenharRodapeAssinaturaPadrao } from "../services/documentoPdfBase.service";
+import {
+  criarQrCodeValidacao,
+  desenharCabecalhoPadrao,
+  desenharRodapeAssinaturaPadrao,
+} from "../services/documentoPdfBase.service";
 
 const STATUS_CONECTADA = "Conectada";
 const STATUS_DESCONECTADA = "Desconectada";
@@ -53,7 +60,10 @@ function formatarIndisponibilidade(minutosTotais: number) {
   const partes = [];
   if (dias) partes.push(`${dias} dia${dias === 1 ? "" : "s"}`);
   if (horas) partes.push(`${horas} hora${horas === 1 ? "" : "s"}`);
-  if (!dias && !horas) partes.push(`${minutosRestantes} minuto${minutosRestantes === 1 ? "" : "s"}`);
+  if (!dias && !horas)
+    partes.push(
+      `${minutosRestantes} minuto${minutosRestantes === 1 ? "" : "s"}`,
+    );
   return partes.join(" e ");
 }
 
@@ -68,14 +78,23 @@ function textoPdf(valor?: string | number | null) {
 
 function textoPdfSeguro(valor?: string | number | null, maxCaracteres = 240) {
   const texto = textoPdf(valor).replace(/\s+/g, " ");
-  const limitado = texto.length > maxCaracteres ? `${texto.slice(0, maxCaracteres - 3).trim()}...` : texto;
+  const limitado =
+    texto.length > maxCaracteres
+      ? `${texto.slice(0, maxCaracteres - 3).trim()}...`
+      : texto;
   return limitado
     .split(" ")
-    .map((parte) => (parte.length > 22 ? parte.match(/.{1,22}/g)?.join(" ") || parte : parte))
+    .map((parte) =>
+      parte.length > 22 ? parte.match(/.{1,22}/g)?.join(" ") || parte : parte,
+    )
     .join(" ");
 }
 
-function tokenRelatorioCftv(params: { id: number; codigo: string; unidade: string }) {
+function tokenRelatorioCftv(params: {
+  id: number;
+  codigo: string;
+  unidade: string;
+}) {
   return crypto
     .createHmac("sha256", jwtSecret())
     .update(`relatorio-cftv:${params.id}:${params.codigo}:${params.unidade}`)
@@ -83,27 +102,43 @@ function tokenRelatorioCftv(params: { id: number; codigo: string; unidade: strin
     .slice(0, 32);
 }
 
-export function criarUrlPublicaRelatorioCftv(req: Pick<AuthRequest, "protocol" | "get">, params: { id: number; codigo: string; unidade: string }) {
+export function criarUrlPublicaRelatorioCftv(
+  req: Pick<AuthRequest, "protocol" | "get">,
+  params: { id: number; codigo: string; unidade: string },
+) {
   const token = tokenRelatorioCftv(params);
   return `${req.protocol}://${req.get("host")}/api/public/cameras/relatorios-cftv/${params.id}/pdf?token=${token}`;
 }
 
-export function validarTokenAcessoRelatorioCftv(params: { id: number; codigo: string; unidade: string; token: string }) {
+export function validarTokenAcessoRelatorioCftv(params: {
+  id: number;
+  codigo: string;
+  unidade: string;
+  token: string;
+}) {
   const esperado = tokenRelatorioCftv(params);
   if (!params.token || params.token.length !== esperado.length) return false;
-  return crypto.timingSafeEqual(Buffer.from(esperado), Buffer.from(params.token));
+  return crypto.timingSafeEqual(
+    Buffer.from(esperado),
+    Buffer.from(params.token),
+  );
 }
 
 function calcularMinutosIndisponiveisNoIntervalo(
-  eventos: Array<{ iniciadoEm: Date; encerradoEm: Date | null; statusNovo: string }>,
+  eventos: Array<{
+    iniciadoEm: Date;
+    encerradoEm: Date | null;
+    statusNovo: string;
+  }>,
   inicio: Date,
-  fim: Date
+  fim: Date,
 ) {
   const agora = new Date();
   return eventos
     .filter((evento) => evento.statusNovo === STATUS_DESCONECTADA)
     .reduce((total, evento) => {
-      const inicioEvento = evento.iniciadoEm > inicio ? evento.iniciadoEm : inicio;
+      const inicioEvento =
+        evento.iniciadoEm > inicio ? evento.iniciadoEm : inicio;
       const fimEventoBase = evento.encerradoEm || agora;
       const fimEvento = fimEventoBase < fim ? fimEventoBase : fim;
       if (fimEvento <= inicioEvento) return total;
@@ -116,7 +151,11 @@ function calcularRetencaoEfetiva(params: {
   dataMaisRecente?: Date | null;
   statusCamera?: string;
   referenciaAtual?: Date;
-  eventos: Array<{ iniciadoEm: Date; encerradoEm: Date | null; statusNovo: string }>;
+  eventos: Array<{
+    iniciadoEm: Date;
+    encerradoEm: Date | null;
+    statusNovo: string;
+  }>;
 }) {
   if (!params.dataMaisAntiga) {
     return {
@@ -128,11 +167,17 @@ function calcularRetencaoEfetiva(params: {
   }
 
   const agora = params.referenciaAtual || new Date();
-  const limiteJanelaMovel = new Date(agora.getTime() - RETENCAO_MAXIMA_MINUTOS * 60000);
-  const inicioOperacional = params.dataMaisAntiga > limiteJanelaMovel ? params.dataMaisAntiga : limiteJanelaMovel;
-  const fimOperacional = params.statusCamera === STATUS_DESCONECTADA
-    ? params.dataMaisRecente || agora
-    : agora;
+  const limiteJanelaMovel = new Date(
+    agora.getTime() - RETENCAO_MAXIMA_MINUTOS * 60000,
+  );
+  const inicioOperacional =
+    params.dataMaisAntiga > limiteJanelaMovel
+      ? params.dataMaisAntiga
+      : limiteJanelaMovel;
+  const fimOperacional =
+    params.statusCamera === STATUS_DESCONECTADA
+      ? params.dataMaisRecente || agora
+      : agora;
 
   if (fimOperacional <= inicioOperacional) {
     return {
@@ -143,13 +188,19 @@ function calcularRetencaoEfetiva(params: {
     };
   }
 
-  const retencaoBrutaMinutos = Math.min(minutosEntre(inicioOperacional, fimOperacional), RETENCAO_MAXIMA_MINUTOS);
+  const retencaoBrutaMinutos = Math.min(
+    minutosEntre(inicioOperacional, fimOperacional),
+    RETENCAO_MAXIMA_MINUTOS,
+  );
   const indisponibilidadeMinutos = calcularMinutosIndisponiveisNoIntervalo(
     params.eventos,
     inicioOperacional,
-    fimOperacional
+    fimOperacional,
   );
-  const retencaoMinutos = Math.max(0, retencaoBrutaMinutos - indisponibilidadeMinutos);
+  const retencaoMinutos = Math.max(
+    0,
+    retencaoBrutaMinutos - indisponibilidadeMinutos,
+  );
 
   return {
     retencaoBrutaMinutos,
@@ -159,7 +210,10 @@ function calcularRetencaoEfetiva(params: {
   };
 }
 
-function agrupar<T>(itens: T[], chave: (item: T) => string | number | null | undefined) {
+function agrupar<T>(
+  itens: T[],
+  chave: (item: T) => string | number | null | undefined,
+) {
   return itens.reduce<Record<string, number>>((acc, item) => {
     const key = String(chave(item) || "Não informado");
     acc[key] = (acc[key] || 0) + 1;
@@ -194,7 +248,9 @@ async function calcularRetencaoGravacao(params: {
 }
 
 function ranking(dados: Record<string, number>, limite = 8) {
-  return Object.entries(dados).sort((a, b) => b[1] - a[1]).slice(0, limite);
+  return Object.entries(dados)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, limite);
 }
 
 function csvEscape(valor: unknown) {
@@ -219,10 +275,15 @@ export async function registrarMudancaStatus(params: {
   dataEvento?: Date;
 }) {
   const agora = params.dataEvento || new Date();
-  const camera = await prisma.cameraMonitoramento.findUnique({ where: { id: params.cameraId } });
+  const camera = await prisma.cameraMonitoramento.findUnique({
+    where: { id: params.cameraId },
+  });
   if (!camera) return;
 
-  if (params.statusNovo === STATUS_DESCONECTADA && camera.status !== STATUS_DESCONECTADA) {
+  if (
+    params.statusNovo === STATUS_DESCONECTADA &&
+    camera.status !== STATUS_DESCONECTADA
+  ) {
     await prisma.cameraEventoStatus.create({
       data: {
         cameraId: params.cameraId,
@@ -246,7 +307,7 @@ export async function registrarMudancaStatus(params: {
     });
     emitirRealtime({
       tipo: "camera.desconectada",
-      titulo: `Câmera ${camera.numeroCamera} desconectada`,
+      titulo: `CÃ¢mera ${camera.numeroCamera} desconectada`,
       mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
       severidade: "alta",
       unidade: params.unidade,
@@ -256,7 +317,10 @@ export async function registrarMudancaStatus(params: {
     return;
   }
 
-  if (params.statusNovo === STATUS_CONECTADA && (camera.status === STATUS_DESCONECTADA || camera.desconectadaDesde)) {
+  if (
+    params.statusNovo === STATUS_CONECTADA &&
+    (camera.status === STATUS_DESCONECTADA || camera.desconectadaDesde)
+  ) {
     const eventoAberto = await prisma.cameraEventoStatus.findFirst({
       where: {
         cameraId: params.cameraId,
@@ -266,7 +330,8 @@ export async function registrarMudancaStatus(params: {
       orderBy: { iniciadoEm: "desc" },
     });
 
-    const inicio = eventoAberto?.iniciadoEm || camera.desconectadaDesde || agora;
+    const inicio =
+      eventoAberto?.iniciadoEm || camera.desconectadaDesde || agora;
     const duracao = minutosEntre(inicio, agora);
 
     if (eventoAberto) {
@@ -305,19 +370,25 @@ export async function registrarMudancaStatus(params: {
     });
     emitirRealtime({
       tipo: "camera.conectada",
-      titulo: `Câmera ${camera.numeroCamera} reconectada`,
+      titulo: `CÃ¢mera ${camera.numeroCamera} reconectada`,
       mensagem: `${camera.areaMonitorada} | offline por ${duracao} minuto(s)`,
       severidade: "media",
       unidade: params.unidade,
       link: "/cameras",
-      payload: { cameraId: camera.id, numeroCamera: camera.numeroCamera, duracao },
+      payload: {
+        cameraId: camera.id,
+        numeroCamera: camera.numeroCamera,
+        duracao,
+      },
     });
   }
 }
 
 export async function listarCameras(req: AuthRequest, res: Response) {
   try {
-    const incluirRemovidas = req.query.incluirRemovidas === "true" && req.usuarioPerfil === PERFIS.SUPER_ADMIN;
+    const incluirRemovidas =
+      req.query.incluirRemovidas === "true" &&
+      req.usuarioPerfil === PERFIS.SUPER_ADMIN;
     const cameras = await prisma.cameraMonitoramento.findMany({
       where: {
         unidade: req.unidadeAtiva,
@@ -328,19 +399,28 @@ export async function listarCameras(req: AuthRequest, res: Response) {
         checklists: {
           orderBy: { createdAt: "desc" },
           take: 1,
-          include: { responsavel: { select: { id: true, nome: true, apelido: true } } },
+          include: {
+            responsavel: { select: { id: true, nome: true, apelido: true } },
+          },
         },
       },
     });
     const eventos = await prisma.cameraEventoStatus.findMany({
       where: { unidade: req.unidadeAtiva, statusNovo: STATUS_DESCONECTADA },
-      select: { cameraId: true, iniciadoEm: true, encerradoEm: true, statusNovo: true },
+      select: {
+        cameraId: true,
+        iniciadoEm: true,
+        encerradoEm: true,
+        statusNovo: true,
+      },
     });
 
     const camerasComRetencaoAtual = cameras.map((camera) => {
       const ultimoChecklist = camera.checklists[0];
       if (!ultimoChecklist) return camera;
-      const eventosCamera = eventos.filter((evento) => evento.cameraId === camera.id);
+      const eventosCamera = eventos.filter(
+        (evento) => evento.cameraId === camera.id,
+      );
       const retencao = calcularRetencaoEfetiva({
         dataMaisAntiga: ultimoChecklist.dataInicialGravacao,
         dataMaisRecente: ultimoChecklist.dataMaisRecenteGravacao,
@@ -352,7 +432,9 @@ export async function listarCameras(req: AuthRequest, res: Response) {
         checklists: [
           {
             ...ultimoChecklist,
-            tempoGravacaoDisponivel: Math.floor(retencao.retencaoMinutos / 1440),
+            tempoGravacaoDisponivel: Math.floor(
+              retencao.retencaoMinutos / 1440,
+            ),
             retencaoEstimadaMinutos: retencao.retencaoMinutos,
             retencaoEstimadaTexto: retencao.retencaoTexto,
             indisponibilidadeMinutos: retencao.indisponibilidadeMinutos,
@@ -364,7 +446,7 @@ export async function listarCameras(req: AuthRequest, res: Response) {
     return res.json(camerasComRetencaoAtual);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar câmeras" });
+    return res.status(500).json({ error: "Erro ao listar cÃ¢meras" });
   }
 }
 
@@ -381,8 +463,14 @@ export async function criarCamera(req: AuthRequest, res: Response) {
       "monitoramento",
     ];
 
-    if (obrigatorios.some((campo) => req.body[campo] === undefined || req.body[campo] === "")) {
-      return res.status(400).json({ error: "Preencha todos os campos obrigatórios da câmera." });
+    if (
+      obrigatorios.some(
+        (campo) => req.body[campo] === undefined || req.body[campo] === "",
+      )
+    ) {
+      return res
+        .status(400)
+        .json({ error: "Preencha todos os campos obrigatórios da câmera." });
     }
 
     const status = req.body.status || STATUS_CONECTADA;
@@ -400,7 +488,9 @@ export async function criarCamera(req: AuthRequest, res: Response) {
         areaMonitorada: req.body.areaMonitorada,
         infravermelho: req.body.infravermelho,
         monitoramento: req.body.monitoramento,
-        ultimaManutencao: req.body.ultimaManutencao ? new Date(req.body.ultimaManutencao) : null,
+        ultimaManutencao: req.body.ultimaManutencao
+          ? new Date(req.body.ultimaManutencao)
+          : null,
         observacoesTecnicas: req.body.observacoesTecnicas,
         unidade: req.unidadeAtiva || "GJA-T1",
         cadastradoPorId: req.usuarioId,
@@ -423,7 +513,7 @@ export async function criarCamera(req: AuthRequest, res: Response) {
       });
       emitirRealtime({
         tipo: "camera.desconectada",
-        titulo: `Câmera ${camera.numeroCamera} cadastrada desconectada`,
+        titulo: `CÃ¢mera ${camera.numeroCamera} cadastrada desconectada`,
         mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
         severidade: "alta",
         unidade: camera.unidade,
@@ -431,14 +521,22 @@ export async function criarCamera(req: AuthRequest, res: Response) {
       });
     }
 
-    await registrarLog({ req, acao: `Cadastro de câmera ${camera.numeroCamera}`, tipoRegistro: "CameraMonitoramento", registroId: camera.id, dadosNovos: camera });
+    await registrarLog({
+      req,
+      acao: `Cadastro de cÃ¢mera ${camera.numeroCamera}`,
+      tipoRegistro: "CameraMonitoramento",
+      registroId: camera.id,
+      dadosNovos: camera,
+    });
     return res.status(201).json(camera);
   } catch (error: any) {
     console.error(error);
     if (error?.code === "P2002") {
-      return res.status(400).json({ error: "Já existe uma câmera com esse número nesta unidade." });
+      return res
+        .status(400)
+        .json({ error: "Já existe uma câmera com esse número nesta unidade." });
     }
-    return res.status(500).json({ error: "Erro ao cadastrar câmera" });
+    return res.status(500).json({ error: "Erro ao cadastrar cÃ¢mera" });
   }
 }
 
@@ -446,9 +544,14 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     const anterior = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(id), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
+      where: {
+        id: Number(id),
+        unidade: req.unidadeAtiva,
+        statusCadastro: STATUS_CADASTRO_ATIVA,
+      },
     });
-    if (!anterior) return res.status(404).json({ error: "Câmera não encontrada" });
+    if (!anterior)
+      return res.status(404).json({ error: "Câmera não encontrada" });
 
     const statusNovo = req.body.status || anterior.status;
     const camera = await prisma.cameraMonitoramento.update({
@@ -456,16 +559,24 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
       data: {
         numeroCamera: codigo(req.body.numeroCamera, anterior.numeroCamera),
         nomeCamera: req.body.nomeCamera ?? anterior.nomeCamera,
-        numeroServidor: codigo(req.body.numeroServidor, anterior.numeroServidor),
+        numeroServidor: codigo(
+          req.body.numeroServidor,
+          anterior.numeroServidor,
+        ),
         tipoSistema: "DIGIFORT",
-        periodoGravacaoDias: numero(req.body.periodoGravacaoDias, anterior.periodoGravacaoDias),
+        periodoGravacaoDias: numero(
+          req.body.periodoGravacaoDias,
+          anterior.periodoGravacaoDias,
+        ),
         tecnologia: req.body.tecnologia || anterior.tecnologia,
         tipoCamera: req.body.tipoCamera || anterior.tipoCamera,
         localInstalado: req.body.localInstalado || anterior.localInstalado,
         areaMonitorada: req.body.areaMonitorada || anterior.areaMonitorada,
         infravermelho: req.body.infravermelho || anterior.infravermelho,
         monitoramento: req.body.monitoramento || anterior.monitoramento,
-        ultimaManutencao: req.body.ultimaManutencao ? new Date(req.body.ultimaManutencao) : anterior.ultimaManutencao,
+        ultimaManutencao: req.body.ultimaManutencao
+          ? new Date(req.body.ultimaManutencao)
+          : anterior.ultimaManutencao,
         observacoesTecnicas: req.body.observacoesTecnicas,
       },
     });
@@ -481,12 +592,21 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
       });
     }
 
-    const atualizada = await prisma.cameraMonitoramento.findUnique({ where: { id: anterior.id } });
-    await registrarLog({ req, acao: `Atualização de câmera ${camera.numeroCamera}`, tipoRegistro: "CameraMonitoramento", registroId: camera.id, dadosAnteriores: anterior, dadosNovos: atualizada });
+    const atualizada = await prisma.cameraMonitoramento.findUnique({
+      where: { id: anterior.id },
+    });
+    await registrarLog({
+      req,
+      acao: `Atualização de câmera ${camera.numeroCamera}`,
+      tipoRegistro: "CameraMonitoramento",
+      registroId: camera.id,
+      dadosAnteriores: anterior,
+      dadosNovos: atualizada,
+    });
     return res.json(atualizada);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao atualizar câmera" });
+    return res.status(500).json({ error: "Erro ao atualizar cÃ¢mera" });
   }
 }
 
@@ -501,17 +621,25 @@ export async function excluirCamera(req: AuthRequest, res: Response) {
       },
     });
 
-    if (!camera) return res.status(404).json({ error: "Câmera não encontrada" });
+    if (!camera)
+      return res.status(404).json({ error: "Câmera não encontrada" });
 
     const exclusaoDefinitiva = req.query.permanente === "true";
 
     if (exclusaoDefinitiva && req.usuarioPerfil !== PERFIS.SUPER_ADMIN) {
-      return res.status(403).json({ error: "Somente Super Admin pode excluir definitivamente uma câmera." });
+      return res
+        .status(403)
+        .json({
+          error:
+            "Somente Super Admin pode excluir definitivamente uma cÃ¢mera.",
+        });
     }
 
     if (!exclusaoDefinitiva) {
       if (camera.statusCadastro === STATUS_CADASTRO_REMOVIDA) {
-        return res.status(400).json({ error: "Esta câmera já está removida/inativa." });
+        return res
+          .status(400)
+          .json({ error: "Esta câmera já está removida/inativa." });
       }
 
       const atualizada = await prisma.cameraMonitoramento.update({
@@ -527,7 +655,7 @@ export async function excluirCamera(req: AuthRequest, res: Response) {
 
       await registrarLog({
         req,
-        acao: `Câmera ${camera.numeroCamera} marcada como removida/inativa`,
+        acao: `CÃ¢mera ${camera.numeroCamera} marcada como removida/inativa`,
         tipoRegistro: "CameraMonitoramento",
         registroId: camera.id,
         dadosAnteriores: camera,
@@ -552,7 +680,7 @@ export async function excluirCamera(req: AuthRequest, res: Response) {
     return res.status(204).send();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao excluir câmera" });
+    return res.status(500).json({ error: "Erro ao excluir cÃ¢mera" });
   }
 }
 
@@ -560,9 +688,14 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
   try {
     const { cameraId } = req.params;
     const camera = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(cameraId), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
+      where: {
+        id: Number(cameraId),
+        unidade: req.unidadeAtiva,
+        statusCadastro: STATUS_CADASTRO_ATIVA,
+      },
     });
-    if (!camera) return res.status(404).json({ error: "Câmera não encontrada" });
+    if (!camera)
+      return res.status(404).json({ error: "Câmera não encontrada" });
 
     const statusAtual = req.body.statusAtual || camera.status;
 
@@ -574,27 +707,45 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
       },
     });
 
-    const atual = await prisma.cameraMonitoramento.findUnique({ where: { id: camera.id } });
+    const atual = await prisma.cameraMonitoramento.findUnique({
+      where: { id: camera.id },
+    });
     const indisponibilidadeAberta =
       atual?.status === STATUS_DESCONECTADA && atual.desconectadaDesde
         ? minutosEntre(atual.desconectadaDesde, new Date())
         : 0;
     const dataInicialGravacao = dataOpcional(req.body.dataInicialGravacao);
-    const dataMaisRecenteInformada = dataOpcional(req.body.dataMaisRecenteGravacao);
+    const dataMaisRecenteInformada = dataOpcional(
+      req.body.dataMaisRecenteGravacao,
+    );
     const dataMaisRecenteGravacao =
-      dataMaisRecenteInformada || (statusAtual === STATUS_CONECTADA ? new Date() : null);
+      dataMaisRecenteInformada ||
+      (statusAtual === STATUS_CONECTADA ? new Date() : null);
 
     if (!dataInicialGravacao) {
-      return res.status(400).json({ error: "Informe a data e hora mais antiga encontrada no Digifort." });
+      return res
+        .status(400)
+        .json({
+          error: "Informe a data e hora mais antiga encontrada no Digifort.",
+        });
     }
 
     if (statusAtual === STATUS_DESCONECTADA && !dataMaisRecenteGravacao) {
-      return res.status(400).json({ error: "Informe a data e hora da última gravação antes da desconexão." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Informe a data e hora da última gravação antes da desconexão.",
+        });
     }
 
-    if (dataMaisRecenteGravacao && dataInicialGravacao > dataMaisRecenteGravacao) {
+    if (
+      dataMaisRecenteGravacao &&
+      dataInicialGravacao > dataMaisRecenteGravacao
+    ) {
       return res.status(400).json({
-        error: "A data mais antiga encontrada no Digifort nao pode ser maior que a data mais recente.",
+        error:
+          "A data mais antiga encontrada no Digifort nao pode ser maior que a data mais recente.",
       });
     }
 
@@ -632,23 +783,40 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
         retencaoEstimadaMinutos: retencao.retencaoMinutos,
         retencaoEstimadaTexto: retencao.retencaoTexto,
         qualidadeImagem: req.body.qualidadeImagem || "Nao informado",
-        funcionamentoInfravermelho: req.body.funcionamentoInfravermelho || "Nao informado",
-        funcionamentoGravacao: req.body.funcionamentoGravacao || "Nao informado",
+        funcionamentoInfravermelho:
+          req.body.funcionamentoInfravermelho || "Nao informado",
+        funcionamentoGravacao:
+          req.body.funcionamentoGravacao || "Nao informado",
         comunicacaoServidor: req.body.comunicacaoServidor || "Nao informado",
-        instabilidadeDetectada: req.body.instabilidadeDetectada || (statusAtual === STATUS_DESCONECTADA ? "Sim" : "Nao"),
-        necessidadeManutencao: req.body.necessidadeManutencao || "Nao informado",
+        instabilidadeDetectada:
+          req.body.instabilidadeDetectada ||
+          (statusAtual === STATUS_DESCONECTADA ? "Sim" : "Nao"),
+        necessidadeManutencao:
+          req.body.necessidadeManutencao || "Nao informado",
         observacoesOperacionais: req.body.observacoesOperacionais,
         indisponibilidadeMinutos: indisponibilidadeAberta,
-        falhaRecorrente: eventosRecentes >= 3 || statusAtual === STATUS_DESCONECTADA,
+        falhaRecorrente:
+          eventosRecentes >= 3 || statusAtual === STATUS_DESCONECTADA,
       },
-      include: { responsavel: { select: { id: true, nome: true, apelido: true } }, camera: true },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+        camera: true,
+      },
     });
 
-    await registrarLog({ req, acao: `Checklist operacional da câmera ${camera.numeroCamera}`, tipoRegistro: "CameraChecklistOperacional", registroId: checklist.id, dadosNovos: checklist });
+    await registrarLog({
+      req,
+      acao: `Checklist operacional da cÃ¢mera ${camera.numeroCamera}`,
+      tipoRegistro: "CameraChecklistOperacional",
+      registroId: checklist.id,
+      dadosNovos: checklist,
+    });
     return res.status(201).json(checklist);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao criar checklist da câmera" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao criar checklist da cÃ¢mera" });
   }
 }
 
@@ -656,24 +824,40 @@ export async function listarChecklistCamera(req: AuthRequest, res: Response) {
   try {
     const { cameraId } = req.params;
     const checklists = await prisma.cameraChecklistOperacional.findMany({
-      where: { cameraId: Number(cameraId), unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
+      where: {
+        cameraId: Number(cameraId),
+        unidade: req.unidadeAtiva,
+        camera: { statusCadastro: STATUS_CADASTRO_ATIVA },
+      },
       orderBy: { createdAt: "desc" },
-      include: { responsavel: { select: { id: true, nome: true, apelido: true } } },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+      },
     });
     return res.json(checklists);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar histórico da câmera" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar histórico da câmera" });
   }
 }
 
-export async function listarIndisponibilidadesCamera(req: AuthRequest, res: Response) {
+export async function listarIndisponibilidadesCamera(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { cameraId } = req.params;
     const camera = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(cameraId), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
+      where: {
+        id: Number(cameraId),
+        unidade: req.unidadeAtiva,
+        statusCadastro: STATUS_CADASTRO_ATIVA,
+      },
     });
-    if (!camera) return res.status(404).json({ error: "CÃ¢mera nÃ£o encontrada" });
+    if (!camera)
+      return res.status(404).json({ error: "CÃƒÂ¢mera nÃƒÂ£o encontrada" });
 
     const eventos = await prisma.cameraEventoStatus.findMany({
       where: {
@@ -684,47 +868,79 @@ export async function listarIndisponibilidadesCamera(req: AuthRequest, res: Resp
       orderBy: { iniciadoEm: "desc" },
     });
 
-    const responsaveisIds = [...new Set(eventos.map((evento) => evento.responsavelId).filter(Boolean))] as number[];
+    const responsaveisIds = [
+      ...new Set(eventos.map((evento) => evento.responsavelId).filter(Boolean)),
+    ] as number[];
     const responsaveis = await prisma.usuario.findMany({
       where: { id: { in: responsaveisIds } },
       select: { id: true, nome: true, apelido: true },
     });
-    const usuarios = new Map(responsaveis.map((usuario) => [usuario.id, usuario]));
+    const usuarios = new Map(
+      responsaveis.map((usuario) => [usuario.id, usuario]),
+    );
 
-    return res.json(eventos.map((evento) => {
-      const duracao = evento.duracaoIndisponivel ?? (evento.encerradoEm ? minutosEntre(evento.iniciadoEm, evento.encerradoEm) : minutosEntre(evento.iniciadoEm, new Date()));
-      const responsavel = evento.responsavelId ? usuarios.get(evento.responsavelId) : null;
-      return {
-        ...evento,
-        duracaoIndisponivel: duracao,
-        tempoIndisponibilidade: formatarIndisponibilidade(duracao),
-        responsavel: responsavel ? { nome: responsavel.apelido || responsavel.nome } : null,
-      };
-    }));
+    return res.json(
+      eventos.map((evento) => {
+        const duracao =
+          evento.duracaoIndisponivel ??
+          (evento.encerradoEm
+            ? minutosEntre(evento.iniciadoEm, evento.encerradoEm)
+            : minutosEntre(evento.iniciadoEm, new Date()));
+        const responsavel = evento.responsavelId
+          ? usuarios.get(evento.responsavelId)
+          : null;
+        return {
+          ...evento,
+          duracaoIndisponivel: duracao,
+          tempoIndisponibilidade: formatarIndisponibilidade(duracao),
+          responsavel: responsavel
+            ? { nome: responsavel.apelido || responsavel.nome }
+            : null,
+        };
+      }),
+    );
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar histÃ³rico de indisponibilidade" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar histÃƒÂ³rico de indisponibilidade" });
   }
 }
 
-export async function registrarIndisponibilidadeCamera(req: AuthRequest, res: Response) {
+export async function registrarIndisponibilidadeCamera(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { cameraId } = req.params;
     const camera = await prisma.cameraMonitoramento.findFirst({
-      where: { id: Number(cameraId), unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
+      where: {
+        id: Number(cameraId),
+        unidade: req.unidadeAtiva,
+        statusCadastro: STATUS_CADASTRO_ATIVA,
+      },
     });
-    if (!camera) return res.status(404).json({ error: "CÃ¢mera nÃ£o encontrada" });
+    if (!camera)
+      return res.status(404).json({ error: "CÃƒÂ¢mera nÃƒÂ£o encontrada" });
 
     const iniciadoEm = dataOpcional(req.body.iniciadoEm);
     const encerradoEm = dataOpcional(req.body.encerradoEm);
     const motivo = String(req.body.motivo || "").trim();
 
     if (!iniciadoEm || !encerradoEm || !motivo) {
-      return res.status(400).json({ error: "Informe data/hora inicial, data/hora final e motivo." });
+      return res
+        .status(400)
+        .json({
+          error: "Informe data/hora inicial, data/hora final e motivo.",
+        });
     }
 
     if (encerradoEm <= iniciadoEm) {
-      return res.status(400).json({ error: "A data/hora final deve ser maior que a data/hora inicial." });
+      return res
+        .status(400)
+        .json({
+          error: "A data/hora final deve ser maior que a data/hora inicial.",
+        });
     }
 
     const duracao = minutosEntre(iniciadoEm, encerradoEm);
@@ -753,7 +969,7 @@ export async function registrarIndisponibilidadeCamera(req: AuthRequest, res: Re
 
     await registrarLog({
       req,
-      acao: `Registro de indisponibilidade da cÃ¢mera ${camera.numeroCamera} por ${formatarIndisponibilidade(duracao)}`,
+      acao: `Registro de indisponibilidade da cÃƒÂ¢mera ${camera.numeroCamera} por ${formatarIndisponibilidade(duracao)}`,
       tipoRegistro: "CameraEventoStatus",
       registroId: evento.id,
       dadosNovos: evento,
@@ -765,11 +981,16 @@ export async function registrarIndisponibilidadeCamera(req: AuthRequest, res: Re
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao registrar indisponibilidade" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao registrar indisponibilidade" });
   }
 }
 
-export async function atualizarIndisponibilidadeCamera(req: AuthRequest, res: Response) {
+export async function atualizarIndisponibilidadeCamera(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { cameraId, eventoId } = req.params;
     const anterior = await prisma.cameraEventoStatus.findFirst({
@@ -780,15 +1001,25 @@ export async function atualizarIndisponibilidadeCamera(req: AuthRequest, res: Re
         statusNovo: STATUS_DESCONECTADA,
       },
     });
-    if (!anterior) return res.status(404).json({ error: "Registro de indisponibilidade nÃ£o encontrado" });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Registro de indisponibilidade nÃƒÂ£o encontrado" });
 
     const iniciadoEm = dataOpcional(req.body.iniciadoEm) || anterior.iniciadoEm;
-    const encerradoEm = dataOpcional(req.body.encerradoEm) || anterior.encerradoEm;
+    const encerradoEm =
+      dataOpcional(req.body.encerradoEm) || anterior.encerradoEm;
     if (!encerradoEm || encerradoEm <= iniciadoEm) {
-      return res.status(400).json({ error: "A data/hora final deve ser maior que a data/hora inicial." });
+      return res
+        .status(400)
+        .json({
+          error: "A data/hora final deve ser maior que a data/hora inicial.",
+        });
     }
 
-    const duracaoAnterior = anterior.duracaoIndisponivel ?? minutosEntre(anterior.iniciadoEm, anterior.encerradoEm || new Date());
+    const duracaoAnterior =
+      anterior.duracaoIndisponivel ??
+      minutosEntre(anterior.iniciadoEm, anterior.encerradoEm || new Date());
     const duracaoNova = minutosEntre(iniciadoEm, encerradoEm);
 
     const evento = await prisma.cameraEventoStatus.update({
@@ -811,7 +1042,7 @@ export async function atualizarIndisponibilidadeCamera(req: AuthRequest, res: Re
 
     await registrarLog({
       req,
-      acao: `AtualizaÃ§Ã£o de indisponibilidade da cÃ¢mera ID ${cameraId}`,
+      acao: `AtualizaÃƒÂ§ÃƒÂ£o de indisponibilidade da cÃƒÂ¢mera ID ${cameraId}`,
       tipoRegistro: "CameraEventoStatus",
       registroId: evento.id,
       dadosAnteriores: anterior,
@@ -824,21 +1055,37 @@ export async function atualizarIndisponibilidadeCamera(req: AuthRequest, res: Re
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao atualizar indisponibilidade" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar indisponibilidade" });
   }
 }
 
 export async function dashboardCameras(req: AuthRequest, res: Response) {
   try {
     const [cameras, checklists, eventos, configuracao] = await Promise.all([
-      prisma.cameraMonitoramento.findMany({ where: { unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA } }),
+      prisma.cameraMonitoramento.findMany({
+        where: {
+          unidade: req.unidadeAtiva,
+          statusCadastro: STATUS_CADASTRO_ATIVA,
+        },
+      }),
       prisma.cameraChecklistOperacional.findMany({
-        where: { unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
-        include: { responsavel: { select: { nome: true, apelido: true } }, camera: true },
+        where: {
+          unidade: req.unidadeAtiva,
+          camera: { statusCadastro: STATUS_CADASTRO_ATIVA },
+        },
+        include: {
+          responsavel: { select: { nome: true, apelido: true } },
+          camera: true,
+        },
         orderBy: { createdAt: "desc" },
       }),
       prisma.cameraEventoStatus.findMany({
-        where: { unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
+        where: {
+          unidade: req.unidadeAtiva,
+          camera: { statusCadastro: STATUS_CADASTRO_ATIVA },
+        },
         include: { camera: true },
         orderBy: { iniciadoEm: "desc" },
       }),
@@ -847,20 +1094,40 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
 
     const agora = new Date();
     const total = cameras.length;
-    const online = cameras.filter((camera) => camera.status === STATUS_CONECTADA).length;
-    const offline = cameras.filter((camera) => camera.status === STATUS_DESCONECTADA).length;
+    const online = cameras.filter(
+      (camera) => camera.status === STATUS_CONECTADA,
+    ).length;
+    const offline = cameras.filter(
+      (camera) => camera.status === STATUS_DESCONECTADA,
+    ).length;
     const indisponibilidadeAtual = cameras.reduce((totalMinutos, camera) => {
-      if (camera.status !== STATUS_DESCONECTADA || !camera.desconectadaDesde) return totalMinutos;
+      if (camera.status !== STATUS_DESCONECTADA || !camera.desconectadaDesde)
+        return totalMinutos;
       return totalMinutos + minutosEntre(camera.desconectadaDesde, agora);
     }, 0);
 
-    const eventosOfflineEncerrados = eventos.filter((evento) => evento.duracaoIndisponivel !== null && evento.duracaoIndisponivel !== undefined && evento.statusNovo === STATUS_DESCONECTADA);
+    const eventosOfflineEncerrados = eventos.filter(
+      (evento) =>
+        evento.duracaoIndisponivel !== null &&
+        evento.duracaoIndisponivel !== undefined &&
+        evento.statusNovo === STATUS_DESCONECTADA,
+    );
     const mediaSolucao =
       eventosOfflineEncerrados.length > 0
-        ? Math.round(eventosOfflineEncerrados.reduce((soma, evento) => soma + (evento.duracaoIndisponivel || 0), 0) / eventosOfflineEncerrados.length)
+        ? Math.round(
+            eventosOfflineEncerrados.reduce(
+              (soma, evento) => soma + (evento.duracaoIndisponivel || 0),
+              0,
+            ) / eventosOfflineEncerrados.length,
+          )
         : 0;
-    const totalOfflineHistorico = cameras.reduce((soma, camera) => soma + camera.totalIndisponibilidade, 0) + indisponibilidadeAtual;
-    const sla = total === 0 ? 100 : Math.max(0, Math.round((online / total) * 100));
+    const totalOfflineHistorico =
+      cameras.reduce(
+        (soma, camera) => soma + camera.totalIndisponibilidade,
+        0,
+      ) + indisponibilidadeAtual;
+    const sla =
+      total === 0 ? 100 : Math.max(0, Math.round((online / total) * 100));
     const metaSla = configuracao?.slaCameras || 98;
     const tempoMaximoOffline = configuracao?.tempoMaximoOffline || 60;
     const checklistsComRetencao = checklists.map((checklist) => {
@@ -868,7 +1135,9 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         dataMaisAntiga: checklist.dataInicialGravacao,
         dataMaisRecente: checklist.dataMaisRecenteGravacao,
         statusCamera: checklist.camera.status,
-        eventos: eventos.filter((evento) => evento.cameraId === checklist.cameraId),
+        eventos: eventos.filter(
+          (evento) => evento.cameraId === checklist.cameraId,
+        ),
       });
       return {
         ...checklist,
@@ -880,16 +1149,27 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
     });
     const ultimoChecklistPorCamera = cameras.map((camera) => ({
       camera,
-      checklist: checklistsComRetencao.find((checklist) => checklist.cameraId === camera.id) || null,
+      checklist:
+        checklistsComRetencao.find(
+          (checklist) => checklist.cameraId === camera.id,
+        ) || null,
     }));
     const retencoesValidas = ultimoChecklistPorCamera
       .map(({ checklist }) => checklist?.tempoGravacaoDisponivel ?? null)
-      .filter((dias): dias is number => typeof dias === "number" && Number.isFinite(dias));
+      .filter(
+        (dias): dias is number =>
+          typeof dias === "number" && Number.isFinite(dias),
+      );
     const retencaoMedia =
       retencoesValidas.length === 0
         ? 0
-        : Math.round(retencoesValidas.reduce((soma, dias) => soma + dias, 0) / retencoesValidas.length);
-    const camerasConformidade = ultimoChecklistPorCamera.filter(({ checklist }) => (checklist?.tempoGravacaoDisponivel ?? -1) >= 180).length;
+        : Math.round(
+            retencoesValidas.reduce((soma, dias) => soma + dias, 0) /
+              retencoesValidas.length,
+          );
+    const camerasConformidade = ultimoChecklistPorCamera.filter(
+      ({ checklist }) => (checklist?.tempoGravacaoDisponivel ?? -1) >= 180,
+    ).length;
     const camerasAtencao = ultimoChecklistPorCamera.filter(({ checklist }) => {
       const dias = checklist?.tempoGravacaoDisponivel;
       return typeof dias === "number" && dias >= 150 && dias <= 179;
@@ -899,8 +1179,15 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
       return typeof dias === "number" && dias < 150;
     }).length;
     const menorRetencao = ultimoChecklistPorCamera
-      .filter(({ checklist }) => typeof checklist?.tempoGravacaoDisponivel === "number")
-      .sort((a, b) => (a.checklist!.tempoGravacaoDisponivel || 0) - (b.checklist!.tempoGravacaoDisponivel || 0))
+      .filter(
+        ({ checklist }) =>
+          typeof checklist?.tempoGravacaoDisponivel === "number",
+      )
+      .sort(
+        (a, b) =>
+          (a.checklist!.tempoGravacaoDisponivel || 0) -
+          (b.checklist!.tempoGravacaoDisponivel || 0),
+      )
       .slice(0, 10)
       .map(({ camera, checklist }) => ({
         id: camera.id,
@@ -915,9 +1202,10 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
 
     const instabilidadePorCamera = ranking(
       cameras.reduce<Record<string, number>>((acc, camera) => {
-        acc[`Câmera ${camera.numeroCamera}`] = camera.totalFalhas + (camera.status === STATUS_DESCONECTADA ? 1 : 0);
+        acc[`CÃ¢mera ${camera.numeroCamera}`] =
+          camera.totalFalhas + (camera.status === STATUS_DESCONECTADA ? 1 : 0);
         return acc;
-      }, {})
+      }, {}),
     );
 
     const falhasPorArea = ranking(
@@ -927,25 +1215,30 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
           const area = evento.camera?.areaMonitorada || "Não informado";
           acc[area] = (acc[area] || 0) + 1;
           return acc;
-        }, {})
+        }, {}),
     );
 
     const falhasPorServidor = ranking(
       eventos
         .filter((evento) => evento.statusNovo === STATUS_DESCONECTADA)
         .reduce<Record<string, number>>((acc, evento) => {
-          const servidor = evento.camera?.numeroServidor ? `Servidor ${evento.camera.numeroServidor}` : "Não informado";
+          const servidor = evento.camera?.numeroServidor
+            ? `Servidor ${evento.camera.numeroServidor}`
+            : "Não informado";
           acc[servidor] = (acc[servidor] || 0) + 1;
           return acc;
-        }, {})
+        }, {}),
     );
 
     const resolucaoPorOperador = ranking(
       checklistsComRetencao.reduce<Record<string, number>>((acc, checklist) => {
-        const nome = checklist.responsavel?.apelido || checklist.responsavel?.nome || "Não informado";
+        const nome =
+          checklist.responsavel?.apelido ||
+          checklist.responsavel?.nome ||
+          "Não informado";
         acc[nome] = (acc[nome] || 0) + checklist.indisponibilidadeMinutos;
         return acc;
-      }, {})
+      }, {}),
     );
 
     const falhasPorDia = eventos
@@ -963,7 +1256,8 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
       disponibilidade: total === 0 ? 100 : Math.round((online / total) * 100),
       indisponibilidade: total === 0 ? 0 : Math.round((offline / total) * 100),
       mediaSolucao,
-      mediaOfflinePorCamera: total === 0 ? 0 : Math.round(totalOfflineHistorico / total),
+      mediaOfflinePorCamera:
+        total === 0 ? 0 : Math.round(totalOfflineHistorico / total),
       totalOfflineHistorico,
       retencaoMedia,
       camerasConformidade,
@@ -973,21 +1267,33 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
       menorRetencao,
       sla,
       metaSla,
-      indicadorSla: sla >= metaSla ? "Dentro do SLA" : sla >= 90 ? "Atenção" : "Crítico",
+      indicadorSla:
+        sla >= metaSla ? "Dentro do SLA" : sla >= 90 ? "Atenção" : "Crítico",
       digifort: {
         statusIntegracao: "Preparado para integração futura",
         tipoSistemaPadrao: "DIGIFORT",
-        camposMapeados: ["numeroCamera", "numeroServidor", "status", "areaMonitorada", "eventos"],
+        camposMapeados: [
+          "numeroCamera",
+          "numeroServidor",
+          "status",
+          "areaMonitorada",
+          "eventos",
+        ],
       },
       porTipoCamera: agrupar(cameras, (camera) => camera.tipoCamera),
       porTecnologia: agrupar(cameras, (camera) => camera.tecnologia),
       porUnidade: agrupar(cameras, (camera) => camera.unidade),
-      porServidor: agrupar(cameras, (camera) => `Servidor ${camera.numeroServidor}`),
+      porServidor: agrupar(
+        cameras,
+        (camera) => `Servidor ${camera.numeroServidor}`,
+      ),
       instabilidadePorCamera,
       falhasPorArea,
       falhasPorServidor,
       resolucaoPorOperador,
-      falhasPorDia: Object.entries(falhasPorDia).sort((a, b) => a[0].localeCompare(b[0])).slice(-14),
+      falhasPorDia: Object.entries(falhasPorDia)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .slice(-14),
       timeline: eventos.slice(0, 30).map((evento) => ({
         id: evento.id,
         camera: evento.camera?.numeroCamera,
@@ -1007,7 +1313,10 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         status: camera.status,
         tipoCamera: camera.tipoCamera,
         tecnologia: camera.tecnologia,
-        diasRetencao: checklistsComRetencao.find((checklist) => checklist.cameraId === camera.id)?.tempoGravacaoDisponivel ?? null,
+        diasRetencao:
+          checklistsComRetencao.find(
+            (checklist) => checklist.cameraId === camera.id,
+          )?.tempoGravacaoDisponivel ?? null,
         offlineMinutos:
           camera.status === STATUS_DESCONECTADA && camera.desconectadaDesde
             ? minutosEntre(camera.desconectadaDesde, agora)
@@ -1017,17 +1326,27 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         .filter((camera) => camera.status === STATUS_DESCONECTADA)
         .map((camera) => ({
           id: camera.id,
-          titulo: `Câmera ${camera.numeroCamera} desconectada`,
+          titulo: `CÃ¢mera ${camera.numeroCamera} desconectada`,
           mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
-          minutos: camera.desconectadaDesde ? minutosEntre(camera.desconectadaDesde, agora) : 0,
-          slaViolado: camera.desconectadaDesde ? minutosEntre(camera.desconectadaDesde, agora) > tempoMaximoOffline : false,
+          minutos: camera.desconectadaDesde
+            ? minutosEntre(camera.desconectadaDesde, agora)
+            : 0,
+          slaViolado: camera.desconectadaDesde
+            ? minutosEntre(camera.desconectadaDesde, agora) > tempoMaximoOffline
+            : false,
         })),
       alertasAutomaticos: [
         ...cameras
-          .filter((camera) => camera.status === STATUS_DESCONECTADA && camera.desconectadaDesde && minutosEntre(camera.desconectadaDesde, agora) > tempoMaximoOffline)
+          .filter(
+            (camera) =>
+              camera.status === STATUS_DESCONECTADA &&
+              camera.desconectadaDesde &&
+              minutosEntre(camera.desconectadaDesde, agora) >
+                tempoMaximoOffline,
+          )
           .map((camera) => ({
             tipo: "SLA violado",
-            mensagem: `Câmera ${camera.numeroCamera} offline acima de ${tempoMaximoOffline} minutos`,
+            mensagem: `CÃ¢mera ${camera.numeroCamera} offline acima de ${tempoMaximoOffline} minutos`,
             severidade: "Crítica",
           })),
         ...menorRetencao
@@ -1039,7 +1358,9 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
             severidade: "Critica",
           })),
         ...menorRetencao
-          .filter((camera) => camera.diasRetencao >= 150 && camera.diasRetencao < 180)
+          .filter(
+            (camera) => camera.diasRetencao >= 150 && camera.diasRetencao < 180,
+          )
           .slice(0, 5)
           .map((camera) => ({
             tipo: "Retencao em atencao",
@@ -1050,14 +1371,22 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao gerar dashboard de câmeras" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao gerar dashboard de cÃ¢meras" });
   }
 }
 
-export async function exportarInventarioCameras(req: AuthRequest, res: Response) {
+export async function exportarInventarioCameras(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const cameras = await prisma.cameraMonitoramento.findMany({
-      where: { unidade: req.unidadeAtiva, statusCadastro: STATUS_CADASTRO_ATIVA },
+      where: {
+        unidade: req.unidadeAtiva,
+        statusCadastro: STATUS_CADASTRO_ATIVA,
+      },
       orderBy: { numeroCamera: "asc" },
       include: {
         checklists: {
@@ -1067,12 +1396,38 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
       },
     });
     const eventos = await prisma.cameraEventoStatus.findMany({
-      where: { unidade: req.unidadeAtiva, statusNovo: STATUS_DESCONECTADA, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
-      select: { cameraId: true, iniciadoEm: true, encerradoEm: true, statusNovo: true },
+      where: {
+        unidade: req.unidadeAtiva,
+        statusNovo: STATUS_DESCONECTADA,
+        camera: { statusCadastro: STATUS_CADASTRO_ATIVA },
+      },
+      select: {
+        cameraId: true,
+        iniciadoEm: true,
+        encerradoEm: true,
+        statusNovo: true,
+      },
     });
 
     const linhas = [
-      ["Camera", "Servidor", "Sistema", "Retencao real dias", "Data mais antiga", "Data mais recente", "Status", "Tecnologia", "Tipo", "Local", "Area", "Infravermelho", "Monitoramento", "Ultima manutencao", "Falhas", "Indisponibilidade minutos"],
+      [
+        "Camera",
+        "Servidor",
+        "Sistema",
+        "Retencao real dias",
+        "Data mais antiga",
+        "Data mais recente",
+        "Status",
+        "Tecnologia",
+        "Tipo",
+        "Local",
+        "Area",
+        "Infravermelho",
+        "Monitoramento",
+        "Ultima manutencao",
+        "Falhas",
+        "Indisponibilidade minutos",
+      ],
       ...cameras.map((camera) => {
         const checklist = camera.checklists[0];
         const retencao = checklist
@@ -1080,7 +1435,9 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
               dataMaisAntiga: checklist.dataInicialGravacao,
               dataMaisRecente: checklist.dataMaisRecenteGravacao,
               statusCamera: camera.status,
-              eventos: eventos.filter((evento) => evento.cameraId === camera.id),
+              eventos: eventos.filter(
+                (evento) => evento.cameraId === camera.id,
+              ),
             })
           : null;
         return [
@@ -1104,21 +1461,36 @@ export async function exportarInventarioCameras(req: AuthRequest, res: Response)
       }),
     ];
 
-    return enviarCsv(res, `inventario-cameras-${req.unidadeAtiva || "unidade"}.csv`, linhas);
+    return enviarCsv(
+      res,
+      `inventario-cameras-${req.unidadeAtiva || "unidade"}.csv`,
+      linhas,
+    );
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao exportar inventário de câmeras" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao exportar inventário de câmeras" });
   }
 }
 
-export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res: Response) {
+export async function gerarRelatorioDisponibilidadeCameras(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const cameraIds = Array.isArray(req.body?.cameraIds)
-      ? req.body.cameraIds.map((id: unknown) => Number(id)).filter((id: number) => Number.isFinite(id))
+      ? req.body.cameraIds
+          .map((id: unknown) => Number(id))
+          .filter((id: number) => Number.isFinite(id))
       : [];
 
     if (cameraIds.length === 0) {
-      return res.status(400).json({ error: "Selecione ao menos uma câmera para gerar o relatório." });
+      return res
+        .status(400)
+        .json({
+          error: "Selecione ao menos uma câmera para gerar o relatório.",
+        });
     }
 
     const cameras = await prisma.cameraMonitoramento.findMany({
@@ -1142,15 +1514,27 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
     });
 
     if (cameras.length === 0) {
-      return res.status(404).json({ error: "Nenhuma câmera encontrada para os filtros selecionados." });
+      return res
+        .status(404)
+        .json({
+          error: "Nenhuma cÃ¢mera encontrada para os filtros selecionados.",
+        });
     }
 
-    const responsaveisIds = [...new Set(cameras.flatMap((camera) => camera.eventos.map((evento) => evento.responsavelId).filter(Boolean)))] as number[];
+    const responsaveisIds = [
+      ...new Set(
+        cameras.flatMap((camera) =>
+          camera.eventos.map((evento) => evento.responsavelId).filter(Boolean),
+        ),
+      ),
+    ] as number[];
     const responsaveis = await prisma.usuario.findMany({
       where: { id: { in: responsaveisIds } },
       select: { id: true, nome: true, apelido: true },
     });
-    const usuarios = new Map(responsaveis.map((usuario) => [usuario.id, usuario]));
+    const usuarios = new Map(
+      responsaveis.map((usuario) => [usuario.id, usuario]),
+    );
 
     const camerasRelatorio = cameras.map((camera) => {
       const checklist = camera.checklists[0];
@@ -1163,70 +1547,127 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
           })
         : null;
       const totalIndisponibilidade = camera.eventos.reduce((soma, evento) => {
-        return soma + (evento.duracaoIndisponivel ?? minutosEntre(evento.iniciadoEm, evento.encerradoEm || new Date()));
+        return (
+          soma +
+          (evento.duracaoIndisponivel ??
+            minutosEntre(evento.iniciadoEm, evento.encerradoEm || new Date()))
+        );
       }, 0);
       return {
         camera,
         checklist,
         retencao,
-        diasRetencao: retencao ? Math.floor(retencao.retencaoMinutos / 1440) : null,
+        diasRetencao: retencao
+          ? Math.floor(retencao.retencaoMinutos / 1440)
+          : null,
         totalIndisponibilidade,
         eventos: camera.eventos.map((evento) => {
-          const duracao = evento.duracaoIndisponivel ?? minutosEntre(evento.iniciadoEm, evento.encerradoEm || new Date());
-          const responsavel = evento.responsavelId ? usuarios.get(evento.responsavelId) : null;
+          const duracao =
+            evento.duracaoIndisponivel ??
+            minutosEntre(evento.iniciadoEm, evento.encerradoEm || new Date());
+          const responsavel = evento.responsavelId
+            ? usuarios.get(evento.responsavelId)
+            : null;
           return {
             ...evento,
             duracaoCalculada: duracao,
-            responsavelNome: responsavel ? responsavel.apelido || responsavel.nome : "Sistema",
+            responsavelNome: responsavel
+              ? responsavel.apelido || responsavel.nome
+              : "Sistema",
           };
         }),
       };
     });
 
     const total = camerasRelatorio.length;
-    const conectadas = camerasRelatorio.filter(({ camera }) => camera.status === STATUS_CONECTADA).length;
-    const desconectadas = camerasRelatorio.filter(({ camera }) => camera.status === STATUS_DESCONECTADA).length;
-    const totalEventos = camerasRelatorio.reduce((soma, item) => soma + item.eventos.length, 0);
-    const totalIndisponibilidade = camerasRelatorio.reduce((soma, item) => soma + item.totalIndisponibilidade, 0);
-    const retencoesValidas = camerasRelatorio.map((item) => item.diasRetencao).filter((dias): dias is number => typeof dias === "number");
-    const retencaoMedia = retencoesValidas.length ? Math.round(retencoesValidas.reduce((soma, dias) => soma + dias, 0) / retencoesValidas.length) : 0;
-    const snapshotAtual = camerasRelatorio.map(({ camera, diasRetencao, totalIndisponibilidade: totalCamera }) => ({
-      cameraId: camera.id,
-      numeroCamera: camera.numeroCamera,
-      nomeCamera: camera.nomeCamera,
-      servidor: camera.numeroServidor,
-      area: camera.areaMonitorada,
-      status: camera.status,
-      diasRetencao,
-      totalFalhas: camera.totalFalhas,
-      totalIndisponibilidade: totalCamera,
-    }));
+    const conectadas = camerasRelatorio.filter(
+      ({ camera }) => camera.status === STATUS_CONECTADA,
+    ).length;
+    const desconectadas = camerasRelatorio.filter(
+      ({ camera }) => camera.status === STATUS_DESCONECTADA,
+    ).length;
+    const totalEventos = camerasRelatorio.reduce(
+      (soma, item) => soma + item.eventos.length,
+      0,
+    );
+    const totalIndisponibilidade = camerasRelatorio.reduce(
+      (soma, item) => soma + item.totalIndisponibilidade,
+      0,
+    );
+    const retencoesValidas = camerasRelatorio
+      .map((item) => item.diasRetencao)
+      .filter((dias): dias is number => typeof dias === "number");
+    const retencaoMedia = retencoesValidas.length
+      ? Math.round(
+          retencoesValidas.reduce((soma, dias) => soma + dias, 0) /
+            retencoesValidas.length,
+        )
+      : 0;
+    const snapshotAtual = camerasRelatorio.map(
+      ({ camera, diasRetencao, totalIndisponibilidade: totalCamera }) => ({
+        cameraId: camera.id,
+        numeroCamera: camera.numeroCamera,
+        nomeCamera: camera.nomeCamera,
+        servidor: camera.numeroServidor,
+        area: camera.areaMonitorada,
+        status: camera.status,
+        diasRetencao,
+        totalFalhas: camera.totalFalhas,
+        totalIndisponibilidade: totalCamera,
+      }),
+    );
     const relatorioAnterior = await prisma.relatorioCftv.findFirst({
-      where: { unidade: req.unidadeAtiva || "GJA-T1", snapshotJson: { not: null } },
+      where: {
+        unidade: req.unidadeAtiva || "GJA-T1",
+        snapshotJson: { not: null },
+      },
       orderBy: { createdAt: "desc" },
     });
     const snapshotAnterior = relatorioAnterior?.snapshotJson
-      ? JSON.parse(relatorioAnterior.snapshotJson) as Array<{ cameraId: number; numeroCamera: string; diasRetencao: number | null; totalFalhas: number; totalIndisponibilidade: number; status: string }>
+      ? (JSON.parse(relatorioAnterior.snapshotJson) as Array<{
+          cameraId: number;
+          numeroCamera: string;
+          diasRetencao: number | null;
+          totalFalhas: number;
+          totalIndisponibilidade: number;
+          status: string;
+        }>)
       : [];
-    const mapaAnterior = new Map(snapshotAnterior.map((item) => [item.cameraId, item]));
+    const mapaAnterior = new Map(
+      snapshotAnterior.map((item) => [item.cameraId, item]),
+    );
     const comparativoCameras = snapshotAtual.map((atual) => {
       const anterior = mapaAnterior.get(atual.cameraId);
       const variacaoRetencao =
-        anterior && typeof atual.diasRetencao === "number" && typeof anterior.diasRetencao === "number"
+        anterior &&
+        typeof atual.diasRetencao === "number" &&
+        typeof anterior.diasRetencao === "number"
           ? atual.diasRetencao - anterior.diasRetencao
           : null;
       return {
         ...atual,
         anterior,
         variacaoRetencao,
-        variacaoFalhas: anterior ? atual.totalFalhas - anterior.totalFalhas : null,
-        variacaoIndisponibilidade: anterior ? atual.totalIndisponibilidade - anterior.totalIndisponibilidade : null,
+        variacaoFalhas: anterior
+          ? atual.totalFalhas - anterior.totalFalhas
+          : null,
+        variacaoIndisponibilidade: anterior
+          ? atual.totalIndisponibilidade - anterior.totalIndisponibilidade
+          : null,
       };
     });
-    const ganhoRetencao = comparativoCameras.filter((item) => (item.variacaoRetencao ?? 0) > 0).length;
-    const perdaRetencao = comparativoCameras.filter((item) => (item.variacaoRetencao ?? 0) < 0).length;
-    const variacaoRetencaoMedia = relatorioAnterior ? retencaoMedia - relatorioAnterior.retencaoMedia : null;
-    const variacaoIndisponibilidadeTotal = relatorioAnterior ? totalIndisponibilidade - relatorioAnterior.totalIndisponibilidade : null;
+    const ganhoRetencao = comparativoCameras.filter(
+      (item) => (item.variacaoRetencao ?? 0) > 0,
+    ).length;
+    const perdaRetencao = comparativoCameras.filter(
+      (item) => (item.variacaoRetencao ?? 0) < 0,
+    ).length;
+    const variacaoRetencaoMedia = relatorioAnterior
+      ? retencaoMedia - relatorioAnterior.retencaoMedia
+      : null;
+    const variacaoIndisponibilidadeTotal = relatorioAnterior
+      ? totalIndisponibilidade - relatorioAnterior.totalIndisponibilidade
+      : null;
 
     const ano = new Date().getFullYear();
     const relatorioCftv = await prisma.$transaction(async (tx) => {
@@ -1274,7 +1715,8 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
       where: { id: req.usuarioId },
       select: { nome: true, apelido: true },
     });
-    const responsavelEmissao = usuario?.apelido || usuario?.nome || "Usuario autenticado";
+    const responsavelEmissao =
+      usuario?.apelido || usuario?.nome || "Usuario autenticado";
 
     const doc = new PDFDocument({ size: "A4", margin: 42, bufferPages: true });
     const pageWidth = doc.page.width;
@@ -1283,7 +1725,10 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
     const footerY = pageHeight - 116;
 
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename=relatorio-disponibilidade-cftv-${protocolo.replace("/", "-")}.pdf`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=relatorio-disponibilidade-cftv-${protocolo.replace("/", "-")}.pdf`,
+    );
     doc.pipe(res);
 
     function header() {
@@ -1311,8 +1756,17 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
       return true;
     }
 
-    function card(x: number, y: number, w: number, label: string, value: string, color = "#0f172a") {
-      const textoValor = String(value || "").replace(/\s+/g, " ").trim();
+    function card(
+      x: number,
+      y: number,
+      w: number,
+      label: string,
+      value: string,
+      color = "#0f172a",
+    ) {
+      const textoValor = String(value || "")
+        .replace(/\s+/g, " ")
+        .trim();
       let tamanhoValor = 15;
       while (tamanhoValor > 8) {
         doc.fontSize(tamanhoValor);
@@ -1320,21 +1774,46 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
         tamanhoValor -= 0.5;
       }
       doc.roundedRect(x, y, w, 48, 8).fillAndStroke("#f8fafc", "#e2e8f0");
-      doc.fillColor("#64748b").fontSize(7).text(label.toUpperCase(), x + 10, y + 9, { width: w - 20 });
-      doc.fillColor(color).fontSize(tamanhoValor).text(textoValor, x + 10, y + 24, { width: w - 20, lineBreak: false, ellipsis: true });
+      doc
+        .fillColor("#64748b")
+        .fontSize(7)
+        .text(label.toUpperCase(), x + 10, y + 9, { width: w - 20 });
+      doc
+        .fillColor(color)
+        .fontSize(tamanhoValor)
+        .text(textoValor, x + 10, y + 24, {
+          width: w - 20,
+          lineBreak: false,
+          ellipsis: true,
+        });
     }
 
-    function graficoBarras(titulo: string, dados: Array<{ label: string; value: number; color: string }>) {
+    function graficoBarras(
+      titulo: string,
+      dados: Array<{ label: string; value: number; color: string }>,
+    ) {
       ensureSpace(120);
       doc.fillColor("#0f172a").fontSize(12).text(titulo, 42, doc.y);
       doc.moveDown(0.6);
       const max = Math.max(...dados.map((item) => item.value), 1);
       dados.forEach((item) => {
         const y = doc.y;
-        doc.fillColor("#334155").fontSize(8).text(item.label, 42, y + 2, { width: 116, lineBreak: false, ellipsis: true });
+        doc
+          .fillColor("#334155")
+          .fontSize(8)
+          .text(item.label, 42, y + 2, {
+            width: 116,
+            lineBreak: false,
+            ellipsis: true,
+          });
         doc.roundedRect(164, y, 300, 12, 6).fill("#e2e8f0");
-        doc.roundedRect(164, y, Math.max(8, (item.value / max) * 300), 12, 6).fill(item.color);
-        doc.fillColor("#0f172a").fontSize(8).text(String(item.value), 474, y + 1, { width: 40, align: "right" });
+        doc
+          .roundedRect(164, y, Math.max(8, (item.value / max) * 300), 12, 6)
+          .fill(item.color);
+        doc
+          .fillColor("#0f172a")
+          .fontSize(8)
+          .text(String(item.value), 474, y + 1, { width: 40, align: "right" });
         doc.y += 20;
       });
       doc.moveDown(0.3);
@@ -1345,7 +1824,14 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
       doc.roundedRect(42, y, contentWidth, 24, 6).fill("#0f172a");
       let x = 42;
       headers.forEach((head, i) => {
-        doc.fillColor("#ffffff").fontSize(7).text(textoPdfSeguro(head, 42).toUpperCase(), x + 5, y + 8, { width: widths[i] - 8, lineBreak: false, ellipsis: true });
+        doc
+          .fillColor("#ffffff")
+          .fontSize(7)
+          .text(textoPdfSeguro(head, 42).toUpperCase(), x + 5, y + 8, {
+            width: widths[i] - 8,
+            lineBreak: false,
+            ellipsis: true,
+          });
         x += widths[i];
       });
       doc.y = y + 28;
@@ -1355,18 +1841,35 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
       ensureSpace(44);
       desenharCabecalhoTabela(headers, widths);
       rows.forEach((row, index) => {
-        const textos = row.map((cell, i) => textoPdfSeguro(cell, widths[i] > 140 ? 260 : 140));
+        const textos = row.map((cell, i) =>
+          textoPdfSeguro(cell, widths[i] > 140 ? 260 : 140),
+        );
         const alturas = textos.map((cell, i) => {
           doc.fontSize(7.2);
-          return doc.heightOfString(cell, { width: widths[i] - 10, lineGap: 1 });
+          return doc.heightOfString(cell, {
+            width: widths[i] - 10,
+            lineGap: 1,
+          });
         });
         const rowH = Math.max(34, Math.min(86, Math.max(...alturas) + 16));
         if (ensureSpace(rowH + 8)) desenharCabecalhoTabela(headers, widths);
         const y = doc.y;
-        doc.rect(42, y, contentWidth, rowH).fill(index % 2 === 0 ? "#ffffff" : "#f8fafc").strokeColor("#e2e8f0").stroke();
+        doc
+          .rect(42, y, contentWidth, rowH)
+          .fill(index % 2 === 0 ? "#ffffff" : "#f8fafc")
+          .strokeColor("#e2e8f0")
+          .stroke();
         let x = 42;
         textos.forEach((cell, i) => {
-          doc.fillColor("#334155").fontSize(7.2).text(cell, x + 5, y + 8, { width: widths[i] - 10, height: rowH - 12, lineGap: 1, ellipsis: true });
+          doc
+            .fillColor("#334155")
+            .fontSize(7.2)
+            .text(cell, x + 5, y + 8, {
+              width: widths[i] - 10,
+              height: rowH - 12,
+              lineGap: 1,
+              ellipsis: true,
+            });
           x += widths[i];
         });
         doc.y = y + rowH;
@@ -1381,24 +1884,62 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
     const col = (contentWidth - 36) / 4;
     const yCards = doc.y;
     card(42, yCards, col, "Cameras avaliadas", String(total));
-    card(42 + col + 12, yCards, col, "Conectadas", String(conectadas), "#059669");
-    card(42 + (col + 12) * 2, yCards, col, "Desconectadas", String(desconectadas), "#dc2626");
-    card(42 + (col + 12) * 3, yCards, col, "Retencao media", `${retencaoMedia} dias`, "#2563eb");
+    card(
+      42 + col + 12,
+      yCards,
+      col,
+      "Conectadas",
+      String(conectadas),
+      "#059669",
+    );
+    card(
+      42 + (col + 12) * 2,
+      yCards,
+      col,
+      "Desconectadas",
+      String(desconectadas),
+      "#dc2626",
+    );
+    card(
+      42 + (col + 12) * 3,
+      yCards,
+      col,
+      "Retencao media",
+      `${retencaoMedia} dias`,
+      "#2563eb",
+    );
     doc.y = yCards + 68;
 
     const intro =
       "Conforme analise realizada no modulo de Gestao e Monitoramento de Cameras CFTV do JetGuard, este relatorio consolida o status operacional, a retencao de gravacao e os registros de conexao, desconexao e indisponibilidade das cameras selecionadas. As informacoes apresentadas apoiam a auditoria tecnica, o acompanhamento de SLA, a rastreabilidade das falhas e a tomada de decisao para tratativas preventivas ou corretivas.";
     const introY = doc.y;
     const introH = 74;
-    doc.roundedRect(42, introY, contentWidth, introH, 10).fillAndStroke("#f8fafc", "#dbeafe");
-    doc.fillColor("#0f172a").fontSize(8.8).text(intro, 56, introY + 11, { width: contentWidth - 28, align: "justify", lineGap: 1.5 });
+    doc
+      .roundedRect(42, introY, contentWidth, introH, 10)
+      .fillAndStroke("#f8fafc", "#dbeafe");
+    doc
+      .fillColor("#0f172a")
+      .fontSize(8.8)
+      .text(intro, 56, introY + 11, {
+        width: contentWidth - 28,
+        align: "justify",
+        lineGap: 1.5,
+      });
     doc.y = introY + introH + 10;
 
     graficoBarras("Mapa grafico de status", [
       { label: "Conectadas", value: conectadas, color: "#10b981" },
       { label: "Desconectadas", value: desconectadas, color: "#ef4444" },
-      { label: "Eventos de indisponibilidade", value: totalEventos, color: "#2563eb" },
-      { label: "Horas indisponiveis", value: Math.round(totalIndisponibilidade / 60), color: "#f59e0b" },
+      {
+        label: "Eventos de indisponibilidade",
+        value: totalEventos,
+        color: "#2563eb",
+      },
+      {
+        label: "Horas indisponiveis",
+        value: Math.round(totalIndisponibilidade / 60),
+        color: "#f59e0b",
+      },
     ]);
 
     tabela(
@@ -1411,41 +1952,94 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
         camera.areaMonitorada,
         diasRetencao === null ? "Sem checklist" : `${diasRetencao} dias`,
         String(camera.totalFalhas),
-      ])
+      ]),
     );
 
     ensureSpace(150);
-    doc.fillColor("#0f172a").fontSize(12).text("Analise comparativa de retencao e disponibilidade", 42, doc.y);
+    doc
+      .fillColor("#0f172a")
+      .fontSize(12)
+      .text("Analise comparativa de retencao e disponibilidade", 42, doc.y);
     doc.moveDown(0.6);
     if (!relatorioAnterior) {
-      doc.roundedRect(42, doc.y, contentWidth, 42, 8).fillAndStroke("#f8fafc", "#e2e8f0");
-      doc.fillColor("#475569").fontSize(9).text(
-        "Este e o primeiro relatorio CFTV com base comparativa armazenada para esta unidade. A partir da proxima emissao, o JetGuard apresentara ganhos, perdas e variacoes em relacao ao relatorio anterior.",
-        56,
-        doc.y + 12,
-        { width: contentWidth - 28 }
-      );
+      doc
+        .roundedRect(42, doc.y, contentWidth, 42, 8)
+        .fillAndStroke("#f8fafc", "#e2e8f0");
+      doc
+        .fillColor("#475569")
+        .fontSize(9)
+        .text(
+          "Este e o primeiro relatorio CFTV com base comparativa armazenada para esta unidade. A partir da proxima emissao, o JetGuard apresentara ganhos, perdas e variacoes em relacao ao relatorio anterior.",
+          56,
+          doc.y + 12,
+          { width: contentWidth - 28 },
+        );
       doc.y += 54;
     } else {
       const yComp = doc.y;
       const compCol = (contentWidth - 36) / 4;
-      const codigoRelatorioAnterior = String(relatorioAnterior.codigo || "").replace(/\s+/g, "");
-      card(42, yComp, compCol, "Comparado com", codigoRelatorioAnterior, "#2563eb");
-      card(42 + compCol + 12, yComp, compCol, "Variacao retencao", `${variacaoRetencaoMedia && variacaoRetencaoMedia > 0 ? "+" : ""}${variacaoRetencaoMedia ?? 0} dias`, (variacaoRetencaoMedia ?? 0) < 0 ? "#dc2626" : "#059669");
-      card(42 + (compCol + 12) * 2, yComp, compCol, "Cameras com ganho", String(ganhoRetencao), "#059669");
-      card(42 + (compCol + 12) * 3, yComp, compCol, "Cameras com perda", String(perdaRetencao), "#dc2626");
+      const codigoRelatorioAnterior = String(
+        relatorioAnterior.codigo || "",
+      ).replace(/\s+/g, "");
+      card(
+        42,
+        yComp,
+        compCol,
+        "Comparado com",
+        codigoRelatorioAnterior,
+        "#2563eb",
+      );
+      card(
+        42 + compCol + 12,
+        yComp,
+        compCol,
+        "Variacao retencao",
+        `${variacaoRetencaoMedia && variacaoRetencaoMedia > 0 ? "+" : ""}${variacaoRetencaoMedia ?? 0} dias`,
+        (variacaoRetencaoMedia ?? 0) < 0 ? "#dc2626" : "#059669",
+      );
+      card(
+        42 + (compCol + 12) * 2,
+        yComp,
+        compCol,
+        "Cameras com ganho",
+        String(ganhoRetencao),
+        "#059669",
+      );
+      card(
+        42 + (compCol + 12) * 3,
+        yComp,
+        compCol,
+        "Cameras com perda",
+        String(perdaRetencao),
+        "#dc2626",
+      );
       doc.y = yComp + 64;
 
-      const variacaoIndisponibilidadeTexto = variacaoIndisponibilidadeTotal === null
-        ? ""
-        : ` A variacao total de indisponibilidade foi de ${variacaoIndisponibilidadeTotal > 0 ? "+" : ""}${Math.round(variacaoIndisponibilidadeTotal / 60)} hora(s).`;
+      const variacaoIndisponibilidadeTexto =
+        variacaoIndisponibilidadeTotal === null
+          ? ""
+          : ` A variacao total de indisponibilidade foi de ${variacaoIndisponibilidadeTotal > 0 ? "+" : ""}${Math.round(variacaoIndisponibilidadeTotal / 60)} hora(s).`;
       const textoComparativo =
         (variacaoRetencaoMedia ?? 0) < 0
           ? `Em comparacao com o relatorio ${codigoRelatorioAnterior}, houve reducao media de ${Math.abs(variacaoRetencaoMedia || 0)} dia(s) de retencao. Este comportamento pode indicar impacto por indisponibilidade, falha de gravacao ou sobrescrita operacional no Digifort.${variacaoIndisponibilidadeTexto}`
           : `Em comparacao com o relatorio ${codigoRelatorioAnterior}, houve ganho ou estabilidade na retencao media das cameras avaliadas.${variacaoIndisponibilidadeTexto} Recomenda-se manter o acompanhamento para confirmar a tendencia operacional.`;
-      const textoCompH = Math.max(42, doc.heightOfString(textoComparativo, { width: contentWidth - 28, lineGap: 2 }) + 22);
-      doc.roundedRect(42, doc.y, contentWidth, textoCompH, 8).fillAndStroke("#f8fafc", "#dbeafe");
-      doc.fillColor("#334155").fontSize(9).text(textoComparativo, 56, doc.y + 11, { width: contentWidth - 28, lineGap: 2 });
+      const textoCompH = Math.max(
+        42,
+        doc.heightOfString(textoComparativo, {
+          width: contentWidth - 28,
+          lineGap: 2,
+        }) + 22,
+      );
+      doc
+        .roundedRect(42, doc.y, contentWidth, textoCompH, 8)
+        .fillAndStroke("#f8fafc", "#dbeafe");
+      doc
+        .fillColor("#334155")
+        .fontSize(9)
+        .text(textoComparativo, 56, doc.y + 11, {
+          width: contentWidth - 28,
+          lineGap: 2,
+        });
       doc.y += textoCompH + 10;
 
       const linhasComparativo = comparativoCameras
@@ -1454,69 +2048,149 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
         .slice(0, 10)
         .map((item) => [
           `${item.numeroCamera}${item.nomeCamera ? ` - ${item.nomeCamera}` : ""}`,
-          item.anterior?.diasRetencao === null || item.anterior?.diasRetencao === undefined ? "Sem base" : `${item.anterior.diasRetencao} dias`,
-          item.diasRetencao === null ? "Sem checklist" : `${item.diasRetencao} dias`,
-          item.variacaoRetencao === null ? "N/A" : `${item.variacaoRetencao > 0 ? "+" : ""}${item.variacaoRetencao} dias`,
-          item.variacaoIndisponibilidade === null ? "N/A" : `${item.variacaoIndisponibilidade > 0 ? "+" : ""}${Math.round(item.variacaoIndisponibilidade / 60)} h`,
+          item.anterior?.diasRetencao === null ||
+          item.anterior?.diasRetencao === undefined
+            ? "Sem base"
+            : `${item.anterior.diasRetencao} dias`,
+          item.diasRetencao === null
+            ? "Sem checklist"
+            : `${item.diasRetencao} dias`,
+          item.variacaoRetencao === null
+            ? "N/A"
+            : `${item.variacaoRetencao > 0 ? "+" : ""}${item.variacaoRetencao} dias`,
+          item.variacaoIndisponibilidade === null
+            ? "N/A"
+            : `${item.variacaoIndisponibilidade > 0 ? "+" : ""}${Math.round(item.variacaoIndisponibilidade / 60)} h`,
         ]);
       if (linhasComparativo.length > 0) {
         tabela(
-          ["Camera", "Retencao anterior", "Retencao atual", "Ganho/perda", "Indisp."],
+          [
+            "Camera",
+            "Retencao anterior",
+            "Retencao atual",
+            "Ganho/perda",
+            "Indisp.",
+          ],
           [132, 96, 90, 82, contentWidth - 132 - 96 - 90 - 82],
-          linhasComparativo
+          linhasComparativo,
         );
       }
     }
 
-    camerasRelatorio.forEach(({ camera, checklist, eventos, totalIndisponibilidade: totalCamera, diasRetencao }) => {
-      ensureSpace(116);
-      doc.fillColor("#0f172a").fontSize(12).text(textoPdfSeguro(`Historico - Camera ${camera.numeroCamera}${camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}`, 110), 42, doc.y, { width: contentWidth, ellipsis: true });
-      doc.moveDown(0.4);
-      doc.fillColor("#475569").fontSize(8.5).text(
-        textoPdfSeguro(`Servidor ${camera.numeroServidor} | ${camera.areaMonitorada} | ${camera.localInstalado} | Status atual: ${camera.status} | Retencao: ${diasRetencao === null ? "Sem checklist" : `${diasRetencao} dias`} | Indisponibilidade acumulada: ${formatarIndisponibilidade(totalCamera)}`, 420),
-        42,
-        doc.y,
-        { width: contentWidth }
-      );
-      doc.moveDown(0.6);
-      if (checklist) {
-        doc.fillColor("#64748b").fontSize(8).text(
-          textoPdfSeguro(`Ultimo checklist: ${dataPt(checklist.createdAt)} | Data mais antiga: ${dataPt(checklist.dataInicialGravacao)} | Data mais recente: ${dataPt(checklist.dataMaisRecenteGravacao)} | Responsavel: ${checklist.responsavel?.apelido || checklist.responsavel?.nome || "Nao informado"}`, 420),
-          42,
-          doc.y,
-          { width: contentWidth }
+    camerasRelatorio.forEach(
+      ({
+        camera,
+        checklist,
+        eventos,
+        totalIndisponibilidade: totalCamera,
+        diasRetencao,
+      }) => {
+        ensureSpace(116);
+        doc
+          .fillColor("#0f172a")
+          .fontSize(12)
+          .text(
+            textoPdfSeguro(
+              `Historico - Camera ${camera.numeroCamera}${camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}`,
+              110,
+            ),
+            42,
+            doc.y,
+            { width: contentWidth, ellipsis: true },
+          );
+        doc.moveDown(0.4);
+        doc
+          .fillColor("#475569")
+          .fontSize(8.5)
+          .text(
+            textoPdfSeguro(
+              `Servidor ${camera.numeroServidor} | ${camera.areaMonitorada} | ${camera.localInstalado} | Status atual: ${camera.status} | Retencao: ${diasRetencao === null ? "Sem checklist" : `${diasRetencao} dias`} | Indisponibilidade acumulada: ${formatarIndisponibilidade(totalCamera)}`,
+              420,
+            ),
+            42,
+            doc.y,
+            { width: contentWidth },
+          );
+        doc.moveDown(0.6);
+        if (checklist) {
+          doc
+            .fillColor("#64748b")
+            .fontSize(8)
+            .text(
+              textoPdfSeguro(
+                `Ultimo checklist: ${dataPt(checklist.createdAt)} | Data mais antiga: ${dataPt(checklist.dataInicialGravacao)} | Data mais recente: ${dataPt(checklist.dataMaisRecenteGravacao)} | Responsavel: ${checklist.responsavel?.apelido || checklist.responsavel?.nome || "Nao informado"}`,
+                420,
+              ),
+              42,
+              doc.y,
+              { width: contentWidth },
+            );
+          doc.moveDown(0.7);
+        }
+        if (eventos.length === 0) {
+          doc
+            .roundedRect(42, doc.y, contentWidth, 30, 6)
+            .fillAndStroke("#f0fdf4", "#bbf7d0");
+          doc
+            .fillColor("#047857")
+            .fontSize(8.5)
+            .text(
+              "Sem registros de indisponibilidade para a camera no historico selecionado.",
+              54,
+              doc.y + 10,
+              { width: contentWidth - 24 },
+            );
+          doc.y += 40;
+          return;
+        }
+        tabela(
+          ["Inicio", "Fim", "Duracao", "Motivo", "Responsavel"],
+          [88, 88, 80, 156, contentWidth - 88 - 88 - 80 - 156],
+          eventos
+            .slice(0, 12)
+            .map((evento) => [
+              dataPt(evento.iniciadoEm),
+              dataPt(evento.encerradoEm),
+              formatarIndisponibilidade(evento.duracaoCalculada),
+              textoPdf(evento.motivo || evento.observacao),
+              evento.responsavelNome,
+            ]),
         );
-        doc.moveDown(0.7);
-      }
-      if (eventos.length === 0) {
-        doc.roundedRect(42, doc.y, contentWidth, 30, 6).fillAndStroke("#f0fdf4", "#bbf7d0");
-        doc.fillColor("#047857").fontSize(8.5).text("Sem registros de indisponibilidade para a camera no historico selecionado.", 54, doc.y + 10, { width: contentWidth - 24 });
-        doc.y += 40;
-        return;
-      }
-      tabela(
-        ["Inicio", "Fim", "Duracao", "Motivo", "Responsavel"],
-        [88, 88, 80, 156, contentWidth - 88 - 88 - 80 - 156],
-        eventos.slice(0, 12).map((evento) => [
-          dataPt(evento.iniciadoEm),
-          dataPt(evento.encerradoEm),
-          formatarIndisponibilidade(evento.duracaoCalculada),
-          textoPdf(evento.motivo || evento.observacao),
-          evento.responsavelNome,
-        ])
-      );
-    });
+      },
+    );
 
     ensureSpace(92);
-    const conclusao = desconectadas > 0 || totalEventos > 0
-      ? "Foram identificados registros de indisponibilidade ou cameras desconectadas entre os itens avaliados. Recomenda-se acompanhamento tecnico, verificacao das causas recorrentes e priorizacao das cameras com maior impacto operacional para preservacao da cobertura de seguranca patrimonial."
-      : "As cameras selecionadas apresentam condicao operacional satisfatoria no momento da emissao, sem registros de indisponibilidade no historico avaliado. Recomenda-se manter a rotina de checklist e a verificacao periodica da retencao real no Digifort.";
+    const conclusao =
+      desconectadas > 0 || totalEventos > 0
+        ? "Foram identificados registros de indisponibilidade ou cameras desconectadas entre os itens avaliados. Recomenda-se acompanhamento tecnico, verificacao das causas recorrentes e priorizacao das cameras com maior impacto operacional para preservacao da cobertura de seguranca patrimonial."
+        : "As cameras selecionadas apresentam condicao operacional satisfatoria no momento da emissao, sem registros de indisponibilidade no historico avaliado. Recomenda-se manter a rotina de checklist e a verificacao periodica da retencao real no Digifort.";
     doc.fillColor("#0f172a").fontSize(12).text("Conclusao tecnica", 42, doc.y);
     doc.moveDown(0.5);
-    const conclusaoH = Math.max(62, doc.heightOfString(conclusao, { width: contentWidth - 32, align: "justify", lineGap: 3 }) + 26);
-    doc.roundedRect(42, doc.y, contentWidth, conclusaoH, 9).fillAndStroke(desconectadas > 0 || totalEventos > 0 ? "#fff7ed" : "#f0fdf4", desconectadas > 0 || totalEventos > 0 ? "#fed7aa" : "#bbf7d0");
-    doc.rect(42, doc.y, 4, conclusaoH).fill(desconectadas > 0 || totalEventos > 0 ? "#f97316" : "#10b981");
-    doc.fillColor("#334155").fontSize(9.5).text(conclusao, 58, doc.y + 14, { width: contentWidth - 32, align: "justify", lineGap: 3 });
+    const conclusaoH = Math.max(
+      62,
+      doc.heightOfString(conclusao, {
+        width: contentWidth - 32,
+        align: "justify",
+        lineGap: 3,
+      }) + 26,
+    );
+    doc
+      .roundedRect(42, doc.y, contentWidth, conclusaoH, 9)
+      .fillAndStroke(
+        desconectadas > 0 || totalEventos > 0 ? "#fff7ed" : "#f0fdf4",
+        desconectadas > 0 || totalEventos > 0 ? "#fed7aa" : "#bbf7d0",
+      );
+    doc
+      .rect(42, doc.y, 4, conclusaoH)
+      .fill(desconectadas > 0 || totalEventos > 0 ? "#f97316" : "#10b981");
+    doc
+      .fillColor("#334155")
+      .fontSize(9.5)
+      .text(conclusao, 58, doc.y + 14, {
+        width: contentWidth - 32,
+        align: "justify",
+        lineGap: 3,
+      });
 
     const range = doc.bufferedPageRange();
     for (let i = range.start; i < range.start + range.count; i += 1) {
@@ -1534,20 +2208,40 @@ export async function gerarRelatorioDisponibilidadeCameras(req: AuthRequest, res
     });
   } catch (error: any) {
     console.error(error);
-    return res.status(error?.status || 500).json({ error: error?.message || "Erro ao gerar relatorio tecnico CFTV" });
+    return res
+      .status(error?.status || 500)
+      .json({
+        error: error?.message || "Erro ao gerar relatorio tecnico CFTV",
+      });
   }
 }
 
-export async function exportarHistoricoCameras(req: AuthRequest, res: Response) {
+export async function exportarHistoricoCameras(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const eventos = await prisma.cameraEventoStatus.findMany({
-      where: { unidade: req.unidadeAtiva, camera: { statusCadastro: STATUS_CADASTRO_ATIVA } },
+      where: {
+        unidade: req.unidadeAtiva,
+        camera: { statusCadastro: STATUS_CADASTRO_ATIVA },
+      },
       include: { camera: true },
       orderBy: { iniciadoEm: "desc" },
     });
 
     const linhas = [
-      ["Camera", "Servidor", "Area", "Status anterior", "Status novo", "Inicio", "Encerramento", "Duracao minutos", "Observacao"],
+      [
+        "Camera",
+        "Servidor",
+        "Area",
+        "Status anterior",
+        "Status novo",
+        "Inicio",
+        "Encerramento",
+        "Duracao minutos",
+        "Observacao",
+      ],
       ...eventos.map((evento) => [
         evento.camera.numeroCamera,
         evento.camera.numeroServidor,
@@ -1561,9 +2255,15 @@ export async function exportarHistoricoCameras(req: AuthRequest, res: Response) 
       ]),
     ];
 
-    return enviarCsv(res, `historico-cameras-${req.unidadeAtiva || "unidade"}.csv`, linhas);
+    return enviarCsv(
+      res,
+      `historico-cameras-${req.unidadeAtiva || "unidade"}.csv`,
+      linhas,
+    );
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao exportar histórico de câmeras" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao exportar histórico de câmeras" });
   }
 }

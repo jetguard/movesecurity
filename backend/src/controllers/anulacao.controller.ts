@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
@@ -32,10 +32,16 @@ function podeDecidir(perfil?: string) {
 }
 
 async function validarPinAnulacao(req: AuthRequest) {
-  await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
+  await validarPinOperacional(
+    req.usuarioId!,
+    String(req.body?.pinOperacional || ""),
+  );
 }
 
-export async function listarSolicitacoesAnulacao(req: AuthRequest, res: Response) {
+export async function listarSolicitacoesAnulacao(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const solicitacoes = await prisma.solicitacaoAnulacaoRelatorio.findMany({
       where: {
@@ -53,7 +59,9 @@ export async function listarSolicitacoesAnulacao(req: AuthRequest, res: Response
         decididoPor: { select: { nome: true, apelido: true } },
         acordos: {
           orderBy: { createdAt: "asc" },
-          include: { analista: { select: { nome: true, apelido: true, email: true } } },
+          include: {
+            analista: { select: { nome: true, apelido: true, email: true } },
+          },
         },
       },
     });
@@ -61,22 +69,34 @@ export async function listarSolicitacoesAnulacao(req: AuthRequest, res: Response
     return res.json(solicitacoes);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar solicitações de anulação" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar solicitações de anulação" });
   }
 }
 
-export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response) {
+export async function solicitarAnulacaoRelatorio(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { modulo, registroId, motivo } = req.body;
 
     if (!moduloValido(modulo) || !registroId || !motivo?.trim()) {
-      return res.status(400).json({ error: "Informe relatório e motivo da anulação." });
+      return res
+        .status(400)
+        .json({ error: "Informe relatório e motivo da anulação." });
     }
 
     await validarPinAnulacao(req);
 
-    const registro = await buscarRegistro(modulo, Number(registroId), req.unidadeAtiva || "GJA-T1");
-    if (!registro) return res.status(404).json({ error: "Relatório não encontrado." });
+    const registro = await buscarRegistro(
+      modulo,
+      Number(registroId),
+      req.unidadeAtiva || "GJA-T1",
+    );
+    if (!registro)
+      return res.status(404).json({ error: "Relatório não encontrado." });
     if (registro.status === STATUS_ANULADO) {
       return res.status(400).json({ error: "Este relatório já está anulado." });
     }
@@ -91,7 +111,11 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
     });
 
     if (pendente) {
-      return res.status(400).json({ error: "Já existe uma solicitação pendente para este relatório." });
+      return res
+        .status(400)
+        .json({
+          error: "Já existe uma solicitação pendente para este relatório.",
+        });
     }
 
     const analistas = await prisma.usuario.findMany({
@@ -102,7 +126,9 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
           { unidadesPermitidas: { contains: req.unidadeAtiva } },
           { perfilAcesso: PERFIS.SUPER_ADMIN },
         ],
-        perfilAcesso: { in: [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA] },
+        perfilAcesso: {
+          in: [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA],
+        },
         NOT: { id: req.usuarioId },
       },
       select: { id: true },
@@ -125,7 +151,11 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
       },
       include: {
         solicitante: { select: { nome: true, apelido: true, email: true } },
-        acordos: { include: { analista: { select: { nome: true, apelido: true, email: true } } } },
+        acordos: {
+          include: {
+            analista: { select: { nome: true, apelido: true, email: true } },
+          },
+        },
       },
     });
 
@@ -157,7 +187,8 @@ export async function solicitarAnulacaoRelatorio(req: AuthRequest, res: Response
   } catch (error) {
     console.error(error);
     const status = (error as Error & { status?: number }).status;
-    if (status) return res.status(status).json({ error: (error as Error).message });
+    if (status)
+      return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao solicitar anulação" });
   }
 }
@@ -181,9 +212,14 @@ export async function registrarAcordoAnulacao(req: AuthRequest, res: Response) {
       include: { solicitacao: true },
     });
 
-    if (!acordo) return res.status(404).json({ error: "Acordo não encontrado para este usuário." });
+    if (!acordo)
+      return res
+        .status(404)
+        .json({ error: "Acordo não encontrado para este usuário." });
     if (acordo.solicitacao.status !== STATUS_PENDENTE) {
-      return res.status(400).json({ error: "Esta solicitação já foi decidida." });
+      return res
+        .status(400)
+        .json({ error: "Esta solicitação já foi decidida." });
     }
 
     const atualizado = await prisma.acordoAnulacaoRelatorio.update({
@@ -211,7 +247,8 @@ export async function registrarAcordoAnulacao(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     const status = (error as Error & { status?: number }).status;
-    if (status) return res.status(status).json({ error: (error as Error).message });
+    if (status)
+      return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao registrar acordo" });
   }
 }
@@ -219,7 +256,9 @@ export async function registrarAcordoAnulacao(req: AuthRequest, res: Response) {
 export async function decidirAnulacao(req: AuthRequest, res: Response) {
   try {
     if (!podeDecidir(req.usuarioPerfil)) {
-      return res.status(403).json({ error: "Apenas administrador pode decidir a anulação." });
+      return res
+        .status(403)
+        .json({ error: "Apenas administrador pode decidir a anulação." });
     }
 
     const { id } = req.params;
@@ -236,21 +275,30 @@ export async function decidirAnulacao(req: AuthRequest, res: Response) {
       include: { acordos: true },
     });
 
-    if (!solicitacao) return res.status(404).json({ error: "Solicitação não encontrada." });
+    if (!solicitacao)
+      return res.status(404).json({ error: "Solicitação não encontrada." });
     if (solicitacao.status !== STATUS_PENDENTE) {
-      return res.status(400).json({ error: "Esta solicitação já foi decidida." });
+      return res
+        .status(400)
+        .json({ error: "Esta solicitação já foi decidida." });
     }
 
-    const possuiRecusa = solicitacao.acordos.some((acordo) => acordo.status === STATUS_RECUSADO);
-    const possuiPendencia = solicitacao.acordos.some((acordo) => acordo.status === STATUS_PENDENTE);
+    const possuiRecusa = solicitacao.acordos.some(
+      (acordo) => acordo.status === STATUS_RECUSADO,
+    );
+    const possuiPendencia = solicitacao.acordos.some(
+      (acordo) => acordo.status === STATUS_PENDENTE,
+    );
 
     if (decisao === STATUS_APROVADO && (possuiPendencia || possuiRecusa)) {
       return res.status(400).json({
-        error: "A anulação só pode ser aprovada após o acordo de todos os analistas mencionados.",
+        error:
+          "A anulação só pode ser aprovada após o acordo de todos os analistas mencionados.",
       });
     }
 
-    const statusFinal = decisao === STATUS_APROVADO ? STATUS_ANULADO : STATUS_RECUSADO;
+    const statusFinal =
+      decisao === STATUS_APROVADO ? STATUS_ANULADO : STATUS_RECUSADO;
 
     const resultado = await prisma.$transaction(async (tx) => {
       const atualizada = await tx.solicitacaoAnulacaoRelatorio.update({
@@ -264,7 +312,11 @@ export async function decidirAnulacao(req: AuthRequest, res: Response) {
         include: {
           solicitante: { select: { nome: true, apelido: true, email: true } },
           decididoPor: { select: { nome: true, apelido: true } },
-          acordos: { include: { analista: { select: { nome: true, apelido: true, email: true } } } },
+          acordos: {
+            include: {
+              analista: { select: { nome: true, apelido: true, email: true } },
+            },
+          },
         },
       });
 
@@ -287,7 +339,10 @@ export async function decidirAnulacao(req: AuthRequest, res: Response) {
 
     await registrarLog({
       req,
-      acao: statusFinal === STATUS_ANULADO ? "Anulação de relatório aprovada" : "Anulação de relatório recusada",
+      acao:
+        statusFinal === STATUS_ANULADO
+          ? "Anulação de relatório aprovada"
+          : "Anulação de relatório recusada",
       tipoRegistro: solicitacao.modulo,
       registroId: solicitacao.registroId,
       dadosAnteriores: solicitacao,
@@ -298,7 +353,8 @@ export async function decidirAnulacao(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     const status = (error as Error & { status?: number }).status;
-    if (status) return res.status(status).json({ error: (error as Error).message });
+    if (status)
+      return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao decidir anulação" });
   }
 }

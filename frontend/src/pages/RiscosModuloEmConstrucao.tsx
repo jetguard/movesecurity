@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+﻿import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft, BrainCircuit } from "lucide-react";
 
 function tituloModulo(pathname: string) {

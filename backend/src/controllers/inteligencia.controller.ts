@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
@@ -8,13 +8,16 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 
-function contarPor<T>(itens: T[], chave: (item: T) => string | null | undefined) {
+function contarPor<T>(
+  itens: T[],
+  chave: (item: T) => string | null | undefined,
+) {
   return Object.entries(
     itens.reduce<Record<string, number>>((acc, item) => {
       const nome = chave(item) || "Nao informado";
       acc[nome] = (acc[nome] || 0) + 1;
       return acc;
-    }, {})
+    }, {}),
   )
     .map(([nome, total]) => ({ nome, total }))
     .sort((a, b) => b.total - a.total);
@@ -26,26 +29,50 @@ function porMes(data: Date) {
 
 export async function obterInteligencia(req: AuthRequest, res: Response) {
   try {
-    const [ocorrencias, eventos, riscos, investigacoes, estrategicas] = await Promise.all([
-      prisma.ocorrencia.findMany({ where: { unidade: req.unidadeAtiva } }),
-      prisma.evento.findMany({ where: { unidade: req.unidadeAtiva } }),
-      prisma.analiseRisco.findMany({ where: { unidade: req.unidadeAtiva } }),
-      prisma.investigacao.findMany({ where: { unidade: req.unidadeAtiva } }),
-      prisma.analiseEstrategica.findMany({ where: { unidade: req.unidadeAtiva } }),
-    ]);
+    const [ocorrencias, eventos, riscos, investigacoes, estrategicas] =
+      await Promise.all([
+        prisma.ocorrencia.findMany({ where: { unidade: req.unidadeAtiva } }),
+        prisma.evento.findMany({ where: { unidade: req.unidadeAtiva } }),
+        prisma.analiseRisco.findMany({ where: { unidade: req.unidadeAtiva } }),
+        prisma.investigacao.findMany({ where: { unidade: req.unidadeAtiva } }),
+        prisma.analiseEstrategica.findMany({
+          where: { unidade: req.unidadeAtiva },
+        }),
+      ]);
 
     const registros = [
-      ...ocorrencias.map((item) => ({ modulo: "Ocorrencia", local: item.local, natureza: item.natureza, data: item.dataOcorrencia, status: item.status })),
-      ...eventos.map((item) => ({ modulo: "Evento", local: item.local, natureza: item.natureza, data: item.dataEvento, status: item.status })),
+      ...ocorrencias.map((item) => ({
+        modulo: "Ocorrencia",
+        local: item.local,
+        natureza: item.natureza,
+        data: item.dataOcorrencia,
+        status: item.status,
+      })),
+      ...eventos.map((item) => ({
+        modulo: "Evento",
+        local: item.local,
+        natureza: item.natureza,
+        data: item.dataEvento,
+        status: item.status,
+      })),
     ];
 
     const porLocal = contarPor(registros, (item) => item.local).slice(0, 8);
-    const porNatureza = contarPor(registros, (item) => item.natureza).slice(0, 8);
+    const porNatureza = contarPor(registros, (item) => item.natureza).slice(
+      0,
+      8,
+    );
     const porStatus = contarPor(registros, (item) => item.status);
-    const riscosCriticos = riscos.filter((item) => ["Critico", "Crítico", "Alto"].includes(item.nivelRisco));
-    const investigacoesAbertas = investigacoes.filter((item) => !["Concluido", "Concluído"].includes(item.status));
+    const riscosCriticos = riscos.filter((item) =>
+      ["Critico", "Crítico", "Alto"].includes(item.nivelRisco),
+    );
+    const investigacoesAbertas = investigacoes.filter(
+      (item) => !["Concluido", "Concluído"].includes(item.status),
+    );
 
-    const temporal = contarPor(registros, (item) => porMes(new Date(item.data))).sort((a, b) => a.nome.localeCompare(b.nome));
+    const temporal = contarPor(registros, (item) =>
+      porMes(new Date(item.data)),
+    ).sort((a, b) => a.nome.localeCompare(b.nome));
     const locaisCriticos = porLocal.filter((item) => item.total >= 3);
     const naturezasCriticas = porNatureza.filter((item) => item.total >= 3);
 
@@ -53,13 +80,15 @@ export async function obterInteligencia(req: AuthRequest, res: Response) {
       ...locaisCriticos.map((item) => ({
         tipo: "Local critico",
         titulo: `${item.nome} concentra ${item.total} registros`,
-        recomendacao: "Avaliar reforco de controle, ronda, iluminacao, CFTV e procedimento local.",
+        recomendacao:
+          "Avaliar reforco de controle, ronda, iluminacao, CFTV e procedimento local.",
         severidade: item.total >= 5 ? "alta" : "media",
       })),
       ...naturezasCriticas.map((item) => ({
         tipo: "Natureza recorrente",
         titulo: `${item.nome} aparece em ${item.total} registros`,
-        recomendacao: "Criar plano preventivo especifico e acompanhar reincidencia no mes seguinte.",
+        recomendacao:
+          "Criar plano preventivo especifico e acompanhar reincidencia no mes seguinte.",
         severidade: item.total >= 5 ? "alta" : "media",
       })),
       ...riscosCriticos.slice(0, 5).map((item) => ({
@@ -89,25 +118,31 @@ export async function obterInteligencia(req: AuthRequest, res: Response) {
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
       return res.status(503).json({
-        error: "ConversÃ£o de Ã¡udio indisponÃ­vel no servidor.",
-        detalhe: "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
+        error: "ConversÃƒÂ£o de ÃƒÂ¡udio indisponÃƒÂ­vel no servidor.",
+        detalhe:
+          "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
       });
     }
 
     if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
       return res.status(503).json({
-        error: "ConversÃ£o de Ã¡udio indisponÃ­vel no servidor.",
-        detalhe: "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
+        error: "ConversÃƒÂ£o de ÃƒÂ¡udio indisponÃƒÂ­vel no servidor.",
+        detalhe:
+          "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
       });
     }
 
     console.error(error);
-    return res.status(500).json({ error: "Erro ao gerar inteligencia operacional" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao gerar inteligencia operacional" });
   }
 }
 
 function mimeRelatoPermitido(mime?: string) {
-  return ["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(String(mime || ""));
+  return ["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(
+    String(mime || ""),
+  );
 }
 
 function mimeAudioPermitido(mime?: string) {
@@ -161,7 +196,9 @@ function extrairErroOpenAi(detalhe: string) {
       };
     };
 
-    return json.error?.message || json.error?.code || json.error?.type || detalhe;
+    return (
+      json.error?.message || json.error?.code || json.error?.type || detalhe
+    );
   } catch {
     return detalhe;
   }
@@ -200,8 +237,19 @@ function executarWhisperCpp(arquivoEntrada: string, saidaBase: string) {
   return new Promise<string>((resolve, reject) => {
     const processo = spawn(
       comando,
-      ["-m", modelo, "-f", arquivoEntrada, "-l", "pt", "-nt", "-otxt", "-of", saidaBase],
-      { windowsHide: true }
+      [
+        "-m",
+        modelo,
+        "-f",
+        arquivoEntrada,
+        "-l",
+        "pt",
+        "-nt",
+        "-otxt",
+        "-of",
+        saidaBase,
+      ],
+      { windowsHide: true },
     );
     let stdout = "";
     let stderr = "";
@@ -215,11 +263,15 @@ function executarWhisperCpp(arquivoEntrada: string, saidaBase: string) {
     processo.on("error", reject);
     processo.on("close", async (code) => {
       if (code !== 0) {
-        reject(new Error(stderr || `whisper.cpp finalizado com codigo ${code}`));
+        reject(
+          new Error(stderr || `whisper.cpp finalizado com codigo ${code}`),
+        );
         return;
       }
 
-      const textoArquivo = await fs.readFile(`${saidaBase}.txt`, "utf8").catch(() => "");
+      const textoArquivo = await fs
+        .readFile(`${saidaBase}.txt`, "utf8")
+        .catch(() => "");
       resolve((textoArquivo || stdout).trim());
     });
   });
@@ -231,8 +283,19 @@ function converterAudioParaWav(arquivoEntrada: string, arquivoSaida: string) {
   return new Promise<void>((resolve, reject) => {
     const processo = spawn(
       comando,
-      ["-y", "-i", arquivoEntrada, "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", arquivoSaida],
-      { windowsHide: true }
+      [
+        "-y",
+        "-i",
+        arquivoEntrada,
+        "-ar",
+        "16000",
+        "-ac",
+        "1",
+        "-c:a",
+        "pcm_s16le",
+        arquivoSaida,
+      ],
+      { windowsHide: true },
     );
     let stderr = "";
 
@@ -244,7 +307,11 @@ function converterAudioParaWav(arquivoEntrada: string, arquivoSaida: string) {
     });
     processo.on("close", (code) => {
       if (code !== 0) {
-        reject(new Error(`FFMPEG_ERRO:${stderr || `ffmpeg finalizado com codigo ${code}`}`));
+        reject(
+          new Error(
+            `FFMPEG_ERRO:${stderr || `ffmpeg finalizado com codigo ${code}`}`,
+          ),
+        );
         return;
       }
       resolve();
@@ -253,15 +320,21 @@ function converterAudioParaWav(arquivoEntrada: string, arquivoSaida: string) {
 }
 
 async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
-  const configuracao = await prisma.configuracaoSistema.findUnique({ where: { chave: "global" } });
+  const configuracao = await prisma.configuracaoSistema.findUnique({
+    where: { chave: "global" },
+  });
   const apiKey = configuracao?.openaiApiKey || process.env.OPENAI_API_KEY;
-  const modelo = configuracao?.openaiOcrModel || process.env.OPENAI_OCR_MODEL || "gpt-4.1-mini";
+  const modelo =
+    configuracao?.openaiOcrModel ||
+    process.env.OPENAI_OCR_MODEL ||
+    "gpt-4.1-mini";
 
   if (!apiKey) {
     return {
       status: 503,
       error: "Leitura inteligente ainda não configurada.",
-      detalhe: "Configure OPENAI_API_KEY no backend para ativar a leitura OCR/IA dos relatos.",
+      detalhe:
+        "Configure OPENAI_API_KEY no backend para ativar a leitura OCR/IA dos relatos.",
     };
   }
 
@@ -277,16 +350,17 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
 
   const arquivoBase64 = arquivo.buffer.toString("base64");
   const arquivoDataUrl = `data:${arquivo.mimetype};base64,${arquivoBase64}`;
-  const conteudoArquivo = arquivo.mimetype === "application/pdf"
-    ? {
-        type: "input_file",
-        filename: arquivo.originalname || "relato.pdf",
-        file_data: arquivoDataUrl,
-      }
-    : {
-        type: "input_image",
-        image_url: arquivoDataUrl,
-      };
+  const conteudoArquivo =
+    arquivo.mimetype === "application/pdf"
+      ? {
+          type: "input_file",
+          filename: arquivo.originalname || "relato.pdf",
+          file_data: arquivoDataUrl,
+        }
+      : {
+          type: "input_image",
+          image_url: arquivoDataUrl,
+        };
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
@@ -299,10 +373,7 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
       input: [
         {
           role: "user",
-          content: [
-            { type: "input_text", text: prompt },
-            conteudoArquivo,
-          ],
+          content: [{ type: "input_text", text: prompt }, conteudoArquivo],
         },
       ],
       temperature: 0.2,
@@ -317,7 +388,8 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
     return {
       status: 502,
       error: mensagemAmigavelOpenAi(response.status, detalheTratado),
-      detalhe: process.env.NODE_ENV === "production" ? undefined : detalheTratado,
+      detalhe:
+        process.env.NODE_ENV === "production" ? undefined : detalheTratado,
     };
   }
 
@@ -334,7 +406,11 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
   };
   const texto =
     data.output_text ||
-    data.output?.flatMap((item) => item.content || []).map((part) => part.text || "").join("\n").trim() ||
+    data.output
+      ?.flatMap((item) => item.content || [])
+      .map((part) => part.text || "")
+      .join("\n")
+      .trim() ||
     "";
 
   if (!texto) {
@@ -347,7 +423,8 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
   return {
     status: 200,
     relatoSugerido: limparSugestaoRelato(texto),
-    aviso: "Sugestão gerada por IA com OpenAI. Revise o conteúdo antes de aplicar ao relato.",
+    aviso:
+      "Sugestão gerada por IA com OpenAI. Revise o conteúdo antes de aplicar ao relato.",
     modelo,
     tokens: {
       entrada: data.usage?.input_tokens || 0,
@@ -363,11 +440,15 @@ export async function sugerirRelatoPorOcr(req: AuthRequest, res: Response) {
     const provedor = (process.env.OCR_PROVIDER || "openai").toLowerCase();
 
     if (!arquivo) {
-      return res.status(400).json({ error: "Anexe uma foto ou PDF do relato manuscrito." });
+      return res
+        .status(400)
+        .json({ error: "Anexe uma foto ou PDF do relato manuscrito." });
     }
 
     if (!mimeRelatoPermitido(arquivo.mimetype)) {
-      return res.status(400).json({ error: "Formato não permitido. Envie JPG, PNG, WEBP ou PDF." });
+      return res
+        .status(400)
+        .json({ error: "Formato não permitido. Envie JPG, PNG, WEBP ou PDF." });
     }
 
     let resultado:
@@ -382,14 +463,17 @@ export async function sugerirRelatoPorOcr(req: AuthRequest, res: Response) {
 
     if (provedor !== "openai") {
       return res.status(400).json({
-        error: "Provedor OCR inválido. Configure OCR_PROVIDER=\"openai\" no backend.",
+        error:
+          'Provedor OCR inválido. Configure OCR_PROVIDER="openai" no backend.',
       });
     }
 
     resultado = await sugerirRelatoComOpenAi(arquivo);
 
     if ("error" in resultado) {
-      return res.status(resultado.status).json({ error: resultado.error, detalhe: resultado.detalhe });
+      return res
+        .status(resultado.status)
+        .json({ error: resultado.error, detalhe: resultado.detalhe });
     }
 
     await registrarLog({
@@ -412,28 +496,42 @@ export async function sugerirRelatoPorOcr(req: AuthRequest, res: Response) {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao processar leitura inteligente do relato." });
+    return res
+      .status(500)
+      .json({ error: "Erro ao processar leitura inteligente do relato." });
   }
 }
 
 export async function transcreverRelatoAudio(req: AuthRequest, res: Response) {
   const arquivo = req.file;
   const id = randomUUID();
-  const caminhoEntrada = path.join(os.tmpdir(), `jetguard-audio-${id}.${extensaoAudio(arquivo?.mimetype)}`);
+  const caminhoEntrada = path.join(
+    os.tmpdir(),
+    `jetguard-audio-${id}.${extensaoAudio(arquivo?.mimetype)}`,
+  );
   const caminhoWav = path.join(os.tmpdir(), `jetguard-audio-${id}.wav`);
   const saidaBase = path.join(os.tmpdir(), `jetguard-transcricao-${id}`);
 
   try {
     if (!arquivo) {
-      return res.status(400).json({ error: "Anexe ou grave um áudio para transcrição." });
+      return res
+        .status(400)
+        .json({ error: "Anexe ou grave um áudio para transcrição." });
     }
 
     if (!mimeAudioPermitido(arquivo.mimetype)) {
-      return res.status(400).json({ error: "Formato de áudio não permitido. Envie WEBM, OGG, MP3, M4A ou WAV." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Formato de áudio não permitido. Envie WEBM, OGG, MP3, M4A ou WAV.",
+        });
     }
 
     await fs.writeFile(caminhoEntrada, arquivo.buffer);
-    const arquivoTranscricao = audioEhWav(arquivo.mimetype) ? caminhoEntrada : caminhoWav;
+    const arquivoTranscricao = audioEhWav(arquivo.mimetype)
+      ? caminhoEntrada
+      : caminhoWav;
     if (!audioEhWav(arquivo.mimetype)) {
       await converterAudioParaWav(caminhoEntrada, caminhoWav);
     }
@@ -441,7 +539,11 @@ export async function transcreverRelatoAudio(req: AuthRequest, res: Response) {
     const transcricao = await executarWhisperCpp(arquivoTranscricao, saidaBase);
 
     if (!transcricao) {
-      return res.status(422).json({ error: "Não foi possível identificar uma fala legível neste áudio." });
+      return res
+        .status(422)
+        .json({
+          error: "Não foi possível identificar uma fala legível neste áudio.",
+        });
     }
 
     await registrarLog({
@@ -458,25 +560,30 @@ export async function transcreverRelatoAudio(req: AuthRequest, res: Response) {
 
     return res.json({
       transcricao,
-      aviso: "Transcrição local gerada com whisper.cpp. Revise o texto antes de usar no relatório.",
+      aviso:
+        "Transcrição local gerada com whisper.cpp. Revise o texto antes de usar no relatório.",
     });
   } catch (error) {
     if (error instanceof Error && error.message === "WHISPER_NAO_CONFIGURADO") {
       return res.status(503).json({
         error: "Transcrição local ainda não configurada.",
-        detalhe: "Configure WHISPER_CPP_COMMAND e WHISPER_CPP_MODEL no .env do backend.",
+        detalhe:
+          "Configure WHISPER_CPP_COMMAND e WHISPER_CPP_MODEL no .env do backend.",
       });
     }
 
     if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
       return res.status(503).json({
         error: "Conversao de audio indisponivel no servidor.",
-        detalhe: "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
+        detalhe:
+          "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
       });
     }
 
     console.error(error);
-    return res.status(500).json({ error: "Erro ao transcrever áudio do relato." });
+    return res
+      .status(500)
+      .json({ error: "Erro ao transcrever áudio do relato." });
   } finally {
     await Promise.all([
       fs.unlink(caminhoEntrada).catch(() => undefined),

@@ -1,8 +1,14 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
-import { criarUrlPublicaPdf, gerarRelatorioPdf } from "../services/relatorioPdf.service";
-import { assinaturaValidaDocumento, criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
+import {
+  criarUrlPublicaPdf,
+  gerarRelatorioPdf,
+} from "../services/relatorioPdf.service";
+import {
+  assinaturaValidaDocumento,
+  criarUrlValidacaoAssinatura,
+} from "../services/assinaturaDocumento.service";
 import { registrarLog } from "../services/auditoria.service";
 import { emitirRealtime } from "../services/realtime.service";
 import { estaAprovado } from "../utils/status";
@@ -22,11 +28,13 @@ async function validarLocalAtivo(local: string, unidade?: string) {
 }
 
 function ehImpactoOperacionalExterno(natureza?: string) {
-  return String(natureza || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase() === "impacto operacional externo";
+  return (
+    String(natureza || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase() === "impacto operacional externo"
+  );
 }
 
 function prepararImpactoOperacional(valor: unknown, dataInicio: string) {
@@ -45,25 +53,39 @@ function prepararImpactoOperacional(valor: unknown, dataInicio: string) {
       dados.dataHoraTermino &&
       new Date(dados.dataHoraTermino).getTime() < new Date(dataInicio).getTime()
     ) {
-      throw new Error("A data/hora de término não pode ser anterior ao início do impacto.");
+      throw new Error(
+        "A data/hora de término não pode ser anterior ao início do impacto.",
+      );
     }
     if (
       dados.dataHoraIdentificacaoUltimoVeiculo &&
-      new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime() < new Date(dataInicio).getTime()
+      new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime() <
+        new Date(dataInicio).getTime()
     ) {
-      throw new Error("A data/hora de identificação da placa não pode ser anterior ao início do impacto.");
+      throw new Error(
+        "A data/hora de identificação da placa não pode ser anterior ao início do impacto.",
+      );
     }
     if (
       dados.dataHoraIdentificacaoUltimoVeiculo &&
       dados.dataHoraChegadaBalanca &&
-      new Date(dados.dataHoraChegadaBalanca).getTime() < new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime()
+      new Date(dados.dataHoraChegadaBalanca).getTime() <
+        new Date(dados.dataHoraIdentificacaoUltimoVeiculo).getTime()
     ) {
-      throw new Error("A chegada na balança não pode ser anterior à identificação da placa no final da fila.");
+      throw new Error(
+        "A chegada na balança não pode ser anterior à identificação da placa no final da fila.",
+      );
     }
 
     return JSON.stringify(impacto);
   } catch (error) {
-    if (error instanceof Error && (error.message.includes("término") || error.message.includes("placa") || error.message.includes("balança"))) throw error;
+    if (
+      error instanceof Error &&
+      (error.message.includes("término") ||
+        error.message.includes("placa") ||
+        error.message.includes("balança"))
+    )
+      throw error;
     throw new Error("Os dados do impacto operacional são inválidos.");
   }
 }
@@ -178,7 +200,10 @@ export async function criarEvento(req: AuthRequest, res: Response) {
     });
 
     const autor = req.usuarioId
-      ? await prisma.usuario.findUnique({ where: { id: req.usuarioId }, select: { nome: true, apelido: true } })
+      ? await prisma.usuario.findUnique({
+          where: { id: req.usuarioId },
+          select: { nome: true, apelido: true },
+        })
       : null;
     emitirRealtime({
       tipo: "evento.criado",
@@ -219,8 +244,10 @@ export async function listarEventos(req: AuthRequest, res: Response) {
     const eventosComAssinatura = await Promise.all(
       eventos.map(async (evento) => ({
         ...evento,
-        assinaturaAprovacaoValida: Boolean(await assinaturaValidaDocumento("Evento", evento.id)),
-      }))
+        assinaturaAprovacaoValida: Boolean(
+          await assinaturaValidaDocumento("Evento", evento.id),
+        ),
+      })),
     );
 
     return res.json(eventosComAssinatura);
@@ -344,7 +371,8 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       : null;
     if (estaAprovado(eventoExiste) && assinaturaAprovacao) {
       return res.status(403).json({
-        error: "Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.",
+        error:
+          "Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.",
       });
     }
 
@@ -383,7 +411,9 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
           dataEvento: new Date(dataEvento),
 
           envolvidos: {
-            create: envolvidosFormatados.map(({ id, eventoId, ...envolvido }) => envolvido),
+            create: envolvidosFormatados.map(
+              ({ id, eventoId, ...envolvido }) => envolvido,
+            ),
           },
 
           anexos: {
@@ -484,11 +514,18 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
       codigo: evento.codigo,
       unidade: evento.unidade,
     });
-    const assinaturaAprovacao = await assinaturaValidaDocumento("Evento", evento.id);
+    const assinaturaAprovacao = await assinaturaValidaDocumento(
+      "Evento",
+      evento.id,
+    );
     const assinatura =
       assinaturaAprovacao ||
-      (evento.analise ? await assinaturaValidaDocumento("AnaliseEvento", evento.analise.id) : null);
-    const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
+      (evento.analise
+        ? await assinaturaValidaDocumento("AnaliseEvento", evento.analise.id)
+        : null);
+    const validacaoUrl = assinatura
+      ? criarUrlValidacaoAssinatura(req, assinatura.token)
+      : pdfUrl;
 
     return gerarRelatorioPdf(
       res,
@@ -512,7 +549,7 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
       },
       usuario,
       validacaoUrl,
-      assinatura?.token
+      assinatura?.token,
     );
   } catch (error) {
     console.error(error);
@@ -522,4 +559,3 @@ export async function gerarPdfEvento(req: AuthRequest, res: Response) {
     });
   }
 }
-

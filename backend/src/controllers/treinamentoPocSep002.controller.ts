@@ -324,10 +324,13 @@ async function proximoCodigo(tx: any) {
     where: { codigo: { endsWith: `/${ano}` } },
     select: { codigo: true },
   });
-  const maiorNumero = certificados.reduce((maior: number, item: { codigo: string | null }) => {
-    const numero = Number(item.codigo?.match(/POC002-(\d+)\//)?.[1] || 0);
-    return Math.max(maior, numero);
-  }, 0);
+  const maiorNumero = certificados.reduce(
+    (maior: number, item: { codigo: string | null }) => {
+      const numero = Number(item.codigo?.match(/POC002-(\d+)\//)?.[1] || 0);
+      return Math.max(maior, numero);
+    },
+    0,
+  );
   const numero = maiorNumero + 1;
   return `POC002-${String(numero).padStart(5, "0")}/${ano}`;
 }
@@ -671,9 +674,7 @@ export async function concluirTreinamentoPocSep002(
     const mensagem =
       error?.message || "Erro ao concluir treinamento POC-SEP-002.";
     console.error(error);
-    return res
-      .status(500)
-      .json({ error: mensagem });
+    return res.status(500).json({ error: mensagem });
   }
 }
 

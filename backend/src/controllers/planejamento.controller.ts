@@ -129,7 +129,9 @@ export async function atualizarColuna(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
     const { titulo } = req.body;
-    const anterior = await prisma.planejamentoColuna.findUnique({ where: { id } });
+    const anterior = await prisma.planejamentoColuna.findUnique({
+      where: { id },
+    });
 
     if (!anterior || anterior.unidade !== unidadeAtual(req)) {
       return res.status(404).json({ error: "Coluna nao encontrada." });
@@ -173,13 +175,23 @@ export async function excluirColuna(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Coluna nao encontrada." });
     }
 
-    const totalColunas = await prisma.planejamentoColuna.count({ where: { unidade } });
+    const totalColunas = await prisma.planejamentoColuna.count({
+      where: { unidade },
+    });
     if (totalColunas <= 1) {
-      return res.status(400).json({ error: "O planejamento precisa manter pelo menos uma coluna." });
+      return res
+        .status(400)
+        .json({
+          error: "O planejamento precisa manter pelo menos uma coluna.",
+        });
     }
 
     if (coluna.cards.length > 0) {
-      return res.status(400).json({ error: "Mova ou arquive os cards antes de excluir esta coluna." });
+      return res
+        .status(400)
+        .json({
+          error: "Mova ou arquive os cards antes de excluir esta coluna.",
+        });
     }
 
     await prisma.planejamentoColuna.delete({ where: { id } });
@@ -212,8 +224,8 @@ export async function reordenarColunas(req: AuthRequest, res: Response) {
         prisma.planejamentoColuna.updateMany({
           where: { id: Number(id), unidade },
           data: { ordem },
-        })
-      )
+        }),
+      ),
     );
 
     await registrarLog({
@@ -247,10 +259,14 @@ export async function criarCard(req: AuthRequest, res: Response) {
     } = req.body;
 
     if (!titulo || !colunaId) {
-      return res.status(400).json({ error: "Informe o titulo e a coluna do card." });
+      return res
+        .status(400)
+        .json({ error: "Informe o titulo e a coluna do card." });
     }
 
-    const coluna = await prisma.planejamentoColuna.findUnique({ where: { id: Number(colunaId) } });
+    const coluna = await prisma.planejamentoColuna.findUnique({
+      where: { id: Number(colunaId) },
+    });
     if (!coluna || coluna.unidade !== unidade) {
       return res.status(404).json({ error: "Coluna nao encontrada." });
     }
@@ -300,7 +316,9 @@ export async function criarCard(req: AuthRequest, res: Response) {
 export async function atualizarCard(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
-    const anterior = await prisma.planejamentoCard.findUnique({ where: { id } });
+    const anterior = await prisma.planejamentoCard.findUnique({
+      where: { id },
+    });
 
     if (!anterior || anterior.unidade !== unidadeAtual(req)) {
       return res.status(404).json({ error: "Card nao encontrado." });
@@ -354,10 +372,19 @@ export async function moverCard(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
     const { colunaId, ordem } = req.body;
-    const anterior = await prisma.planejamentoCard.findUnique({ where: { id } });
-    const coluna = await prisma.planejamentoColuna.findUnique({ where: { id: Number(colunaId) } });
+    const anterior = await prisma.planejamentoCard.findUnique({
+      where: { id },
+    });
+    const coluna = await prisma.planejamentoColuna.findUnique({
+      where: { id: Number(colunaId) },
+    });
 
-    if (!anterior || !coluna || anterior.unidade !== unidadeAtual(req) || coluna.unidade !== unidadeAtual(req)) {
+    if (
+      !anterior ||
+      !coluna ||
+      anterior.unidade !== unidadeAtual(req) ||
+      coluna.unidade !== unidadeAtual(req)
+    ) {
       return res.status(404).json({ error: "Card ou coluna nao encontrado." });
     }
 
@@ -387,7 +414,9 @@ export async function moverCard(req: AuthRequest, res: Response) {
 export async function arquivarCard(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
-    const anterior = await prisma.planejamentoCard.findUnique({ where: { id } });
+    const anterior = await prisma.planejamentoCard.findUnique({
+      where: { id },
+    });
 
     if (!anterior || anterior.unidade !== unidadeAtual(req)) {
       return res.status(404).json({ error: "Card nao encontrado." });

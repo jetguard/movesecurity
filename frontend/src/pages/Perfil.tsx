@@ -111,7 +111,11 @@ export default function Perfil() {
       setSenhaAtualPin("");
       setNovoPin("");
       setConfirmarNovoPin("");
-      alert(perfil?.possuiPinOperacional ? "PIN atualizado com sucesso." : "PIN criado com sucesso.");
+      alert(
+        perfil?.possuiPinOperacional
+          ? "PIN atualizado com sucesso."
+          : "PIN criado com sucesso.",
+      );
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { error?: string } } };
       alert(apiError.response?.data?.error || "Erro ao atualizar PIN.");
@@ -254,7 +258,9 @@ export default function Perfil() {
             </label>
 
             <label className="space-y-2">
-              <span className="text-sm font-semibold text-gray-700">Unidade</span>
+              <span className="text-sm font-semibold text-gray-700">
+                Unidade
+              </span>
               <input
                 className="w-full border rounded-lg p-3 bg-gray-100 text-gray-600"
                 value={perfil.unidade || ""}
@@ -308,16 +314,22 @@ export default function Perfil() {
       >
         <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">PIN de Segurança</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              PIN de Segurança
+            </h2>
             <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
-              Use um PIN de 4 dígitos para desbloquear sessão, enviar relatórios, concluir análises, aprovar e consolidar ações sensíveis.
+              Use um PIN de 4 dígitos para desbloquear sessão, enviar
+              relatórios, concluir análises, aprovar e consolidar ações
+              sensíveis.
             </p>
           </div>
-          <span className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
-            perfil.possuiPinOperacional
-              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
-              : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"
-          }`}>
+          <span
+            className={`w-fit rounded-full px-3 py-1 text-xs font-bold ${
+              perfil.possuiPinOperacional
+                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200"
+                : "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200"
+            }`}
+          >
             {perfil.possuiPinOperacional ? "PIN cadastrado" : "PIN pendente"}
           </span>
         </div>
@@ -325,7 +337,9 @@ export default function Perfil() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
           {perfil.possuiPinOperacional ? (
             <label className="space-y-2">
-              <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">PIN atual</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
+                PIN atual
+              </span>
               <input
                 type="password"
                 inputMode="numeric"
@@ -340,7 +354,9 @@ export default function Perfil() {
             </label>
           ) : (
             <label className="space-y-2 md:col-span-2">
-              <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Senha atual</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
+                Senha atual
+              </span>
               <input
                 type="password"
                 value={senhaAtualPin}
@@ -353,7 +369,9 @@ export default function Perfil() {
           )}
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Novo PIN</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
+              Novo PIN
+            </span>
             <input
               type="password"
               inputMode="numeric"
@@ -368,14 +386,18 @@ export default function Perfil() {
           </label>
 
           <label className="space-y-2">
-            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">Confirmar PIN</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
+              Confirmar PIN
+            </span>
             <input
               type="password"
               inputMode="numeric"
               pattern="\d{4}"
               maxLength={4}
               value={confirmarNovoPin}
-              onChange={(e) => setConfirmarNovoPin(normalizarPin(e.target.value))}
+              onChange={(e) =>
+                setConfirmarNovoPin(normalizarPin(e.target.value))
+              }
               className="w-full rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
               placeholder="Repita o PIN"
               required
@@ -389,11 +411,14 @@ export default function Perfil() {
             disabled={salvandoPin}
             className="rounded-lg bg-slate-900 px-5 py-2 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-500 dark:bg-blue-600 dark:hover:bg-blue-500"
           >
-            {salvandoPin ? "Salvando..." : perfil.possuiPinOperacional ? "Atualizar PIN" : "Criar PIN"}
+            {salvandoPin
+              ? "Salvando..."
+              : perfil.possuiPinOperacional
+                ? "Atualizar PIN"
+                : "Criar PIN"}
           </button>
         </div>
       </form>
     </div>
   );
 }
-

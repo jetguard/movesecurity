@@ -13,7 +13,9 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
     const planos = await prisma.planoAcaoCorporativo.findMany({
       where: { unidade: req.unidadeAtiva },
       orderBy: { createdAt: "desc" },
-      include: { responsavel: { select: { id: true, nome: true, apelido: true } } },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+      },
     });
     return res.json(planos);
   } catch (error) {
@@ -25,33 +27,46 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
 export async function listarOrigensPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const unidade = req.unidadeAtiva;
-    const [ocorrencias, eventos, investigacoes, riscos, analisesEstrategicas] = await Promise.all([
-      prisma.ocorrencia.findMany({
-        where: { unidade },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, codigo: true, assunto: true, status: true },
-      }),
-      prisma.evento.findMany({
-        where: { unidade },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, codigo: true, assunto: true, status: true },
-      }),
-      prisma.investigacao.findMany({
-        where: { unidade },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, codigo: true, titulo: true, status: true },
-      }),
-      prisma.analiseRisco.findMany({
-        where: { unidade },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, codigo: true, descricaoRisco: true, nivelRisco: true, status: true },
-      }),
-      prisma.analiseEstrategica.findMany({
-        where: { unidade },
-        orderBy: { createdAt: "desc" },
-        select: { id: true, codigo: true, titulo: true, tipo: true, status: true },
-      }),
-    ]);
+    const [ocorrencias, eventos, investigacoes, riscos, analisesEstrategicas] =
+      await Promise.all([
+        prisma.ocorrencia.findMany({
+          where: { unidade },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, codigo: true, assunto: true, status: true },
+        }),
+        prisma.evento.findMany({
+          where: { unidade },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, codigo: true, assunto: true, status: true },
+        }),
+        prisma.investigacao.findMany({
+          where: { unidade },
+          orderBy: { createdAt: "desc" },
+          select: { id: true, codigo: true, titulo: true, status: true },
+        }),
+        prisma.analiseRisco.findMany({
+          where: { unidade },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            codigo: true,
+            descricaoRisco: true,
+            nivelRisco: true,
+            status: true,
+          },
+        }),
+        prisma.analiseEstrategica.findMany({
+          where: { unidade },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            codigo: true,
+            titulo: true,
+            tipo: true,
+            status: true,
+          },
+        }),
+      ]);
 
     return res.json({
       Ocorrencia: ocorrencias.map((item) => ({
@@ -89,7 +104,9 @@ export async function listarOrigensPlanoAcao(req: AuthRequest, res: Response) {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar registros de origem do plano de acao" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar registros de origem do plano de acao" });
   }
 }
 
@@ -97,7 +114,9 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const { titulo, descricao, prazo } = req.body;
     if (!titulo || !descricao || !prazo) {
-      return res.status(400).json({ error: "Informe titulo, descricao e prazo." });
+      return res
+        .status(400)
+        .json({ error: "Informe titulo, descricao e prazo." });
     }
 
     const ano = new Date().getFullYear();
@@ -131,10 +150,18 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         evidencia: req.body.evidencia,
         comentarios: req.body.comentarios,
       },
-      include: { responsavel: { select: { id: true, nome: true, apelido: true } } },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+      },
     });
 
-    await registrarLog({ req, acao: `Criacao de plano de acao ${plano.codigo}`, tipoRegistro: "PlanoAcao", registroId: plano.id, dadosNovos: plano });
+    await registrarLog({
+      req,
+      acao: `Criacao de plano de acao ${plano.codigo}`,
+      tipoRegistro: "PlanoAcao",
+      registroId: plano.id,
+      dadosNovos: plano,
+    });
     return res.status(201).json(plano);
   } catch (error) {
     console.error(error);
@@ -145,8 +172,11 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
 export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
-    const anterior = await prisma.planoAcaoCorporativo.findFirst({ where: { id: Number(id), unidade: req.unidadeAtiva } });
-    if (!anterior) return res.status(404).json({ error: "Plano de acao nao encontrado" });
+    const anterior = await prisma.planoAcaoCorporativo.findFirst({
+      where: { id: Number(id), unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Plano de acao nao encontrado" });
 
     const status = req.body.status || anterior.status;
     const plano = await prisma.planoAcaoCorporativo.update({
@@ -168,14 +198,22 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         evidencia: req.body.evidencia,
         comentarios: req.body.comentarios,
       },
-      include: { responsavel: { select: { id: true, nome: true, apelido: true } } },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+      },
     });
 
-    await registrarLog({ req, acao: `Atualizacao de plano de acao ${plano.codigo}`, tipoRegistro: "PlanoAcao", registroId: plano.id, dadosAnteriores: anterior, dadosNovos: plano });
+    await registrarLog({
+      req,
+      acao: `Atualizacao de plano de acao ${plano.codigo}`,
+      tipoRegistro: "PlanoAcao",
+      registroId: plano.id,
+      dadosAnteriores: anterior,
+      dadosNovos: plano,
+    });
     return res.json(plano);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao atualizar plano de acao" });
   }
 }
-

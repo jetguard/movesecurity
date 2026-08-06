@@ -10,9 +10,10 @@ function obterDeviceId() {
   const existente = localStorage.getItem("jetguardDeviceId");
   if (existente) return existente;
 
-  const novo = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const novo =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   localStorage.setItem("jetguardDeviceId", novo);
   return novo;
 }
@@ -48,7 +49,9 @@ export default function Login() {
         localStorage.removeItem("bloquearAposProximoLogin");
       }
 
-      window.location.href = response.data.usuario?.deveAlterarSenha ? "/alterar-senha" : "/";
+      window.location.href = response.data.usuario?.deveAlterarSenha
+        ? "/alterar-senha"
+        : "/";
     } catch (error) {
       const apiError = error as AxiosError<ApiError>;
       alert(apiError.response?.data?.error || "Erro ao fazer login");
@@ -87,15 +90,21 @@ export default function Login() {
             <div className="mt-10 grid max-w-xl grid-cols-1 gap-3 sm:grid-cols-3">
               <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur">
                 <p className="text-2xl font-bold">24h</p>
-                <p className="mt-1 text-sm text-slate-300">Controle operacional</p>
+                <p className="mt-1 text-sm text-slate-300">
+                  Controle operacional
+                </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur">
                 <p className="text-2xl font-bold">PDF</p>
-                <p className="mt-1 text-sm text-slate-300">Relatórios validados</p>
+                <p className="mt-1 text-sm text-slate-300">
+                  Relatórios validados
+                </p>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur">
                 <p className="text-2xl font-bold">Logs</p>
-                <p className="mt-1 text-sm text-slate-300">Auditoria completa</p>
+                <p className="mt-1 text-sm text-slate-300">
+                  Auditoria completa
+                </p>
               </div>
             </div>
           </div>
@@ -160,6 +169,3 @@ export default function Login() {
     </main>
   );
 }
-
-
-

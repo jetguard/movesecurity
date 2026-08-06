@@ -1074,7 +1074,10 @@ function calcularDesempenhoResidual(
   return arredondarRisco((residual - Number(inerente)) / Number(inerente));
 }
 
-function calcularResidualCompleta(body: Record<string, unknown>, anterior?: any) {
+function calcularResidualCompleta(
+  body: Record<string, unknown>,
+  anterior?: any,
+) {
   const temPontuacaoResidual =
     body.scResidual !== undefined ||
     body.feResidual !== undefined ||
@@ -1113,9 +1116,7 @@ function calcularResidualCompleta(body: Record<string, unknown>, anterior?: any)
       admResidual * 1 +
       imgResidual * 2 +
       lcResidual * 3;
-    const consequenciaResidual = arredondarRisco(
-      notaConsequenciaResidual / 17,
-    );
+    const consequenciaResidual = arredondarRisco(notaConsequenciaResidual / 17);
     const resultadoResidual = arredondarRisco(
       probabilidadeResidual * consequenciaResidual,
     );
@@ -1134,8 +1135,9 @@ function calcularResidualCompleta(body: Record<string, unknown>, anterior?: any)
       notaProbabilidadeResidual,
       probabilidadeResidual,
       percentualProbabilidadeResidual,
-      nivelProbabilidadeResidual:
-        nivelProbabilidadeCompleta(probabilidadeResidual),
+      nivelProbabilidadeResidual: nivelProbabilidadeCompleta(
+        probabilidadeResidual,
+      ),
       notaConsequenciaResidual,
       consequenciaResidual,
       nivelConsequenciaResidual:
@@ -1227,9 +1229,7 @@ function calcularResidualCompleta(body: Record<string, unknown>, anterior?: any)
     lcResidual: null,
     notaProbabilidadeResidual: null,
     probabilidadeResidual,
-    percentualProbabilidadeResidual: arredondarRisco(
-      probabilidadeResidual / 5,
-    ),
+    percentualProbabilidadeResidual: arredondarRisco(probabilidadeResidual / 5),
     nivelProbabilidadeResidual: nivelProbabilidadeCompleta(
       probabilidadeResidual,
     ),
@@ -1528,9 +1528,7 @@ export async function atualizarControlesAnaliseCompletaRisco(
     const mensagem =
       error?.message || "Erro ao atualizar controles da análise completa.";
     console.error(error);
-    return res
-      .status(500)
-      .json({ error: mensagem });
+    return res.status(500).json({ error: mensagem });
   }
 }
 

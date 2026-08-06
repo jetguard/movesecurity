@@ -128,9 +128,12 @@ export default function TreinamentosPocSep006() {
     setBaixandoCertificados(true);
     setMensagem("");
     try {
-      const response = await api.get("/treinamentos-poc-sep-006/certificados.zip", {
-        responseType: "blob",
-      });
+      const response = await api.get(
+        "/treinamentos-poc-sep-006/certificados.zip",
+        {
+          responseType: "blob",
+        },
+      );
       const url = URL.createObjectURL(response.data);
       const link = document.createElement("a");
       link.href = url;

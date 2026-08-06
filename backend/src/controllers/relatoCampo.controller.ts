@@ -1,12 +1,19 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import { Response } from "express";
 import PDFDocument from "pdfkit";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
-import { ErroTranscricaoAudio, transcreverAudioBuffer } from "../services/audioTranscricao.service";
-import { desenharCabecalhoPadrao, desenharRodapeAssinaturaPadrao, pdfTheme } from "../services/documentoPdfBase.service";
+import {
+  ErroTranscricaoAudio,
+  transcreverAudioBuffer,
+} from "../services/audioTranscricao.service";
+import {
+  desenharCabecalhoPadrao,
+  desenharRodapeAssinaturaPadrao,
+  pdfTheme,
+} from "../services/documentoPdfBase.service";
 import { validarPinOperacional } from "../services/pinOperacional.service";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
@@ -52,12 +59,14 @@ function textoChecklistColeta(valor?: string | null) {
     cameraCftv: "Há câmera CFTV próxima",
   };
 
-  const linhas = Object.entries(rotulos).map(([chave, rotulo]) => `- ${rotulo}: ${checklist[chave] ? "Sim" : "Não"}`);
+  const linhas = Object.entries(rotulos).map(
+    ([chave, rotulo]) => `- ${rotulo}: ${checklist[chave] ? "Sim" : "Não"}`,
+  );
   return linhas.length ? `\n\nChecklist de coleta:\n${linhas.join("\n")}` : "";
 }
 
 function formatarData(valor?: Date | string | null) {
-  if (!valor) return "NÃ£o informado";
+  if (!valor) return "NÃƒÂ£o informado";
   return new Date(valor).toLocaleString("pt-BR");
 }
 
@@ -67,13 +76,13 @@ function valorChecklistColeta(valor?: string | null) {
     ["Fotos do local anexadas", checklist.fotosLocal],
     ["Relato principal coletado", checklist.relatoPrincipal],
     ["Existe testemunha", checklist.testemunha],
-    ["Existe veÃ­culo envolvido", checklist.veiculoEnvolvido],
-    ["Dano material visÃ­vel", checklist.danoMaterial],
-    ["HorÃ¡rio aproximado informado", checklist.horarioAproximado],
+    ["Existe veÃƒÂ­culo envolvido", checklist.veiculoEnvolvido],
+    ["Dano material visÃƒÂ­vel", checklist.danoMaterial],
+    ["HorÃƒÂ¡rio aproximado informado", checklist.horarioAproximado],
     ["Local exato informado", checklist.localExato],
-    ["Ãudio gravado", checklist.audioGravado],
+    ["ÃƒÂudio gravado", checklist.audioGravado],
     ["CCOS acionado", checklist.acionouCcos],
-    ["CÃ¢mera CFTV prÃ³xima", checklist.cameraCftv],
+    ["CÃƒÂ¢mera CFTV prÃƒÂ³xima", checklist.cameraCftv],
   ];
 }
 
@@ -83,7 +92,7 @@ function garantirEspaco(doc: PDFKit.PDFDocument, altura = 80) {
     desenharCabecalhoPadrao(doc, {
       titulo: "Relato de campo",
       subtitulo: "Coleta de dados patrimonial",
-      codigo: "ContinuaÃ§Ã£o",
+      codigo: "ContinuaÃƒÂ§ÃƒÂ£o",
       unidade: "",
     });
   }
@@ -92,16 +101,48 @@ function garantirEspaco(doc: PDFKit.PDFDocument, altura = 80) {
 function secaoPdf(doc: PDFKit.PDFDocument, titulo: string) {
   garantirEspaco(doc, 44);
   doc.moveDown(0.4);
-  doc.fillColor(pdfTheme.primary).fontSize(13).text(titulo, 42, doc.y, { width: 511 });
-  doc.moveTo(42, doc.y + 6).lineTo(553, doc.y + 6).strokeColor(pdfTheme.line).lineWidth(0.8).stroke();
+  doc
+    .fillColor(pdfTheme.primary)
+    .fontSize(13)
+    .text(titulo, 42, doc.y, { width: 511 });
+  doc
+    .moveTo(42, doc.y + 6)
+    .lineTo(553, doc.y + 6)
+    .strokeColor(pdfTheme.line)
+    .lineWidth(0.8)
+    .stroke();
   doc.moveDown(1.1);
 }
 
-function linhaInfo(doc: PDFKit.PDFDocument, label: string, valor?: string | null, x = 42, y?: number, width = 240) {
+function linhaInfo(
+  doc: PDFKit.PDFDocument,
+  label: string,
+  valor?: string | null,
+  x = 42,
+  y?: number,
+  width = 240,
+) {
   const atualY = y ?? doc.y;
-  doc.roundedRect(x, atualY, width, 42, 8).fill("#f8fafc").strokeColor("#dbe4f0").stroke();
-  doc.fillColor("#64748b").fontSize(7).text(label.toUpperCase(), x + 10, atualY + 8, { width: width - 20, lineBreak: false });
-  doc.fillColor("#0f172a").fontSize(9).text(valor || "NÃ£o informado", x + 10, atualY + 22, { width: width - 20, lineBreak: false, ellipsis: true });
+  doc
+    .roundedRect(x, atualY, width, 42, 8)
+    .fill("#f8fafc")
+    .strokeColor("#dbe4f0")
+    .stroke();
+  doc
+    .fillColor("#64748b")
+    .fontSize(7)
+    .text(label.toUpperCase(), x + 10, atualY + 8, {
+      width: width - 20,
+      lineBreak: false,
+    });
+  doc
+    .fillColor("#0f172a")
+    .fontSize(9)
+    .text(valor || "NÃƒÂ£o informado", x + 10, atualY + 22, {
+      width: width - 20,
+      lineBreak: false,
+      ellipsis: true,
+    });
 }
 
 async function proximoCodigoOcorrencia(unidade: string) {
@@ -143,7 +184,11 @@ export async function gerarLinkRelatoCampo(req: AuthRequest, res: Response) {
       acao: "Geração de link de coleta de dados para relatório",
       tipoRegistro: "RelatoCampo",
       registroId: relato.id,
-      dadosNovos: { id: relato.id, expiraEm: relato.expiraEm, unidade: relato.unidade },
+      dadosNovos: {
+        id: relato.id,
+        expiraEm: relato.expiraEm,
+        unidade: relato.unidade,
+      },
     });
 
     return res.status(201).json({
@@ -168,11 +213,14 @@ export async function listarRelatosCampo(req: AuthRequest, res: Response) {
       },
     });
 
-    return res.json(relatos.map((relato) => ({
-      ...relato,
-      link: `${urlBase(req)}/coleta-dados/${relato.token}`,
-      expirado: relato.status === "Link Gerado" && relato.expiraEm < new Date(),
-    })));
+    return res.json(
+      relatos.map((relato) => ({
+        ...relato,
+        link: `${urlBase(req)}/coleta-dados/${relato.token}`,
+        expirado:
+          relato.status === "Link Gerado" && relato.expiraEm < new Date(),
+      })),
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar relatos de campo." });
@@ -191,15 +239,33 @@ export async function excluirLinkRelatoCampo(req: AuthRequest, res: Response) {
       },
     });
 
-    if (!relato) return res.status(404).json({ error: "Link de coleta não encontrado." });
+    if (!relato)
+      return res.status(404).json({ error: "Link de coleta não encontrado." });
     if (relato.geradoPorId !== req.usuarioId) {
-      return res.status(403).json({ error: "Somente o usuário que criou o link pode excluir este link de coleta." });
+      return res
+        .status(403)
+        .json({
+          error:
+            "Somente o usuário que criou o link pode excluir este link de coleta.",
+        });
     }
-    if (relato.status !== "Link Gerado" || relato.enviadoEm || relato.finalizadoEm) {
-      return res.status(400).json({ error: "Este link já possui envio ou conversão e não pode ser excluído." });
+    if (
+      relato.status !== "Link Gerado" ||
+      relato.enviadoEm ||
+      relato.finalizadoEm
+    ) {
+      return res
+        .status(400)
+        .json({
+          error:
+            "Este link já possui envio ou conversão e não pode ser excluído.",
+        });
     }
 
-    await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
+    await validarPinOperacional(
+      req.usuarioId!,
+      String(req.body?.pinOperacional || ""),
+    );
 
     await prisma.relatoCampo.delete({ where: { id: relato.id } });
 
@@ -219,7 +285,10 @@ export async function excluirLinkRelatoCampo(req: AuthRequest, res: Response) {
     return res.status(204).send();
   } catch (error: any) {
     const status = error?.status || 500;
-    if (status !== 500) return res.status(status).json({ error: error.message || "PIN operacional inválido." });
+    if (status !== 500)
+      return res
+        .status(status)
+        .json({ error: error.message || "PIN operacional inválido." });
 
     console.error(error);
     return res.status(500).json({ error: "Erro ao excluir link de coleta." });
@@ -236,10 +305,16 @@ export async function baixarAnexoRelatoCampo(req: AuthRequest, res: Response) {
     });
 
     if (!anexo) return res.status(404).json({ error: "Anexo nao encontrado." });
-    if (!fs.existsSync(anexo.caminho)) return res.status(404).json({ error: "Arquivo nao encontrado no servidor." });
+    if (!fs.existsSync(anexo.caminho))
+      return res
+        .status(404)
+        .json({ error: "Arquivo nao encontrado no servidor." });
 
     res.setHeader("Content-Type", anexo.tipo || "application/octet-stream");
-    res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(anexo.nomeOriginal)}"`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${encodeURIComponent(anexo.nomeOriginal)}"`,
+    );
     return fs.createReadStream(anexo.caminho).pipe(res);
   } catch (error) {
     console.error(error);
@@ -258,11 +333,15 @@ export async function gerarPdfRelatoCampo(req: AuthRequest, res: Response) {
       },
     });
 
-    if (!relato) return res.status(404).json({ error: "Relato de campo nao encontrado." });
+    if (!relato)
+      return res.status(404).json({ error: "Relato de campo nao encontrado." });
 
     const doc = new PDFDocument({ size: "A4", margin: 42, bufferPages: true });
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename=relato-campo-RC${String(relato.id).padStart(4, "0")}.pdf`);
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename=relato-campo-RC${String(relato.id).padStart(4, "0")}.pdf`,
+    );
     doc.pipe(res);
 
     desenharCabecalhoPadrao(doc, {
@@ -279,19 +358,50 @@ export async function gerarPdfRelatoCampo(req: AuthRequest, res: Response) {
     linhaInfo(doc, "Local", relato.local, 296, y1, 257);
     doc.y = y1 + 54;
     const y2 = doc.y;
-    linhaInfo(doc, "Responsavel pela coleta", relato.responsavelColeta || relato.geradoPor?.apelido || relato.geradoPor?.nome, 42, y2, 240);
-    linhaInfo(doc, "Data do ocorrido", formatarData(relato.dataOcorrido), 294, y2, 259);
+    linhaInfo(
+      doc,
+      "Responsavel pela coleta",
+      relato.responsavelColeta ||
+        relato.geradoPor?.apelido ||
+        relato.geradoPor?.nome,
+      42,
+      y2,
+      240,
+    );
+    linhaInfo(
+      doc,
+      "Data do ocorrido",
+      formatarData(relato.dataOcorrido),
+      294,
+      y2,
+      259,
+    );
     doc.y = y2 + 58;
 
     if (relato.convertidoCodigo) {
-      doc.roundedRect(42, doc.y, 511, 42, 8).fill("#ecfdf5").strokeColor("#a7f3d0").stroke();
-      doc.fillColor("#047857").fontSize(9).text(`Convertido para ${relato.convertidoTipo} ${relato.convertidoCodigo}`, 56, doc.y + 14, { width: 480 });
+      doc
+        .roundedRect(42, doc.y, 511, 42, 8)
+        .fill("#ecfdf5")
+        .strokeColor("#a7f3d0")
+        .stroke();
+      doc
+        .fillColor("#047857")
+        .fontSize(9)
+        .text(
+          `Convertido para ${relato.convertidoTipo} ${relato.convertidoCodigo}`,
+          56,
+          doc.y + 14,
+          { width: 480 },
+        );
       doc.y += 56;
     }
 
     if (relato.observacoes) {
       secaoPdf(doc, "Observacoes gerais");
-      doc.fillColor("#0f172a").fontSize(10).text(relato.observacoes, 42, doc.y, { width: 511, align: "justify" });
+      doc
+        .fillColor("#0f172a")
+        .fontSize(10)
+        .text(relato.observacoes, 42, doc.y, { width: 511, align: "justify" });
       doc.moveDown(1);
     }
 
@@ -299,19 +409,41 @@ export async function gerarPdfRelatoCampo(req: AuthRequest, res: Response) {
     relato.envolvidos.forEach((envolvido, index) => {
       garantirEspaco(doc, 110);
       doc.roundedRect(42, doc.y, 511, 28, 8).fill("#0f172a");
-      doc.fillColor("#ffffff").fontSize(9).text(`${index + 1}. ${envolvido.nome} - ${envolvido.tipoEnvolvimento}`, 54, doc.y + 9, { width: 480 });
+      doc
+        .fillColor("#ffffff")
+        .fontSize(9)
+        .text(
+          `${index + 1}. ${envolvido.nome} - ${envolvido.tipoEnvolvimento}`,
+          54,
+          doc.y + 9,
+          { width: 480 },
+        );
       doc.y += 38;
-      doc.fillColor("#475569").fontSize(8).text(
-        `Documento: ${envolvido.tipoDocumento} ${envolvido.documento || "N/I"} | Empresa: ${envolvido.empresa || "N/I"} | Veiculo: ${envolvido.possuiVeiculo ? `${envolvido.placa || "N/I"} ${envolvido.reboque ? `/ ${envolvido.reboque}` : ""}` : "Nao"}`,
-        42,
-        doc.y,
-        { width: 511 }
-      );
+      doc
+        .fillColor("#475569")
+        .fontSize(8)
+        .text(
+          `Documento: ${envolvido.tipoDocumento} ${envolvido.documento || "N/I"} | Empresa: ${envolvido.empresa || "N/I"} | Veiculo: ${envolvido.possuiVeiculo ? `${envolvido.placa || "N/I"} ${envolvido.reboque ? `/ ${envolvido.reboque}` : ""}` : "Nao"}`,
+          42,
+          doc.y,
+          { width: 511 },
+        );
       doc.moveDown(0.5);
-      doc.fillColor("#0f172a").fontSize(10).text(envolvido.relato || "Sem relato informado.", 42, doc.y, { width: 511, align: "justify" });
+      doc
+        .fillColor("#0f172a")
+        .fontSize(10)
+        .text(envolvido.relato || "Sem relato informado.", 42, doc.y, {
+          width: 511,
+          align: "justify",
+        });
       if (envolvido.audioNome) {
         doc.moveDown(0.4);
-        doc.fillColor("#2563eb").fontSize(8).text(`Audio anexado: ${envolvido.audioNome}`, 42, doc.y, { width: 511 });
+        doc
+          .fillColor("#2563eb")
+          .fontSize(8)
+          .text(`Audio anexado: ${envolvido.audioNome}`, 42, doc.y, {
+            width: 511,
+          });
       }
       doc.moveDown(1);
     });
@@ -319,17 +451,28 @@ export async function gerarPdfRelatoCampo(req: AuthRequest, res: Response) {
     secaoPdf(doc, "Checklist inteligente");
     valorChecklistColeta(relato.checklistColeta).forEach(([label, valor]) => {
       garantirEspaco(doc, 22);
-      doc.fillColor(valor ? "#047857" : "#b45309").fontSize(9).text(`${valor ? "Sim" : "Nao"} - ${label}`, 54, doc.y, { width: 480 });
+      doc
+        .fillColor(valor ? "#047857" : "#b45309")
+        .fontSize(9)
+        .text(`${valor ? "Sim" : "Nao"} - ${label}`, 54, doc.y, { width: 480 });
       doc.moveDown(0.4);
     });
 
     secaoPdf(doc, "Evidencias anexadas");
     if (relato.anexos.length === 0) {
-      doc.fillColor("#64748b").fontSize(9).text("Nenhuma evidencia anexada.", 42, doc.y, { width: 511 });
+      doc
+        .fillColor("#64748b")
+        .fontSize(9)
+        .text("Nenhuma evidencia anexada.", 42, doc.y, { width: 511 });
     } else {
       relato.anexos.forEach((anexo) => {
         garantirEspaco(doc, 22);
-        doc.fillColor("#0f172a").fontSize(9).text(`- ${anexo.nomeOriginal} (${anexo.tipo})`, 54, doc.y, { width: 480 });
+        doc
+          .fillColor("#0f172a")
+          .fontSize(9)
+          .text(`- ${anexo.nomeOriginal} (${anexo.tipo})`, 54, doc.y, {
+            width: 480,
+          });
         doc.moveDown(0.35);
       });
     }
@@ -348,11 +491,16 @@ export async function gerarPdfRelatoCampo(req: AuthRequest, res: Response) {
     doc.end();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao gerar PDF do relato de campo." });
+    return res
+      .status(500)
+      .json({ error: "Erro ao gerar PDF do relato de campo." });
   }
 }
 
-export async function buscarRelatoCampoPublico(req: AuthRequest, res: Response) {
+export async function buscarRelatoCampoPublico(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const token = String(req.params.token || "");
     const relato = await prisma.relatoCampo.findUnique({
@@ -367,9 +515,16 @@ export async function buscarRelatoCampoPublico(req: AuthRequest, res: Response) 
       },
     });
 
-    if (!relato) return res.status(404).json({ error: "Link de coleta não encontrado." });
-    if (relato.finalizadoEm || relato.enviadoEm || relato.status !== "Link Gerado") {
-      return res.status(410).json({ error: "Este link de coleta já foi finalizado." });
+    if (!relato)
+      return res.status(404).json({ error: "Link de coleta não encontrado." });
+    if (
+      relato.finalizadoEm ||
+      relato.enviadoEm ||
+      relato.status !== "Link Gerado"
+    ) {
+      return res
+        .status(410)
+        .json({ error: "Este link de coleta já foi finalizado." });
     }
     if (relato.expiraEm < new Date()) {
       return res.status(410).json({ error: "Este link de coleta expirou." });
@@ -396,7 +551,10 @@ export async function buscarRelatoCampoPublico(req: AuthRequest, res: Response) 
   }
 }
 
-export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) {
+export async function enviarRelatoCampoPublico(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const token = String(req.params.token || "");
     const relato = await prisma.relatoCampo.findUnique({
@@ -404,38 +562,68 @@ export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) 
       include: { envolvidos: true },
     });
 
-    if (!relato) return res.status(404).json({ error: "Link de coleta não encontrado." });
-    if (relato.enviadoEm || relato.finalizadoEm || relato.status !== "Link Gerado") {
-      return res.status(410).json({ error: "Este link de coleta já foi finalizado." });
+    if (!relato)
+      return res.status(404).json({ error: "Link de coleta não encontrado." });
+    if (
+      relato.enviadoEm ||
+      relato.finalizadoEm ||
+      relato.status !== "Link Gerado"
+    ) {
+      return res
+        .status(410)
+        .json({ error: "Este link de coleta já foi finalizado." });
     }
     if (relato.expiraEm < new Date()) {
       return res.status(410).json({ error: "Este link de coleta expirou." });
     }
 
-    const envolvidos = parseJson<Array<{
-      tipoEnvolvimento: string;
-      nome: string;
-      tipoDocumento: string;
-      documento?: string;
-      empresa?: string;
-      possuiVeiculo?: boolean;
-      placa?: string;
-      reboque?: string;
-      relato: string;
-    }>>(req.body.envolvidos, []);
+    const envolvidos = parseJson<
+      Array<{
+        tipoEnvolvimento: string;
+        nome: string;
+        tipoDocumento: string;
+        documento?: string;
+        empresa?: string;
+        possuiVeiculo?: boolean;
+        placa?: string;
+        reboque?: string;
+        relato: string;
+      }>
+    >(req.body.envolvidos, []);
 
-    if (!req.body.titulo || !req.body.local || !req.body.dataOcorrido || envolvidos.length === 0) {
-      return res.status(400).json({ error: "Preencha título, local, data do ocorrido e pelo menos um envolvido." });
+    if (
+      !req.body.titulo ||
+      !req.body.local ||
+      !req.body.dataOcorrido ||
+      envolvidos.length === 0
+    ) {
+      return res
+        .status(400)
+        .json({
+          error:
+            "Preencha título, local, data do ocorrido e pelo menos um envolvido.",
+        });
     }
 
-    const localCadastro = await validarLocalAtivo(String(req.body.local), relato.unidade);
+    const localCadastro = await validarLocalAtivo(
+      String(req.body.local),
+      relato.unidade,
+    );
     if (!localCadastro) {
-      return res.status(400).json({ error: "Selecione um local ativo cadastrado para esta unidade." });
+      return res
+        .status(400)
+        .json({
+          error: "Selecione um local ativo cadastrado para esta unidade.",
+        });
     }
 
     const arquivos = (req.files as Express.Multer.File[]) || [];
-    const anexos = arquivos.filter((arquivo) => !arquivo.fieldname.startsWith("audio_"));
-    const audios = arquivos.filter((arquivo) => arquivo.fieldname.startsWith("audio_"));
+    const anexos = arquivos.filter(
+      (arquivo) => !arquivo.fieldname.startsWith("audio_"),
+    );
+    const audios = arquivos.filter((arquivo) =>
+      arquivo.fieldname.startsWith("audio_"),
+    );
 
     const atualizado = await prisma.relatoCampo.update({
       where: { id: relato.id },
@@ -453,7 +641,9 @@ export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) 
         envolvidos: {
           deleteMany: {},
           create: envolvidos.map((envolvido, index) => {
-            const audio = audios.find((arquivo) => arquivo.fieldname === `audio_${index}`);
+            const audio = audios.find(
+              (arquivo) => arquivo.fieldname === `audio_${index}`,
+            );
             return {
               tipoEnvolvimento: envolvido.tipoEnvolvimento || "Envolvido",
               nome: envolvido.nome,
@@ -494,7 +684,10 @@ export async function enviarRelatoCampoPublico(req: AuthRequest, res: Response) 
   }
 }
 
-export async function transcreverAudioRelatoCampoPublico(req: AuthRequest, res: Response) {
+export async function transcreverAudioRelatoCampoPublico(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const token = String(req.params.token || "");
     const relato = await prisma.relatoCampo.findUnique({
@@ -507,29 +700,43 @@ export async function transcreverAudioRelatoCampoPublico(req: AuthRequest, res: 
       },
     });
 
-    if (!relato) return res.status(404).json({ error: "Link de coleta não encontrado." });
-    if (relato.enviadoEm || relato.finalizadoEm || relato.status !== "Link Gerado") {
-      return res.status(410).json({ error: "Este link de coleta já foi finalizado." });
+    if (!relato)
+      return res.status(404).json({ error: "Link de coleta não encontrado." });
+    if (
+      relato.enviadoEm ||
+      relato.finalizadoEm ||
+      relato.status !== "Link Gerado"
+    ) {
+      return res
+        .status(410)
+        .json({ error: "Este link de coleta já foi finalizado." });
     }
     if (relato.expiraEm < new Date()) {
       return res.status(410).json({ error: "Este link de coleta expirou." });
     }
     if (!req.file) {
-      return res.status(400).json({ error: "Grave ou anexe um áudio para transcrição." });
+      return res
+        .status(400)
+        .json({ error: "Grave ou anexe um áudio para transcrição." });
     }
 
     const transcricao = await transcreverAudioBuffer(req.file);
     return res.json({
       transcricao,
-      aviso: "Transcrição gerada automaticamente. Revise o texto antes de enviar a coleta.",
+      aviso:
+        "Transcrição gerada automaticamente. Revise o texto antes de enviar a coleta.",
     });
   } catch (error) {
     if (error instanceof ErroTranscricaoAudio) {
-      return res.status(error.status).json({ error: error.message, detalhe: error.detalhe });
+      return res
+        .status(error.status)
+        .json({ error: error.message, detalhe: error.detalhe });
     }
 
     console.error(error);
-    return res.status(500).json({ error: "Erro ao transcrever áudio do relato." });
+    return res
+      .status(500)
+      .json({ error: "Erro ao transcrever áudio do relato." });
   }
 }
 
@@ -540,9 +747,14 @@ export async function converterRelatoCampo(req: AuthRequest, res: Response) {
       include: { envolvidos: true, anexos: true },
     });
 
-    if (!relato) return res.status(404).json({ error: "Relato de campo não encontrado." });
-    if (relato.status === "Convertido") return res.status(400).json({ error: "Este relato já foi convertido." });
-    if (relato.status !== "Enviado") return res.status(400).json({ error: "Somente relatos enviados podem ser convertidos." });
+    if (!relato)
+      return res.status(404).json({ error: "Relato de campo não encontrado." });
+    if (relato.status === "Convertido")
+      return res.status(400).json({ error: "Este relato já foi convertido." });
+    if (relato.status !== "Enviado")
+      return res
+        .status(400)
+        .json({ error: "Somente relatos enviados podem ser convertidos." });
 
     const tipo = String(req.body.tipo || "");
     const assunto = String(req.body.assunto || relato.titulo || "");
@@ -552,15 +764,29 @@ export async function converterRelatoCampo(req: AuthRequest, res: Response) {
     const localInformado = String(req.body.local || relato.local || "");
 
     if (!["Ocorrencia", "Evento"].includes(tipo)) {
-      return res.status(400).json({ error: "Escolha se o relato será Ocorrência ou Evento." });
+      return res
+        .status(400)
+        .json({ error: "Escolha se o relato será Ocorrência ou Evento." });
     }
     if (!assunto || !localInformado || !natureza || !subNatureza) {
-      return res.status(400).json({ error: "Preencha assunto, local, natureza e subnatureza para converter." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Preencha assunto, local, natureza e subnatureza para converter.",
+        });
     }
 
-    const localCadastro = await validarLocalAtivo(localInformado, req.unidadeAtiva);
+    const localCadastro = await validarLocalAtivo(
+      localInformado,
+      req.unidadeAtiva,
+    );
     if (!localCadastro) {
-      return res.status(400).json({ error: "Selecione um local ativo cadastrado para esta unidade." });
+      return res
+        .status(400)
+        .json({
+          error: "Selecione um local ativo cadastrado para esta unidade.",
+        });
     }
 
     const envolvidos = relato.envolvidos.map((envolvido) => ({
@@ -614,7 +840,13 @@ export async function converterRelatoCampo(req: AuthRequest, res: Response) {
         },
       });
 
-      await registrarLog({ req, acao: `Conversão de relato de campo em ocorrência ${ocorrencia.codigo}`, tipoRegistro: "RelatoCampo", registroId: relato.id, dadosNovos: { relatoId: relato.id, ocorrencia } });
+      await registrarLog({
+        req,
+        acao: `Conversão de relato de campo em ocorrência ${ocorrencia.codigo}`,
+        tipoRegistro: "RelatoCampo",
+        registroId: relato.id,
+        dadosNovos: { relatoId: relato.id, ocorrencia },
+      });
       return res.json({ tipo: "Ocorrencia", registro: ocorrencia });
     }
 
@@ -654,10 +886,18 @@ export async function converterRelatoCampo(req: AuthRequest, res: Response) {
       },
     });
 
-    await registrarLog({ req, acao: `Conversão de relato de campo em evento ${evento.codigo}`, tipoRegistro: "RelatoCampo", registroId: relato.id, dadosNovos: { relatoId: relato.id, evento } });
+    await registrarLog({
+      req,
+      acao: `Conversão de relato de campo em evento ${evento.codigo}`,
+      tipoRegistro: "RelatoCampo",
+      registroId: relato.id,
+      dadosNovos: { relatoId: relato.id, evento },
+    });
     return res.json({ tipo: "Evento", registro: evento });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao converter relato de campo." });
+    return res
+      .status(500)
+      .json({ error: "Erro ao converter relato de campo." });
   }
 }

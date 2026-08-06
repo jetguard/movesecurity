@@ -146,7 +146,10 @@ function normalizarStatus(status: string) {
 
 function moedaParaNumero(valor?: string) {
   if (!valor) return 0;
-  const limpo = valor.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+  const limpo = valor
+    .replace(/[^\d,.-]/g, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
   const numero = Number(limpo);
   return Number.isFinite(numero) ? numero : 0;
 }
@@ -174,7 +177,10 @@ function mesAno(data: string) {
   }).format(new Date(data));
 }
 
-function dentroDoPeriodo(data: string, filtro: { periodo: string; mes: string; ano: string }) {
+function dentroDoPeriodo(
+  data: string,
+  filtro: { periodo: string; mes: string; ano: string },
+) {
   const date = new Date(data);
   const hoje = new Date();
 
@@ -202,7 +208,9 @@ function dentroDoPeriodo(data: string, filtro: { periodo: string; mes: string; a
 
 function contarPorStatus<T extends { status: string }>(itens: T[]) {
   return statusPadrao.reduce<Record<string, number>>((acc, status) => {
-    acc[status] = itens.filter((item) => normalizarStatus(item.status) === status).length;
+    acc[status] = itens.filter(
+      (item) => normalizarStatus(item.status) === status,
+    ).length;
     return acc;
   }, {});
 }
@@ -250,9 +258,15 @@ function TooltipGrafico({
       {label && <p className="mb-2 font-semibold text-blue-100">{label}</p>}
       <div className="space-y-1">
         {payload.map((item) => (
-          <p key={item.name} className="flex items-center justify-between gap-5">
+          <p
+            key={item.name}
+            className="flex items-center justify-between gap-5"
+          >
             <span className="flex items-center gap-2 text-slate-300">
-              <span className="h-2 w-2 rounded-full shadow-sm" style={{ backgroundColor: item.color }} />
+              <span
+                className="h-2 w-2 rounded-full shadow-sm"
+                style={{ backgroundColor: item.color }}
+              />
               {item.name}
             </span>
             <strong className="text-white">{item.value}</strong>
@@ -288,7 +302,13 @@ function Indicador({
 function ConformidadeOperacional({
   itens,
 }: {
-  itens: Array<{ modulo: string; conforme: number; naoConforme: number; atencao: number; descricao: string }>;
+  itens: Array<{
+    modulo: string;
+    conforme: number;
+    naoConforme: number;
+    atencao: number;
+    descricao: string;
+  }>;
 }) {
   const totais = itens.reduce(
     (acc, item) => ({
@@ -301,13 +321,14 @@ function ConformidadeOperacional({
   const total = totais.conforme + totais.naoConforme + totais.atencao;
   const indiceConformidade = percentual(totais.conforme, total);
   const indiceNaoConformidade = percentual(totais.naoConforme, total);
-  const dadosRosca = total > 0
-    ? [
-        { nome: "Conforme", valor: totais.conforme, cor: "#22c55e" },
-        { nome: "Atenção", valor: totais.atencao, cor: "#f59e0b" },
-        { nome: "Não conforme", valor: totais.naoConforme, cor: "#ef4444" },
-      ]
-    : [{ nome: "Sem dados", valor: 1, cor: "#334155" }];
+  const dadosRosca =
+    total > 0
+      ? [
+          { nome: "Conforme", valor: totais.conforme, cor: "#22c55e" },
+          { nome: "Atenção", valor: totais.atencao, cor: "#f59e0b" },
+          { nome: "Não conforme", valor: totais.naoConforme, cor: "#ef4444" },
+        ]
+      : [{ nome: "Sem dados", valor: 1, cor: "#334155" }];
 
   return (
     <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -317,8 +338,12 @@ function ConformidadeOperacional({
           <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-800 dark:bg-slate-900/70">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-500 dark:text-blue-300">Índice operacional</p>
-                <h2 className="mt-2 text-xl font-black text-slate-900 dark:text-white">Conformidade geral</h2>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-500 dark:text-blue-300">
+                  Índice operacional
+                </p>
+                <h2 className="mt-2 text-xl font-black text-slate-900 dark:text-white">
+                  Conformidade geral
+                </h2>
               </div>
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-400/30 bg-emerald-500/15 text-emerald-500">
                 <ShieldCheck size={24} />
@@ -343,27 +368,46 @@ function ConformidadeOperacional({
                         <Cell key={item.nome} fill={item.cor} />
                       ))}
                     </Pie>
-                    <Tooltip content={<TooltipGrafico />} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
+                    <Tooltip
+                      content={<TooltipGrafico />}
+                      wrapperStyle={{ pointerEvents: "none", outline: "none" }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <strong className="text-2xl text-slate-900 dark:text-white">{indiceConformidade}%</strong>
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">conforme</span>
+                  <strong className="text-2xl text-slate-900 dark:text-white">
+                    {indiceConformidade}%
+                  </strong>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    conforme
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 p-3">
-                  <p className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-300"><CheckCircle2 size={15} /> Conformidades</p>
-                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totais.conforme}</p>
+                  <p className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-300">
+                    <CheckCircle2 size={15} /> Conformidades
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                    {totais.conforme}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 p-3">
-                  <p className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-300"><AlertTriangle size={15} /> Atenção</p>
-                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totais.atencao}</p>
+                  <p className="flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-300">
+                    <AlertTriangle size={15} /> Atenção
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                    {totais.atencao}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-red-400/20 bg-red-500/10 p-3">
-                  <p className="flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-300"><XCircle size={15} /> Não conformidades</p>
-                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{totais.naoConforme}</p>
+                  <p className="flex items-center gap-2 text-xs font-bold text-red-600 dark:text-red-300">
+                    <XCircle size={15} /> Não conformidades
+                  </p>
+                  <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                    {totais.naoConforme}
+                  </p>
                 </div>
               </div>
             </div>
@@ -383,33 +427,52 @@ function ConformidadeOperacional({
 
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {itens.map((item) => {
-              const totalModulo = item.conforme + item.naoConforme + item.atencao;
+              const totalModulo =
+                item.conforme + item.naoConforme + item.atencao;
               const moduloConforme = percentual(item.conforme, totalModulo);
               return (
-                <div key={item.modulo} className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                <div
+                  key={item.modulo}
+                  className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/70"
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <h3 className="font-black text-slate-900 dark:text-white">{item.modulo}</h3>
-                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{item.descricao}</p>
+                      <h3 className="font-black text-slate-900 dark:text-white">
+                        {item.modulo}
+                      </h3>
+                      <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                        {item.descricao}
+                      </p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-black ${moduloConforme >= 80 ? "bg-emerald-500/15 text-emerald-500" : moduloConforme >= 60 ? "bg-amber-500/15 text-amber-500" : "bg-red-500/15 text-red-500"}`}>
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-black ${moduloConforme >= 80 ? "bg-emerald-500/15 text-emerald-500" : moduloConforme >= 60 ? "bg-amber-500/15 text-amber-500" : "bg-red-500/15 text-red-500"}`}
+                    >
                       {moduloConforme}%
                     </span>
                   </div>
                   <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-sky-400 to-blue-500" style={{ width: `${moduloConforme}%` }} />
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-sky-400 to-blue-500"
+                      style={{ width: `${moduloConforme}%` }}
+                    />
                   </div>
                   <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
                     <div className="rounded-xl bg-emerald-500/10 p-2 text-emerald-600 dark:text-emerald-300">
-                      <strong className="block text-base">{item.conforme}</strong>
+                      <strong className="block text-base">
+                        {item.conforme}
+                      </strong>
                       OK
                     </div>
                     <div className="rounded-xl bg-amber-500/10 p-2 text-amber-600 dark:text-amber-300">
-                      <strong className="block text-base">{item.atencao}</strong>
+                      <strong className="block text-base">
+                        {item.atencao}
+                      </strong>
                       Atenção
                     </div>
                     <div className="rounded-xl bg-red-500/10 p-2 text-red-600 dark:text-red-300">
-                      <strong className="block text-base">{item.naoConforme}</strong>
+                      <strong className="block text-base">
+                        {item.naoConforme}
+                      </strong>
                       Desvio
                     </div>
                   </div>
@@ -436,14 +499,17 @@ function StatusCards({
     nome,
     valor: status[nome] || 0,
   }));
-  const dadosVisuais = total > 0 ? dadosRosca : [{ nome: "Sem dados", valor: 1 }];
+  const dadosVisuais =
+    total > 0 ? dadosRosca : [{ nome: "Sem dados", valor: 1 }];
   const sombraId = `shadow-${idGrafico(titulo)}`;
   const brilhoId = `glow-${idGrafico(titulo)}`;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900/80">
       <div className="flex items-center justify-between">
-        <h2 className="font-bold text-slate-800 dark:text-slate-100">{titulo}</h2>
+        <h2 className="font-bold text-slate-800 dark:text-slate-100">
+          {titulo}
+        </h2>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700 dark:bg-slate-950 dark:text-slate-100">
           {total}
         </span>
@@ -455,11 +521,35 @@ function StatusCards({
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <defs>
-                <filter id={sombraId} x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="8" stdDeviation="6" floodColor="#0f172a" floodOpacity="0.16" />
+                <filter
+                  id={sombraId}
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="8"
+                    stdDeviation="6"
+                    floodColor="#0f172a"
+                    floodOpacity="0.16"
+                  />
                 </filter>
-                <filter id={brilhoId} x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="0" stdDeviation="3" floodColor="#60a5fa" floodOpacity="0.22" />
+                <filter
+                  id={brilhoId}
+                  x="-20%"
+                  y="-20%"
+                  width="140%"
+                  height="140%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="0"
+                    stdDeviation="3"
+                    floodColor="#60a5fa"
+                    floodOpacity="0.22"
+                  />
                 </filter>
               </defs>
               <Pie
@@ -471,7 +561,9 @@ function StatusCards({
                 strokeWidth={0}
                 isAnimationActive={false}
               >
-                <Cell fill={total > 0 ? "rgba(148, 163, 184, 0.16)" : "#e2e8f0"} />
+                <Cell
+                  fill={total > 0 ? "rgba(148, 163, 184, 0.16)" : "#e2e8f0"}
+                />
               </Pie>
               <Pie
                 data={dadosVisuais}
@@ -485,26 +577,46 @@ function StatusCards({
                 filter={total > 0 ? `url(#${brilhoId})` : `url(#${sombraId})`}
               >
                 {dadosVisuais.map((item) => (
-                  <Cell key={item.nome} fill={total > 0 ? coresStatus[item.nome] : "#e2e8f0"} />
+                  <Cell
+                    key={item.nome}
+                    fill={total > 0 ? coresStatus[item.nome] : "#e2e8f0"}
+                  />
                 ))}
               </Pie>
-              <Tooltip content={<TooltipGrafico />} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
+              <Tooltip
+                content={<TooltipGrafico />}
+                wrapperStyle={{ pointerEvents: "none", outline: "none" }}
+              />
             </PieChart>
           </ResponsiveContainer>
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-            <strong className="text-xl text-slate-900 dark:text-white">{total}</strong>
-            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">total</span>
+            <strong className="text-xl text-slate-900 dark:text-white">
+              {total}
+            </strong>
+            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              total
+            </span>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2 self-center">
           {statusPadrao.map((item) => (
-            <div key={item} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/45">
+            <div
+              key={item}
+              className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5 dark:border-slate-800 dark:bg-slate-950/45"
+            >
               <div className="flex items-center gap-2">
-                <span className="h-2 w-2 rounded-full shadow-sm" style={{ backgroundColor: coresStatus[item] }} />
-                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-300">{item}</p>
+                <span
+                  className="h-2 w-2 rounded-full shadow-sm"
+                  style={{ backgroundColor: coresStatus[item] }}
+                />
+                <p className="truncate text-xs font-medium text-slate-500 dark:text-slate-300">
+                  {item}
+                </p>
               </div>
-              <p className="mt-1.5 text-lg font-bold text-slate-900 dark:text-white">{status[item] || 0}</p>
+              <p className="mt-1.5 text-lg font-bold text-slate-900 dark:text-white">
+                {status[item] || 0}
+              </p>
             </div>
           ))}
         </div>
@@ -528,7 +640,9 @@ function BarraHorizontal({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="font-bold text-slate-800 dark:text-slate-100">{titulo}</h2>
+        <h2 className="font-bold text-slate-800 dark:text-slate-100">
+          {titulo}
+        </h2>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
           Top {dados.length}
         </span>
@@ -536,21 +650,54 @@ function BarraHorizontal({
 
       <div className="mt-5 h-72">
         {dados.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-slate-400">Sem dados no filtro atual.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Sem dados no filtro atual.
+          </p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={dadosGrafico} layout="vertical" margin={{ top: 8, right: 18, left: 8, bottom: 8 }}>
+            <BarChart
+              data={dadosGrafico}
+              layout="vertical"
+              margin={{ top: 8, right: 18, left: 8, bottom: 8 }}
+            >
               <defs>
                 <linearGradient id={gradientId} x1="0" x2="1" y1="0" y2="0">
                   <stop offset="0%" stopColor={cor} stopOpacity={0.68} />
                   <stop offset="100%" stopColor={cor} stopOpacity={1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridGrafico} />
-              <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
-              <YAxis dataKey="nome" type="category" width={122} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
-              <Tooltip content={<TooltipGrafico />} cursor={{ fill: cursorGrafico }} wrapperStyle={{ pointerEvents: "none", outline: "none" }} />
-              <Bar dataKey="valor" name="Quantidade" radius={[0, 10, 10, 0]} fill={`url(#${gradientId})`} barSize={18} />
+              <CartesianGrid
+                strokeDasharray="3 3"
+                horizontal={false}
+                stroke={gridGrafico}
+              />
+              <XAxis
+                type="number"
+                allowDecimals={false}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: eixoGrafico }}
+              />
+              <YAxis
+                dataKey="nome"
+                type="category"
+                width={122}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: eixoGrafico }}
+              />
+              <Tooltip
+                content={<TooltipGrafico />}
+                cursor={{ fill: cursorGrafico }}
+                wrapperStyle={{ pointerEvents: "none", outline: "none" }}
+              />
+              <Bar
+                dataKey="valor"
+                name="Quantidade"
+                radius={[0, 10, 10, 0]}
+                fill={`url(#${gradientId})`}
+                barSize={18}
+              />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -567,21 +714,40 @@ function GraficoTemporal({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 lg:col-span-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-bold text-slate-800 dark:text-slate-100">Comparativo temporal</h2>
+        <h2 className="font-bold text-slate-800 dark:text-slate-100">
+          Comparativo temporal
+        </h2>
         <div className="flex items-center gap-3 text-xs font-semibold text-slate-500 dark:text-slate-300">
-          <span className="flex items-center gap-2"><span className="h-2 w-5 rounded-full bg-red-500" />Ocorrências</span>
-          <span className="flex items-center gap-2"><span className="h-2 w-5 rounded-full bg-sky-500" />Eventos</span>
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-5 rounded-full bg-red-500" />
+            Ocorrências
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-5 rounded-full bg-sky-500" />
+            Eventos
+          </span>
         </div>
       </div>
 
       <div className="mt-6 h-72">
         {dados.length === 0 ? (
-          <p className="self-start text-sm text-slate-500 dark:text-slate-400">Sem dados no filtro atual.</p>
+          <p className="self-start text-sm text-slate-500 dark:text-slate-400">
+            Sem dados no filtro atual.
+          </p>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={dados} margin={{ top: 12, right: 24, left: 0, bottom: 8 }}>
+            <LineChart
+              data={dados}
+              margin={{ top: 12, right: 24, left: 0, bottom: 8 }}
+            >
               <defs>
-                <linearGradient id="linhaOcorrencias" x1="0" x2="1" y1="0" y2="0">
+                <linearGradient
+                  id="linhaOcorrencias"
+                  x1="0"
+                  x2="1"
+                  y1="0"
+                  y2="0"
+                >
                   <stop offset="0%" stopColor="#fb7185" />
                   <stop offset="100%" stopColor="#ef4444" />
                 </linearGradient>
@@ -591,8 +757,18 @@ function GraficoTemporal({
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke={gridGrafico} />
-              <XAxis dataKey="mes" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
-              <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: eixoGrafico }} />
+              <XAxis
+                dataKey="mes"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: eixoGrafico }}
+              />
+              <YAxis
+                allowDecimals={false}
+                axisLine={false}
+                tickLine={false}
+                tick={{ fontSize: 12, fill: eixoGrafico }}
+              />
               <Tooltip
                 content={<TooltipGrafico />}
                 cursor={{ stroke: "rgba(59, 130, 246, 0.30)", strokeWidth: 1 }}
@@ -606,7 +782,12 @@ function GraficoTemporal({
                 stroke="url(#linhaOcorrencias)"
                 strokeWidth={3}
                 dot={{ r: 3, fill: "#ef4444", strokeWidth: 0 }}
-                activeDot={{ r: 6, fill: "#ef4444", stroke: "#fee2e2", strokeWidth: 2 }}
+                activeDot={{
+                  r: 6,
+                  fill: "#ef4444",
+                  stroke: "#fee2e2",
+                  strokeWidth: 2,
+                }}
               />
               <Line
                 type="monotone"
@@ -615,7 +796,12 @@ function GraficoTemporal({
                 stroke="url(#linhaEventos)"
                 strokeWidth={3}
                 dot={{ r: 3, fill: "#0ea5e9", strokeWidth: 0 }}
-                activeDot={{ r: 6, fill: "#0ea5e9", stroke: "#e0f2fe", strokeWidth: 2 }}
+                activeDot={{
+                  r: 6,
+                  fill: "#0ea5e9",
+                  stroke: "#e0f2fe",
+                  strokeWidth: 2,
+                }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -631,7 +817,12 @@ export default function Dashboard() {
   const [investigacoes, setInvestigacoes] = useState<Investigacao[]>([]);
   const [camerasResumo, setCamerasResumo] = useState<CamerasResumo>({});
   const [quadraResumo, setQuadraResumo] = useState<QuadraResumo>({});
-  const [documentosResumo, setDocumentosResumo] = useState<DocumentosResumo>({ total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
+  const [documentosResumo, setDocumentosResumo] = useState<DocumentosResumo>({
+    total: 0,
+    assinados: 0,
+    pendentes: 0,
+    comPdf: 0,
+  });
   const [tarefasAbertas, setTarefasAbertas] = useState<PlanejamentoCard[]>([]);
   const [checklists, setChecklists] = useState<ChecklistInspecao[]>([]);
   const [riscos, setRiscos] = useState<RiscoDashboard[]>([]);
@@ -658,37 +849,69 @@ export default function Dashboard() {
       checklistsResponse,
       riscosResponse,
       planosResponse,
-    ] =
-      await Promise.all([
-        api.get("/ocorrencias"),
-        api.get("/eventos"),
-        api.get("/investigacoes"),
-        api.get("/cameras/dashboard").catch(() => ({ data: {} })),
-        api.get(`/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`).catch(() => ({ data: {} })),
-        api.get("/planejamento").catch(() => ({ data: { colunas: [] } })),
-        api.get("/documentos").catch(() => ({ data: { resumo: { total: 0, assinados: 0, pendentes: 0, comPdf: 0 } } })),
-        api.get("/checklists").catch(() => ({ data: [] })),
-        api.get("/riscos").catch(() => ({ data: [] })),
-        api.get("/planos-acao").catch(() => ({ data: [] })),
-      ]);
+    ] = await Promise.all([
+      api.get("/ocorrencias"),
+      api.get("/eventos"),
+      api.get("/investigacoes"),
+      api.get("/cameras/dashboard").catch(() => ({ data: {} })),
+      api
+        .get(
+          `/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`,
+        )
+        .catch(() => ({ data: {} })),
+      api.get("/planejamento").catch(() => ({ data: { colunas: [] } })),
+      api
+        .get("/documentos")
+        .catch(() => ({
+          data: { resumo: { total: 0, assinados: 0, pendentes: 0, comPdf: 0 } },
+        })),
+      api.get("/checklists").catch(() => ({ data: [] })),
+      api.get("/riscos").catch(() => ({ data: [] })),
+      api.get("/planos-acao").catch(() => ({ data: [] })),
+    ]);
 
     setOcorrencias(ocorrenciasResponse.data);
     setEventos(eventosResponse.data);
     setInvestigacoes(investigacoesResponse.data);
     setCamerasResumo(camerasResponse.data);
     setQuadraResumo(quadraResponse.data);
-    setDocumentosResumo(documentosResponse.data.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
-    setChecklists(Array.isArray(checklistsResponse.data) ? checklistsResponse.data : []);
-    setRiscos(Array.isArray(riscosResponse.data) ? riscosResponse.data : []);
-    setPlanosAcao(Array.isArray(planosResponse.data) ? planosResponse.data : []);
-    const cards = ((planejamentoResponse.data.colunas || []) as PlanejamentoColuna[]).flatMap((coluna) =>
-      (coluna.cards || []).map((card: PlanejamentoCard) => ({ ...card, status: coluna.titulo }))
+    setDocumentosResumo(
+      documentosResponse.data.resumo || {
+        total: 0,
+        assinados: 0,
+        pendentes: 0,
+        comPdf: 0,
+      },
     );
-    setTarefasAbertas(cards.filter((card: PlanejamentoCard) => {
-      const responsavelAtual = !card.responsavel?.id || card.responsavel.id === usuario?.id;
-      const statusAberto = !["Concluido", "Concluído", "Arquivado"].includes(card.status);
-      return responsavelAtual && statusAberto;
-    }).slice(0, 6));
+    setChecklists(
+      Array.isArray(checklistsResponse.data) ? checklistsResponse.data : [],
+    );
+    setRiscos(Array.isArray(riscosResponse.data) ? riscosResponse.data : []);
+    setPlanosAcao(
+      Array.isArray(planosResponse.data) ? planosResponse.data : [],
+    );
+    const cards = (
+      (planejamentoResponse.data.colunas || []) as PlanejamentoColuna[]
+    ).flatMap((coluna) =>
+      (coluna.cards || []).map((card: PlanejamentoCard) => ({
+        ...card,
+        status: coluna.titulo,
+      })),
+    );
+    setTarefasAbertas(
+      cards
+        .filter((card: PlanejamentoCard) => {
+          const responsavelAtual =
+            !card.responsavel?.id || card.responsavel.id === usuario?.id;
+          const statusAberto = ![
+            "Concluido",
+            "Concluído",
+            "Arquivado",
+          ].includes(card.status);
+          return responsavelAtual && statusAberto;
+        })
+        .slice(0, 6),
+    );
     setCarregando(false);
   }
 
@@ -701,7 +924,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isOperador) return;
-    api.get(`/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`)
+    api
+      .get(`/quadra-seguranca/dashboard?ano=${ano || new Date().getFullYear()}`)
       .then((response) => setQuadraResumo(response.data))
       .catch(() => setQuadraResumo({}));
   }, [ano, isOperador]);
@@ -723,8 +947,12 @@ export default function Dashboard() {
 
   const anos = useMemo(() => {
     const lista = new Set<number>();
-    ocorrencias.forEach((item) => lista.add(new Date(item.dataOcorrencia).getFullYear()));
-    eventos.forEach((item) => lista.add(new Date(item.dataEvento).getFullYear()));
+    ocorrencias.forEach((item) =>
+      lista.add(new Date(item.dataOcorrencia).getFullYear()),
+    );
+    eventos.forEach((item) =>
+      lista.add(new Date(item.dataEvento).getFullYear()),
+    );
     return Array.from(lista).sort((a, b) => b - a);
   }, [eventos, ocorrencias]);
 
@@ -756,16 +984,19 @@ export default function Dashboard() {
 
   const totalPrejuizo = ocorrenciasFiltradas.reduce(
     (total, item) => total + moedaParaNumero(item.analise?.prejuizoFinanceiro),
-    0
+    0,
   );
   const totalRecuperado = eventosFiltrados.reduce(
     (total, item) => total + moedaParaNumero(item.analise?.valorRecuperado),
-    0
+    0,
   );
   const diferenca = totalPrejuizo - totalRecuperado;
 
   const temporal = useMemo(() => {
-    const mapa = new Map<string, { mes: string; ocorrencias: number; eventos: number }>();
+    const mapa = new Map<
+      string,
+      { mes: string; ocorrencias: number; eventos: number }
+    >();
 
     ocorrenciasFiltradas.forEach((item) => {
       const chave = mesAno(item.dataOcorrencia);
@@ -797,42 +1028,75 @@ export default function Dashboard() {
         (totalMesAnterior.ocorrencias + totalMesAnterior.eventos)
       : 0;
 
-  const itensChecklist = checklists.flatMap((checklist) => checklist.itens || []);
-  const checklistConformes = itensChecklist.filter((item) => normalizarTexto(item.conformidade) === "conforme").length;
-  const checklistNaoConformes = itensChecklist.filter((item) => normalizarTexto(item.conformidade) === "nao conforme").length;
+  const itensChecklist = checklists.flatMap(
+    (checklist) => checklist.itens || [],
+  );
+  const checklistConformes = itensChecklist.filter(
+    (item) => normalizarTexto(item.conformidade) === "conforme",
+  ).length;
+  const checklistNaoConformes = itensChecklist.filter(
+    (item) => normalizarTexto(item.conformidade) === "nao conforme",
+  ).length;
   const checklistAtencao = itensChecklist.filter((item) => {
     const conformidade = normalizarTexto(item.conformidade);
-    return conformidade === "nao aplicavel" || (!conformidade && normalizarTexto(item.criticidade) !== "");
+    return (
+      conformidade === "nao aplicavel" ||
+      (!conformidade && normalizarTexto(item.criticidade) !== "")
+    );
   }).length;
 
-  const camerasConformes = camerasResumo.camerasConformidade || camerasResumo.totalConectadas || camerasResumo.online || 0;
+  const camerasConformes =
+    camerasResumo.camerasConformidade ||
+    camerasResumo.totalConectadas ||
+    camerasResumo.online ||
+    0;
   const camerasNaoConformes =
     (camerasResumo.camerasCriticas || 0) +
-    (camerasResumo.camerasDesconectadas || camerasResumo.totalDesconectadas || camerasResumo.offline || 0);
+    (camerasResumo.camerasDesconectadas ||
+      camerasResumo.totalDesconectadas ||
+      camerasResumo.offline ||
+      0);
   const camerasAtencao = camerasResumo.camerasAtencao || 0;
 
   const riscosConformes = riscos.filter((risco) => {
     const statusRisco = normalizarTexto(risco.status);
     const nivel = normalizarTexto(risco.nivelRisco);
-    return statusRisco === "concluido" || nivel === "baixo" || nivel === "moderado";
+    return (
+      statusRisco === "concluido" || nivel === "baixo" || nivel === "moderado"
+    );
   }).length;
   const riscosNaoConformes = riscos.filter((risco) => {
     const statusRisco = normalizarTexto(risco.status);
     const nivel = normalizarTexto(risco.nivelRisco);
-    return statusRisco !== "concluido" && (nivel === "alto" || nivel === "critico");
+    return (
+      statusRisco !== "concluido" && (nivel === "alto" || nivel === "critico")
+    );
   }).length;
-  const riscosAtencao = Math.max(0, riscos.length - riscosConformes - riscosNaoConformes);
+  const riscosAtencao = Math.max(
+    0,
+    riscos.length - riscosConformes - riscosNaoConformes,
+  );
 
-  const planosConformes = planosAcao.filter((plano) => normalizarTexto(plano.status) === "concluido").length;
+  const planosConformes = planosAcao.filter(
+    (plano) => normalizarTexto(plano.status) === "concluido",
+  ).length;
   const planosNaoConformes = planosAcao.filter((plano) => {
     const statusPlano = normalizarTexto(plano.status);
     return statusPlano === "atrasado" || statusPlano === "vencido";
   }).length;
-  const planosAtencao = Math.max(0, planosAcao.length - planosConformes - planosNaoConformes);
+  const planosAtencao = Math.max(
+    0,
+    planosAcao.length - planosConformes - planosNaoConformes,
+  );
 
   const documentosConformes = documentosResumo.assinados;
   const documentosNaoConformes = documentosResumo.pendentes;
-  const documentosAtencao = Math.max(0, documentosResumo.total - documentosResumo.assinados - documentosResumo.pendentes);
+  const documentosAtencao = Math.max(
+    0,
+    documentosResumo.total -
+      documentosResumo.assinados -
+      documentosResumo.pendentes,
+  );
 
   const itensConformidade = [
     {
@@ -840,7 +1104,8 @@ export default function Dashboard() {
       conforme: checklistConformes,
       naoConforme: checklistNaoConformes,
       atencao: checklistAtencao,
-      descricao: "Itens vistoriados em conformidade, atenção ou desvio operacional.",
+      descricao:
+        "Itens vistoriados em conformidade, atenção ou desvio operacional.",
     },
     {
       modulo: "CFTV",
@@ -854,14 +1119,16 @@ export default function Dashboard() {
       conforme: riscosConformes,
       naoConforme: riscosNaoConformes,
       atencao: riscosAtencao,
-      descricao: "Classificação de riscos e tratativas pendentes por criticidade.",
+      descricao:
+        "Classificação de riscos e tratativas pendentes por criticidade.",
     },
     {
       modulo: "Planos de ação",
       conforme: planosConformes,
       naoConforme: planosNaoConformes,
       atencao: planosAtencao,
-      descricao: "Ações corretivas e preventivas concluídas, pendentes ou vencidas.",
+      descricao:
+        "Ações corretivas e preventivas concluídas, pendentes ou vencidas.",
     },
     {
       modulo: "Documentos",
@@ -904,11 +1171,15 @@ export default function Dashboard() {
             <div class="card"><div class="label">Ocorrências</div><div class="value">${ocorrenciasFiltradas.length}</div></div>
             <div class="card"><div class="label">Eventos</div><div class="value">${eventosFiltrados.length}</div></div>
             <div class="card"><div class="label">Investigações</div><div class="value">${investigacoesFiltradas.length}</div></div>
-            ${isOperador ? "" : `
+            ${
+              isOperador
+                ? ""
+                : `
               <div class="card"><div class="label">Prejuízo total</div><div class="value">${formatarMoeda(totalPrejuizo)}</div></div>
               <div class="card"><div class="label">Valor recuperado</div><div class="value">${formatarMoeda(totalRecuperado)}</div></div>
               <div class="card"><div class="label">Diferença</div><div class="value">${formatarMoeda(diferenca)}</div></div>
-            `}
+            `
+            }
           </div>
           <table>
             <thead><tr><th>Mês</th><th>Ocorrências</th><th>Eventos</th></tr></thead>
@@ -929,9 +1200,15 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">{isOperador ? "Dashboard Operacional CFTV" : "Dashboard Administrativo"}</h1>
+          <h1 className="text-3xl font-bold text-slate-900">
+            {isOperador
+              ? "Dashboard Operacional CFTV"
+              : "Dashboard Administrativo"}
+          </h1>
           <p className="mt-1 text-slate-500">
-            {isOperador ? "Monitoramento operacional, CFTV, relatórios, tarefas e quadra de segurança." : "Indicadores operacionais, financeiros e tendências dos relatórios."}
+            {isOperador
+              ? "Monitoramento operacional, CFTV, relatórios, tarefas e quadra de segurança."
+              : "Indicadores operacionais, financeiros e tendências dos relatórios."}
           </p>
         </div>
 
@@ -966,16 +1243,26 @@ export default function Dashboard() {
             <option value="ano">Ano atual</option>
           </select>
 
-          <select value={mes} onChange={(e) => setMes(e.target.value)} className="rounded-lg border p-3">
+          <select
+            value={mes}
+            onChange={(e) => setMes(e.target.value)}
+            className="rounded-lg border p-3"
+          >
             <option value="">Todos os meses</option>
             {Array.from({ length: 12 }, (_, index) => (
               <option key={index + 1} value={index + 1}>
-                {new Date(2026, index, 1).toLocaleString("pt-BR", { month: "long" })}
+                {new Date(2026, index, 1).toLocaleString("pt-BR", {
+                  month: "long",
+                })}
               </option>
             ))}
           </select>
 
-          <select value={ano} onChange={(e) => setAno(e.target.value)} className="rounded-lg border p-3">
+          <select
+            value={ano}
+            onChange={(e) => setAno(e.target.value)}
+            className="rounded-lg border p-3"
+          >
             <option value="">Todos os anos</option>
             {anos.map((item) => (
               <option key={item} value={item}>
@@ -997,7 +1284,11 @@ export default function Dashboard() {
             ))}
           </select>
 
-          <select value={local} onChange={(e) => setLocal(e.target.value)} className="rounded-lg border p-3">
+          <select
+            value={local}
+            onChange={(e) => setLocal(e.target.value)}
+            className="rounded-lg border p-3"
+          >
             <option value="">Todos os locais</option>
             {locais.map((item) => (
               <option key={item} value={item}>
@@ -1031,45 +1322,139 @@ export default function Dashboard() {
       {isOperador ? (
         <>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            <Indicador titulo="Câmeras conectadas" valor={camerasResumo.totalConectadas || camerasResumo.online || 0} subtitulo="Disponíveis no monitoramento" destaque="text-emerald-600" />
-            <Indicador titulo="Câmeras desconectadas" valor={camerasResumo.totalDesconectadas || camerasResumo.offline || 0} subtitulo="Exigem atenção operacional" destaque="text-red-600" />
-            <Indicador titulo="Tarefas em aberto" valor={tarefasAbertas.length} subtitulo="Atribuídas ao usuário conectado" destaque="text-blue-600" />
-            <Indicador titulo="Contêineres armazenados" valor={quadraResumo.armazenados || quadraResumo.noTerminal || 0} subtitulo={`${quadraResumo.permanenciaCritica || 0} em permanência crítica no ano`} destaque="text-amber-600" />
-            <Indicador titulo="Previsão de chegada" valor={quadraResumo.previstos || 0} subtitulo={`Filtro anual: ${ano || new Date().getFullYear()}`} destaque="text-blue-600" />
-            <Indicador titulo="Contêineres que saíram" valor={quadraResumo.saidos || 0} subtitulo={`Saídas/finalizados em ${ano || new Date().getFullYear()}`} destaque="text-emerald-600" />
+            <Indicador
+              titulo="Câmeras conectadas"
+              valor={camerasResumo.totalConectadas || camerasResumo.online || 0}
+              subtitulo="Disponíveis no monitoramento"
+              destaque="text-emerald-600"
+            />
+            <Indicador
+              titulo="Câmeras desconectadas"
+              valor={
+                camerasResumo.totalDesconectadas || camerasResumo.offline || 0
+              }
+              subtitulo="Exigem atenção operacional"
+              destaque="text-red-600"
+            />
+            <Indicador
+              titulo="Tarefas em aberto"
+              valor={tarefasAbertas.length}
+              subtitulo="Atribuídas ao usuário conectado"
+              destaque="text-blue-600"
+            />
+            <Indicador
+              titulo="Contêineres armazenados"
+              valor={quadraResumo.armazenados || quadraResumo.noTerminal || 0}
+              subtitulo={`${quadraResumo.permanenciaCritica || 0} em permanência crítica no ano`}
+              destaque="text-amber-600"
+            />
+            <Indicador
+              titulo="Previsão de chegada"
+              valor={quadraResumo.previstos || 0}
+              subtitulo={`Filtro anual: ${ano || new Date().getFullYear()}`}
+              destaque="text-blue-600"
+            />
+            <Indicador
+              titulo="Contêineres que saíram"
+              valor={quadraResumo.saidos || 0}
+              subtitulo={`Saídas/finalizados em ${ano || new Date().getFullYear()}`}
+              destaque="text-emerald-600"
+            />
           </div>
 
           <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 text-lg font-bold text-slate-900">Tarefas em Aberto</h2>
+            <h2 className="mb-4 text-lg font-bold text-slate-900">
+              Tarefas em Aberto
+            </h2>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {tarefasAbertas.map((tarefa) => (
-                <div key={tarefa.id} className="rounded-xl border border-slate-200 p-4">
+                <div
+                  key={tarefa.id}
+                  className="rounded-xl border border-slate-200 p-4"
+                >
                   <div className="flex items-start justify-between gap-3">
-                    <h3 className="font-bold text-slate-900">{tarefa.titulo}</h3>
-                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-700">{tarefa.prioridade || "Normal"}</span>
+                    <h3 className="font-bold text-slate-900">
+                      {tarefa.titulo}
+                    </h3>
+                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-bold text-blue-700">
+                      {tarefa.prioridade || "Normal"}
+                    </span>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-sm text-slate-500">{tarefa.descricao || "Sem descrição."}</p>
-                  <p className="mt-3 text-xs text-slate-500">Status: {tarefa.status}</p>
-                  <p className="text-xs text-slate-500">Prazo: {tarefa.prazo ? new Date(tarefa.prazo).toLocaleDateString("pt-BR") : "Sem prazo"}</p>
+                  <p className="mt-2 line-clamp-2 text-sm text-slate-500">
+                    {tarefa.descricao || "Sem descrição."}
+                  </p>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Status: {tarefa.status}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Prazo:{" "}
+                    {tarefa.prazo
+                      ? new Date(tarefa.prazo).toLocaleDateString("pt-BR")
+                      : "Sem prazo"}
+                  </p>
                 </div>
               ))}
-              {tarefasAbertas.length === 0 && <p className="text-sm text-slate-500">Nenhuma tarefa em aberto atribuída.</p>}
+              {tarefasAbertas.length === 0 && (
+                <p className="text-sm text-slate-500">
+                  Nenhuma tarefa em aberto atribuída.
+                </p>
+              )}
             </div>
           </section>
         </>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <Indicador titulo="Prejuízo total" valor={formatarMoeda(totalPrejuizo)} subtitulo="Somatório das análises de ocorrência" destaque="text-red-600" />
-            <Indicador titulo="Valor recuperado" valor={formatarMoeda(totalRecuperado)} subtitulo="Somatório das análises de eventos" destaque="text-emerald-600" />
-            <Indicador titulo="Diferença financeira" valor={formatarMoeda(diferenca)} subtitulo="Prejuízo menos recuperação" destaque={diferenca > 0 ? "text-amber-600" : "text-emerald-600"} />
-            <Indicador titulo="Tendência" valor={variacao > 0 ? `+${variacao}` : variacao} subtitulo="Variação contra período anterior" destaque={variacao > 0 ? "text-blue-600" : "text-slate-700"} />
+            <Indicador
+              titulo="Prejuízo total"
+              valor={formatarMoeda(totalPrejuizo)}
+              subtitulo="Somatório das análises de ocorrência"
+              destaque="text-red-600"
+            />
+            <Indicador
+              titulo="Valor recuperado"
+              valor={formatarMoeda(totalRecuperado)}
+              subtitulo="Somatório das análises de eventos"
+              destaque="text-emerald-600"
+            />
+            <Indicador
+              titulo="Diferença financeira"
+              valor={formatarMoeda(diferenca)}
+              subtitulo="Prejuízo menos recuperação"
+              destaque={diferenca > 0 ? "text-amber-600" : "text-emerald-600"}
+            />
+            <Indicador
+              titulo="Tendência"
+              valor={variacao > 0 ? `+${variacao}` : variacao}
+              subtitulo="Variação contra período anterior"
+              destaque={variacao > 0 ? "text-blue-600" : "text-slate-700"}
+            />
           </div>
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-            <Indicador titulo="Documentos emitidos" valor={documentosResumo.total} subtitulo="Central documental consolidada" destaque="text-blue-600" />
-            <Indicador titulo="Assinados" valor={documentosResumo.assinados} subtitulo="Com validação eletrônica" destaque="text-emerald-600" />
-            <Indicador titulo="Pendentes" valor={documentosResumo.pendentes} subtitulo="Exigem assinatura ou revisão" destaque="text-amber-600" />
-            <Indicador titulo="Com PDF" valor={documentosResumo.comPdf} subtitulo="Disponíveis para consulta e download" destaque="text-slate-700" />
+            <Indicador
+              titulo="Documentos emitidos"
+              valor={documentosResumo.total}
+              subtitulo="Central documental consolidada"
+              destaque="text-blue-600"
+            />
+            <Indicador
+              titulo="Assinados"
+              valor={documentosResumo.assinados}
+              subtitulo="Com validação eletrônica"
+              destaque="text-emerald-600"
+            />
+            <Indicador
+              titulo="Pendentes"
+              valor={documentosResumo.pendentes}
+              subtitulo="Exigem assinatura ou revisão"
+              destaque="text-amber-600"
+            />
+            <Indicador
+              titulo="Com PDF"
+              valor={documentosResumo.comPdf}
+              subtitulo="Disponíveis para consulta e download"
+              destaque="text-slate-700"
+            />
           </div>
         </>
       )}
@@ -1078,17 +1463,23 @@ export default function Dashboard() {
         <GraficoTemporal dados={temporal} />
         <BarraHorizontal
           titulo="Naturezas com maior índice de ocorrências"
-          dados={topRegistros(agrupar(ocorrenciasFiltradas, (item) => item.natureza))}
+          dados={topRegistros(
+            agrupar(ocorrenciasFiltradas, (item) => item.natureza),
+          )}
           cor="#2563eb"
         />
         <BarraHorizontal
           titulo="Naturezas com maior índice de eventos"
-          dados={topRegistros(agrupar(eventosFiltrados, (item) => item.natureza))}
+          dados={topRegistros(
+            agrupar(eventosFiltrados, (item) => item.natureza),
+          )}
           cor="#10b981"
         />
         <BarraHorizontal
           titulo="Locais com maior índice de ocorrências"
-          dados={topRegistros(agrupar(ocorrenciasFiltradas, (item) => item.local))}
+          dados={topRegistros(
+            agrupar(ocorrenciasFiltradas, (item) => item.local),
+          )}
           cor="#6366f1"
         />
         <BarraHorizontal
@@ -1100,4 +1491,3 @@ export default function Dashboard() {
     </div>
   );
 }
-

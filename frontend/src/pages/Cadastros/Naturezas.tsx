@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { AxiosError } from "axios";
 import { api } from "../../services/api";
 import { podeAnalisar } from "../../utils/permissoes";
@@ -71,7 +71,10 @@ export default function Naturezas() {
   }
 
   async function editarNatureza(natureza: Natureza) {
-    const novoNome = prompt("Informe o novo nome da natureza:", natureza.nome)?.trim();
+    const novoNome = prompt(
+      "Informe o novo nome da natureza:",
+      natureza.nome,
+    )?.trim();
     if (!novoNome || novoNome === natureza.nome) return;
 
     try {
@@ -83,9 +86,10 @@ export default function Naturezas() {
   }
 
   async function excluirNatureza(natureza: Natureza) {
-    const mensagem = natureza.subNaturezas.length > 0
-      ? `A natureza ${natureza.nome} possui subnaturezas vinculadas. Deseja excluir tudo mesmo assim?`
-      : `Deseja excluir a natureza ${natureza.nome}?`;
+    const mensagem =
+      natureza.subNaturezas.length > 0
+        ? `A natureza ${natureza.nome} possui subnaturezas vinculadas. Deseja excluir tudo mesmo assim?`
+        : `Deseja excluir a natureza ${natureza.nome}?`;
 
     if (!confirm(mensagem)) return;
 
@@ -98,11 +102,16 @@ export default function Naturezas() {
   }
 
   async function editarSubNatureza(subNatureza: SubNatureza) {
-    const novoNome = prompt("Informe o novo nome da subnatureza:", subNatureza.nome)?.trim();
+    const novoNome = prompt(
+      "Informe o novo nome da subnatureza:",
+      subNatureza.nome,
+    )?.trim();
     if (!novoNome || novoNome === subNatureza.nome) return;
 
     try {
-      await api.put(`/naturezas/subnaturezas/${subNatureza.id}`, { nome: novoNome });
+      await api.put(`/naturezas/subnaturezas/${subNatureza.id}`, {
+        nome: novoNome,
+      });
       carregarNaturezas();
     } catch (error) {
       tratarErro(error, "Erro ao editar subnatureza");
@@ -129,7 +138,8 @@ export default function Naturezas() {
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Naturezas e Subnaturezas</h1>
         <p className="mt-1 text-gray-500 dark:text-slate-300">
-          Cadastre, organize e mantenha as opções usadas nos relatórios de ocorrências e eventos.
+          Cadastre, organize e mantenha as opções usadas nos relatórios de
+          ocorrências e eventos.
         </p>
       </div>
 
@@ -189,7 +199,8 @@ export default function Naturezas() {
         </div>
       ) : (
         <div className="mb-6 rounded-xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800 dark:border-blue-900/60 dark:bg-blue-950/40 dark:text-blue-100">
-          Você pode consultar as naturezas e subnaturezas cadastradas. Alterações ficam disponíveis para administradores e analistas.
+          Você pode consultar as naturezas e subnaturezas cadastradas.
+          Alterações ficam disponíveis para administradores e analistas.
         </div>
       )}
 
@@ -200,7 +211,10 @@ export default function Naturezas() {
       ) : (
         <div className="space-y-4">
           {naturezas.map((natureza) => (
-            <div key={natureza.id} className="rounded-xl border border-slate-200 bg-white p-5 shadow dark:border-slate-700 dark:bg-slate-900">
+            <div
+              key={natureza.id}
+              className="rounded-xl border border-slate-200 bg-white p-5 shadow dark:border-slate-700 dark:bg-slate-900"
+            >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="text-xl font-bold">{natureza.nome}</h2>

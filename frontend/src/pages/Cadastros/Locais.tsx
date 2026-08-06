@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import type { AxiosError } from "axios";
 import { Edit3, Eye, MapPin, Plus, Trash2 } from "lucide-react";
 import { api } from "../../services/api";
@@ -18,7 +18,14 @@ type LocalTerminal = {
   createdAt: string;
 };
 
-const tipos = ["Operacional", "Administrativo", "Acesso", "Armazenagem", "Segurança", "Outro"];
+const tipos = [
+  "Operacional",
+  "Administrativo",
+  "Acesso",
+  "Armazenagem",
+  "Segurança",
+  "Outro",
+];
 const vazio = {
   nome: "",
   descricao: "",
@@ -46,17 +53,21 @@ export default function Locais() {
 
   const locaisFiltrados = useMemo(() => {
     const texto = busca.toLocaleUpperCase("pt-BR");
-    return locais.filter((local) =>
-      local.nome.includes(texto) ||
-      local.tipo.toLocaleUpperCase("pt-BR").includes(texto) ||
-      (local.descricao || "").toLocaleUpperCase("pt-BR").includes(texto)
+    return locais.filter(
+      (local) =>
+        local.nome.includes(texto) ||
+        local.tipo.toLocaleUpperCase("pt-BR").includes(texto) ||
+        (local.descricao || "").toLocaleUpperCase("pt-BR").includes(texto),
     );
   }, [busca, locais]);
 
   function campo(nome: string, valor: string | boolean) {
     setForm((atual) => ({
       ...atual,
-      [nome]: nome === "nome" && typeof valor === "string" ? valor.toLocaleUpperCase("pt-BR") : valor,
+      [nome]:
+        nome === "nome" && typeof valor === "string"
+          ? valor.toLocaleUpperCase("pt-BR")
+          : valor,
     }));
   }
 
@@ -106,11 +117,15 @@ export default function Locais() {
         <div>
           <h1 className="text-3xl font-bold">Locais</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Base de locais do terminal usada em ocorrências, eventos e investigações.
+            Base de locais do terminal usada em ocorrências, eventos e
+            investigações.
           </p>
         </div>
         {podeEditar && (
-          <button onClick={novoLocal} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+          <button
+            onClick={novoLocal}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          >
             <Plus size={18} />
             Novo Local
           </button>
@@ -119,15 +134,21 @@ export default function Locais() {
 
       {!podeEditar && (
         <div className="rounded-xl border border-blue-500/20 bg-blue-50 p-4 text-sm text-blue-800 dark:bg-blue-950/30 dark:text-blue-200">
-          Você pode consultar os locais cadastrados. Cadastro, edição e exclusão ficam disponíveis para administradores.
+          Você pode consultar os locais cadastrados. Cadastro, edição e exclusão
+          ficam disponíveis para administradores.
         </div>
       )}
 
       {podeEditar && (
-        <form onSubmit={salvarLocal} className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <form
+          onSubmit={salvarLocal}
+          className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+        >
           <div className="mb-4 flex items-center gap-2">
             <MapPin className="text-blue-600" size={20} />
-            <h2 className="text-xl font-bold">{editando ? "Editar local" : "Cadastrar local"}</h2>
+            <h2 className="text-xl font-bold">
+              {editando ? "Editar local" : "Cadastrar local"}
+            </h2>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -144,7 +165,9 @@ export default function Locais() {
               onChange={(e) => campo("tipo", e.target.value)}
             >
               {tipos.map((tipo) => (
-                <option key={tipo} value={tipo}>{tipo}</option>
+                <option key={tipo} value={tipo}>
+                  {tipo}
+                </option>
               ))}
             </select>
             <select
@@ -176,7 +199,11 @@ export default function Locais() {
               Salvar Local
             </button>
             {editando && (
-              <button type="button" onClick={novoLocal} className="rounded-lg bg-slate-200 px-4 py-2 text-slate-800 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100">
+              <button
+                type="button"
+                onClick={novoLocal}
+                className="rounded-lg bg-slate-200 px-4 py-2 text-slate-800 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100"
+              >
                 Cancelar edição
               </button>
             )}
@@ -206,33 +233,56 @@ export default function Locais() {
             </thead>
             <tbody>
               {locaisFiltrados.map((local) => (
-                <tr key={local.id} className="border-t border-slate-200 dark:border-slate-800">
+                <tr
+                  key={local.id}
+                  className="border-t border-slate-200 dark:border-slate-800"
+                >
                   <td className="p-3 font-bold">{local.nome}</td>
                   <td className="p-3">{local.tipo}</td>
                   <td className="p-3">
                     {local.areaSensivel ? (
-                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 dark:bg-red-950/50 dark:text-red-200">ÁREA SENSÍVEL</span>
+                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 dark:bg-red-950/50 dark:text-red-200">
+                        ÁREA SENSÍVEL
+                      </span>
                     ) : (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">Não</span>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                        Não
+                      </span>
                     )}
                   </td>
                   <td className="p-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${local.status === "Ativo" ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-200" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${local.status === "Ativo" ? "bg-green-100 text-green-700 dark:bg-green-950/50 dark:text-green-200" : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"}`}
+                    >
                       {local.status}
                     </span>
                   </td>
-                  <td className="p-3">{new Date(local.createdAt).toLocaleDateString("pt-BR")}</td>
+                  <td className="p-3">
+                    {new Date(local.createdAt).toLocaleDateString("pt-BR")}
+                  </td>
                   <td className="p-3">
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => setVisualizando(local)} className="rounded bg-slate-700 p-2 text-white" title="Ver">
+                      <button
+                        onClick={() => setVisualizando(local)}
+                        className="rounded bg-slate-700 p-2 text-white"
+                        title="Ver"
+                      >
                         <Eye size={16} />
                       </button>
                       {podeEditar && (
                         <>
-                          <button onClick={() => editarLocal(local)} className="rounded bg-blue-600 p-2 text-white" title="Editar">
+                          <button
+                            onClick={() => editarLocal(local)}
+                            className="rounded bg-blue-600 p-2 text-white"
+                            title="Editar"
+                          >
                             <Edit3 size={16} />
                           </button>
-                          <button onClick={() => excluirLocal(local)} className="rounded bg-red-600 p-2 text-white" title="Excluir">
+                          <button
+                            onClick={() => excluirLocal(local)}
+                            className="rounded bg-red-600 p-2 text-white"
+                            title="Excluir"
+                          >
                             <Trash2 size={16} />
                           </button>
                         </>
@@ -243,7 +293,9 @@ export default function Locais() {
               ))}
               {locaisFiltrados.length === 0 && (
                 <tr>
-                  <td className="p-6 text-center text-slate-500" colSpan={6}>Nenhum local encontrado.</td>
+                  <td className="p-6 text-center text-slate-500" colSpan={6}>
+                    Nenhum local encontrado.
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -257,17 +309,33 @@ export default function Locais() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold">{visualizando.nome}</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">{visualizando.tipo}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {visualizando.tipo}
+                </p>
               </div>
-              <button onClick={() => setVisualizando(null)} className="rounded-lg bg-slate-100 px-3 py-2 text-slate-700 dark:bg-slate-800 dark:text-slate-100">
+              <button
+                onClick={() => setVisualizando(null)}
+                className="rounded-lg bg-slate-100 px-3 py-2 text-slate-700 dark:bg-slate-800 dark:text-slate-100"
+              >
                 Fechar
               </button>
             </div>
             <div className="mt-5 space-y-3 text-sm">
-              <p><strong>Status:</strong> {visualizando.status}</p>
-              <p><strong>Área sensível:</strong> {visualizando.areaSensivel ? "Sim" : "Não"}</p>
-              <p><strong>Descrição:</strong> {visualizando.descricao || "Não informada"}</p>
-              <p><strong>Cadastro:</strong> {new Date(visualizando.createdAt).toLocaleString("pt-BR")}</p>
+              <p>
+                <strong>Status:</strong> {visualizando.status}
+              </p>
+              <p>
+                <strong>Área sensível:</strong>{" "}
+                {visualizando.areaSensivel ? "Sim" : "Não"}
+              </p>
+              <p>
+                <strong>Descrição:</strong>{" "}
+                {visualizando.descricao || "Não informada"}
+              </p>
+              <p>
+                <strong>Cadastro:</strong>{" "}
+                {new Date(visualizando.createdAt).toLocaleString("pt-BR")}
+              </p>
             </div>
           </div>
         </div>

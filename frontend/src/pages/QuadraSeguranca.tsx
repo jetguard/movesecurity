@@ -1,8 +1,22 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+﻿import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { Camera, ChevronDown, Download, Eye, FileText, MapPinned, PackageSearch, Pencil, Trash2 } from "lucide-react";
+import {
+  Camera,
+  ChevronDown,
+  Download,
+  Eye,
+  FileText,
+  MapPinned,
+  PackageSearch,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { api } from "../services/api";
-import { podeAdministrar, podeAnalisar, usuarioAtual } from "../utils/permissoes";
+import {
+  podeAdministrar,
+  podeAnalisar,
+  usuarioAtual,
+} from "../utils/permissoes";
 import { SkeletonTable } from "../components/ui/Skeleton";
 
 type Anexo = {
@@ -80,7 +94,16 @@ const inicial = {
 
 const tiposContainer = ["Dry", "Reefer", "Tank", "Open Top", "Flat Rack"];
 const dimensoes = ["20 pés", "40 pés", "40 HC"];
-const destinos = ["África", "Europa", "Ásia", "América do Norte", "América do Sul", "América Central", "Oriente Médio", "Oceania"];
+const destinos = [
+  "África",
+  "Europa",
+  "Ásia",
+  "América do Norte",
+  "América do Sul",
+  "América Central",
+  "Oriente Médio",
+  "Oceania",
+];
 const prioridades = ["Baixa", "Média", "Alta", "Crítica"];
 const statusOperacionais = ["Previsão para chegada", "No terminal", "Liberado"];
 
@@ -96,7 +119,9 @@ const angulosCameraMapa: Record<string, { x: number; z: number }> = {
 function inputData(data?: string | null) {
   if (!data) return "";
   const date = new Date(data);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
 }
 
 function nomeUsuario(usuario?: { nome: string; apelido?: string | null }) {
@@ -115,11 +140,15 @@ function lerJsonSeguro(valor?: string | null) {
 function posicaoTimeline(item: Historico) {
   const anterior = lerJsonSeguro(item.dadosAnteriores);
   const novo = lerJsonSeguro(item.dadosNovos);
-  const posicaoAnterior = String(anterior?.posicionamento || "").trim() || "Sem posição";
-  const posicaoAtual = String(novo?.posicionamento || "").trim() || "Sem posição";
+  const posicaoAnterior =
+    String(anterior?.posicionamento || "").trim() || "Sem posição";
+  const posicaoAtual =
+    String(novo?.posicionamento || "").trim() || "Sem posição";
   const reposicionamento =
     item.acao === "Reposicionamento de contêiner" ||
-    ((anterior?.posicionamento !== undefined || novo?.posicionamento !== undefined) && posicaoAnterior !== posicaoAtual);
+    ((anterior?.posicionamento !== undefined ||
+      novo?.posicionamento !== undefined) &&
+      posicaoAnterior !== posicaoAtual);
 
   return {
     reposicionamento,
@@ -129,7 +158,10 @@ function posicaoTimeline(item: Historico) {
 }
 
 function mascararContainer(valor: string) {
-  const limpo = valor.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11);
+  const limpo = valor
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 11);
   const letras = limpo.slice(0, 4).replace(/[^A-Z]/g, "");
   const numeros = limpo.slice(4).replace(/\D/g, "").slice(0, 7);
 
@@ -147,7 +179,10 @@ function mascararContainer(valor: string) {
 }
 
 function normalizarPosicao(valor?: string | null) {
-  return String(valor || "").toLocaleUpperCase("pt-BR").replace(/[^A-Z0-9]/g, "").slice(0, 6);
+  return String(valor || "")
+    .toLocaleUpperCase("pt-BR")
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 6);
 }
 
 function interpretarPosicao(valor?: string | null) {
@@ -176,13 +211,20 @@ function slotsContainer(container: ContainerQuadra) {
   if (dimensaoMapa(container.dimensao) === "40") {
     const quadraAnterior = posicoes40[posicao.quadra];
     return quadraAnterior
-      ? [slotChave(quadraAnterior, posicao.pilha, posicao.altura), slotChave(posicao.quadra, posicao.pilha, posicao.altura)]
+      ? [
+          slotChave(quadraAnterior, posicao.pilha, posicao.altura),
+          slotChave(posicao.quadra, posicao.pilha, posicao.altura),
+        ]
       : [posicao.posicao];
   }
   return [posicao.posicao];
 }
 
-function calcularPosicoesDisponiveis(containers: ContainerQuadra[], dimensaoValor: string, posicaoAtual?: string | null) {
+function calcularPosicoesDisponiveis(
+  containers: ContainerQuadra[],
+  dimensaoValor: string,
+  posicaoAtual?: string | null,
+) {
   const dimensao = dimensaoMapa(dimensaoValor || "20 pés");
   const candidatosQuadra = dimensao === "40" ? ["A09", "A11"] : ["A06", "A07"];
   const slotsOcupados = new Set<string>();
@@ -193,32 +235,41 @@ function calcularPosicoesDisponiveis(containers: ContainerQuadra[], dimensaoValo
     const posicao = interpretarPosicao(container.posicionamento);
     if (!posicao) return;
     const dimensaoContainer = dimensaoMapa(container.dimensao);
-    const quadras = dimensaoContainer === "40" && posicoes40[posicao.quadra]
-      ? [posicoes40[posicao.quadra], posicao.quadra]
-      : [posicao.quadra];
-    quadras.forEach((quadra) => pilhasPorDimensao.set(`${quadra}-${posicao.pilha}`, dimensaoContainer));
+    const quadras =
+      dimensaoContainer === "40" && posicoes40[posicao.quadra]
+        ? [posicoes40[posicao.quadra], posicao.quadra]
+        : [posicao.quadra];
+    quadras.forEach((quadra) =>
+      pilhasPorDimensao.set(`${quadra}-${posicao.pilha}`, dimensaoContainer),
+    );
   });
 
   const atual = normalizarPosicao(posicaoAtual);
   const sugestoes: string[] = [];
   candidatosQuadra.forEach((quadra) => {
     pilhasMapa.forEach((pilha) => {
-      alturasMapa.slice().reverse().forEach((altura) => {
-        const posicao = slotChave(quadra, pilha, altura);
-        const slots = dimensao === "40" && posicoes40[quadra]
-          ? [slotChave(posicoes40[quadra], pilha, altura), posicao]
-          : [posicao];
-        const pilhas = dimensao === "40" && posicoes40[quadra]
-          ? [`${posicoes40[quadra]}-${pilha}`, `${quadra}-${pilha}`]
-          : [`${quadra}-${pilha}`];
-        const temSlotOcupado = slots.some((slot) => slotsOcupados.has(slot));
-        const misturaDimensao = pilhas.some((pilhaChave) => {
-          const dimensaoExistente = pilhasPorDimensao.get(pilhaChave);
-          return dimensaoExistente && dimensaoExistente !== dimensao;
-        });
+      alturasMapa
+        .slice()
+        .reverse()
+        .forEach((altura) => {
+          const posicao = slotChave(quadra, pilha, altura);
+          const slots =
+            dimensao === "40" && posicoes40[quadra]
+              ? [slotChave(posicoes40[quadra], pilha, altura), posicao]
+              : [posicao];
+          const pilhas =
+            dimensao === "40" && posicoes40[quadra]
+              ? [`${posicoes40[quadra]}-${pilha}`, `${quadra}-${pilha}`]
+              : [`${quadra}-${pilha}`];
+          const temSlotOcupado = slots.some((slot) => slotsOcupados.has(slot));
+          const misturaDimensao = pilhas.some((pilhaChave) => {
+            const dimensaoExistente = pilhasPorDimensao.get(pilhaChave);
+            return dimensaoExistente && dimensaoExistente !== dimensao;
+          });
 
-        if ((!temSlotOcupado && !misturaDimensao) || posicao === atual) sugestoes.push(posicao);
-      });
+          if ((!temSlotOcupado && !misturaDimensao) || posicao === atual)
+            sugestoes.push(posicao);
+        });
     });
   });
 
@@ -231,10 +282,13 @@ export default function QuadraSeguranca() {
   const [form, setForm] = useState({ ...inicial });
   const [arquivos, setArquivos] = useState<File[]>([]);
   const [editando, setEditando] = useState<ContainerQuadra | null>(null);
-  const [reposicionando, setReposicionando] = useState<ContainerQuadra | null>(null);
+  const [reposicionando, setReposicionando] = useState<ContainerQuadra | null>(
+    null,
+  );
   const [novaPosicao, setNovaPosicao] = useState("");
   const [dossie, setDossie] = useState<ContainerQuadra | null>(null);
-  const [containerMapaSelecionado, setContainerMapaSelecionado] = useState<ContainerQuadra | null>(null);
+  const [containerMapaSelecionado, setContainerMapaSelecionado] =
+    useState<ContainerQuadra | null>(null);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
   const [filtroTipo, setFiltroTipo] = useState("");
@@ -246,9 +300,16 @@ export default function QuadraSeguranca() {
   const [carregando, setCarregando] = useState(true);
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [anguloMapa, setAnguloMapa] = useState({ x: 60, z: -36 });
-  const [arrastoMapa, setArrastoMapa] = useState<{ x: number; y: number; anguloX: number; anguloZ: number } | null>(null);
+  const [arrastoMapa, setArrastoMapa] = useState<{
+    x: number;
+    y: number;
+    anguloX: number;
+    anguloZ: number;
+  } | null>(null);
   const [giroAutomaticoMapa, setGiroAutomaticoMapa] = useState(true);
-  const [cameraPresetAtiva, setCameraPresetAtiva] = useState<number | null>(null);
+  const [cameraPresetAtiva, setCameraPresetAtiva] = useState<number | null>(
+    null,
+  );
   const retomadaGiroMapa = useRef<number | null>(null);
   const mapa3DRef = useRef<HTMLDivElement | null>(null);
   const anguloAtualMapa = useRef({ x: 60, z: -36 });
@@ -278,7 +339,9 @@ export default function QuadraSeguranca() {
     const girar = (agora: number) => {
       const delta = Math.min(50, agora - anterior);
       anterior = agora;
-      anguloAtualMapa.current.z = normalizarGiro(anguloAtualMapa.current.z + delta * 0.002);
+      anguloAtualMapa.current.z = normalizarGiro(
+        anguloAtualMapa.current.z + delta * 0.002,
+      );
       if (mapa3DRef.current) {
         mapa3DRef.current.style.transform = `rotateX(${anguloAtualMapa.current.x}deg) rotateZ(${anguloAtualMapa.current.z}deg)`;
       }
@@ -296,13 +359,18 @@ export default function QuadraSeguranca() {
     }
   }, [anguloMapa]);
 
-  useEffect(() => () => {
-    if (retomadaGiroMapa.current) window.clearTimeout(retomadaGiroMapa.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (retomadaGiroMapa.current)
+        window.clearTimeout(retomadaGiroMapa.current);
+    },
+    [],
+  );
 
   const filtrados = useMemo(() => {
     return containers.filter((item) => {
-      const texto = `${item.numeroContainer} ${item.armador || ""} ${item.posicionamento || ""}`.toLowerCase();
+      const texto =
+        `${item.numeroContainer} ${item.armador || ""} ${item.posicionamento || ""}`.toLowerCase();
       return (
         (!busca || texto.includes(busca.toLowerCase())) &&
         (!filtroStatus || item.statusOperacional === filtroStatus) &&
@@ -311,34 +379,71 @@ export default function QuadraSeguranca() {
         (!filtroDestino || item.destino === filtroDestino)
       );
     });
-  }, [busca, containers, filtroDestino, filtroDimensao, filtroStatus, filtroTipo]);
+  }, [
+    busca,
+    containers,
+    filtroDestino,
+    filtroDimensao,
+    filtroStatus,
+    filtroTipo,
+  ]);
 
-  const resumo = useMemo(() => ({
-    total: containers.length,
-    previstos: containers.filter((item) => item.statusOperacional === "Previsão para chegada" || item.statusOperacional === "Previsto para chegada").length,
-    terminal: containers.filter((item) => item.statusOperacional === "No terminal" || item.statusOperacional === "Dentro do terminal").length,
-    liberados: containers.filter((item) => item.statusOperacional === "Liberado").length,
-    mapaPosicoes: Object.entries(containers.reduce<Record<string, number>>((acc, item) => {
-      const posicao = item.posicionamento || "Sem posição";
-      acc[posicao] = (acc[posicao] || 0) + 1;
-      return acc;
-    }, {})).map(([posicao, total]) => ({ posicao, total })).sort((a, b) => b.total - a.total),
-  }), [containers]);
+  const resumo = useMemo(
+    () => ({
+      total: containers.length,
+      previstos: containers.filter(
+        (item) =>
+          item.statusOperacional === "Previsão para chegada" ||
+          item.statusOperacional === "Previsto para chegada",
+      ).length,
+      terminal: containers.filter(
+        (item) =>
+          item.statusOperacional === "No terminal" ||
+          item.statusOperacional === "Dentro do terminal",
+      ).length,
+      liberados: containers.filter(
+        (item) => item.statusOperacional === "Liberado",
+      ).length,
+      mapaPosicoes: Object.entries(
+        containers.reduce<Record<string, number>>((acc, item) => {
+          const posicao = item.posicionamento || "Sem posição";
+          acc[posicao] = (acc[posicao] || 0) + 1;
+          return acc;
+        }, {}),
+      )
+        .map(([posicao, total]) => ({ posicao, total }))
+        .sort((a, b) => b.total - a.total),
+    }),
+    [containers],
+  );
 
   const containersNoPatio = useMemo(
-    () => containers.filter((item) => item.statusOperacional !== "Liberado" && interpretarPosicao(item.posicionamento)),
-    [containers]
+    () =>
+      containers.filter(
+        (item) =>
+          item.statusOperacional !== "Liberado" &&
+          interpretarPosicao(item.posicionamento),
+      ),
+    [containers],
   );
 
   const containerDestacado = useMemo(() => {
     const termo = busca.trim().toLowerCase();
     if (!termo) return null;
-    return containersNoPatio.find((item) => `${item.numeroContainer} ${item.posicionamento || ""} ${item.armador || ""}`.toLowerCase().includes(termo)) || null;
+    return (
+      containersNoPatio.find((item) =>
+        `${item.numeroContainer} ${item.posicionamento || ""} ${item.armador || ""}`
+          .toLowerCase()
+          .includes(termo),
+      ) || null
+    );
   }, [busca, containersNoPatio]);
 
   const containerPainelMapa = useMemo(() => {
     const selecionadoAtual = containerMapaSelecionado
-      ? containersNoPatio.find((item) => item.id === containerMapaSelecionado.id) || null
+      ? containersNoPatio.find(
+          (item) => item.id === containerMapaSelecionado.id,
+        ) || null
       : null;
     return selecionadoAtual || containerDestacado || null;
   }, [containerDestacado, containerMapaSelecionado, containersNoPatio]);
@@ -382,7 +487,9 @@ export default function QuadraSeguranca() {
     });
 
     mapa.forEach((lista) => {
-      lista.sort((a, b) => (a.posicionamento || "").localeCompare(b.posicionamento || "", "pt-BR"));
+      lista.sort((a, b) =>
+        (a.posicionamento || "").localeCompare(b.posicionamento || "", "pt-BR"),
+      );
     });
 
     return mapa;
@@ -390,20 +497,33 @@ export default function QuadraSeguranca() {
 
   const camerasVisaoQuadra = useMemo(() => {
     const speedDomes = camerasMapa.filter((camera) =>
-      camera.tipoCamera.toLocaleLowerCase("pt-BR").includes("speed dome")
+      camera.tipoCamera.toLocaleLowerCase("pt-BR").includes("speed dome"),
     );
     const relacionadasAoPatio = speedDomes.filter((camera) => {
-      const referencia = `${camera.localInstalado} ${camera.areaMonitorada}`.toLocaleLowerCase("pt-BR");
-      return referencia.includes("quadra") || referencia.includes("pátio") || referencia.includes("patio");
+      const referencia =
+        `${camera.localInstalado} ${camera.areaMonitorada}`.toLocaleLowerCase(
+          "pt-BR",
+        );
+      return (
+        referencia.includes("quadra") ||
+        referencia.includes("pátio") ||
+        referencia.includes("patio")
+      );
     });
-    const candidatas = relacionadasAoPatio.length > 0 ? relacionadasAoPatio : speedDomes;
+    const candidatas =
+      relacionadasAoPatio.length > 0 ? relacionadasAoPatio : speedDomes;
 
     return candidatas
       .slice()
       .sort((a, b) => {
         const prioridadeA = a.numeroCamera.trim() === "120" ? 0 : 1;
         const prioridadeB = b.numeroCamera.trim() === "120" ? 0 : 1;
-        return prioridadeA - prioridadeB || a.numeroCamera.localeCompare(b.numeroCamera, "pt-BR", { numeric: true });
+        return (
+          prioridadeA - prioridadeB ||
+          a.numeroCamera.localeCompare(b.numeroCamera, "pt-BR", {
+            numeric: true,
+          })
+        );
       })
       .slice(0, 4);
   }, [camerasMapa]);
@@ -417,7 +537,11 @@ export default function QuadraSeguranca() {
       slotsContainer(container).forEach((slot) => {
         const slotInterpretado = interpretarPosicao(slot);
         if (!slotInterpretado) return;
-        const chave = slotChave(slotInterpretado.quadra, pilhaMapa, slotInterpretado.altura);
+        const chave = slotChave(
+          slotInterpretado.quadra,
+          pilhaMapa,
+          slotInterpretado.altura,
+        );
         const lista = mapa.get(chave) || [];
         lista.push(container);
         mapa.set(chave, lista);
@@ -431,12 +555,22 @@ export default function QuadraSeguranca() {
   }, [ocupacaoPorQuadra, quadraMapa]);
 
   useEffect(() => {
-    if (pilhaManual || containersNoPatio.length === 0 || ocupacaoPorPilha.has(pilhaMapa)) return;
-    const primeiraPilhaComConteudo = pilhasMapa.slice().reverse().find((pilha) => ocupacaoPorPilha.has(pilha));
+    if (
+      pilhaManual ||
+      containersNoPatio.length === 0 ||
+      ocupacaoPorPilha.has(pilhaMapa)
+    )
+      return;
+    const primeiraPilhaComConteudo = pilhasMapa
+      .slice()
+      .reverse()
+      .find((pilha) => ocupacaoPorPilha.has(pilha));
     if (primeiraPilhaComConteudo) setPilhaMapa(primeiraPilhaComConteudo);
   }, [containersNoPatio.length, ocupacaoPorPilha, pilhaManual, pilhaMapa]);
 
-  const posicaoDestacada = containerDestacado ? new Set(slotsContainer(containerDestacado)) : new Set<string>();
+  const posicaoDestacada = containerDestacado
+    ? new Set(slotsContainer(containerDestacado))
+    : new Set<string>();
 
   const containersMapa3D = useMemo(() => {
     const slotLargura = 112;
@@ -448,13 +582,19 @@ export default function QuadraSeguranca() {
         if (!posicao) return null;
 
         const eh40 = dimensaoMapa(container.dimensao) === "40";
-        const quadraBase = eh40 && posicoes40[posicao.quadra] ? posicoes40[posicao.quadra] : posicao.quadra;
+        const quadraBase =
+          eh40 && posicoes40[posicao.quadra]
+            ? posicoes40[posicao.quadra]
+            : posicao.quadra;
         const quadraIndice = quadrasMapa.indexOf(quadraBase);
         const pilhaIndice = pilhasMapa.indexOf(posicao.pilha);
         const alturaIndice = Number(posicao.altura) - 1;
-        if (quadraIndice < 0 || pilhaIndice < 0 || alturaIndice < 0) return null;
+        if (quadraIndice < 0 || pilhaIndice < 0 || alturaIndice < 0)
+          return null;
 
-        const destaque = containerDestacado?.id === container.id || containerPainelMapa?.id === container.id;
+        const destaque =
+          containerDestacado?.id === container.id ||
+          containerPainelMapa?.id === container.id;
         const pilhaAtiva = posicao.pilha === pilhaMapa;
         const quadraAtiva = !quadraMapa || posicao.quadra === quadraMapa;
 
@@ -471,26 +611,36 @@ export default function QuadraSeguranca() {
           height: 46,
           depth: 58,
           z: alturaIndice * 42,
-          zIndex: 60 + pilhaIndice * 12 + alturaIndice + (destaque ? 220 : pilhaAtiva ? 80 : 0),
+          zIndex:
+            60 +
+            pilhaIndice * 12 +
+            alturaIndice +
+            (destaque ? 220 : pilhaAtiva ? 80 : 0),
         };
       })
       .filter(Boolean)
-      .sort((a, b) => (a!.zIndex - b!.zIndex)) as Array<{
-        container: ContainerQuadra;
-        posicao: NonNullable<ReturnType<typeof interpretarPosicao>>;
-        eh40: boolean;
-        destaque: boolean;
-        pilhaAtiva: boolean;
-        quadraAtiva: boolean;
-        left: number;
-        top: number;
-        width: number;
-        height: number;
-        depth: number;
-        z: number;
-        zIndex: number;
-      }>;
-  }, [containerDestacado, containerPainelMapa, containersNoPatio, pilhaMapa, quadraMapa]);
+      .sort((a, b) => a!.zIndex - b!.zIndex) as Array<{
+      container: ContainerQuadra;
+      posicao: NonNullable<ReturnType<typeof interpretarPosicao>>;
+      eh40: boolean;
+      destaque: boolean;
+      pilhaAtiva: boolean;
+      quadraAtiva: boolean;
+      left: number;
+      top: number;
+      width: number;
+      height: number;
+      depth: number;
+      z: number;
+      zIndex: number;
+    }>;
+  }, [
+    containerDestacado,
+    containerPainelMapa,
+    containersNoPatio,
+    pilhaMapa,
+    quadraMapa,
+  ]);
 
   useEffect(() => {
     const posicao = interpretarPosicao(containerDestacado?.posicionamento);
@@ -501,34 +651,58 @@ export default function QuadraSeguranca() {
   const posicoesSugeridas = useMemo(() => {
     if (form.statusOperacional === "Previsão para chegada") return [];
 
-    const containersBase = containersNoPatio.filter((container) => container.id !== editando?.id);
-    return calcularPosicoesDisponiveis(containersBase, form.dimensao, editando?.posicionamento);
-  }, [containersNoPatio, editando?.id, editando?.posicionamento, form.dimensao, form.statusOperacional]);
+    const containersBase = containersNoPatio.filter(
+      (container) => container.id !== editando?.id,
+    );
+    return calcularPosicoesDisponiveis(
+      containersBase,
+      form.dimensao,
+      editando?.posicionamento,
+    );
+  }, [
+    containersNoPatio,
+    editando?.id,
+    editando?.posicionamento,
+    form.dimensao,
+    form.statusOperacional,
+  ]);
 
   const posicoesReposicionamento = useMemo(() => {
     if (!reposicionando) return [];
-    const containersBase = containersNoPatio.filter((container) => container.id !== reposicionando.id);
-    return calcularPosicoesDisponiveis(containersBase, reposicionando.dimensao, reposicionando.posicionamento);
+    const containersBase = containersNoPatio.filter(
+      (container) => container.id !== reposicionando.id,
+    );
+    return calcularPosicoesDisponiveis(
+      containersBase,
+      reposicionando.dimensao,
+      reposicionando.posicionamento,
+    );
   }, [containersNoPatio, reposicionando]);
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({
       ...atual,
-      ...(nome === "statusOperacional" && valor === "Previsão para chegada" ? { posicionamento: "" } : {}),
-      [nome]: nome === "numeroContainer"
-        ? mascararContainer(valor)
-        : nome === "posicionamento"
-          ? normalizarPosicao(valor)
-        : ["posicionamento", "numeroLacre", "armador"].includes(nome)
-          ? valor.toLocaleUpperCase("pt-BR")
-          : valor,
+      ...(nome === "statusOperacional" && valor === "Previsão para chegada"
+        ? { posicionamento: "" }
+        : {}),
+      [nome]:
+        nome === "numeroContainer"
+          ? mascararContainer(valor)
+          : nome === "posicionamento"
+            ? normalizarPosicao(valor)
+            : ["posicionamento", "numeroLacre", "armador"].includes(nome)
+              ? valor.toLocaleUpperCase("pt-BR")
+              : valor,
     }));
   }
 
   function novo() {
     setEditando(null);
     setArquivos([]);
-    setForm({ ...inicial, dataHoraEntrada: inputData(new Date().toISOString()) });
+    setForm({
+      ...inicial,
+      dataHoraEntrada: inputData(new Date().toISOString()),
+    });
     setFormularioAberto(true);
   }
 
@@ -544,12 +718,20 @@ export default function QuadraSeguranca() {
       dimensao: item.dimensao,
       destino: item.destino,
       scannerEntrada: item.scannerEntrada ? "Sim" : "Não",
-      scannerSaida: item.scannerSaida === null || item.scannerSaida === undefined ? "" : item.scannerSaida ? "Sim" : "Não",
+      scannerSaida:
+        item.scannerSaida === null || item.scannerSaida === undefined
+          ? ""
+          : item.scannerSaida
+            ? "Sim"
+            : "Não",
       estufadoTerminal: item.estufadoTerminal ? "Sim" : "Não",
       numeroLacre: item.numeroLacre || "",
       armador: item.armador || "",
       prioridade: item.prioridade,
-      statusOperacional: item.statusOperacional === "Dentro do terminal" ? "No terminal" : item.statusOperacional,
+      statusOperacional:
+        item.statusOperacional === "Dentro do terminal"
+          ? "No terminal"
+          : item.statusOperacional,
       observacoes: item.observacoes || "",
       observacoesSaida: item.observacoesSaida || "",
     });
@@ -566,9 +748,13 @@ export default function QuadraSeguranca() {
     arquivos.forEach((arquivo) => formData.append("anexos", arquivo));
 
     if (editando) {
-      await api.put(`/quadra-seguranca/${editando.id}`, formData, { headers: { "Content-Type": "multipart/form-data" } });
+      await api.put(`/quadra-seguranca/${editando.id}`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     } else {
-      await api.post("/quadra-seguranca", formData, { headers: { "Content-Type": "multipart/form-data" } });
+      await api.post("/quadra-seguranca", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
     }
 
     novo();
@@ -605,7 +791,9 @@ export default function QuadraSeguranca() {
   }
 
   async function baixarDossiePdf(item: ContainerQuadra) {
-    const response = await api.get(`/quadra-seguranca/${item.id}/pdf`, { responseType: "blob" });
+    const response = await api.get(`/quadra-seguranca/${item.id}/pdf`, {
+      responseType: "blob",
+    });
     const url = URL.createObjectURL(response.data);
     window.open(url, "_blank", "noopener,noreferrer");
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
@@ -644,7 +832,9 @@ export default function QuadraSeguranca() {
     setArrastoMapa(null);
     setGiroAutomaticoMapa(false);
     setCameraPresetAtiva(camera.id);
-    setAnguloMapa(angulosCameraMapa[camera.numeroCamera.trim()] || { x: 60, z: 324 });
+    setAnguloMapa(
+      angulosCameraMapa[camera.numeroCamera.trim()] || { x: 60, z: 324 },
+    );
   }
 
   function iniciarArrastoMapa(event: PointerEvent<HTMLDivElement>) {
@@ -680,10 +870,14 @@ export default function QuadraSeguranca() {
         <div>
           <h1 className="text-3xl font-bold">Quadra de Segurança</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Controle operacional, posicionamento e rastreabilidade de contêineres.
+            Controle operacional, posicionamento e rastreabilidade de
+            contêineres.
           </p>
         </div>
-        <button onClick={novo} className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700">
+        <button
+          onClick={novo}
+          className="rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+        >
           Novo Contêiner
         </button>
       </div>
@@ -695,15 +889,21 @@ export default function QuadraSeguranca() {
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p className="text-sm text-slate-500">Previsão para chegada</p>
-          <p className="mt-2 text-3xl font-bold text-amber-600">{resumo.previstos}</p>
+          <p className="mt-2 text-3xl font-bold text-amber-600">
+            {resumo.previstos}
+          </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p className="text-sm text-slate-500">No terminal</p>
-          <p className="mt-2 text-3xl font-bold text-blue-600">{resumo.terminal}</p>
+          <p className="mt-2 text-3xl font-bold text-blue-600">
+            {resumo.terminal}
+          </p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <p className="text-sm text-slate-500">Liberados</p>
-          <p className="mt-2 text-3xl font-bold text-emerald-600">{resumo.liberados}</p>
+          <p className="mt-2 text-3xl font-bold text-emerald-600">
+            {resumo.liberados}
+          </p>
         </div>
       </div>
 
@@ -716,104 +916,243 @@ export default function QuadraSeguranca() {
           <div className="flex items-center gap-2">
             <PackageSearch className="text-blue-600" />
             <div>
-              <h2 className="text-xl font-bold">{editando ? `Editar ${editando.numeroContainer}` : "Cadastro de Contêiner"}</h2>
+              <h2 className="text-xl font-bold">
+                {editando
+                  ? `Editar ${editando.numeroContainer}`
+                  : "Cadastro de Contêiner"}
+              </h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">
-                {formularioAberto ? "Preencha os dados operacionais do contêiner." : "Clique para expandir o formulário."}
+                {formularioAberto
+                  ? "Preencha os dados operacionais do contêiner."
+                  : "Clique para expandir o formulário."}
               </p>
             </div>
           </div>
-          <ChevronDown className={`text-slate-500 transition ${formularioAberto ? "rotate-180" : ""}`} />
+          <ChevronDown
+            className={`text-slate-500 transition ${formularioAberto ? "rotate-180" : ""}`}
+          />
         </button>
 
         {formularioAberto && (
-          <form onSubmit={salvar} className="border-t border-slate-200 p-5 dark:border-slate-800">
+          <form
+            onSubmit={salvar}
+            className="border-t border-slate-200 p-5 dark:border-slate-800"
+          >
             <div className="space-y-5">
               <div className="rounded-2xl border border-blue-100 bg-blue-50/60 p-4 dark:border-blue-500/20 dark:bg-blue-500/5">
                 <div className="mb-4">
-                  <h3 className="text-sm font-black uppercase tracking-wide text-blue-700 dark:text-blue-200">Informações de entrada</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Dados usados para chegada, posição, permanência e rastreabilidade operacional.</p>
+                  <h3 className="text-sm font-black uppercase tracking-wide text-blue-700 dark:text-blue-200">
+                    Informações de entrada
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Dados usados para chegada, posição, permanência e
+                    rastreabilidade operacional.
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Número do contêiner: AAAA 123.456-7" value={form.numeroContainer} onChange={(e) => campo("numeroContainer", e.target.value)} required />
-              <input
-                className="rounded-lg border p-3 uppercase disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:disabled:bg-slate-900/70"
-                placeholder={form.statusOperacional === "Previsão para chegada" ? "Indisponível para previsão de chegada" : "Posicionamento. Ex: A09051"}
-                value={form.posicionamento}
-                onChange={(e) => campo("posicionamento", e.target.value)}
-                list="posicoes-quadra-livres"
-                maxLength={6}
-                disabled={form.statusOperacional === "Previsão para chegada"}
-              />
-              <datalist id="posicoes-quadra-livres">
-                {posicoesSugeridas.map((posicao) => <option key={posicao} value={posicao} />)}
-              </datalist>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.statusOperacional} onChange={(e) => campo("statusOperacional", e.target.value)}>
-                {statusOperacionais.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
+                  <input
+                    className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950"
+                    placeholder="Número do contêiner: AAAA 123.456-7"
+                    value={form.numeroContainer}
+                    onChange={(e) => campo("numeroContainer", e.target.value)}
+                    required
+                  />
+                  <input
+                    className="rounded-lg border p-3 uppercase disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400 dark:border-slate-700 dark:bg-slate-950 dark:disabled:bg-slate-900/70"
+                    placeholder={
+                      form.statusOperacional === "Previsão para chegada"
+                        ? "Indisponível para previsão de chegada"
+                        : "Posicionamento. Ex: A09051"
+                    }
+                    value={form.posicionamento}
+                    onChange={(e) => campo("posicionamento", e.target.value)}
+                    list="posicoes-quadra-livres"
+                    maxLength={6}
+                    disabled={
+                      form.statusOperacional === "Previsão para chegada"
+                    }
+                  />
+                  <datalist id="posicoes-quadra-livres">
+                    {posicoesSugeridas.map((posicao) => (
+                      <option key={posicao} value={posicao} />
+                    ))}
+                  </datalist>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.statusOperacional}
+                    onChange={(e) => campo("statusOperacional", e.target.value)}
+                  >
+                    {statusOperacionais.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
 
-              <label className="space-y-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
-                Data de entrada
-                <input className="w-full rounded-lg border p-3 font-normal dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraEntrada} onChange={(e) => campo("dataHoraEntrada", e.target.value)} required />
-              </label>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.prioridade} onChange={(e) => campo("prioridade", e.target.value)}>
-                <option value="">Prioridade</option>
-                {prioridades.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
+                  <label className="space-y-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                    Data de entrada
+                    <input
+                      className="w-full rounded-lg border p-3 font-normal dark:border-slate-700 dark:bg-slate-950"
+                      type="datetime-local"
+                      value={form.dataHoraEntrada}
+                      onChange={(e) => campo("dataHoraEntrada", e.target.value)}
+                      required
+                    />
+                  </label>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.prioridade}
+                    onChange={(e) => campo("prioridade", e.target.value)}
+                  >
+                    <option value="">Prioridade</option>
+                    {prioridades.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
 
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.tipoContainer} onChange={(e) => campo("tipoContainer", e.target.value)} required>
-                <option value="">Tipo do contêiner</option>
-                {tiposContainer.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.dimensao} onChange={(e) => campo("dimensao", e.target.value)} required>
-                <option value="">Dimensão</option>
-                {dimensoes.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.destino} onChange={(e) => campo("destino", e.target.value)} required>
-                <option value="">Destino</option>
-                {destinos.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.tipoContainer}
+                    onChange={(e) => campo("tipoContainer", e.target.value)}
+                    required
+                  >
+                    <option value="">Tipo do contêiner</option>
+                    {tiposContainer.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.dimensao}
+                    onChange={(e) => campo("dimensao", e.target.value)}
+                    required
+                  >
+                    <option value="">Dimensão</option>
+                    {dimensoes.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.destino}
+                    onChange={(e) => campo("destino", e.target.value)}
+                    required
+                  >
+                    <option value="">Destino</option>
+                    {destinos.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
 
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerEntrada} onChange={(e) => campo("scannerEntrada", e.target.value)}>
-                <option value="">Scanner na entrada</option>
-                <option value="Não">Não</option>
-                <option value="Sim">Sim</option>
-              </select>
-              <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.estufadoTerminal} onChange={(e) => campo("estufadoTerminal", e.target.value)}>
-                <option value="">Estufado no terminal</option>
-                <option value="Não">Não</option>
-                <option value="Sim">Sim</option>
-              </select>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.scannerEntrada}
+                    onChange={(e) => campo("scannerEntrada", e.target.value)}
+                  >
+                    <option value="">Scanner na entrada</option>
+                    <option value="Não">Não</option>
+                    <option value="Sim">Sim</option>
+                  </select>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.estufadoTerminal}
+                    onChange={(e) => campo("estufadoTerminal", e.target.value)}
+                  >
+                    <option value="">Estufado no terminal</option>
+                    <option value="Não">Não</option>
+                    <option value="Sim">Sim</option>
+                  </select>
 
-              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Número do lacre" value={form.numeroLacre} onChange={(e) => campo("numeroLacre", e.target.value)} />
-              <input className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950" placeholder="Armador" value={form.armador} onChange={(e) => campo("armador", e.target.value)} />
-              <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950 md:col-span-3" type="file" multiple accept="image/*,.pdf" onChange={(e) => setArquivos(Array.from(e.target.files || []))} />
+                  <input
+                    className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950"
+                    placeholder="Número do lacre"
+                    value={form.numeroLacre}
+                    onChange={(e) => campo("numeroLacre", e.target.value)}
+                  />
+                  <input
+                    className="rounded-lg border p-3 uppercase dark:border-slate-700 dark:bg-slate-950"
+                    placeholder="Armador"
+                    value={form.armador}
+                    onChange={(e) => campo("armador", e.target.value)}
+                  />
+                  <input
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950 md:col-span-3"
+                    type="file"
+                    multiple
+                    accept="image/*,.pdf"
+                    onChange={(e) =>
+                      setArquivos(Array.from(e.target.files || []))
+                    }
+                  />
 
-              <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações operacionais" value={form.observacoes} onChange={(e) => campo("observacoes", e.target.value)} />
+                  <textarea
+                    className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950"
+                    placeholder="Observações operacionais"
+                    value={form.observacoes}
+                    onChange={(e) => campo("observacoes", e.target.value)}
+                  />
                 </div>
               </div>
 
               <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
                 <div className="mb-4">
-                  <h3 className="text-sm font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-200">Informações de saída</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">Preencha somente quando houver liberação ou atualização de saída do contêiner.</p>
+                  <h3 className="text-sm font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-200">
+                    Informações de saída
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Preencha somente quando houver liberação ou atualização de
+                    saída do contêiner.
+                  </p>
                 </div>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                   <label className="space-y-1 text-sm font-semibold text-slate-600 dark:text-slate-300">
                     Data de saída
-                    <input className="w-full rounded-lg border p-3 font-normal dark:border-slate-700 dark:bg-slate-950" type="datetime-local" value={form.dataHoraSaida} onChange={(e) => campo("dataHoraSaida", e.target.value)} />
+                    <input
+                      className="w-full rounded-lg border p-3 font-normal dark:border-slate-700 dark:bg-slate-950"
+                      type="datetime-local"
+                      value={form.dataHoraSaida}
+                      onChange={(e) => campo("dataHoraSaida", e.target.value)}
+                    />
                   </label>
-                  <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={form.scannerSaida} onChange={(e) => campo("scannerSaida", e.target.value)}>
+                  <select
+                    className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+                    value={form.scannerSaida}
+                    onChange={(e) => campo("scannerSaida", e.target.value)}
+                  >
                     <option value="">Scanner na saída</option>
                     <option value="Não">Não</option>
                     <option value="Sim">Sim</option>
                   </select>
-                  <textarea className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Observações na saída" value={form.observacoesSaida} onChange={(e) => campo("observacoesSaida", e.target.value)} />
+                  <textarea
+                    className="min-h-24 rounded-lg border p-3 md:col-span-3 dark:border-slate-700 dark:bg-slate-950"
+                    placeholder="Observações na saída"
+                    value={form.observacoesSaida}
+                    onChange={(e) => campo("observacoesSaida", e.target.value)}
+                  />
                 </div>
               </div>
             </div>
             <div className="mt-4 flex flex-wrap gap-3">
-              <button className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">Salvar</button>
-              {editando && <button type="button" onClick={novo} className="rounded-lg bg-slate-200 px-4 py-2 dark:bg-slate-800">Cancelar edição</button>}
+              <button className="rounded-lg bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700">
+                Salvar
+              </button>
+              {editando && (
+                <button
+                  type="button"
+                  onClick={novo}
+                  className="rounded-lg bg-slate-200 px-4 py-2 dark:bg-slate-800"
+                >
+                  Cancelar edição
+                </button>
+              )}
             </div>
           </form>
         )}
@@ -826,15 +1165,23 @@ export default function QuadraSeguranca() {
               <MapPinned size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-black text-white">Mapa 3D de posicionamento</h2>
+              <h2 className="text-xl font-black text-white">
+                Mapa 3D de posicionamento
+              </h2>
               <p className="mt-1 text-sm text-slate-300">
-                Visão operacional por quadra, pilha e altura. Contêineres de 40 pés ocupam dois vãos e mantêm a posição oficial na segunda quadra.
+                Visão operacional por quadra, pilha e altura. Contêineres de 40
+                pés ocupam dois vãos e mantêm a posição oficial na segunda
+                quadra.
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-100">20 pes: A06 e A07</span>
-            <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-100">40 pes: A08/A09 e A10/A11</span>
+            <span className="rounded-full border border-blue-400/20 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-100">
+              20 pes: A06 e A07
+            </span>
+            <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-1 text-xs font-black text-emerald-100">
+              40 pes: A08/A09 e A10/A11
+            </span>
             <select
               value={pilhaMapa}
               onChange={(e) => {
@@ -843,7 +1190,14 @@ export default function QuadraSeguranca() {
               }}
               className="rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-bold text-white"
             >
-              {pilhasMapa.map((pilha) => <option key={pilha} value={pilha}>Pilha {pilha}{ocupacaoPorPilha.has(pilha) ? ` (${ocupacaoPorPilha.get(pilha)})` : ""}</option>)}
+              {pilhasMapa.map((pilha) => (
+                <option key={pilha} value={pilha}>
+                  Pilha {pilha}
+                  {ocupacaoPorPilha.has(pilha)
+                    ? ` (${ocupacaoPorPilha.get(pilha)})`
+                    : ""}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -851,7 +1205,11 @@ export default function QuadraSeguranca() {
         <div className="grid gap-5 p-5 xl:grid-cols-[1fr_280px]">
           <div
             className={`relative min-h-[560px] select-none overflow-hidden rounded-3xl border border-blue-400/10 bg-[radial-gradient(circle_at_50%_25%,rgba(37,99,235,0.25),transparent_32%),linear-gradient(145deg,#020617,#071426_48%,#020617)] ${arrastoMapa ? "cursor-grabbing" : "cursor-grab"}`}
-            style={{ userSelect: "none", WebkitUserSelect: "none", touchAction: "none" }}
+            style={{
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              touchAction: "none",
+            }}
             onPointerDown={iniciarArrastoMapa}
             onPointerMove={moverArrastoMapa}
             onPointerUp={encerrarArrastoMapa}
@@ -862,8 +1220,14 @@ export default function QuadraSeguranca() {
           >
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(148,163,184,0.06)_1px,transparent_1px),linear-gradient(90deg,rgba(148,163,184,0.06)_1px,transparent_1px)] bg-[size:34px_34px]" />
             <div className="absolute left-5 top-5 z-20 rounded-2xl border border-slate-700/70 bg-slate-950/70 px-4 py-3 backdrop-blur">
-              <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">Visão operacional</p>
-              <p className="mt-1 text-sm text-slate-300">Pilha ativa <span className="font-black text-white">{pilhaMapa}</span> | {containersMapa3D.length} contêineres no pátio</p>
+              <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-200">
+                Visão operacional
+              </p>
+              <p className="mt-1 text-sm text-slate-300">
+                Pilha ativa{" "}
+                <span className="font-black text-white">{pilhaMapa}</span> |{" "}
+                {containersMapa3D.length} contêineres no pátio
+              </p>
             </div>
 
             {camerasVisaoQuadra.length > 0 && (
@@ -885,19 +1249,25 @@ export default function QuadraSeguranca() {
                           ? "border-cyan-300/70 bg-cyan-500/20 text-white shadow-cyan-950/30"
                           : "border-slate-700/70 bg-slate-950/75 text-slate-200 hover:border-cyan-400/60 hover:bg-cyan-500/10"
                       }`}
-                      title={`Visualizar o mapa pelo ângulo da câmera ${camera.numeroCamera}`}
+                      title={`Visualizar o mapa pelo Ã¢ngulo da cÃ¢mera ${camera.numeroCamera}`}
                     >
-                      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
-                        ativa
-                          ? "border-cyan-300/50 bg-cyan-400/20 text-cyan-100"
-                          : "border-slate-700 bg-slate-900 text-blue-200 group-hover:text-cyan-200"
-                      }`}>
+                      <span
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+                          ativa
+                            ? "border-cyan-300/50 bg-cyan-400/20 text-cyan-100"
+                            : "border-slate-700 bg-slate-900 text-blue-200 group-hover:text-cyan-200"
+                        }`}
+                      >
                         <Camera size={18} />
                       </span>
                       <span className="min-w-0">
                         <span className="flex items-center gap-2">
-                          <strong className="truncate text-sm font-black">{camera.numeroCamera}</strong>
-                          <span className={`h-2 w-2 shrink-0 rounded-full ${conectada ? "bg-emerald-400" : "bg-red-400"}`} />
+                          <strong className="truncate text-sm font-black">
+                            {camera.numeroCamera}
+                          </strong>
+                          <span
+                            className={`h-2 w-2 shrink-0 rounded-full ${conectada ? "bg-emerald-400" : "bg-red-400"}`}
+                          />
                         </span>
                         <span className="block truncate text-[10px] font-bold uppercase tracking-wide text-slate-400">
                           {camera.tipoCamera}
@@ -914,7 +1284,9 @@ export default function QuadraSeguranca() {
               onPointerDown={(event) => event.stopPropagation()}
             >
               <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Quadras ocupadas</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">
+                  Quadras ocupadas
+                </p>
                 {quadraMapa && (
                   <button
                     type="button"
@@ -926,71 +1298,94 @@ export default function QuadraSeguranca() {
                 )}
               </div>
               <div className="grid gap-2">
-                {quadrasMapa.filter((quadra) => ocupacaoPorQuadra.has(quadra)).map((quadra) => {
-                  const total = ocupacaoPorQuadra.get(quadra) || 0;
-                  const ativo = quadraMapa === quadra;
-                  const containersQuadra = containersPorQuadraMapa.get(quadra) || [];
+                {quadrasMapa
+                  .filter((quadra) => ocupacaoPorQuadra.has(quadra))
+                  .map((quadra) => {
+                    const total = ocupacaoPorQuadra.get(quadra) || 0;
+                    const ativo = quadraMapa === quadra;
+                    const containersQuadra =
+                      containersPorQuadraMapa.get(quadra) || [];
 
-                  return (
-                    <div key={quadra} className="space-y-2">
-                      <button
-                        type="button"
-                        onPointerDown={(event) => event.stopPropagation()}
-                        onClick={() => setQuadraMapa((atual) => atual === quadra ? null : quadra)}
-                        className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-black transition ${
-                          ativo
-                            ? "border-blue-300 bg-blue-500 text-white shadow-lg shadow-blue-500/25"
-                            : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-blue-400 hover:text-white"
-                        }`}
-                      >
-                        <span>{quadra}</span>
-                        <span className={`rounded-full px-2 py-0.5 text-[10px] ${ativo ? "bg-white/20 text-white" : "bg-blue-500/10 text-blue-200"}`}>
-                          {total}
-                        </span>
-                      </button>
+                    return (
+                      <div key={quadra} className="space-y-2">
+                        <button
+                          type="button"
+                          onPointerDown={(event) => event.stopPropagation()}
+                          onClick={() =>
+                            setQuadraMapa((atual) =>
+                              atual === quadra ? null : quadra,
+                            )
+                          }
+                          className={`flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-xs font-black transition ${
+                            ativo
+                              ? "border-blue-300 bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                              : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-blue-400 hover:text-white"
+                          }`}
+                        >
+                          <span>{quadra}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[10px] ${ativo ? "bg-white/20 text-white" : "bg-blue-500/10 text-blue-200"}`}
+                          >
+                            {total}
+                          </span>
+                        </button>
 
-                      {ativo && (
-                        <div className="rounded-2xl border border-blue-400/20 bg-slate-950/85 p-2 shadow-inner shadow-blue-950/30">
-                          <div className="max-h-44 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(96,165,250,0.45)_rgba(15,23,42,0.6)]">
-                            {containersQuadra.map((container) => {
-                              const selecionado = containerPainelMapa?.id === container.id;
-                              const posicao = interpretarPosicao(container.posicionamento);
+                        {ativo && (
+                          <div className="rounded-2xl border border-blue-400/20 bg-slate-950/85 p-2 shadow-inner shadow-blue-950/30">
+                            <div className="max-h-44 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin] [scrollbar-color:rgba(96,165,250,0.45)_rgba(15,23,42,0.6)]">
+                              {containersQuadra.map((container) => {
+                                const selecionado =
+                                  containerPainelMapa?.id === container.id;
+                                const posicao = interpretarPosicao(
+                                  container.posicionamento,
+                                );
 
-                              return (
-                                <button
-                                  key={container.id}
-                                  type="button"
-                                  onPointerDown={(event) => event.stopPropagation()}
-                                  onClick={() => {
-                                    setContainerMapaSelecionado(container);
-                                    if (posicao) {
-                                      setPilhaManual(true);
-                                      setPilhaMapa(posicao.pilha);
+                                return (
+                                  <button
+                                    key={container.id}
+                                    type="button"
+                                    onPointerDown={(event) =>
+                                      event.stopPropagation()
                                     }
-                                  }}
-                                  className={`w-full rounded-xl border px-2.5 py-2 text-left transition ${
-                                    selecionado
-                                      ? "border-amber-300/70 bg-amber-400/15 text-amber-50 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
-                                      : "border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-cyan-300/50 hover:bg-cyan-500/10 hover:text-white"
-                                  }`}
-                                  title={`${container.numeroContainer} - ${container.posicionamento || "Sem posição"}`}
-                                >
-                                  <span className="block truncate text-[11px] font-black">{container.numeroContainer}</span>
-                                  <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-slate-400">
-                                    <span>{container.posicionamento || "Sem posição"}</span>
-                                    <span>{container.dimensao}</span>
-                                  </span>
-                                </button>
-                              );
-                            })}
+                                    onClick={() => {
+                                      setContainerMapaSelecionado(container);
+                                      if (posicao) {
+                                        setPilhaManual(true);
+                                        setPilhaMapa(posicao.pilha);
+                                      }
+                                    }}
+                                    className={`w-full rounded-xl border px-2.5 py-2 text-left transition ${
+                                      selecionado
+                                        ? "border-amber-300/70 bg-amber-400/15 text-amber-50 shadow-[0_0_18px_rgba(251,191,36,0.18)]"
+                                        : "border-slate-700/70 bg-slate-900/70 text-slate-300 hover:border-cyan-300/50 hover:bg-cyan-500/10 hover:text-white"
+                                    }`}
+                                    title={`${container.numeroContainer} - ${container.posicionamento || "Sem posição"}`}
+                                  >
+                                    <span className="block truncate text-[11px] font-black">
+                                      {container.numeroContainer}
+                                    </span>
+                                    <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-slate-400">
+                                      <span>
+                                        {container.posicionamento ||
+                                          "Sem posição"}
+                                      </span>
+                                      <span>{container.dimensao}</span>
+                                    </span>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {quadrasMapa.every((quadra) => !ocupacaoPorQuadra.has(quadra)) && (
-                  <p className="text-xs text-slate-400">Nenhuma quadra ocupada.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                {quadrasMapa.every(
+                  (quadra) => !ocupacaoPorQuadra.has(quadra),
+                ) && (
+                  <p className="text-xs text-slate-400">
+                    Nenhuma quadra ocupada.
+                  </p>
                 )}
               </div>
             </div>
@@ -1000,7 +1395,9 @@ export default function QuadraSeguranca() {
               onPointerDown={(event) => event.stopPropagation()}
             >
               <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Giro 3D 360</p>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">
+                  Giro 3D 360
+                </p>
                 <button
                   type="button"
                   onClick={() => {
@@ -1013,16 +1410,68 @@ export default function QuadraSeguranca() {
                 </button>
               </div>
               <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/70 px-3 py-2">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Rotação automática</span>
-                <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${giroAutomaticoMapa ? "bg-emerald-500/15 text-emerald-200" : "bg-amber-500/15 text-amber-200"}`}>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                  Rotação automática
+                </span>
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-black ${giroAutomaticoMapa ? "bg-emerald-500/15 text-emerald-200" : "bg-amber-500/15 text-amber-200"}`}
+                >
                   {giroAutomaticoMapa ? "Girando" : "Pausado"}
                 </span>
               </div>
               <div className="mt-4 grid grid-cols-4 gap-2">
-                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, z: normalizarGiro(atual.z - 18) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Esq.</button>
-                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, z: normalizarGiro(atual.z + 18) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Dir.</button>
-                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x - 8, 38, 74) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Baixo</button>
-                <button type="button" onClick={() => { pausarGiroAutomatico(); setAnguloMapa((atual) => ({ ...atual, x: limitarAngulo(atual.x + 8, 38, 74) })); }} className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20">Topo</button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    pausarGiroAutomatico();
+                    setAnguloMapa((atual) => ({
+                      ...atual,
+                      z: normalizarGiro(atual.z - 18),
+                    }));
+                  }}
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20"
+                >
+                  Esq.
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    pausarGiroAutomatico();
+                    setAnguloMapa((atual) => ({
+                      ...atual,
+                      z: normalizarGiro(atual.z + 18),
+                    }));
+                  }}
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20"
+                >
+                  Dir.
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    pausarGiroAutomatico();
+                    setAnguloMapa((atual) => ({
+                      ...atual,
+                      x: limitarAngulo(atual.x - 8, 38, 74),
+                    }));
+                  }}
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20"
+                >
+                  Baixo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    pausarGiroAutomatico();
+                    setAnguloMapa((atual) => ({
+                      ...atual,
+                      x: limitarAngulo(atual.x + 8, 38, 74),
+                    }));
+                  }}
+                  className="rounded-xl border border-slate-700 bg-slate-900 px-2 py-2 text-xs font-black transition hover:border-blue-400 hover:bg-blue-500/20"
+                >
+                  Topo
+                </button>
               </div>
               <label className="mt-4 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 Inclinação
@@ -1033,12 +1482,15 @@ export default function QuadraSeguranca() {
                   value={anguloMapa.x}
                   onChange={(event) => {
                     pausarGiroAutomatico();
-                    setAnguloMapa((atual) => ({ ...atual, x: Number(event.target.value) }));
+                    setAnguloMapa((atual) => ({
+                      ...atual,
+                      x: Number(event.target.value),
+                    }));
                   }}
                   className="mt-2 w-full accent-blue-500"
                 />
                 <span className="mt-1 block text-center text-[10px] font-black normal-case tracking-normal text-blue-200">
-                  Ângulo exato: {Math.round(anguloMapa.x)}°
+                  Ã‚ngulo exato: {Math.round(anguloMapa.x)}Â°
                 </span>
               </label>
               <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
@@ -1050,15 +1502,21 @@ export default function QuadraSeguranca() {
                   value={normalizarGiro(anguloMapa.z)}
                   onChange={(event) => {
                     pausarGiroAutomatico();
-                    setAnguloMapa((atual) => ({ ...atual, z: Number(event.target.value) }));
+                    setAnguloMapa((atual) => ({
+                      ...atual,
+                      z: Number(event.target.value),
+                    }));
                   }}
                   className="mt-2 w-full accent-blue-500"
                 />
                 <span className="mt-1 block text-center text-[10px] font-black normal-case tracking-normal text-blue-200">
-                  Ângulo exato: {Math.round(normalizarGiro(anguloMapa.z))}°
+                  Ã‚ngulo exato: {Math.round(normalizarGiro(anguloMapa.z))}Â°
                 </span>
               </label>
-              <p className="mt-3 text-[11px] text-slate-400">Arraste o mapa para pausar, girar e inspecionar. A rotação volta sozinha em alguns segundos.</p>
+              <p className="mt-3 text-[11px] text-slate-400">
+                Arraste o mapa para pausar, girar e inspecionar. A rotação volta
+                sozinha em alguns segundos.
+              </p>
             </div>
 
             <div
@@ -1079,12 +1537,21 @@ export default function QuadraSeguranca() {
                       : "border-slate-700 bg-slate-950/80 text-slate-300 hover:border-blue-400 hover:text-white"
                   }`}
                 >
-                  Pilha {pilha}{ocupacaoPorPilha.has(pilha) ? ` - ${ocupacaoPorPilha.get(pilha)}` : ""}
+                  Pilha {pilha}
+                  {ocupacaoPorPilha.has(pilha)
+                    ? ` - ${ocupacaoPorPilha.get(pilha)}`
+                    : ""}
                 </button>
               ))}
             </div>
 
-            <div className="absolute left-1/2 top-[52%] h-[470px] w-[790px] max-w-none" style={{ perspective: "1200px", transform: "translate(-50%, -50%)" }}>
+            <div
+              className="absolute left-1/2 top-[52%] h-[470px] w-[790px] max-w-none"
+              style={{
+                perspective: "1200px",
+                transform: "translate(-50%, -50%)",
+              }}
+            >
               <div
                 ref={mapa3DRef}
                 className="relative h-full w-full"
@@ -1101,7 +1568,12 @@ export default function QuadraSeguranca() {
                   <div
                     key={quadra}
                     className="absolute rounded-xl border border-blue-300/20 bg-blue-500/10 px-3 py-1 text-center text-[11px] font-black text-blue-100 shadow-lg"
-                    style={{ left: 62 + quadraIndex * 112, top: 28, width: 94, transform: "translateZ(2px)" }}
+                    style={{
+                      left: 62 + quadraIndex * 112,
+                      top: 28,
+                      width: 94,
+                      transform: "translateZ(2px)",
+                    }}
                   >
                     {quadra}
                   </div>
@@ -1115,170 +1587,214 @@ export default function QuadraSeguranca() {
                         ? "border-amber-300 bg-amber-400/25 text-amber-50"
                         : "border-slate-600 bg-slate-950/50 text-slate-400"
                     }`}
-                    style={{ left: 6, top: 91 + pilhaIndex * 74, transform: "translateZ(8px)" }}
+                    style={{
+                      left: 6,
+                      top: 91 + pilhaIndex * 74,
+                      transform: "translateZ(8px)",
+                    }}
                   >
                     P{pilha}
                   </div>
                 ))}
 
-                {containersMapa3D.map(({ container, posicao, eh40, destaque, quadraAtiva, left, top, width, height, depth, z, zIndex }) => {
-                  const opacidadeFaces = destaque ? 0.96 : !quadraMapa ? 0.9 : quadraAtiva ? 0.9 : 0.36;
-                  const opacidadeTexto = destaque || !quadraMapa || quadraAtiva ? 1 : 0.42;
-                  const faceBackground = destaque
-                    ? "repeating-linear-gradient(90deg, rgba(255,255,255,.34) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(251,191,36,.58), rgba(245,158,11,.24))"
-                    : eh40
-                      ? "repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.15) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(20,184,166,.52), rgba(16,185,129,.22))"
-                      : "repeating-linear-gradient(90deg, rgba(255,255,255,.29) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.15) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(59,130,246,.52), rgba(37,99,235,.22))";
-                  const faceBorder = destaque ? "rgba(254,240,138,.95)" : eh40 ? "rgba(94,234,212,.74)" : "rgba(147,197,253,.74)";
-                  const faceShadow = destaque
-                    ? "inset 0 0 18px rgba(255,255,255,.20), 0 0 24px rgba(251,191,36,.46), 0 12px 26px rgba(0,0,0,.32)"
-                    : "inset 0 0 14px rgba(255,255,255,.12), 0 0 12px rgba(34,211,238,.14), 0 10px 22px rgba(0,0,0,.30)";
-                  const faceStyle = {
-                    position: "absolute" as const,
-                    border: `1px solid ${faceBorder}`,
-                    background: faceBackground,
-                    boxShadow: faceShadow,
-                    opacity: opacidadeFaces,
-                    backfaceVisibility: "hidden" as const,
-                  };
-                  const blocoLeveBackground = eh40
-                    ? "repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 14px), linear-gradient(135deg, rgba(20,184,166,.50), rgba(15,118,110,.22))"
-                    : "repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 14px), linear-gradient(135deg, rgba(59,130,246,.52), rgba(30,64,175,.24))";
+                {containersMapa3D.map(
+                  ({
+                    container,
+                    posicao,
+                    eh40,
+                    destaque,
+                    quadraAtiva,
+                    left,
+                    top,
+                    width,
+                    height,
+                    depth,
+                    z,
+                    zIndex,
+                  }) => {
+                    const opacidadeFaces = destaque
+                      ? 0.96
+                      : !quadraMapa
+                        ? 0.9
+                        : quadraAtiva
+                          ? 0.9
+                          : 0.36;
+                    const opacidadeTexto =
+                      destaque || !quadraMapa || quadraAtiva ? 1 : 0.42;
+                    const faceBackground = destaque
+                      ? "repeating-linear-gradient(90deg, rgba(255,255,255,.34) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.18) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(251,191,36,.58), rgba(245,158,11,.24))"
+                      : eh40
+                        ? "repeating-linear-gradient(90deg, rgba(255,255,255,.28) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.15) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(20,184,166,.52), rgba(16,185,129,.22))"
+                        : "repeating-linear-gradient(90deg, rgba(255,255,255,.29) 0 1px, transparent 1px 13px), repeating-linear-gradient(0deg, rgba(255,255,255,.15) 0 1px, transparent 1px 9px), linear-gradient(135deg, rgba(59,130,246,.52), rgba(37,99,235,.22))";
+                    const faceBorder = destaque
+                      ? "rgba(254,240,138,.95)"
+                      : eh40
+                        ? "rgba(94,234,212,.74)"
+                        : "rgba(147,197,253,.74)";
+                    const faceShadow = destaque
+                      ? "inset 0 0 18px rgba(255,255,255,.20), 0 0 24px rgba(251,191,36,.46), 0 12px 26px rgba(0,0,0,.32)"
+                      : "inset 0 0 14px rgba(255,255,255,.12), 0 0 12px rgba(34,211,238,.14), 0 10px 22px rgba(0,0,0,.30)";
+                    const faceStyle = {
+                      position: "absolute" as const,
+                      border: `1px solid ${faceBorder}`,
+                      background: faceBackground,
+                      boxShadow: faceShadow,
+                      opacity: opacidadeFaces,
+                      backfaceVisibility: "hidden" as const,
+                    };
+                    const blocoLeveBackground = eh40
+                      ? "repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 14px), linear-gradient(135deg, rgba(20,184,166,.50), rgba(15,118,110,.22))"
+                      : "repeating-linear-gradient(90deg, rgba(255,255,255,.18) 0 1px, transparent 1px 14px), linear-gradient(135deg, rgba(59,130,246,.52), rgba(30,64,175,.24))";
 
-                  return (
-                    <button
-                      key={container.id}
-                      type="button"
-                      onPointerDown={(event) => event.stopPropagation()}
-                      onClick={() => {
-                        setPilhaManual(true);
-                        setPilhaMapa(posicao.pilha);
-                        setContainerMapaSelecionado(container);
-                      }}
-                      className="group absolute border-0 bg-transparent text-left transition duration-200"
-                      style={{
-                        left,
-                        top,
-                        width,
-                        height,
-                        zIndex,
-                        transform: `translateZ(${z + (destaque ? height / 2 + 2 : 1)}px)`,
-                        transformStyle: "preserve-3d",
-                      }}
-                      title={`${container.numeroContainer} - ${container.posicionamento}`}
-                    >
-                      {destaque ? (
-                        <>
-                          <span
-                            style={{
-                              ...faceStyle,
-                              left: 0,
-                              top: 0,
-                              width,
-                              height,
-                              borderRadius: 2,
-                              transform: `translateZ(${depth / 2}px)`,
-                            }}
-                          />
-                          <span
-                            style={{
-                              ...faceStyle,
-                              left: 0,
-                              top: 0,
-                              width,
-                              height,
-                              borderRadius: 2,
-                              filter: "brightness(.70)",
-                              transform: `rotateY(180deg) translateZ(${depth / 2}px)`,
-                            }}
-                          />
-                          <span
-                            style={{
-                              ...faceStyle,
-                              left: (width - depth) / 2,
-                              top: 0,
-                              width: depth,
-                              height,
-                              borderRadius: 2,
-                              filter: "brightness(.78)",
-                              transform: `rotateY(-90deg) translateZ(${width / 2}px)`,
-                            }}
-                          />
-                          <span
-                            style={{
-                              ...faceStyle,
-                              left: (width - depth) / 2,
-                              top: 0,
-                              width: depth,
-                              height,
-                              borderRadius: 2,
-                              filter: "brightness(.82)",
-                              transform: `rotateY(90deg) translateZ(${width / 2}px)`,
-                            }}
-                          />
-                          <span
-                            style={{
-                              ...faceStyle,
-                              left: 0,
-                              top: (height - depth) / 2,
-                              width,
-                              height: depth,
-                              borderRadius: 2,
-                              filter: "brightness(1.12)",
-                              transform: `rotateX(90deg) translateZ(${height / 2}px)`,
-                            }}
-                          />
-                          <span
-                            style={{
-                              ...faceStyle,
-                              left: 0,
-                              top: (height - depth) / 2,
-                              width,
-                              height: depth,
-                              borderRadius: 2,
-                              filter: "brightness(.58)",
-                              transform: `rotateX(-90deg) translateZ(${height / 2}px)`,
-                            }}
-                          />
-                        </>
-                      ) : (
-                        <span
-                          className="absolute inset-0 rounded-sm border shadow-[0_10px_22px_rgba(0,0,0,0.26)]"
-                          style={{
-                            borderColor: eh40 ? "rgba(94,234,212,.58)" : "rgba(147,197,253,.58)",
-                            background: blocoLeveBackground,
-                            opacity: !quadraMapa || quadraAtiva ? 0.84 : 0.34,
-                            transform: "translateZ(1px)",
-                          }}
-                        />
-                      )}
-                      <span
-                        className="absolute z-10 flex h-full flex-col justify-center px-3"
-                        style={{ inset: 0, opacity: opacidadeTexto, transform: `translateZ(${destaque ? depth / 2 + 1 : 2}px)` }}
+                    return (
+                      <button
+                        key={container.id}
+                        type="button"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={() => {
+                          setPilhaManual(true);
+                          setPilhaMapa(posicao.pilha);
+                          setContainerMapaSelecionado(container);
+                        }}
+                        className="group absolute border-0 bg-transparent text-left transition duration-200"
+                        style={{
+                          left,
+                          top,
+                          width,
+                          height,
+                          zIndex,
+                          transform: `translateZ(${z + (destaque ? height / 2 + 2 : 1)}px)`,
+                          transformStyle: "preserve-3d",
+                        }}
+                        title={`${container.numeroContainer} - ${container.posicionamento}`}
                       >
-                        <span className="truncate text-[11px] font-black text-white drop-shadow">{container.numeroContainer}</span>
-                        <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-white/80">
-                          <span>{container.posicionamento}</span>
-                          <span>{container.dimensao}</span>
+                        {destaque ? (
+                          <>
+                            <span
+                              style={{
+                                ...faceStyle,
+                                left: 0,
+                                top: 0,
+                                width,
+                                height,
+                                borderRadius: 2,
+                                transform: `translateZ(${depth / 2}px)`,
+                              }}
+                            />
+                            <span
+                              style={{
+                                ...faceStyle,
+                                left: 0,
+                                top: 0,
+                                width,
+                                height,
+                                borderRadius: 2,
+                                filter: "brightness(.70)",
+                                transform: `rotateY(180deg) translateZ(${depth / 2}px)`,
+                              }}
+                            />
+                            <span
+                              style={{
+                                ...faceStyle,
+                                left: (width - depth) / 2,
+                                top: 0,
+                                width: depth,
+                                height,
+                                borderRadius: 2,
+                                filter: "brightness(.78)",
+                                transform: `rotateY(-90deg) translateZ(${width / 2}px)`,
+                              }}
+                            />
+                            <span
+                              style={{
+                                ...faceStyle,
+                                left: (width - depth) / 2,
+                                top: 0,
+                                width: depth,
+                                height,
+                                borderRadius: 2,
+                                filter: "brightness(.82)",
+                                transform: `rotateY(90deg) translateZ(${width / 2}px)`,
+                              }}
+                            />
+                            <span
+                              style={{
+                                ...faceStyle,
+                                left: 0,
+                                top: (height - depth) / 2,
+                                width,
+                                height: depth,
+                                borderRadius: 2,
+                                filter: "brightness(1.12)",
+                                transform: `rotateX(90deg) translateZ(${height / 2}px)`,
+                              }}
+                            />
+                            <span
+                              style={{
+                                ...faceStyle,
+                                left: 0,
+                                top: (height - depth) / 2,
+                                width,
+                                height: depth,
+                                borderRadius: 2,
+                                filter: "brightness(.58)",
+                                transform: `rotateX(-90deg) translateZ(${height / 2}px)`,
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <span
+                            className="absolute inset-0 rounded-sm border shadow-[0_10px_22px_rgba(0,0,0,0.26)]"
+                            style={{
+                              borderColor: eh40
+                                ? "rgba(94,234,212,.58)"
+                                : "rgba(147,197,253,.58)",
+                              background: blocoLeveBackground,
+                              opacity: !quadraMapa || quadraAtiva ? 0.84 : 0.34,
+                              transform: "translateZ(1px)",
+                            }}
+                          />
+                        )}
+                        <span
+                          className="absolute z-10 flex h-full flex-col justify-center px-3"
+                          style={{
+                            inset: 0,
+                            opacity: opacidadeTexto,
+                            transform: `translateZ(${destaque ? depth / 2 + 1 : 2}px)`,
+                          }}
+                        >
+                          <span className="truncate text-[11px] font-black text-white drop-shadow">
+                            {container.numeroContainer}
+                          </span>
+                          <span className="mt-0.5 flex items-center justify-between gap-2 text-[9px] font-black uppercase tracking-wide text-white/80">
+                            <span>{container.posicionamento}</span>
+                            <span>{container.dimensao}</span>
+                          </span>
                         </span>
-                      </span>
-                    </button>
-                  );
-                })}
+                      </button>
+                    );
+                  },
+                )}
               </div>
             </div>
           </div>
 
           <aside className="space-y-3">
             <div className="rounded-3xl border border-blue-400/20 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(2,8,23,0.88))] p-4 shadow-2xl shadow-blue-950/20">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">Contêiner selecionado</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-200">
+                Contêiner selecionado
+              </p>
               {containerPainelMapa ? (
                 <div className="mt-4 space-y-4">
                   <div className="rounded-2xl border border-cyan-300/20 bg-cyan-500/10 p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xl font-black text-white">{containerPainelMapa.numeroContainer}</p>
-                        <p className="mt-1 text-sm text-cyan-100">{containerPainelMapa.posicionamento || "Sem posição"}</p>
+                        <p className="text-xl font-black text-white">
+                          {containerPainelMapa.numeroContainer}
+                        </p>
+                        <p className="mt-1 text-sm text-cyan-100">
+                          {containerPainelMapa.posicionamento || "Sem posição"}
+                        </p>
                       </div>
                       <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-[10px] font-black uppercase text-cyan-100">
                         {containerPainelMapa.dimensao}
@@ -1288,39 +1804,65 @@ export default function QuadraSeguranca() {
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
-                      <p className="font-black uppercase tracking-wide text-slate-500">Status</p>
-                      <p className="mt-1 font-black text-white">{containerPainelMapa.statusOperacional}</p>
+                      <p className="font-black uppercase tracking-wide text-slate-500">
+                        Status
+                      </p>
+                      <p className="mt-1 font-black text-white">
+                        {containerPainelMapa.statusOperacional}
+                      </p>
                     </div>
                     <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
-                      <p className="font-black uppercase tracking-wide text-slate-500">Prioridade</p>
-                      <p className="mt-1 font-black text-white">{containerPainelMapa.prioridade || "Não informada"}</p>
+                      <p className="font-black uppercase tracking-wide text-slate-500">
+                        Prioridade
+                      </p>
+                      <p className="mt-1 font-black text-white">
+                        {containerPainelMapa.prioridade || "Não informada"}
+                      </p>
                     </div>
                     <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
-                      <p className="font-black uppercase tracking-wide text-slate-500">Entrada</p>
-                      <p className="mt-1 font-black text-white">{new Date(containerPainelMapa.dataHoraEntrada).toLocaleDateString("pt-BR")}</p>
+                      <p className="font-black uppercase tracking-wide text-slate-500">
+                        Entrada
+                      </p>
+                      <p className="mt-1 font-black text-white">
+                        {new Date(
+                          containerPainelMapa.dataHoraEntrada,
+                        ).toLocaleDateString("pt-BR")}
+                      </p>
                     </div>
                     <div className="rounded-2xl border border-slate-700 bg-slate-950/70 p-3">
-                      <p className="font-black uppercase tracking-wide text-slate-500">Terminal</p>
-                      <p className="mt-1 font-black text-white">{containerPainelMapa.tempoTerminal}</p>
+                      <p className="font-black uppercase tracking-wide text-slate-500">
+                        Terminal
+                      </p>
+                      <p className="mt-1 font-black text-white">
+                        {containerPainelMapa.tempoTerminal}
+                      </p>
                     </div>
                   </div>
 
                   <div className="space-y-2 rounded-2xl border border-slate-700 bg-slate-950/70 p-3 text-sm text-slate-300">
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500">Armador</span>
-                      <strong className="text-right text-white">{containerPainelMapa.armador || "Não informado"}</strong>
+                      <strong className="text-right text-white">
+                        {containerPainelMapa.armador || "Não informado"}
+                      </strong>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500">Lacre</span>
-                      <strong className="text-right text-white">{containerPainelMapa.numeroLacre || "Não informado"}</strong>
+                      <strong className="text-right text-white">
+                        {containerPainelMapa.numeroLacre || "Não informado"}
+                      </strong>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500">Destino</span>
-                      <strong className="text-right text-white">{containerPainelMapa.destino}</strong>
+                      <strong className="text-right text-white">
+                        {containerPainelMapa.destino}
+                      </strong>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-slate-500">Scanner entrada</span>
-                      <strong className="text-right text-white">{containerPainelMapa.scannerEntrada ? "Sim" : "Não"}</strong>
+                      <strong className="text-right text-white">
+                        {containerPainelMapa.scannerEntrada ? "Sim" : "Não"}
+                      </strong>
                     </div>
                   </div>
 
@@ -1343,27 +1885,48 @@ export default function QuadraSeguranca() {
                 </div>
               ) : (
                 <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-400">
-                  Pesquise ou clique em um bloco no mapa para visualizar os dados operacionais do contêiner.
+                  Pesquise ou clique em um bloco no mapa para visualizar os
+                  dados operacionais do contêiner.
                 </div>
               )}
             </div>
 
             <div className="rounded-3xl border border-slate-700 bg-slate-950/80 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Legenda</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+                Legenda
+              </p>
               <div className="mt-4 space-y-3 text-sm text-slate-300">
-                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full bg-blue-500" /> 20 pes</div>
-                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full bg-emerald-500" /> 40 pes / 40 HC</div>
-                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full bg-amber-400" /> Container pesquisado</div>
-                <div className="flex items-center gap-3"><span className="h-3 w-7 rounded-full border border-white/40 bg-slate-500/30" /> Outras pilhas</div>
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-7 rounded-full bg-blue-500" /> 20 pes
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-7 rounded-full bg-emerald-500" /> 40
+                  pes / 40 HC
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-7 rounded-full bg-amber-400" />{" "}
+                  Container pesquisado
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="h-3 w-7 rounded-full border border-white/40 bg-slate-500/30" />{" "}
+                  Outras pilhas
+                </div>
               </div>
             </div>
 
             <div className="rounded-3xl border border-slate-700 bg-slate-950/80 p-4">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Ocupacao por pilha</p>
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+                Ocupacao por pilha
+              </p>
               <div className="mt-4 space-y-3">
                 {pilhasMapa.map((pilha) => {
                   const total = ocupacaoPorPilha.get(pilha) || 0;
-                  const percentual = Math.min(100, Math.round((total / Math.max(1, containersNoPatio.length)) * 100));
+                  const percentual = Math.min(
+                    100,
+                    Math.round(
+                      (total / Math.max(1, containersNoPatio.length)) * 100,
+                    ),
+                  );
                   return (
                     <button
                       key={pilha}
@@ -1380,7 +1943,10 @@ export default function QuadraSeguranca() {
                         <span>{total}</span>
                       </div>
                       <div className="h-2 rounded-full bg-slate-800">
-                        <div className={`h-2 rounded-full ${pilha === pilhaMapa ? "bg-blue-400" : "bg-slate-500"}`} style={{ width: `${percentual}%` }} />
+                        <div
+                          className={`h-2 rounded-full ${pilha === pilhaMapa ? "bg-blue-400" : "bg-slate-500"}`}
+                          style={{ width: `${percentual}%` }}
+                        />
                       </div>
                     </button>
                   );
@@ -1395,31 +1961,71 @@ export default function QuadraSeguranca() {
             <div className="grid grid-cols-[56px_repeat(6,minmax(92px,1fr))] gap-2">
               <div />
               {quadrasMapa.map((quadra) => (
-                <div key={quadra} className="rounded-xl bg-slate-100 px-3 py-2 text-center text-sm font-black text-slate-700 dark:bg-slate-950 dark:text-slate-200">
+                <div
+                  key={quadra}
+                  className="rounded-xl bg-slate-100 px-3 py-2 text-center text-sm font-black text-slate-700 dark:bg-slate-950 dark:text-slate-200"
+                >
                   {quadra}
                 </div>
               ))}
 
               {alturasMapa.map((altura) => (
                 <Fragment key={altura}>
-                  <div key={`altura-${altura}`} className="flex items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-500 dark:bg-slate-950 dark:text-slate-400">
+                  <div
+                    key={`altura-${altura}`}
+                    className="flex items-center justify-center rounded-xl bg-slate-100 text-xs font-black text-slate-500 dark:bg-slate-950 dark:text-slate-400"
+                  >
                     H{altura}
                   </div>
                   {quadrasMapa.map((quadra) => {
                     const posicaoCodigo = slotChave(quadra, pilhaMapa, altura);
                     const ocupante = ocupacaoMapa.get(posicaoCodigo);
-                    const referencia = !ocupante ? referenciasMapa.get(posicaoCodigo)?.[0] : null;
-                    const posicaoOcupante = interpretarPosicao(ocupante?.posicionamento);
-                    const posicaoReferencia = interpretarPosicao(referencia?.posicionamento);
-                    const eh40 = ocupante && dimensaoMapa(ocupante.dimensao) === "40";
-                    const referenciaEh40 = referencia && dimensaoMapa(referencia.dimensao) === "40";
-                    const quadraInicial40 = eh40 && posicaoOcupante ? posicoes40[posicaoOcupante.quadra] : null;
-                    const quadraInicialReferencia40 = referenciaEh40 && posicaoReferencia ? posicoes40[posicaoReferencia.quadra] : null;
-                    if (eh40 && posicaoOcupante?.quadra === quadra && quadraInicial40) return null;
-                    if (!ocupante && referenciaEh40 && posicaoReferencia?.quadra === quadra && quadraInicialReferencia40) return null;
+                    const referencia = !ocupante
+                      ? referenciasMapa.get(posicaoCodigo)?.[0]
+                      : null;
+                    const posicaoOcupante = interpretarPosicao(
+                      ocupante?.posicionamento,
+                    );
+                    const posicaoReferencia = interpretarPosicao(
+                      referencia?.posicionamento,
+                    );
+                    const eh40 =
+                      ocupante && dimensaoMapa(ocupante.dimensao) === "40";
+                    const referenciaEh40 =
+                      referencia && dimensaoMapa(referencia.dimensao) === "40";
+                    const quadraInicial40 =
+                      eh40 && posicaoOcupante
+                        ? posicoes40[posicaoOcupante.quadra]
+                        : null;
+                    const quadraInicialReferencia40 =
+                      referenciaEh40 && posicaoReferencia
+                        ? posicoes40[posicaoReferencia.quadra]
+                        : null;
+                    if (
+                      eh40 &&
+                      posicaoOcupante?.quadra === quadra &&
+                      quadraInicial40
+                    )
+                      return null;
+                    if (
+                      !ocupante &&
+                      referenciaEh40 &&
+                      posicaoReferencia?.quadra === quadra &&
+                      quadraInicialReferencia40
+                    )
+                      return null;
 
-                    const colSpan = eh40 && quadraInicial40 === quadra ? 2 : referenciaEh40 && quadraInicialReferencia40 === quadra ? 2 : 1;
-                    const destaque = ocupante ? slotsContainer(ocupante).some((slot) => posicaoDestacada.has(slot)) : false;
+                    const colSpan =
+                      eh40 && quadraInicial40 === quadra
+                        ? 2
+                        : referenciaEh40 && quadraInicialReferencia40 === quadra
+                          ? 2
+                          : 1;
+                    const destaque = ocupante
+                      ? slotsContainer(ocupante).some((slot) =>
+                          posicaoDestacada.has(slot),
+                        )
+                      : false;
                     const baseOcupado = eh40
                       ? "border-emerald-300 bg-emerald-500/15 text-emerald-800 dark:border-emerald-400/40 dark:bg-emerald-500/15 dark:text-emerald-100"
                       : "border-blue-300 bg-blue-500/15 text-blue-800 dark:border-blue-400/40 dark:bg-blue-500/15 dark:text-blue-100";
@@ -1441,7 +2047,10 @@ export default function QuadraSeguranca() {
                             setPilhaMapa(posicaoReferencia.pilha);
                             return;
                           }
-                          setForm((atual) => ({ ...atual, posicionamento: posicaoCodigo }));
+                          setForm((atual) => ({
+                            ...atual,
+                            posicionamento: posicaoCodigo,
+                          }));
                           setFormularioAberto(true);
                         }}
                         style={{ gridColumn: `span ${colSpan}` }}
@@ -1450,23 +2059,43 @@ export default function QuadraSeguranca() {
                             ? baseOcupado
                             : referencia
                               ? baseReferencia
-                            : "border-slate-200 bg-slate-50 text-slate-400 hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-600"
+                              : "border-slate-200 bg-slate-50 text-slate-400 hover:border-blue-300 dark:border-slate-800 dark:bg-slate-950/70 dark:text-slate-600"
                         } ${destaque ? "ring-4 ring-amber-300 ring-offset-2 ring-offset-white dark:ring-amber-400 dark:ring-offset-slate-900" : ""}`}
-                        title={ocupante ? `${ocupante.numeroContainer} - ${ocupante.posicionamento}` : referencia ? `Ir para pilha ${posicaoReferencia?.pilha} - ${referencia.numeroContainer}` : posicaoCodigo}
+                        title={
+                          ocupante
+                            ? `${ocupante.numeroContainer} - ${ocupante.posicionamento}`
+                            : referencia
+                              ? `Ir para pilha ${posicaoReferencia?.pilha} - ${referencia.numeroContainer}`
+                              : posicaoCodigo
+                        }
                       >
-                        <span className="block text-[10px] font-black uppercase tracking-wide opacity-70">{ocupante?.posicionamento || referencia?.posicionamento || posicaoCodigo}</span>
+                        <span className="block text-[10px] font-black uppercase tracking-wide opacity-70">
+                          {ocupante?.posicionamento ||
+                            referencia?.posicionamento ||
+                            posicaoCodigo}
+                        </span>
                         {ocupante ? (
                           <>
-                            <span className="mt-1 block truncate text-sm font-black">{ocupante.numeroContainer}</span>
-                            <span className="mt-1 inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-950/60 dark:text-slate-100">{ocupante.dimensao}</span>
+                            <span className="mt-1 block truncate text-sm font-black">
+                              {ocupante.numeroContainer}
+                            </span>
+                            <span className="mt-1 inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-950/60 dark:text-slate-100">
+                              {ocupante.dimensao}
+                            </span>
                           </>
                         ) : referencia ? (
                           <>
-                            <span className="mt-1 block truncate text-sm font-black">{referencia.numeroContainer}</span>
-                            <span className="mt-1 inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-950/60 dark:text-slate-100">Pilha {posicaoReferencia?.pilha}</span>
+                            <span className="mt-1 block truncate text-sm font-black">
+                              {referencia.numeroContainer}
+                            </span>
+                            <span className="mt-1 inline-flex rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-black text-slate-700 dark:bg-slate-950/60 dark:text-slate-100">
+                              Pilha {posicaoReferencia?.pilha}
+                            </span>
                           </>
                         ) : (
-                          <span className="mt-3 block text-xs font-bold">Livre</span>
+                          <span className="mt-3 block text-xs font-bold">
+                            Livre
+                          </span>
                         )}
                       </button>
                     );
@@ -1479,89 +2108,178 @@ export default function QuadraSeguranca() {
 
         {containerDestacado && (
           <div className="border-t border-amber-400/20 bg-amber-500/10 px-5 py-3 text-sm font-bold text-amber-100">
-            Destaque da busca: {containerDestacado.numeroContainer} em {containerDestacado.posicionamento} ({containerDestacado.dimensao})
+            Destaque da busca: {containerDestacado.numeroContainer} em{" "}
+            {containerDestacado.posicionamento} ({containerDestacado.dimensao})
           </div>
         )}
       </section>
 
       <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <input className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" placeholder="Buscar contêiner, posição ou armador" value={busca} onChange={(e) => setBusca(e.target.value)} />
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+          <input
+            className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+            placeholder="Buscar contêiner, posição ou armador"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+          />
+          <select
+            className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value)}
+          >
             <option value="">Todos os status</option>
-            {statusOperacionais.map((item) => <option key={item} value={item}>{item}</option>)}
+            {statusOperacionais.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroTipo} onChange={(e) => setFiltroTipo(e.target.value)}>
+          <select
+            className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+            value={filtroTipo}
+            onChange={(e) => setFiltroTipo(e.target.value)}
+          >
             <option value="">Todos os tipos</option>
-            {tiposContainer.map((item) => <option key={item} value={item}>{item}</option>)}
+            {tiposContainer.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroDimensao} onChange={(e) => setFiltroDimensao(e.target.value)}>
+          <select
+            className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+            value={filtroDimensao}
+            onChange={(e) => setFiltroDimensao(e.target.value)}
+          >
             <option value="">Todas as dimensões</option>
-            {dimensoes.map((item) => <option key={item} value={item}>{item}</option>)}
+            {dimensoes.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
-          <select className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950" value={filtroDestino} onChange={(e) => setFiltroDestino(e.target.value)}>
+          <select
+            className="rounded-lg border p-3 dark:border-slate-700 dark:bg-slate-950"
+            value={filtroDestino}
+            onChange={(e) => setFiltroDestino(e.target.value)}
+          >
             <option value="">Todos os destinos</option>
-            {destinos.map((item) => <option key={item} value={item}>{item}</option>)}
+            {destinos.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
         </div>
 
         <div className="max-h-[470px] overflow-x-auto overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-800">
           {carregando && filtrados.length === 0 ? (
-            <SkeletonTable rows={6} columns={10} className="border-0 shadow-none" />
+            <SkeletonTable
+              rows={6}
+              columns={10}
+              className="border-0 shadow-none"
+            />
           ) : (
-          <table className="min-w-full text-sm">
-            <thead className="sticky top-0 z-10 bg-slate-100 text-left text-slate-600 shadow-sm dark:bg-slate-950 dark:text-slate-300">
-              <tr>
-                <th className="p-3">Contêiner</th>
-                <th className="p-3">Posição</th>
-                <th className="p-3">Unidade</th>
-                <th className="p-3">Entrada</th>
-                <th className="p-3">Tipo</th>
-                <th className="p-3">Dimensão</th>
-                <th className="p-3">Destino</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Tempo no Terminal</th>
-                <th className="p-3">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtrados.map((item) => (
-                <tr key={item.id} className="border-t border-slate-200 dark:border-slate-800">
-                  <td className="p-3 font-bold">{item.numeroContainer}</td>
-                  <td className="p-3">{item.posicionamento || "Não informado"}</td>
-                  <td className="p-3">{item.unidade}</td>
-                  <td className="p-3">{new Date(item.dataHoraEntrada).toLocaleString("pt-BR")}</td>
-                  <td className="p-3">{item.tipoContainer}</td>
-                  <td className="p-3">{item.dimensao}</td>
-                  <td className="p-3">{item.destino}</td>
-                  <td className="p-3"><span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">{item.statusOperacional}</span></td>
-                  <td className="p-3">{item.tempoTerminal}</td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      {item.statusOperacional !== "Liberado" && item.statusOperacional !== "Previsão para chegada" && (
-                        <button onClick={() => abrirReposicionamento(item)} className="rounded bg-emerald-600 p-2 text-white" title="Reposicionar contêiner"><MapPinned size={16} /></button>
-                      )}
-                      <button onClick={() => editar(item)} className="rounded bg-blue-600 p-2 text-white" title="Editar"><Pencil size={16} /></button>
-                      <button onClick={() => abrirDossie(item)} className="rounded bg-slate-700 p-2 text-white" title="Ver dossiê"><Eye size={16} /></button>
-                      {podeExcluir && usuario?.perfilAcesso !== "OPERADOR" && (
-                        <button onClick={() => excluir(item)} className="rounded bg-red-600 p-2 text-white" title="Excluir"><Trash2 size={16} /></button>
-                      )}
-                    </div>
-                  </td>
+            <table className="min-w-full text-sm">
+              <thead className="sticky top-0 z-10 bg-slate-100 text-left text-slate-600 shadow-sm dark:bg-slate-950 dark:text-slate-300">
+                <tr>
+                  <th className="p-3">Contêiner</th>
+                  <th className="p-3">Posição</th>
+                  <th className="p-3">Unidade</th>
+                  <th className="p-3">Entrada</th>
+                  <th className="p-3">Tipo</th>
+                  <th className="p-3">Dimensão</th>
+                  <th className="p-3">Destino</th>
+                  <th className="p-3">Status</th>
+                  <th className="p-3">Tempo no Terminal</th>
+                  <th className="p-3">Ações</th>
                 </tr>
-              ))}
-              {filtrados.length === 0 && (
-                <tr><td colSpan={10} className="p-6 text-center text-slate-500">{carregando ? "Carregando..." : "Nenhum contêiner encontrado."}</td></tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {filtrados.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-t border-slate-200 dark:border-slate-800"
+                  >
+                    <td className="p-3 font-bold">{item.numeroContainer}</td>
+                    <td className="p-3">
+                      {item.posicionamento || "Não informado"}
+                    </td>
+                    <td className="p-3">{item.unidade}</td>
+                    <td className="p-3">
+                      {new Date(item.dataHoraEntrada).toLocaleString("pt-BR")}
+                    </td>
+                    <td className="p-3">{item.tipoContainer}</td>
+                    <td className="p-3">{item.dimensao}</td>
+                    <td className="p-3">{item.destino}</td>
+                    <td className="p-3">
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-950/40 dark:text-blue-200">
+                        {item.statusOperacional}
+                      </span>
+                    </td>
+                    <td className="p-3">{item.tempoTerminal}</td>
+                    <td className="p-3">
+                      <div className="flex gap-2">
+                        {item.statusOperacional !== "Liberado" &&
+                          item.statusOperacional !==
+                            "Previsão para chegada" && (
+                            <button
+                              onClick={() => abrirReposicionamento(item)}
+                              className="rounded bg-emerald-600 p-2 text-white"
+                              title="Reposicionar contêiner"
+                            >
+                              <MapPinned size={16} />
+                            </button>
+                          )}
+                        <button
+                          onClick={() => editar(item)}
+                          className="rounded bg-blue-600 p-2 text-white"
+                          title="Editar"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={() => abrirDossie(item)}
+                          className="rounded bg-slate-700 p-2 text-white"
+                          title="Ver dossiê"
+                        >
+                          <Eye size={16} />
+                        </button>
+                        {podeExcluir &&
+                          usuario?.perfilAcesso !== "OPERADOR" && (
+                            <button
+                              onClick={() => excluir(item)}
+                              className="rounded bg-red-600 p-2 text-white"
+                              title="Excluir"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filtrados.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="p-6 text-center text-slate-500">
+                      {carregando
+                        ? "Carregando..."
+                        : "Nenhum contêiner encontrado."}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           )}
         </div>
       </div>
 
       {reposicionando && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4">
-          <form onSubmit={salvarReposicionamento} className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+          <form
+            onSubmit={salvarReposicionamento}
+            className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-800 dark:bg-slate-900"
+          >
             <div className="border-b border-slate-200 p-5 dark:border-slate-800">
               <div className="flex items-start gap-3">
                 <div className="rounded-2xl bg-emerald-600 p-3 text-white">
@@ -1570,7 +2288,9 @@ export default function QuadraSeguranca() {
                 <div>
                   <h2 className="text-xl font-black">Reposicionar contêiner</h2>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {reposicionando.numeroContainer} • {reposicionando.dimensao} • posição atual {reposicionando.posicionamento || "não informada"}
+                    {reposicionando.numeroContainer} • {reposicionando.dimensao}{" "}
+                    • posição atual{" "}
+                    {reposicionando.posicionamento || "não informada"}
                   </p>
                 </div>
               </div>
@@ -1582,19 +2302,25 @@ export default function QuadraSeguranca() {
                 <input
                   className="w-full rounded-xl border border-slate-200 bg-white p-3 uppercase dark:border-slate-700 dark:bg-slate-950"
                   value={novaPosicao}
-                  onChange={(event) => setNovaPosicao(normalizarPosicao(event.target.value))}
+                  onChange={(event) =>
+                    setNovaPosicao(normalizarPosicao(event.target.value))
+                  }
                   list="posicoes-reposicionamento"
                   maxLength={6}
                   placeholder="Selecione ou digite. Ex: A09051"
                   required
                 />
                 <datalist id="posicoes-reposicionamento">
-                  {posicoesReposicionamento.map((posicao) => <option key={posicao} value={posicao} />)}
+                  {posicoesReposicionamento.map((posicao) => (
+                    <option key={posicao} value={posicao} />
+                  ))}
                 </datalist>
               </label>
 
               <div className="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950/70">
-                <p className="text-xs font-black uppercase tracking-wide text-slate-500">Sugestões rápidas</p>
+                <p className="text-xs font-black uppercase tracking-wide text-slate-500">
+                  Sugestões rápidas
+                </p>
                 <div className="mt-3 flex max-h-36 flex-wrap gap-2 overflow-y-auto pr-1">
                   {posicoesReposicionamento.slice(0, 30).map((posicao) => (
                     <button
@@ -1611,18 +2337,25 @@ export default function QuadraSeguranca() {
                     </button>
                   ))}
                   {posicoesReposicionamento.length === 0 && (
-                    <span className="text-sm text-slate-500">Nenhuma posição disponível para esta dimensão.</span>
+                    <span className="text-sm text-slate-500">
+                      Nenhuma posição disponível para esta dimensão.
+                    </span>
                   )}
                 </div>
               </div>
 
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
-                O sistema respeita a regra de 20/40 pés e bloqueia posições ocupadas ou pilhas incompatíveis.
+                O sistema respeita a regra de 20/40 pés e bloqueia posições
+                ocupadas ou pilhas incompatíveis.
               </div>
             </div>
 
             <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 p-5 dark:border-slate-800">
-              <button type="button" onClick={() => setReposicionando(null)} className="rounded-xl bg-slate-100 px-4 py-2 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">
+              <button
+                type="button"
+                onClick={() => setReposicionando(null)}
+                className="rounded-xl bg-slate-100 px-4 py-2 font-bold text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
                 Cancelar
               </button>
               <button className="rounded-xl bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-700">
@@ -1638,29 +2371,57 @@ export default function QuadraSeguranca() {
           <div className="mx-auto my-6 max-w-6xl rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
-                <h2 className="text-2xl font-bold">Dossiê {dossie.numeroContainer}</h2>
-                <p className="text-slate-500">Posição: {dossie.posicionamento || "Não informado"}</p>
+                <h2 className="text-2xl font-bold">
+                  Dossiê {dossie.numeroContainer}
+                </h2>
+                <p className="text-slate-500">
+                  Posição: {dossie.posicionamento || "Não informado"}
+                </p>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => baixarDossiePdf(dossie)} className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white">
+                <button
+                  onClick={() => baixarDossiePdf(dossie)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white"
+                >
                   <Download size={16} />
                   Dossiê PDF
                 </button>
-                <button onClick={() => setDossie(null)} className="rounded-lg bg-slate-100 px-4 py-2 dark:bg-slate-800">Fechar</button>
+                <button
+                  onClick={() => setDossie(null)}
+                  className="rounded-lg bg-slate-100 px-4 py-2 dark:bg-slate-800"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="rounded-xl border p-4 dark:border-slate-800">
                 <h3 className="font-bold">Entrada</h3>
-                <p>Entrada: {new Date(dossie.dataHoraEntrada).toLocaleString("pt-BR")}</p>
+                <p>
+                  Entrada:{" "}
+                  {new Date(dossie.dataHoraEntrada).toLocaleString("pt-BR")}
+                </p>
                 <p>Scanner: {dossie.scannerEntrada ? "Sim" : "Não"}</p>
                 <p>Lacre: {dossie.numeroLacre || "Não informado"}</p>
               </div>
               <div className="rounded-xl border p-4 dark:border-slate-800">
                 <h3 className="font-bold">Saída</h3>
-                <p>Saída: {dossie.dataHoraSaida ? new Date(dossie.dataHoraSaida).toLocaleString("pt-BR") : "Não informada"}</p>
-                <p>Scanner: {dossie.scannerSaida === undefined || dossie.scannerSaida === null ? "Não informado" : dossie.scannerSaida ? "Sim" : "Não"}</p>
+                <p>
+                  Saída:{" "}
+                  {dossie.dataHoraSaida
+                    ? new Date(dossie.dataHoraSaida).toLocaleString("pt-BR")
+                    : "Não informada"}
+                </p>
+                <p>
+                  Scanner:{" "}
+                  {dossie.scannerSaida === undefined ||
+                  dossie.scannerSaida === null
+                    ? "Não informado"
+                    : dossie.scannerSaida
+                      ? "Sim"
+                      : "Não"}
+                </p>
               </div>
               <div className="rounded-xl border p-4 dark:border-slate-800">
                 <h3 className="font-bold">Operacional</h3>
@@ -1673,21 +2434,42 @@ export default function QuadraSeguranca() {
 
             <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
               <section>
-                <h3 className="mb-3 flex items-center gap-2 font-bold"><FileText size={18} /> Anexos</h3>
+                <h3 className="mb-3 flex items-center gap-2 font-bold">
+                  <FileText size={18} /> Anexos
+                </h3>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {(dossie.anexos || []).map((anexo) => (
-                    <a key={anexo.id} href={`/${anexo.caminho.replace(/\\/g, "/")}`} target="_blank" className="rounded-xl border p-3 hover:border-blue-400 dark:border-slate-800" rel="noreferrer">
+                    <a
+                      key={anexo.id}
+                      href={`/${anexo.caminho.replace(/\\/g, "/")}`}
+                      target="_blank"
+                      className="rounded-xl border p-3 hover:border-blue-400 dark:border-slate-800"
+                      rel="noreferrer"
+                    >
                       {anexo.tipo.startsWith("image/") ? (
-                        <img src={`/${anexo.caminho.replace(/\\/g, "/")}`} className="mb-2 h-32 w-full rounded-lg object-cover" />
+                        <img
+                          src={`/${anexo.caminho.replace(/\\/g, "/")}`}
+                          className="mb-2 h-32 w-full rounded-lg object-cover"
+                        />
                       ) : (
-                        <div className="mb-2 flex h-32 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800"><FileText /></div>
+                        <div className="mb-2 flex h-32 items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
+                          <FileText />
+                        </div>
                       )}
-                      <p className="truncate font-semibold">{anexo.nomeOriginal}</p>
-                      <p className="text-xs text-slate-500">{new Date(anexo.createdAt).toLocaleString("pt-BR")}</p>
-                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600"><Download size={12} /> Abrir/baixar</p>
+                      <p className="truncate font-semibold">
+                        {anexo.nomeOriginal}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(anexo.createdAt).toLocaleString("pt-BR")}
+                      </p>
+                      <p className="mt-1 inline-flex items-center gap-1 text-xs text-blue-600">
+                        <Download size={12} /> Abrir/baixar
+                      </p>
                     </a>
                   ))}
-                  {(dossie.anexos || []).length === 0 && <p className="text-slate-500">Nenhum anexo registrado.</p>}
+                  {(dossie.anexos || []).length === 0 && (
+                    <p className="text-slate-500">Nenhum anexo registrado.</p>
+                  )}
                 </div>
               </section>
 
@@ -1707,7 +2489,9 @@ export default function QuadraSeguranca() {
                       >
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold text-slate-950 dark:text-white">{item.acao}</p>
+                            <p className="font-semibold text-slate-950 dark:text-white">
+                              {item.acao}
+                            </p>
                             <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">
                               {new Date(item.createdAt).toLocaleString("pt-BR")}
                             </p>
@@ -1720,17 +2504,29 @@ export default function QuadraSeguranca() {
                         {posicao.reposicionamento ? (
                           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
                             <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
-                              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Posição anterior</p>
-                              <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">{posicao.posicaoAnterior}</p>
+                              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">
+                                Posição anterior
+                              </p>
+                              <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">
+                                {posicao.posicaoAnterior}
+                              </p>
                             </div>
-                            <span className="text-center text-sm font-black text-blue-700 dark:text-blue-300">para</span>
+                            <span className="text-center text-sm font-black text-blue-700 dark:text-blue-300">
+                              para
+                            </span>
                             <div className="rounded-lg border border-blue-200 bg-white p-3 dark:border-blue-500/40 dark:bg-slate-950">
-                              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">Posição atual</p>
-                              <p className="mt-1 text-lg font-black text-blue-700 dark:text-blue-300">{posicao.posicaoAtual}</p>
+                              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">
+                                Posição atual
+                              </p>
+                              <p className="mt-1 text-lg font-black text-blue-700 dark:text-blue-300">
+                                {posicao.posicaoAtual}
+                              </p>
                             </div>
                           </div>
                         ) : (
-                          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.detalhes || "Sem detalhes"}</p>
+                          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                            {item.detalhes || "Sem detalhes"}
+                          </p>
                         )}
 
                         <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">

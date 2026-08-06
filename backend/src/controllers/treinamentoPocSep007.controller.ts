@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import archiver = require("archiver");
@@ -245,7 +245,7 @@ async function gerarCertificadoPocSep007(treinamento: any) {
     .fillColor("#0f172a")
     .font("Helvetica-Bold")
     .fontSize(7)
-    .text("VALIDAÇÃO", 70, 508, { width: 102, align: "center" });
+    .text("VALIDAÃ‡ÃƒO", 70, 508, { width: 102, align: "center" });
 
   if (treinamento.assinaturaDataUrl) {
     const assinaturaBase64 = String(treinamento.assinaturaDataUrl).split(
@@ -330,10 +330,13 @@ async function proximoCodigo(tx: any) {
     where: { codigo: { endsWith: `/${ano}` } },
     select: { codigo: true },
   });
-  const maiorNumero = certificados.reduce((maior: number, item: { codigo: string | null }) => {
-    const numero = Number(item.codigo?.match(/POC-(\d+)\//)?.[1] || 0);
-    return Math.max(maior, numero);
-  }, 0);
+  const maiorNumero = certificados.reduce(
+    (maior: number, item: { codigo: string | null }) => {
+      const numero = Number(item.codigo?.match(/POC-(\d+)\//)?.[1] || 0);
+      return Math.max(maior, numero);
+    },
+    0,
+  );
   const numero = maiorNumero + 1;
   return `POC-${String(numero).padStart(5, "0")}/${ano}`;
 }
@@ -436,12 +439,10 @@ export async function iniciarTreinamentoPocSep007(req: Request, res: Response) {
       !emailValido(email) ||
       !unidadeValida(unidade)
     ) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Informe nome completo, CPF válido, e-mail válido e unidade para iniciar.",
-        });
+      return res.status(400).json({
+        error:
+          "Informe nome completo, CPF válido, e-mail válido e unidade para iniciar.",
+      });
     }
 
     const usuario = await prisma.usuario.findFirst({
@@ -567,11 +568,9 @@ export async function responderQuizTreinamentoPocSep007(
       respostas.length !== respostasCorretas.length ||
       respostas.some((item) => !Number.isInteger(item))
     ) {
-      return res
-        .status(400)
-        .json({
-          error: "Responda todas as questões para finalizar a avaliação.",
-        });
+      return res.status(400).json({
+        error: "Responda todas as questões para finalizar a avaliação.",
+      });
     }
 
     const treinamento = await prisma.treinamentoPocSep007.findUnique({
@@ -681,9 +680,7 @@ export async function concluirTreinamentoPocSep007(
     const mensagem =
       error?.message || "Erro ao concluir treinamento POC-SEP-007.";
     console.error(error);
-    return res
-      .status(500)
-      .json({ error: mensagem });
+    return res.status(500).json({ error: mensagem });
   }
 }
 
@@ -722,12 +719,10 @@ export async function reenviarEmailTreinamentoPocSep007(
     if (!treinamento)
       return res.status(404).json({ error: "Treinamento não encontrado." });
     if (!treinamentoConcluido(treinamento.status) || !treinamento.codigo) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "O e-mail só pode ser reenviado após a conclusão do treinamento.",
-        });
+      return res.status(400).json({
+        error:
+          "O e-mail só pode ser reenviado após a conclusão do treinamento.",
+      });
     }
 
     const certificadoArquivo =

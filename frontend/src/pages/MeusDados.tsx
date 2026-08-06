@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { AtSign, ClipboardList, UserCircle } from "lucide-react";
 import Perfil from "./Perfil";
@@ -28,9 +28,15 @@ export default function MeusDados() {
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-600">Área do usuário</p>
-        <h1 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">Meus Dados</h1>
-        <p className="mt-1 text-sm text-slate-500">Perfil, jornada operacional e menções reunidos em um só lugar.</p>
+        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-600">
+          Área do usuário
+        </p>
+        <h1 className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">
+          Meus Dados
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Perfil, jornada operacional e menções reunidos em um só lugar.
+        </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
           {abas.map((aba) => {

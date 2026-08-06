@@ -2,7 +2,10 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
-import { assinarDocumento, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
+import {
+  assinarDocumento,
+  exigirSenhaAssinatura,
+} from "../services/assinaturaDocumento.service";
 import { validarPinOperacional } from "../services/pinOperacional.service";
 
 function formatarCodigo(numero: number, ano: number) {
@@ -33,7 +36,10 @@ async function proximaNumeracaoInvestigacao(unidade: string) {
   };
 }
 
-function statusOcorrenciaAposInvestigacao(statusInvestigacao: string, analise?: { status?: string | null } | null) {
+function statusOcorrenciaAposInvestigacao(
+  statusInvestigacao: string,
+  analise?: { status?: string | null } | null,
+) {
   if (statusInvestigacao === "Anulada") {
     if (analise?.status === "Concluído") return "Aguardando Aprovação";
     if (analise) return "Em Análise";
@@ -72,7 +78,7 @@ export async function listarInvestigacoes(req: AuthRequest, res: Response) {
 
 export async function converterOcorrenciaParaInvestigacao(
   req: AuthRequest,
-  res: Response
+  res: Response,
 ) {
   try {
     const { ocorrenciaId } = req.params;
@@ -106,7 +112,10 @@ export async function converterOcorrenciaParaInvestigacao(
     if (investigacaoExistente) {
       if (investigacaoExistente.codigo) {
         if (investigacaoExistente.status === "Anulada") {
-          await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
+          await validarPinOperacional(
+            req.usuarioId!,
+            String(req.body?.pinOperacional || ""),
+          );
 
           const investigacaoReaberta = await prisma.$transaction(async (tx) => {
             const reaberta = await tx.investigacao.update({
@@ -121,10 +130,18 @@ export async function converterOcorrenciaParaInvestigacao(
               },
             });
 
-            if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+            if (
+              ocorrencia.status !== "Concluído" &&
+              ocorrencia.status !== "Anulado"
+            ) {
               await tx.ocorrencia.update({
                 where: { id: ocorrencia.id },
-                data: { status: statusOcorrenciaAposInvestigacao(reaberta.status, ocorrencia.analise) },
+                data: {
+                  status: statusOcorrenciaAposInvestigacao(
+                    reaberta.status,
+                    ocorrencia.analise,
+                  ),
+                },
               });
             }
 
@@ -143,10 +160,18 @@ export async function converterOcorrenciaParaInvestigacao(
           return res.status(200).json(investigacaoReaberta);
         }
 
-        if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+        if (
+          ocorrencia.status !== "Concluído" &&
+          ocorrencia.status !== "Anulado"
+        ) {
           await prisma.ocorrencia.update({
             where: { id: ocorrencia.id },
-            data: { status: statusOcorrenciaAposInvestigacao(investigacaoExistente.status, ocorrencia.analise) },
+            data: {
+              status: statusOcorrenciaAposInvestigacao(
+                investigacaoExistente.status,
+                ocorrencia.analise,
+              ),
+            },
           });
         }
 
@@ -166,10 +191,18 @@ export async function converterOcorrenciaParaInvestigacao(
           },
         });
 
-        if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+        if (
+          ocorrencia.status !== "Concluído" &&
+          ocorrencia.status !== "Anulado"
+        ) {
           await tx.ocorrencia.update({
             where: { id: ocorrencia.id },
-            data: { status: statusOcorrenciaAposInvestigacao(atualizada.status, ocorrencia.analise) },
+            data: {
+              status: statusOcorrenciaAposInvestigacao(
+                atualizada.status,
+                ocorrencia.analise,
+              ),
+            },
           });
         }
 
@@ -230,10 +263,16 @@ export async function converterOcorrenciaParaInvestigacao(
   }
 }
 
-export async function cancelarConversaoInvestigacao(req: AuthRequest, res: Response) {
+export async function cancelarConversaoInvestigacao(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { ocorrenciaId } = req.params;
-    await validarPinOperacional(req.usuarioId!, String(req.body?.pinOperacional || ""));
+    await validarPinOperacional(
+      req.usuarioId!,
+      String(req.body?.pinOperacional || ""),
+    );
 
     const ocorrencia = await prisma.ocorrencia.findFirst({
       where: {
@@ -255,7 +294,9 @@ export async function cancelarConversaoInvestigacao(req: AuthRequest, res: Respo
     }
 
     if (!ocorrencia.investigacao) {
-      return res.status(404).json({ error: "Esta ocorrência não possui investigação vinculada" });
+      return res
+        .status(404)
+        .json({ error: "Esta ocorrência não possui investigação vinculada" });
     }
 
     if (ocorrencia.investigacao.status === "Anulada") {
@@ -275,11 +316,17 @@ export async function cancelarConversaoInvestigacao(req: AuthRequest, res: Respo
         },
       });
 
-      if (ocorrencia.status !== "Concluído" && ocorrencia.status !== "Anulado") {
+      if (
+        ocorrencia.status !== "Concluído" &&
+        ocorrencia.status !== "Anulado"
+      ) {
         await tx.ocorrencia.update({
           where: { id: ocorrencia.id },
           data: {
-            status: statusOcorrenciaAposInvestigacao("Anulada", ocorrencia.analise),
+            status: statusOcorrenciaAposInvestigacao(
+              "Anulada",
+              ocorrencia.analise,
+            ),
           },
         });
       }
@@ -299,7 +346,9 @@ export async function cancelarConversaoInvestigacao(req: AuthRequest, res: Respo
     return res.json(investigacaoAnulada);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao cancelar conversão para investigação" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao cancelar conversão para investigação" });
   }
 }
 
@@ -328,11 +377,14 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
 
     if (anterior.status === "Anulada") {
       return res.status(403).json({
-        error: "Esta investigação está anulada e não pode ser editada. Reabra a R.I para realizar novas alterações.",
+        error:
+          "Esta investigação está anulada e não pode ser editada. Reabra a R.I para realizar novas alterações.",
       });
     }
 
-    const local = req.body.local ? String(req.body.local).trim() : anterior.local;
+    const local = req.body.local
+      ? String(req.body.local).trim()
+      : anterior.local;
     const localCadastro = await prisma.localTerminal.findFirst({
       where: {
         nome: local,
@@ -349,7 +401,8 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
 
     const novoStatus = req.body.status || anterior.status;
     const concluindo = novoStatus === "Concluído";
-    if (concluindo && anterior.status !== "Concluído") await exigirSenhaAssinatura(req);
+    if (concluindo && anterior.status !== "Concluído")
+      await exigirSenhaAssinatura(req);
 
     const investigacao = await prisma.$transaction(async (tx) => {
       const atualizada = await tx.investigacao.update({
@@ -372,10 +425,14 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
       await tx.ocorrencia.update({
         where: { id: atualizada.ocorrenciaId },
         data: {
-          status: statusOcorrenciaAposInvestigacao(novoStatus, anterior.ocorrencia.analise),
-          fluxoStatus: concluindo && anterior.ocorrencia.analise?.status === "Concluído"
-            ? "Aguardando Revisao"
-            : anterior.ocorrencia.fluxoStatus,
+          status: statusOcorrenciaAposInvestigacao(
+            novoStatus,
+            anterior.ocorrencia.analise,
+          ),
+          fluxoStatus:
+            concluindo && anterior.ocorrencia.analise?.status === "Concluído"
+              ? "Aguardando Revisao"
+              : anterior.ocorrencia.fluxoStatus,
         },
       });
 
@@ -412,4 +469,3 @@ export async function atualizarInvestigacao(req: AuthRequest, res: Response) {
     });
   }
 }
-

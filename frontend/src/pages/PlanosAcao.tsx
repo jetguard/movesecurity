@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Edit3, Link2, Plus } from "lucide-react";
 import { api } from "../services/api";
 
@@ -40,7 +40,11 @@ const modulosOrigem = [
 ];
 
 function rotuloModulo(valor?: string) {
-  return modulosOrigem.find((item) => item.valor === valor)?.label || valor || "Sem vínculo";
+  return (
+    modulosOrigem.find((item) => item.valor === valor)?.label ||
+    valor ||
+    "Sem vínculo"
+  );
 }
 
 const vazio = {
@@ -79,12 +83,18 @@ export default function PlanosAcao() {
     carregar();
   }, []);
 
-  const resumo = useMemo(() => ({
-    total: planos.length,
-    atrasados: planos.filter((plano) => plano.status !== "Concluido" && new Date(plano.prazo) < new Date()).length,
-    concluidos: planos.filter((plano) => plano.status === "Concluido").length,
-    criticos: planos.filter((plano) => plano.prioridade === "Critica").length,
-  }), [planos]);
+  const resumo = useMemo(
+    () => ({
+      total: planos.length,
+      atrasados: planos.filter(
+        (plano) =>
+          plano.status !== "Concluido" && new Date(plano.prazo) < new Date(),
+      ).length,
+      concluidos: planos.filter((plano) => plano.status === "Concluido").length,
+      criticos: planos.filter((plano) => plano.prioridade === "Critica").length,
+    }),
+    [planos],
+  );
 
   function campo(nome: string, valor: string) {
     setForm((atual) => ({
@@ -117,7 +127,8 @@ export default function PlanosAcao() {
     evento.preventDefault();
     const dados = {
       ...form,
-      origemModulo: form.origemModulo === "Independente" ? null : form.origemModulo,
+      origemModulo:
+        form.origemModulo === "Independente" ? null : form.origemModulo,
       origemId: form.origemModulo === "Independente" ? null : form.origemId,
     };
 
@@ -128,56 +139,106 @@ export default function PlanosAcao() {
     await carregar();
   }
 
-  const registrosOrigem = form.origemModulo && form.origemModulo !== "Independente"
-    ? origens[form.origemModulo] || []
-    : [];
-  const origemSelecionada = registrosOrigem.find((item) => String(item.id) === form.origemId);
-  const classeCampo = "w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white";
-  const classeCard = "rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900";
+  const registrosOrigem =
+    form.origemModulo && form.origemModulo !== "Independente"
+      ? origens[form.origemModulo] || []
+      : [];
+  const origemSelecionada = registrosOrigem.find(
+    (item) => String(item.id) === form.origemId,
+  );
+  const classeCampo =
+    "w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white";
+  const classeCard =
+    "rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">Planos de Ação</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+            Planos de Ação
+          </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Controle de ações corretivas e preventivas, com vínculo opcional ao registro que originou a tratativa.
+            Controle de ações corretivas e preventivas, com vínculo opcional ao
+            registro que originou a tratativa.
           </p>
         </div>
-        <button onClick={novo} className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-500 sm:w-auto">
+        <button
+          onClick={novo}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-500 sm:w-auto"
+        >
           <Plus size={18} /> Novo Plano
         </button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div className={`${classeCard} p-5`}><p className="text-sm text-slate-500">Total</p><p className="text-3xl font-bold dark:text-white">{resumo.total}</p></div>
-        <div className={`${classeCard} p-5`}><p className="text-sm text-slate-500">Atrasados</p><p className="text-3xl font-bold text-red-500">{resumo.atrasados}</p></div>
-        <div className={`${classeCard} p-5`}><p className="text-sm text-slate-500">Concluídos</p><p className="text-3xl font-bold text-emerald-500">{resumo.concluidos}</p></div>
-        <div className={`${classeCard} p-5`}><p className="text-sm text-slate-500">Críticos</p><p className="text-3xl font-bold text-amber-500">{resumo.criticos}</p></div>
+        <div className={`${classeCard} p-5`}>
+          <p className="text-sm text-slate-500">Total</p>
+          <p className="text-3xl font-bold dark:text-white">{resumo.total}</p>
+        </div>
+        <div className={`${classeCard} p-5`}>
+          <p className="text-sm text-slate-500">Atrasados</p>
+          <p className="text-3xl font-bold text-red-500">{resumo.atrasados}</p>
+        </div>
+        <div className={`${classeCard} p-5`}>
+          <p className="text-sm text-slate-500">Concluídos</p>
+          <p className="text-3xl font-bold text-emerald-500">
+            {resumo.concluidos}
+          </p>
+        </div>
+        <div className={`${classeCard} p-5`}>
+          <p className="text-sm text-slate-500">Críticos</p>
+          <p className="text-3xl font-bold text-amber-500">{resumo.criticos}</p>
+        </div>
       </div>
 
       {abrir && (
-        <form onSubmit={salvar} className={`${classeCard} space-y-5 p-4 sm:p-6`}>
+        <form
+          onSubmit={salvar}
+          className={`${classeCard} space-y-5 p-4 sm:p-6`}
+        >
           <div>
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white">{editando ? `Editar ${editando.codigo}` : "Novo plano de ação"}</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+              {editando ? `Editar ${editando.codigo}` : "Novo plano de ação"}
+            </h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Selecione a origem para vincular o plano a um documento existente. Use “Plano independente” quando a ação não nasceu de outro módulo.
+              Selecione a origem para vincular o plano a um documento existente.
+              Use “Plano independente” quando a ação não nasceu de outro módulo.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Título do plano
-              <input className={classeCampo} placeholder="Ex.: Corrigir vulnerabilidade no Gate 1" value={form.titulo} onChange={(evento) => campo("titulo", evento.target.value)} required />
+              <input
+                className={classeCampo}
+                placeholder="Ex.: Corrigir vulnerabilidade no Gate 1"
+                value={form.titulo}
+                onChange={(evento) => campo("titulo", evento.target.value)}
+                required
+              />
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Prazo para conclusão
-              <input type="datetime-local" className={classeCampo} value={form.prazo} onChange={(evento) => campo("prazo", evento.target.value)} required />
+              <input
+                type="datetime-local"
+                className={classeCampo}
+                value={form.prazo}
+                onChange={(evento) => campo("prazo", evento.target.value)}
+                required
+              />
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Prioridade
-              <select className={classeCampo} value={form.prioridade} onChange={(evento) => campo("prioridade", evento.target.value)} required>
-                <option value="" disabled>Selecione a prioridade</option>
+              <select
+                className={classeCampo}
+                value={form.prioridade}
+                onChange={(evento) => campo("prioridade", evento.target.value)}
+                required
+              >
+                <option value="" disabled>
+                  Selecione a prioridade
+                </option>
                 <option value="Baixa">Baixa</option>
                 <option value="Media">Média</option>
                 <option value="Alta">Alta</option>
@@ -186,8 +247,15 @@ export default function PlanosAcao() {
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Status do plano
-              <select className={classeCampo} value={form.status} onChange={(evento) => campo("status", evento.target.value)} required>
-                <option value="" disabled>Selecione o status atual</option>
+              <select
+                className={classeCampo}
+                value={form.status}
+                onChange={(evento) => campo("status", evento.target.value)}
+                required
+              >
+                <option value="" disabled>
+                  Selecione o status atual
+                </option>
                 <option value="Pendente">Pendente</option>
                 <option value="Em andamento">Em andamento</option>
                 <option value="Concluido">Concluído</option>
@@ -196,27 +264,63 @@ export default function PlanosAcao() {
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Responsável pela execução
-              <input className={classeCampo} placeholder="Nome do responsável pela ação" value={form.responsavelNome} onChange={(evento) => campo("responsavelNome", evento.target.value)} />
+              <input
+                className={classeCampo}
+                placeholder="Nome do responsável pela ação"
+                value={form.responsavelNome}
+                onChange={(evento) =>
+                  campo("responsavelNome", evento.target.value)
+                }
+              />
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Progresso da execução (%)
-              <input type="number" min="0" max="100" className={classeCampo} placeholder="Informe um valor de 0 a 100" value={form.percentual} onChange={(evento) => campo("percentual", evento.target.value)} />
+              <input
+                type="number"
+                min="0"
+                max="100"
+                className={classeCampo}
+                placeholder="Informe um valor de 0 a 100"
+                value={form.percentual}
+                onChange={(evento) => campo("percentual", evento.target.value)}
+              />
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Origem do plano de ação
-              <select className={classeCampo} value={form.origemModulo} onChange={(evento) => campo("origemModulo", evento.target.value)} required>
-                <option value="" disabled>Selecione de onde surgiu esta ação</option>
-                {modulosOrigem.map((modulo) => <option key={modulo.valor} value={modulo.valor}>{modulo.label}</option>)}
+              <select
+                className={classeCampo}
+                value={form.origemModulo}
+                onChange={(evento) =>
+                  campo("origemModulo", evento.target.value)
+                }
+                required
+              >
+                <option value="" disabled>
+                  Selecione de onde surgiu esta ação
+                </option>
+                {modulosOrigem.map((modulo) => (
+                  <option key={modulo.valor} value={modulo.valor}>
+                    {modulo.label}
+                  </option>
+                ))}
               </select>
             </label>
             {form.origemModulo && form.origemModulo !== "Independente" && (
               <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
                 Registro que originou o plano
-                <select className={classeCampo} value={form.origemId} onChange={(evento) => campo("origemId", evento.target.value)} required>
-                  <option value="" disabled>Selecione pelo protocolo ou título</option>
+                <select
+                  className={classeCampo}
+                  value={form.origemId}
+                  onChange={(evento) => campo("origemId", evento.target.value)}
+                  required
+                >
+                  <option value="" disabled>
+                    Selecione pelo protocolo ou título
+                  </option>
                   {registrosOrigem.map((origem) => (
                     <option key={origem.id} value={origem.id}>
-                      {origem.codigo} | {origem.titulo}{origem.complemento ? ` | ${origem.complemento}` : ""}
+                      {origem.codigo} | {origem.titulo}
+                      {origem.complemento ? ` | ${origem.complemento}` : ""}
                     </option>
                   ))}
                 </select>
@@ -227,18 +331,56 @@ export default function PlanosAcao() {
           {origemSelecionada && (
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/40 dark:text-blue-100">
               <Link2 className="mt-0.5 shrink-0" size={17} />
-              <span><strong>{origemSelecionada.codigo}</strong> vinculado: {origemSelecionada.titulo}. Status atual: {origemSelecionada.status || "não informado"}.</span>
+              <span>
+                <strong>{origemSelecionada.codigo}</strong> vinculado:{" "}
+                {origemSelecionada.titulo}. Status atual:{" "}
+                {origemSelecionada.status || "não informado"}.
+              </span>
             </div>
           )}
 
-          <textarea className={`${classeCampo} min-h-24`} placeholder="Descreva o problema, risco ou necessidade que será tratado" value={form.descricao} onChange={(evento) => campo("descricao", evento.target.value)} required />
-          <textarea className={`${classeCampo} min-h-24`} placeholder="Descreva a ação corretiva para resolver o problema identificado" value={form.acaoCorretiva} onChange={(evento) => campo("acaoCorretiva", evento.target.value)} />
-          <textarea className={`${classeCampo} min-h-24`} placeholder="Descreva a ação preventiva para evitar recorrência" value={form.acaoPreventiva} onChange={(evento) => campo("acaoPreventiva", evento.target.value)} />
-          <input className={classeCampo} placeholder="Informe o link ou descreva a evidência de conclusão" value={form.evidencia} onChange={(evento) => campo("evidencia", evento.target.value)} />
-          <textarea className={`${classeCampo} min-h-20`} placeholder="Comentários complementares sobre a execução do plano" value={form.comentarios} onChange={(evento) => campo("comentarios", evento.target.value)} />
+          <textarea
+            className={`${classeCampo} min-h-24`}
+            placeholder="Descreva o problema, risco ou necessidade que será tratado"
+            value={form.descricao}
+            onChange={(evento) => campo("descricao", evento.target.value)}
+            required
+          />
+          <textarea
+            className={`${classeCampo} min-h-24`}
+            placeholder="Descreva a ação corretiva para resolver o problema identificado"
+            value={form.acaoCorretiva}
+            onChange={(evento) => campo("acaoCorretiva", evento.target.value)}
+          />
+          <textarea
+            className={`${classeCampo} min-h-24`}
+            placeholder="Descreva a ação preventiva para evitar recorrência"
+            value={form.acaoPreventiva}
+            onChange={(evento) => campo("acaoPreventiva", evento.target.value)}
+          />
+          <input
+            className={classeCampo}
+            placeholder="Informe o link ou descreva a evidência de conclusão"
+            value={form.evidencia}
+            onChange={(evento) => campo("evidencia", evento.target.value)}
+          />
+          <textarea
+            className={`${classeCampo} min-h-20`}
+            placeholder="Comentários complementares sobre a execução do plano"
+            value={form.comentarios}
+            onChange={(evento) => campo("comentarios", evento.target.value)}
+          />
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button className="rounded-lg bg-emerald-600 px-4 py-2 text-white transition hover:bg-emerald-500">Salvar plano</button>
-            <button type="button" onClick={() => setAbrir(false)} className="rounded-lg bg-slate-200 px-4 py-2 text-slate-800 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700">Cancelar</button>
+            <button className="rounded-lg bg-emerald-600 px-4 py-2 text-white transition hover:bg-emerald-500">
+              Salvar plano
+            </button>
+            <button
+              type="button"
+              onClick={() => setAbrir(false)}
+              className="rounded-lg bg-slate-200 px-4 py-2 text-slate-800 transition hover:bg-slate-300 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700"
+            >
+              Cancelar
+            </button>
           </div>
         </form>
       )}
@@ -248,17 +390,38 @@ export default function PlanosAcao() {
           <div key={plano.id} className={`${classeCard} p-5`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-blue-600">{plano.codigo} | {plano.prioridade}</p>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">{plano.titulo}</h2>
-                <p className="text-sm text-slate-500">Responsável: {plano.responsavelNome || "Não informado"} | Prazo: {new Date(plano.prazo).toLocaleString("pt-BR")}</p>
-                <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><ClipboardList size={14} /> Origem: {rotuloModulo(plano.origemModulo)}{plano.origemId ? " | registro vinculado" : ""}</p>
+                <p className="text-sm font-semibold text-blue-600">
+                  {plano.codigo} | {plano.prioridade}
+                </p>
+                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                  {plano.titulo}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Responsável: {plano.responsavelNome || "Não informado"} |
+                  Prazo: {new Date(plano.prazo).toLocaleString("pt-BR")}
+                </p>
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+                  <ClipboardList size={14} /> Origem:{" "}
+                  {rotuloModulo(plano.origemModulo)}
+                  {plano.origemId ? " | registro vinculado" : ""}
+                </p>
               </div>
-              <button onClick={() => editar(plano)} className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500">
+              <button
+                onClick={() => editar(plano)}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500"
+              >
                 <Edit3 size={16} /> Editar
               </button>
             </div>
-            <div className="mt-4 h-2 rounded bg-slate-100 dark:bg-slate-800"><div className="h-2 rounded bg-emerald-600" style={{ width: `${plano.percentual}%` }} /></div>
-            <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">{plano.descricao}</p>
+            <div className="mt-4 h-2 rounded bg-slate-100 dark:bg-slate-800">
+              <div
+                className="h-2 rounded bg-emerald-600"
+                style={{ width: `${plano.percentual}%` }}
+              />
+            </div>
+            <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">
+              {plano.descricao}
+            </p>
           </div>
         ))}
       </div>

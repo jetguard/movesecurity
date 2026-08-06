@@ -38,8 +38,16 @@ function caminhosProjeto() {
 
 function parseChangelog(markdown: string) {
   const linhas = markdown.split(/\r?\n/);
-  const versoes: Array<{ versao: string; data: string; secoes: SecaoChangelog[] }> = [];
-  let versaoAtual: { versao: string; data: string; secoes: SecaoChangelog[] } | null = null;
+  const versoes: Array<{
+    versao: string;
+    data: string;
+    secoes: SecaoChangelog[];
+  }> = [];
+  let versaoAtual: {
+    versao: string;
+    data: string;
+    secoes: SecaoChangelog[];
+  } | null = null;
   let secaoAtual: SecaoChangelog | null = null;
 
   linhas.forEach((linha) => {
@@ -136,7 +144,11 @@ function tamanhoMb(bytes: number) {
 function listarArquivosUploadsAtivos(cwd: string) {
   return listarArquivosRecursivo(uploadsDir())
     .map((arquivo) => relativoUpload(path.relative(cwd, arquivo)))
-    .filter((arquivo) => arquivo.startsWith("uploads/") && !arquivo.startsWith("uploads/quarentena/"));
+    .filter(
+      (arquivo) =>
+        arquivo.startsWith("uploads/") &&
+        !arquivo.startsWith("uploads/quarentena/"),
+    );
 }
 
 function listarArquivosQuarentena(cwd: string) {
@@ -156,15 +168,43 @@ async function dadosIntegridade() {
   const cwd = process.cwd();
   const backupsDir = path.resolve(cwd, "backups");
 
-  const [ocorrenciaAnexos, eventoAnexos, riscosFotos, quadraAnexos, sugestoes, usuariosComFoto, sessoesAtivas, sessoesExpiradas, falhasLoginHoje] = await Promise.all([
-    prisma.anexoOcorrencia.findMany({ include: { ocorrencia: { select: { codigo: true, unidade: true } } } }),
-    prisma.anexoEvento.findMany({ include: { evento: { select: { codigo: true, unidade: true } } } }),
-    prisma.fotoRisco.findMany({ include: { analiseRisco: { select: { codigo: true, unidade: true } } } }),
-    prisma.quadraSegurancaAnexo.findMany({ include: { container: { select: { numeroContainer: true, unidade: true } } } }),
-    prisma.sugestaoMelhoria.findMany({ where: { printTela: { not: null } }, select: { id: true, printTela: true, unidade: true } }),
-    prisma.usuario.findMany({ where: { fotoPerfil: { not: null } }, select: { id: true, nome: true, fotoPerfil: true, unidade: true } }),
+  const [
+    ocorrenciaAnexos,
+    eventoAnexos,
+    riscosFotos,
+    quadraAnexos,
+    sugestoes,
+    usuariosComFoto,
+    sessoesAtivas,
+    sessoesExpiradas,
+    falhasLoginHoje,
+  ] = await Promise.all([
+    prisma.anexoOcorrencia.findMany({
+      include: { ocorrencia: { select: { codigo: true, unidade: true } } },
+    }),
+    prisma.anexoEvento.findMany({
+      include: { evento: { select: { codigo: true, unidade: true } } },
+    }),
+    prisma.fotoRisco.findMany({
+      include: { analiseRisco: { select: { codigo: true, unidade: true } } },
+    }),
+    prisma.quadraSegurancaAnexo.findMany({
+      include: {
+        container: { select: { numeroContainer: true, unidade: true } },
+      },
+    }),
+    prisma.sugestaoMelhoria.findMany({
+      where: { printTela: { not: null } },
+      select: { id: true, printTela: true, unidade: true },
+    }),
+    prisma.usuario.findMany({
+      where: { fotoPerfil: { not: null } },
+      select: { id: true, nome: true, fotoPerfil: true, unidade: true },
+    }),
     prisma.sessaoUsuario.count({ where: { status: "ATIVA" } }),
-    prisma.sessaoUsuario.count({ where: { status: { in: ["ENCERRADA", "DESCONECTADA", "EXPIRADA"] } } }),
+    prisma.sessaoUsuario.count({
+      where: { status: { in: ["ENCERRADA", "DESCONECTADA", "EXPIRADA"] } },
+    }),
     prisma.logAuditoria.count({
       where: {
         createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
@@ -174,38 +214,108 @@ async function dadosIntegridade() {
   ]);
 
   const registros = [
-    ...ocorrenciaAnexos.map((item) => ({ modulo: "Ocorrencia", id: item.id, caminho: item.caminho, hash: item.hashArquivo, unidade: item.ocorrencia.unidade, codigo: item.ocorrencia.codigo })),
-    ...eventoAnexos.map((item) => ({ modulo: "Evento", id: item.id, caminho: item.caminho, hash: item.hashArquivo, unidade: item.evento.unidade, codigo: item.evento.codigo })),
-    ...riscosFotos.map((item) => ({ modulo: "Risco", id: item.id, caminho: item.caminho, hash: null, unidade: item.analiseRisco.unidade, codigo: item.analiseRisco.codigo })),
-    ...quadraAnexos.map((item) => ({ modulo: "Quadra", id: item.id, caminho: item.caminho, hash: item.hashArquivo, unidade: item.container.unidade, codigo: item.container.numeroContainer })),
-    ...sugestoes.map((item) => ({ modulo: "Sugestao", id: item.id, caminho: item.printTela || "", hash: null, unidade: item.unidade, codigo: `Sugestao ${item.id}` })),
-    ...usuariosComFoto.map((item) => ({ modulo: "Perfil", id: item.id, caminho: item.fotoPerfil || "", hash: "foto-perfil", unidade: item.unidade, codigo: item.nome })),
+    ...ocorrenciaAnexos.map((item) => ({
+      modulo: "Ocorrencia",
+      id: item.id,
+      caminho: item.caminho,
+      hash: item.hashArquivo,
+      unidade: item.ocorrencia.unidade,
+      codigo: item.ocorrencia.codigo,
+    })),
+    ...eventoAnexos.map((item) => ({
+      modulo: "Evento",
+      id: item.id,
+      caminho: item.caminho,
+      hash: item.hashArquivo,
+      unidade: item.evento.unidade,
+      codigo: item.evento.codigo,
+    })),
+    ...riscosFotos.map((item) => ({
+      modulo: "Risco",
+      id: item.id,
+      caminho: item.caminho,
+      hash: null,
+      unidade: item.analiseRisco.unidade,
+      codigo: item.analiseRisco.codigo,
+    })),
+    ...quadraAnexos.map((item) => ({
+      modulo: "Quadra",
+      id: item.id,
+      caminho: item.caminho,
+      hash: item.hashArquivo,
+      unidade: item.container.unidade,
+      codigo: item.container.numeroContainer,
+    })),
+    ...sugestoes.map((item) => ({
+      modulo: "Sugestao",
+      id: item.id,
+      caminho: item.printTela || "",
+      hash: null,
+      unidade: item.unidade,
+      codigo: `Sugestao ${item.id}`,
+    })),
+    ...usuariosComFoto.map((item) => ({
+      modulo: "Perfil",
+      id: item.id,
+      caminho: item.fotoPerfil || "",
+      hash: "foto-perfil",
+      unidade: item.unidade,
+      codigo: item.nome,
+    })),
   ];
 
   const arquivosDisco = listarArquivosUploadsAtivos(cwd);
-  const caminhosBanco = new Set(registros.map((item) => relativoUpload(item.caminho)));
-  const arquivosOrfaos = arquivosDisco.filter((arquivo) => !caminhosBanco.has(arquivo));
-  const arquivosAusentes = registros.filter((item) => item.caminho && !fs.existsSync(caminhoAbsolutoUpload(item.caminho)));
+  const caminhosBanco = new Set(
+    registros.map((item) => relativoUpload(item.caminho)),
+  );
+  const arquivosOrfaos = arquivosDisco.filter(
+    (arquivo) => !caminhosBanco.has(arquivo),
+  );
+  const arquivosAusentes = registros.filter(
+    (item) =>
+      item.caminho && !fs.existsSync(caminhoAbsolutoUpload(item.caminho)),
+  );
   const semHash = registros.filter((item) => !item.hash);
   const arquivosQuarentena = listarArquivosQuarentena(cwd);
   const backups = fs.existsSync(backupsDir)
-    ? fs.readdirSync(backupsDir)
+    ? fs
+        .readdirSync(backupsDir)
         .filter((arquivo) => arquivo.endsWith(".db"))
         .map((arquivo) => {
           const stat = fs.statSync(path.join(backupsDir, arquivo));
-          return { arquivo, tamanhoMb: tamanhoMb(stat.size), criadoEm: stat.mtime };
+          return {
+            arquivo,
+            tamanhoMb: tamanhoMb(stat.size),
+            criadoEm: stat.mtime,
+          };
         })
         .sort((a, b) => b.criadoEm.getTime() - a.criadoEm.getTime())
     : [];
 
   const alertas = [
-    ...(jwtSecret() === "jetguard_dev_secret_change_me" ? ["JWT_SECRET esta usando valor padrao de desenvolvimento."] : []),
-    ...(process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*" ? [] : ["CORS_ORIGIN nao esta restrito ao dominio oficial."]),
+    ...(jwtSecret() === "jetguard_dev_secret_change_me"
+      ? ["JWT_SECRET esta usando valor padrao de desenvolvimento."]
+      : []),
+    ...(process.env.CORS_ORIGIN && process.env.CORS_ORIGIN !== "*"
+      ? []
+      : ["CORS_ORIGIN nao esta restrito ao dominio oficial."]),
     ...(backups.length === 0 ? ["Nenhum backup local encontrado."] : []),
-    ...(arquivosAusentes.length > 0 ? [`${arquivosAusentes.length} registro(s) apontam para arquivo ausente.`] : []),
-    ...(arquivosOrfaos.length > 0 ? [`${arquivosOrfaos.length} arquivo(s) em uploads nao possuem vinculo no banco.`] : []),
-    ...(semHash.length > 0 ? [`${semHash.length} evidencia(s) ainda sem hash registrado.`] : []),
-    ...(arquivosQuarentena.length > 0 ? [`${arquivosQuarentena.length} arquivo(s) aguardam decisao na quarentena.`] : []),
+    ...(arquivosAusentes.length > 0
+      ? [`${arquivosAusentes.length} registro(s) apontam para arquivo ausente.`]
+      : []),
+    ...(arquivosOrfaos.length > 0
+      ? [
+          `${arquivosOrfaos.length} arquivo(s) em uploads nao possuem vinculo no banco.`,
+        ]
+      : []),
+    ...(semHash.length > 0
+      ? [`${semHash.length} evidencia(s) ainda sem hash registrado.`]
+      : []),
+    ...(arquivosQuarentena.length > 0
+      ? [
+          `${arquivosQuarentena.length} arquivo(s) aguardam decisao na quarentena.`,
+        ]
+      : []),
   ];
 
   return {
@@ -251,20 +361,27 @@ export async function integridadeSistema(_req: AuthRequest, res: Response) {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao consultar integridade do sistema" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao consultar integridade do sistema" });
   }
 }
 
 function exigirSuperAdmin(req: AuthRequest, res: Response) {
   if (req.usuarioPerfil !== "SUPER_ADMIN") {
-    res.status(403).json({ error: "Apenas Super Admin pode executar esta acao." });
+    res
+      .status(403)
+      .json({ error: "Apenas Super Admin pode executar esta acao." });
     return false;
   }
 
   return true;
 }
 
-export async function moverOrfaosParaQuarentena(req: AuthRequest, res: Response) {
+export async function moverOrfaosParaQuarentena(
+  req: AuthRequest,
+  res: Response,
+) {
   if (!exigirSuperAdmin(req, res)) return;
 
   try {
@@ -292,7 +409,11 @@ export async function moverOrfaosParaQuarentena(req: AuthRequest, res: Response)
         continue;
       }
 
-      const destino = path.join(caminhoQuarentena(), lote, relativo.replace(/^uploads\//, ""));
+      const destino = path.join(
+        caminhoQuarentena(),
+        lote,
+        relativo.replace(/^uploads\//, ""),
+      );
       fs.mkdirSync(path.dirname(destino), { recursive: true });
       fs.renameSync(origem, destino);
       movidos.push(relativo);
@@ -312,16 +433,23 @@ export async function moverOrfaosParaQuarentena(req: AuthRequest, res: Response)
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao mover arquivos para quarentena" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao mover arquivos para quarentena" });
   }
 }
 
-export async function excluirArquivosQuarentena(req: AuthRequest, res: Response) {
+export async function excluirArquivosQuarentena(
+  req: AuthRequest,
+  res: Response,
+) {
   if (!exigirSuperAdmin(req, res)) return;
 
   try {
     const cwd = process.cwd();
-    const quarentena = listarArquivosQuarentena(cwd).map((item) => item.arquivo);
+    const quarentena = listarArquivosQuarentena(cwd).map(
+      (item) => item.arquivo,
+    );
     const solicitados = Array.isArray(req.body?.arquivos)
       ? req.body.arquivos.map((item: unknown) => String(item))
       : quarentena;
@@ -332,7 +460,11 @@ export async function excluirArquivosQuarentena(req: AuthRequest, res: Response)
 
     for (const arquivo of solicitados) {
       const relativo = relativoUpload(String(arquivo));
-      if (!relativo.startsWith("uploads/quarentena/") || relativo.includes("..") || !permitidos.has(relativo)) {
+      if (
+        !relativo.startsWith("uploads/quarentena/") ||
+        relativo.includes("..") ||
+        !permitidos.has(relativo)
+      ) {
         ignorados.push(String(arquivo));
         continue;
       }
@@ -361,6 +493,8 @@ export async function excluirArquivosQuarentena(req: AuthRequest, res: Response)
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao excluir arquivos em quarentena" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao excluir arquivos em quarentena" });
   }
 }

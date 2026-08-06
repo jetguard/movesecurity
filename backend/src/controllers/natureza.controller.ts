@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { registrarLog } from "../services/auditoria.service";
 

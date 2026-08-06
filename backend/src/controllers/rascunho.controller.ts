@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 
@@ -40,7 +40,9 @@ export async function buscarRascunho(req: AuthRequest, res: Response) {
   const unidade = req.unidadeAtiva || req.usuarioUnidade || "GJA-T1";
 
   if (!usuarioId || !modulo || !chave) {
-    return res.status(400).json({ error: "Informe módulo e chave do rascunho." });
+    return res
+      .status(400)
+      .json({ error: "Informe módulo e chave do rascunho." });
   }
 
   const rascunho = await prisma.rascunhoFormulario.findUnique({
@@ -64,7 +66,9 @@ export async function salvarRascunho(req: AuthRequest, res: Response) {
   const unidade = req.unidadeAtiva || req.usuarioUnidade || "GJA-T1";
 
   if (!usuarioId || !modulo || !chave) {
-    return res.status(400).json({ error: "Informe módulo e chave do rascunho." });
+    return res
+      .status(400)
+      .json({ error: "Informe módulo e chave do rascunho." });
   }
 
   const dadosJson = JSON.stringify(req.body.dados || {});

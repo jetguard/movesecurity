@@ -1,7 +1,18 @@
-import axios from "axios";
+﻿import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
-import { ArrowLeft, CheckCircle2, Clock3, Download, FileCheck2, Maximize2, Pause, Play, RotateCcw, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Clock3,
+  Download,
+  FileCheck2,
+  Maximize2,
+  Pause,
+  Play,
+  RotateCcw,
+  ShieldCheck,
+} from "lucide-react";
 import { formatarNomePessoa, nomePessoaValido } from "../utils/nomePessoa";
 
 type Config = {
@@ -28,11 +39,26 @@ type Integracao = {
 };
 
 const perguntasQuiz = [
-  { texto: "O limite de velocidade dentro da Movecta é de 30 km/h?", correta: false },
+  {
+    texto: "O limite de velocidade dentro da Movecta é de 30 km/h?",
+    correta: false,
+  },
   { texto: "É seguro transitar entre as pilhas de contêiner?", correta: false },
-  { texto: "Em caso de emergência devo descer do meu caminhão e correr pelo pátio de contêiner?", correta: false },
-  { texto: "Após o carregamento e antes de seguir viagem devo efetuar o travamento dos locks do contêiner?", correta: true },
-  { texto: "Meu acesso na Movecta portando armas ou sob efeito de álcool ou substâncias ilícitas é proibido?", correta: true },
+  {
+    texto:
+      "Em caso de emergência devo descer do meu caminhão e correr pelo pátio de contêiner?",
+    correta: false,
+  },
+  {
+    texto:
+      "Após o carregamento e antes de seguir viagem devo efetuar o travamento dos locks do contêiner?",
+    correta: true,
+  },
+  {
+    texto:
+      "Meu acesso na Movecta portando armas ou sob efeito de álcool ou substâncias ilícitas é proibido?",
+    correta: true,
+  },
 ];
 
 const vazio = {
@@ -92,26 +118,38 @@ function cpfValido(cpf: string) {
     const soma = digitos
       .slice(0, tamanho)
       .split("")
-      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+      .reduce(
+        (total, numero, index) =>
+          total + Number(numero) * (tamanho + 1 - index),
+        0,
+      );
     const resto = (soma * 10) % 11;
     return resto === 10 ? 0 : resto;
   };
 
-  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+  return (
+    calcularDigito(9) === Number(digitos[9]) &&
+    calcularDigito(10) === Number(digitos[10])
+  );
 }
 
 function emailValido(email: string) {
   const normalizado = email.trim();
-  if (!normalizado || normalizado.length > 254 || normalizado.includes("..")) return false;
+  if (!normalizado || normalizado.length > 254 || normalizado.includes(".."))
+    return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
 }
 
 function mascararTelefone(valor: string) {
   const digitos = apenasDigitos(valor).slice(0, 11);
   if (digitos.length <= 10) {
-    return digitos.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d)/, "$1-$2");
+    return digitos
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d)/, "$1-$2");
   }
-  return digitos.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d)/, "$1-$2");
+  return digitos
+    .replace(/(\d{2})(\d)/, "($1) $2")
+    .replace(/(\d{5})(\d)/, "$1-$2");
 }
 
 function formatarTempo(segundos: number) {
@@ -122,7 +160,9 @@ function formatarTempo(segundos: number) {
 }
 
 function integracaoConcluido(integracao?: Integracao | null) {
-  return String(integracao?.status || "").toLowerCase().startsWith("conclu");
+  return String(integracao?.status || "")
+    .toLowerCase()
+    .startsWith("conclu");
 }
 
 export default function IntegracaoTerminalPublico() {
@@ -130,7 +170,9 @@ export default function IntegracaoTerminalPublico() {
   const [etapa, setEtapa] = useState(0);
   const [form, setForm] = useState(vazio);
   const [integracao, setIntegracao] = useState<Integracao | null>(null);
-  const [respostas, setRespostas] = useState<Array<boolean | null>>(perguntasQuiz.map(() => null));
+  const [respostas, setRespostas] = useState<Array<boolean | null>>(
+    perguntasQuiz.map(() => null),
+  );
   const [questoesIncorretas, setQuestoesIncorretas] = useState<number[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [mensagem, setMensagem] = useState("");
@@ -149,7 +191,9 @@ export default function IntegracaoTerminalPublico() {
   const ultimoEnvioRef = useRef(0);
 
   useEffect(() => {
-    axios.get("/api/public/integracao-terminal/config").then((response) => setConfig(response.data));
+    axios
+      .get("/api/public/integracao-terminal/config")
+      .then((response) => setConfig(response.data));
   }, []);
 
   useEffect(() => {
@@ -165,7 +209,11 @@ export default function IntegracaoTerminalPublico() {
     else if (integracao.videoConcluido) setEtapa(3);
   }, [integracao]);
 
-  const restante = useMemo(() => Math.max(0, (duracao || integracao?.duracaoSegundos || 0) - tempoAtual), [duracao, tempoAtual, integracao]);
+  const restante = useMemo(
+    () =>
+      Math.max(0, (duracao || integracao?.duracaoSegundos || 0) - tempoAtual),
+    [duracao, tempoAtual, integracao],
+  );
 
   async function salvarProgresso(videoConcluido = false) {
     if (!integracao) return;
@@ -173,12 +221,17 @@ export default function IntegracaoTerminalPublico() {
     if (!videoConcluido && agora - ultimoEnvioRef.current < 5000) return;
     ultimoEnvioRef.current = agora;
     const progressoSegundos = Math.floor(maiorTempoRef.current);
-    const duracaoSegundos = Math.floor(duracao || videoRef.current?.duration || 0);
-    const response = await axios.put(`/api/public/integracao-terminal/${integracao.token}/progresso`, {
-      progressoSegundos,
-      duracaoSegundos,
-      videoConcluido,
-    });
+    const duracaoSegundos = Math.floor(
+      duracao || videoRef.current?.duration || 0,
+    );
+    const response = await axios.put(
+      `/api/public/integracao-terminal/${integracao.token}/progresso`,
+      {
+        progressoSegundos,
+        duracaoSegundos,
+        videoConcluido,
+      },
+    );
     setIntegracao(response.data.integracao);
   }
 
@@ -196,10 +249,15 @@ export default function IntegracaoTerminalPublico() {
   function alterar(nome: keyof typeof vazio, valor: string) {
     if (nome === "nomeCompleto") {
       if (valor.includes("@")) {
-        setMensagem("Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.");
+        setMensagem(
+          "Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.",
+        );
         return;
       }
-      setForm((atual) => ({ ...atual, nomeCompleto: formatarNomePessoa(valor) }));
+      setForm((atual) => ({
+        ...atual,
+        nomeCompleto: formatarNomePessoa(valor),
+      }));
       return;
     }
     if (nome === "cpf") valor = mascararCpf(valor);
@@ -210,7 +268,9 @@ export default function IntegracaoTerminalPublico() {
   async function iniciar(event: FormEvent) {
     event.preventDefault();
     if (!nomePessoaValido(form.nomeCompleto)) {
-      setMensagem("Informe nome completo válido, sem e-mail, com nome e sobrenome.");
+      setMensagem(
+        "Informe nome completo válido, sem e-mail, com nome e sobrenome.",
+      );
       return;
     }
     if (!cpfValido(form.cpf)) {
@@ -224,17 +284,28 @@ export default function IntegracaoTerminalPublico() {
     setCarregando(true);
     setMensagem("");
     try {
-      const response = await axios.post("/api/public/integracao-terminal/iniciar", form);
+      const response = await axios.post(
+        "/api/public/integracao-terminal/iniciar",
+        form,
+      );
       setIntegracao(response.data.integracao);
       if (response.data.concluido) {
-        setMensagem("Integracao ja concluida. Certificado disponivel para download.");
+        setMensagem(
+          "Integracao ja concluida. Certificado disponivel para download.",
+        );
         setEtapa(5);
       } else {
-        setMensagem(response.data.emAndamento ? "Integracao em andamento encontrada. Voce pode continuar de onde parou." : "Cadastro registrado. Inicie o video de orientacao.");
+        setMensagem(
+          response.data.emAndamento
+            ? "Integracao em andamento encontrada. Voce pode continuar de onde parou."
+            : "Cadastro registrado. Inicie o video de orientacao.",
+        );
         setEtapa(2);
       }
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Nao foi possivel iniciar a integracao.");
+      setMensagem(
+        error.response?.data?.error || "Nao foi possivel iniciar a integracao.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -272,13 +343,16 @@ export default function IntegracaoTerminalPublico() {
       setVideoErro(false);
       setVideoCarregando(video.readyState < 3);
       video.playbackRate = 1;
-      video.play().then(() => {
-        setTocando(true);
-        setVideoCarregando(false);
-      }).catch(() => {
-        setVideoCarregando(false);
-        setMensagem("Nao foi possivel iniciar o video.");
-      });
+      video
+        .play()
+        .then(() => {
+          setTocando(true);
+          setVideoCarregando(false);
+        })
+        .catch(() => {
+          setVideoCarregando(false);
+          setMensagem("Nao foi possivel iniciar o video.");
+        });
     } else {
       video.pause();
       setTocando(false);
@@ -289,18 +363,30 @@ export default function IntegracaoTerminalPublico() {
   function abrirTelaCheia() {
     const alvo = videoFrameRef.current || videoRef.current;
     if (!alvo) return;
-    const requestFullscreen = alvo.requestFullscreen || (alvo as any).webkitRequestFullscreen;
+    const requestFullscreen =
+      alvo.requestFullscreen || (alvo as any).webkitRequestFullscreen;
     if (!requestFullscreen) {
       setMensagem("Tela cheia nao disponivel neste navegador.");
       return;
     }
-    requestFullscreen.call(alvo).catch(() => setMensagem("Nao foi possivel abrir o video em tela cheia."));
+    requestFullscreen
+      .call(alvo)
+      .catch(() =>
+        setMensagem("Nao foi possivel abrir o video em tela cheia."),
+      );
   }
 
   function finalizarVideo() {
-    maiorTempoRef.current = Math.max(maiorTempoRef.current, videoRef.current?.duration || tempoAtual);
+    maiorTempoRef.current = Math.max(
+      maiorTempoRef.current,
+      videoRef.current?.duration || tempoAtual,
+    );
     setTocando(false);
-    salvarProgresso(true).then(() => setEtapa(3)).catch(() => setMensagem("Nao foi possivel registrar a conclusao do video."));
+    salvarProgresso(true)
+      .then(() => setEtapa(3))
+      .catch(() =>
+        setMensagem("Nao foi possivel registrar a conclusao do video."),
+      );
   }
 
   async function enviarQuiz() {
@@ -313,18 +399,26 @@ export default function IntegracaoTerminalPublico() {
     setMensagem("");
     setQuestoesIncorretas([]);
     try {
-      const response = await axios.post(`/api/public/integracao-terminal/${integracao.token}/quiz`, {
-        respostas,
-      });
+      const response = await axios.post(
+        `/api/public/integracao-terminal/${integracao.token}/quiz`,
+        {
+          respostas,
+        },
+      );
       setIntegracao(response.data.integracao);
       setEtapa(4);
       setMensagem("Quiz aprovado. Registre a declaracao e assinatura.");
     } catch (error: any) {
       const incorretas = Array.isArray(error.response?.data?.questoesIncorretas)
-        ? error.response.data.questoesIncorretas.map((item: { numero: number }) => item.numero).filter(Number.isFinite)
+        ? error.response.data.questoesIncorretas
+            .map((item: { numero: number }) => item.numero)
+            .filter(Number.isFinite)
         : [];
       setQuestoesIncorretas(incorretas);
-      setMensagem(error.response?.data?.error || "Revise as respostas do quiz para continuar.");
+      setMensagem(
+        error.response?.data?.error ||
+          "Revise as respostas do quiz para continuar.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -376,15 +470,20 @@ export default function IntegracaoTerminalPublico() {
     setCarregando(true);
     try {
       const assinaturaDataUrl = canvasRef.current!.toDataURL("image/png");
-      const response = await axios.post(`/api/public/integracao-terminal/${integracao.token}/concluir`, {
-        aceiteDeclaracao: aceite,
-        assinaturaDataUrl,
-      });
+      const response = await axios.post(
+        `/api/public/integracao-terminal/${integracao.token}/concluir`,
+        {
+          aceiteDeclaracao: aceite,
+          assinaturaDataUrl,
+        },
+      );
       setIntegracao(response.data.integracao);
       setEtapa(5);
       setMensagem("Certificado emitido com sucesso.");
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Nao foi possivel emitir o certificado.");
+      setMensagem(
+        error.response?.data?.error || "Nao foi possivel emitir o certificado.",
+      );
     } finally {
       setCarregando(false);
     }
@@ -394,39 +493,69 @@ export default function IntegracaoTerminalPublico() {
     <main className="treinamento-terminal-publico integracao-terminal-publico relative min-h-screen overflow-hidden bg-[#eef0f7] text-slate-950">
       <picture className="fixed inset-0 z-0 block h-full w-full">
         <source media="(min-width: 768px)" srcSet={fundoDesktopUrl} />
-        <img src={fundoMobileUrl} alt="" aria-hidden="true" className="h-full w-full object-cover object-center" />
+        <img
+          src={fundoMobileUrl}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover object-center"
+        />
       </picture>
       <div className="fixed inset-0 z-0 bg-white/35" />
       <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
         <div className="terminal-panel mb-5 flex items-center justify-between gap-4 rounded-2xl border px-4 py-3 shadow-xl sm:mb-8 sm:px-5 sm:py-4">
           <div>
-            <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">Movecta</p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">{config?.titulo || "Integração de Motoristas"}</h1>
+            <p className="terminal-eyebrow text-xs font-black uppercase text-blue-700">
+              Movecta
+            </p>
+            <h1 className="mt-2 text-2xl font-black tracking-tight sm:text-3xl">
+              {config?.titulo || "Integração de Motoristas"}
+            </h1>
           </div>
           <ShieldCheck className="h-9 w-9 shrink-0 text-blue-600 sm:h-10 sm:w-10" />
         </div>
 
         <div className="mb-5 grid grid-cols-2 gap-2 sm:mb-6 sm:grid-cols-5 sm:gap-3">
-          {["Orientações", "Dados", "Vídeo", "Quiz", "Assinatura"].map((item, index) => (
-            <div key={item} className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "terminal-step-active" : "terminal-step-idle"}`}>
-              {index + 1}. {item}
-            </div>
-          ))}
+          {["Orientações", "Dados", "Vídeo", "Quiz", "Assinatura"].map(
+            (item, index) => (
+              <div
+                key={item}
+                className={`terminal-step rounded-2xl border px-3 py-2 text-xs font-black shadow-lg shadow-slate-900/10 sm:px-4 sm:py-3 sm:text-sm ${etapa >= index ? "terminal-step-active" : "terminal-step-idle"}`}
+              >
+                {index + 1}. {item}
+              </div>
+            ),
+          )}
         </div>
 
-        {mensagem && <div className="terminal-message mb-5 rounded-xl border px-4 py-3 text-sm font-black shadow-lg">{mensagem}</div>}
+        {mensagem && (
+          <div className="terminal-message mb-5 rounded-xl border px-4 py-3 text-sm font-black shadow-lg">
+            {mensagem}
+          </div>
+        )}
 
         {etapa === 0 && (
           <div className={painelClasse()}>
-            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">{config?.portaria || "Portaria de acesso"}</p>
-            <h2 className="mt-3 text-xl font-black sm:text-2xl">Antes de iniciar</h2>
+            <p className="terminal-eyebrow text-sm font-black uppercase text-blue-700">
+              {config?.portaria || "Portaria de acesso"}
+            </p>
+            <h2 className="mt-3 text-xl font-black sm:text-2xl">
+              Antes de iniciar
+            </h2>
             <div className="mt-5 grid gap-4">
               {(config?.resumo || []).map((texto) => (
-                <p key={texto} className="terminal-info-card rounded-xl border p-4 text-sm font-bold leading-6 shadow-sm">{texto}</p>
+                <p
+                  key={texto}
+                  className="terminal-info-card rounded-xl border p-4 text-sm font-bold leading-6 shadow-sm"
+                >
+                  {texto}
+                </p>
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button onClick={() => setEtapa(1)} className={botaoPrimarioClasse()}>
+              <button
+                onClick={() => setEtapa(1)}
+                className={botaoPrimarioClasse()}
+              >
                 Entendi, avancar
               </button>
             </div>
@@ -435,18 +564,90 @@ export default function IntegracaoTerminalPublico() {
 
         {etapa === 1 && (
           <form onSubmit={iniciar} className={painelClasse()}>
-            <h2 className="text-xl font-black sm:text-2xl">Identificacao do participante</h2>
+            <h2 className="text-xl font-black sm:text-2xl">
+              Identificacao do participante
+            </h2>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <label className={labelClasse()}>Nome completo<input className={`${campoClasse()} mt-2.5`} value={form.nomeCompleto} onChange={(e) => alterar("nomeCompleto", e.target.value)} required /></label>
-              <label className={labelClasse()}>CPF<input className={`${campoClasse()} mt-2.5`} value={form.cpf} onChange={(e) => alterar("cpf", e.target.value)} inputMode="numeric" maxLength={14} aria-invalid={form.cpf.length === 14 && !cpfValido(form.cpf)} title="Digite um CPF valido" required /></label>
-              <label className={labelClasse()}>Data de nascimento<input className={`${campoClasse()} mt-2.5`} type="date" value={form.dataNascimento} onChange={(e) => alterar("dataNascimento", e.target.value)} required /></label>
-              <label className={labelClasse()}>Empresa<input className={`${campoClasse()} mt-2.5`} value={form.empresa} onChange={(e) => alterar("empresa", e.target.value)} required /></label>
-              <label className={labelClasse()}>Funcao/Cargo<input className={`${campoClasse()} mt-2.5`} value={form.cargo} onChange={(e) => alterar("cargo", e.target.value)} required /></label>
-              <label className={labelClasse()}>E-mail<input className={`${campoClasse()} mt-2.5`} type="email" value={form.email} onChange={(e) => alterar("email", e.target.value)} aria-invalid={form.email.length > 0 && !emailValido(form.email)} title="Digite um e-mail válido" required /></label>
-              <label className={labelClasse()}>Telefone / WhatsApp<input className={`${campoClasse()} mt-2.5`} value={form.telefone} onChange={(e) => alterar("telefone", e.target.value)} required /></label>
+              <label className={labelClasse()}>
+                Nome completo
+                <input
+                  className={`${campoClasse()} mt-2.5`}
+                  value={form.nomeCompleto}
+                  onChange={(e) => alterar("nomeCompleto", e.target.value)}
+                  required
+                />
+              </label>
+              <label className={labelClasse()}>
+                CPF
+                <input
+                  className={`${campoClasse()} mt-2.5`}
+                  value={form.cpf}
+                  onChange={(e) => alterar("cpf", e.target.value)}
+                  inputMode="numeric"
+                  maxLength={14}
+                  aria-invalid={form.cpf.length === 14 && !cpfValido(form.cpf)}
+                  title="Digite um CPF valido"
+                  required
+                />
+              </label>
+              <label className={labelClasse()}>
+                Data de nascimento
+                <input
+                  className={`${campoClasse()} mt-2.5`}
+                  type="date"
+                  value={form.dataNascimento}
+                  onChange={(e) => alterar("dataNascimento", e.target.value)}
+                  required
+                />
+              </label>
+              <label className={labelClasse()}>
+                Empresa
+                <input
+                  className={`${campoClasse()} mt-2.5`}
+                  value={form.empresa}
+                  onChange={(e) => alterar("empresa", e.target.value)}
+                  required
+                />
+              </label>
+              <label className={labelClasse()}>
+                Funcao/Cargo
+                <input
+                  className={`${campoClasse()} mt-2.5`}
+                  value={form.cargo}
+                  onChange={(e) => alterar("cargo", e.target.value)}
+                  required
+                />
+              </label>
+              <label className={labelClasse()}>
+                E-mail
+                <input
+                  className={`${campoClasse()} mt-2.5`}
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => alterar("email", e.target.value)}
+                  aria-invalid={
+                    form.email.length > 0 && !emailValido(form.email)
+                  }
+                  title="Digite um e-mail válido"
+                  required
+                />
+              </label>
+              <label className={labelClasse()}>
+                Telefone / WhatsApp
+                <input
+                  className={`${campoClasse()} mt-2.5`}
+                  value={form.telefone}
+                  onChange={(e) => alterar("telefone", e.target.value)}
+                  required
+                />
+              </label>
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(0)} className={botaoSecundarioClasse()}>
+              <button
+                type="button"
+                onClick={() => voltarPara(0)}
+                className={botaoSecundarioClasse()}
+              >
                 <ArrowLeft size={18} /> Voltar para orientacoes
               </button>
               <button disabled={carregando} className={botaoPrimarioClasse()}>
@@ -460,15 +661,22 @@ export default function IntegracaoTerminalPublico() {
           <div className={painelClasse()}>
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-xl font-black sm:text-2xl">Vídeo obrigatório</h2>
-                <p className="mt-1 text-sm font-bold text-slate-900">Use o botao abaixo para reproduzir o video.</p>
+                <h2 className="text-xl font-black sm:text-2xl">
+                  Vídeo obrigatório
+                </h2>
+                <p className="mt-1 text-sm font-bold text-slate-900">
+                  Use o botao abaixo para reproduzir o video.
+                </p>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
                 <Clock3 className="mr-2 inline h-4 w-4 text-blue-700" />
                 Restante: {formatarTempo(restante)}
               </div>
             </div>
-            <div ref={videoFrameRef} className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
+            <div
+              ref={videoFrameRef}
+              className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950"
+            >
               <video
                 ref={videoRef}
                 src={config?.videoUrl}
@@ -483,43 +691,68 @@ export default function IntegracaoTerminalPublico() {
                 onLoadedData={() => setVideoCarregando(false)}
                 onCanPlay={() => setVideoCarregando(false)}
                 onCanPlayThrough={() => setVideoCarregando(false)}
-                onPlay={() => setVideoCarregando((videoRef.current?.readyState || 0) < 3)}
+                onPlay={() =>
+                  setVideoCarregando((videoRef.current?.readyState || 0) < 3)
+                }
                 onPlaying={() => setVideoCarregando(false)}
                 onWaiting={() => setVideoCarregando(true)}
                 onError={() => {
                   setVideoCarregando(false);
                   setVideoErro(true);
                   setTocando(false);
-                  setMensagem("Nao foi possivel carregar o video. Verifique a conexao e tente novamente.");
+                  setMensagem(
+                    "Nao foi possivel carregar o video. Verifique a conexao e tente novamente.",
+                  );
                 }}
                 onTimeUpdate={atualizarTempo}
                 onEnded={finalizarVideo}
-                onRateChange={() => { if (videoRef.current && videoRef.current.playbackRate !== 1) videoRef.current.playbackRate = 1; }}
+                onRateChange={() => {
+                  if (videoRef.current && videoRef.current.playbackRate !== 1)
+                    videoRef.current.playbackRate = 1;
+                }}
                 onDoubleClick={(event) => event.preventDefault()}
                 onSeeking={() => {
-                  if (videoRef.current && videoRef.current.currentTime > maiorTempoRef.current + 1) {
+                  if (
+                    videoRef.current &&
+                    videoRef.current.currentTime > maiorTempoRef.current + 1
+                  ) {
                     videoRef.current.currentTime = maiorTempoRef.current;
                   }
                 }}
               />
               {(videoCarregando || videoErro || (!duracao && !tempoAtual)) && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/78 px-4 text-center text-sm font-black text-white">
-                  {videoErro ? "Não foi possível carregar o vídeo." : "Carregando vídeo..."}
+                  {videoErro
+                    ? "Não foi possível carregar o vídeo."
+                    : "Carregando vídeo..."}
                 </div>
               )}
             </div>
             <div className="mt-5 h-2 overflow-hidden rounded-full bg-slate-800">
-              <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(100, ((tempoAtual || 0) / Math.max(1, duracao || 1)) * 100)}%` }} />
+              <div
+                className="h-full rounded-full bg-blue-500"
+                style={{
+                  width: `${Math.min(100, ((tempoAtual || 0) / Math.max(1, duracao || 1)) * 100)}%`,
+                }}
+              />
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(1)} className={botaoSecundarioClasse()}>
+              <button
+                type="button"
+                onClick={() => voltarPara(1)}
+                className={botaoSecundarioClasse()}
+              >
                 <ArrowLeft size={18} /> Voltar para dados
               </button>
               <button onClick={alternarVideo} className={botaoPrimarioClasse()}>
                 {tocando ? <Pause size={18} /> : <Play size={18} />}
                 {tocando ? "Pausar" : "Continuar"}
               </button>
-              <button type="button" onClick={abrirTelaCheia} className={botaoSecundarioClasse()}>
+              <button
+                type="button"
+                onClick={abrirTelaCheia}
+                className={botaoSecundarioClasse()}
+              >
                 <Maximize2 size={18} /> Tela cheia
               </button>
             </div>
@@ -528,15 +761,26 @@ export default function IntegracaoTerminalPublico() {
 
         {etapa === 3 && integracao && (
           <div className={painelClasse()}>
-            <h2 className="text-xl font-black sm:text-2xl">Quiz de seguranca operacional</h2>
-            <p className="mt-2 text-sm font-bold text-slate-700">Selecione Verdadeiro ou Falso em todas as perguntas para liberar a assinatura.</p>
+            <h2 className="text-xl font-black sm:text-2xl">
+              Quiz de seguranca operacional
+            </h2>
+            <p className="mt-2 text-sm font-bold text-slate-700">
+              Selecione Verdadeiro ou Falso em todas as perguntas para liberar a
+              assinatura.
+            </p>
             <div className="mt-6 grid gap-4">
               {perguntasQuiz.map((pergunta, index) => (
-                <div key={pergunta.texto} className={`terminal-info-card rounded-2xl border p-4 shadow-sm ${questoesIncorretas.includes(index + 1) ? "border-red-400 ring-2 ring-red-300" : ""}`}>
-                  <p className="text-sm font-black text-slate-950">{index + 1}. {pergunta.texto}</p>
+                <div
+                  key={pergunta.texto}
+                  className={`terminal-info-card rounded-2xl border p-4 shadow-sm ${questoesIncorretas.includes(index + 1) ? "border-red-400 ring-2 ring-red-300" : ""}`}
+                >
+                  <p className="text-sm font-black text-slate-950">
+                    {index + 1}. {pergunta.texto}
+                  </p>
                   {questoesIncorretas.includes(index + 1) && (
                     <p className="terminal-quiz-error mt-2 rounded-xl border px-3 py-2 text-sm font-black">
-                      Esta resposta está incorreta. Selecione a outra alternativa para continuar.
+                      Esta resposta está incorreta. Selecione a outra
+                      alternativa para continuar.
                     </p>
                   )}
                   <div className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -547,8 +791,14 @@ export default function IntegracaoTerminalPublico() {
                           key={String(valor)}
                           type="button"
                           onClick={() => {
-                            setRespostas((atuais) => atuais.map((item, posicao) => (posicao === index ? valor : item)));
-                            setQuestoesIncorretas((atuais) => atuais.filter((numero) => numero !== index + 1));
+                            setRespostas((atuais) =>
+                              atuais.map((item, posicao) =>
+                                posicao === index ? valor : item,
+                              ),
+                            );
+                            setQuestoesIncorretas((atuais) =>
+                              atuais.filter((numero) => numero !== index + 1),
+                            );
                           }}
                           className={`terminal-quiz-option rounded-2xl border px-4 py-3 text-sm font-black transition ${selecionado ? "terminal-quiz-option-active shadow-lg shadow-blue-700/20" : "terminal-quiz-option-idle"}`}
                         >
@@ -561,10 +811,19 @@ export default function IntegracaoTerminalPublico() {
               ))}
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(2)} className={botaoSecundarioClasse()}>
+              <button
+                type="button"
+                onClick={() => voltarPara(2)}
+                className={botaoSecundarioClasse()}
+              >
                 <ArrowLeft size={18} /> Voltar para video
               </button>
-              <button type="button" disabled={carregando} onClick={enviarQuiz} className={botaoPrimarioClasse()}>
+              <button
+                type="button"
+                disabled={carregando}
+                onClick={enviarQuiz}
+                className={botaoPrimarioClasse()}
+              >
                 {carregando ? "Validando..." : "Validar respostas"}
               </button>
             </div>
@@ -573,25 +832,59 @@ export default function IntegracaoTerminalPublico() {
 
         {etapa === 4 && integracao && (
           <div className={painelClasse()}>
-            <h2 className="text-xl font-black sm:text-2xl">Declaração e assinatura</h2>
+            <h2 className="text-xl font-black sm:text-2xl">
+              Declaração e assinatura
+            </h2>
             <label className="terminal-info-card mt-5 flex cursor-pointer items-start gap-4 rounded-xl border p-5 text-base font-bold leading-7 shadow-sm sm:text-sm sm:leading-6">
-              <input type="checkbox" className="terminal-acceptance-checkbox mt-0.5 h-8 w-8 shrink-0 accent-blue-600 sm:h-6 sm:w-6" checked={aceite} onChange={(e) => setAceite(e.target.checked)} />
-              <span>Declaro que assisti integralmente ao video, compreendi as orientacoes apresentadas e estou ciente das regras de acesso, seguranca e conduta aplicaveis ao terminal.</span>
+              <input
+                type="checkbox"
+                className="terminal-acceptance-checkbox mt-0.5 h-8 w-8 shrink-0 accent-blue-600 sm:h-6 sm:w-6"
+                checked={aceite}
+                onChange={(e) => setAceite(e.target.checked)}
+              />
+              <span>
+                Declaro que assisti integralmente ao video, compreendi as
+                orientacoes apresentadas e estou ciente das regras de acesso,
+                seguranca e conduta aplicaveis ao terminal.
+              </span>
             </label>
             <div className="terminal-info-card mt-5 rounded-xl border p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between gap-3">
-                <p className="terminal-label text-sm font-extrabold">Assinatura</p>
-                <button type="button" onClick={limparAssinatura} className="terminal-secondary-action inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black">
+                <p className="terminal-label text-sm font-extrabold">
+                  Assinatura
+                </p>
+                <button
+                  type="button"
+                  onClick={limparAssinatura}
+                  className="terminal-secondary-action inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-black"
+                >
                   <RotateCcw size={14} /> Limpar
                 </button>
               </div>
-              <canvas ref={canvasRef} width={900} height={220} className="h-48 w-full touch-none rounded-xl bg-white ring-1 ring-slate-200" onPointerDown={iniciarAssinatura} onPointerMove={desenhar} onPointerUp={() => setAssinando(false)} onPointerLeave={() => setAssinando(false)} />
+              <canvas
+                ref={canvasRef}
+                width={900}
+                height={220}
+                className="h-48 w-full touch-none rounded-xl bg-white ring-1 ring-slate-200"
+                onPointerDown={iniciarAssinatura}
+                onPointerMove={desenhar}
+                onPointerUp={() => setAssinando(false)}
+                onPointerLeave={() => setAssinando(false)}
+              />
             </div>
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => voltarPara(3)} className={botaoSecundarioClasse()}>
+              <button
+                type="button"
+                onClick={() => voltarPara(3)}
+                className={botaoSecundarioClasse()}
+              >
                 <ArrowLeft size={18} /> Voltar para quiz
               </button>
-              <button disabled={carregando} onClick={concluir} className={botaoSucessoClasse()}>
+              <button
+                disabled={carregando}
+                onClick={concluir}
+                className={botaoSucessoClasse()}
+              >
                 <FileCheck2 size={18} /> Emitir certificado
               </button>
             </div>
@@ -601,17 +894,25 @@ export default function IntegracaoTerminalPublico() {
         {etapa === 5 && integracao && (
           <div className={painelClasse("text-center")}>
             <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-600" />
-            <h2 className="mt-4 text-2xl font-black">Integração de Motoristas concluída</h2>
-            <p className="mt-2 text-sm font-bold text-emerald-950">Certificado {integracao.codigo} emitido. O arquivo está disponível para download e o envio ao e-mail cadastrado foi solicitado.</p>
+            <h2 className="mt-4 text-2xl font-black">
+              Integração de Motoristas concluída
+            </h2>
+            <p className="mt-2 text-sm font-bold text-emerald-950">
+              Certificado {integracao.codigo} emitido. O arquivo está disponível
+              para download e o envio ao e-mail cadastrado foi solicitado.
+            </p>
             {integracao.certificadoUrl && (
-              <a href={integracao.certificadoUrl} download className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500">
+              <a
+                href={integracao.certificadoUrl}
+                download
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500"
+              >
                 <Download size={18} /> Baixar certificado
               </a>
             )}
           </div>
         )}
       </section>
-
     </main>
   );
 }

@@ -14,7 +14,14 @@ export async function listarUsuariosMencao(req: AuthRequest, res: Response) {
       ],
     },
     orderBy: { nome: "asc" },
-    select: { id: true, nome: true, apelido: true, email: true, cargo: true, unidade: true },
+    select: {
+      id: true,
+      nome: true,
+      apelido: true,
+      email: true,
+      cargo: true,
+      unidade: true,
+    },
   });
 
   return res.json(usuarios);
@@ -32,8 +39,23 @@ export async function minhasMencoes(req: AuthRequest, res: Response) {
 
 export async function criarMencao(req: AuthRequest, res: Response) {
   try {
-    const { modulo, registroId, codigoRegistro, tituloRegistro, usuarioMencionadoId, tipoMencao, prazo, observacao } = req.body;
-    if (!modulo || !registroId || !codigoRegistro || !tituloRegistro || !usuarioMencionadoId) {
+    const {
+      modulo,
+      registroId,
+      codigoRegistro,
+      tituloRegistro,
+      usuarioMencionadoId,
+      tipoMencao,
+      prazo,
+      observacao,
+    } = req.body;
+    if (
+      !modulo ||
+      !registroId ||
+      !codigoRegistro ||
+      !tituloRegistro ||
+      !usuarioMencionadoId
+    ) {
       return res.status(400).json({ error: "Dados da mencao incompletos." });
     }
 
@@ -87,4 +109,3 @@ export async function contarMencoes(req: AuthRequest, res: Response) {
 
   return res.json({ total });
 }
-

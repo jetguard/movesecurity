@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Activity,
@@ -25,7 +25,13 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { api } from "../services/api";
 import { SkeletonDashboard } from "../components/ui/Skeleton";
-import { podeAdministrar, podeAnalisar, podeSuperAdmin, unidadesPermitidasUsuario, usuarioAtual } from "../utils/permissoes";
+import {
+  podeAdministrar,
+  podeAnalisar,
+  podeSuperAdmin,
+  unidadesPermitidasUsuario,
+  usuarioAtual,
+} from "../utils/permissoes";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type DocumentoCentral = {
@@ -110,10 +116,34 @@ const cardsResumo: Array<{
   cor: string;
   fundo: string;
 }> = [
-  { label: "Total", chave: "total", Icon: FileSearch, cor: "text-blue-600", fundo: "bg-blue-50 dark:bg-blue-500/10" },
-  { label: "Assinados", chave: "assinados", Icon: ShieldCheck, cor: "text-emerald-600", fundo: "bg-emerald-50 dark:bg-emerald-500/10" },
-  { label: "Pendentes", chave: "pendentes", Icon: Filter, cor: "text-amber-600", fundo: "bg-amber-50 dark:bg-amber-500/10" },
-  { label: "Com PDF", chave: "comPdf", Icon: Download, cor: "text-slate-700 dark:text-slate-200", fundo: "bg-slate-100 dark:bg-slate-800" },
+  {
+    label: "Total",
+    chave: "total",
+    Icon: FileSearch,
+    cor: "text-blue-600",
+    fundo: "bg-blue-50 dark:bg-blue-500/10",
+  },
+  {
+    label: "Assinados",
+    chave: "assinados",
+    Icon: ShieldCheck,
+    cor: "text-emerald-600",
+    fundo: "bg-emerald-50 dark:bg-emerald-500/10",
+  },
+  {
+    label: "Pendentes",
+    chave: "pendentes",
+    Icon: Filter,
+    cor: "text-amber-600",
+    fundo: "bg-amber-50 dark:bg-amber-500/10",
+  },
+  {
+    label: "Com PDF",
+    chave: "comPdf",
+    Icon: Download,
+    cor: "text-slate-700 dark:text-slate-200",
+    fundo: "bg-slate-100 dark:bg-slate-800",
+  },
 ];
 
 const filtrosTratativa = [
@@ -149,7 +179,14 @@ function statusNormalizado(valor?: string | null) {
 
 function estaConcluido(valor?: string | null) {
   const status = statusNormalizado(valor);
-  return ["concluido", "concluida", "aprovado", "finalizado", "emitido", "anulado"].includes(status);
+  return [
+    "concluido",
+    "concluida",
+    "aprovado",
+    "finalizado",
+    "emitido",
+    "anulado",
+  ].includes(status);
 }
 
 function estaAprovado(documento: DocumentoCentral) {
@@ -161,23 +198,44 @@ function estaEmRevisao(documento: DocumentoCentral) {
 }
 
 function documentoAguardandoAnalise(documento: DocumentoCentral) {
-  const moduloRelatorio = documento.modulo === "Ocorrencia" || documento.modulo === "Evento";
+  const moduloRelatorio =
+    documento.modulo === "Ocorrencia" || documento.modulo === "Evento";
   if (!moduloRelatorio) return false;
   const status = statusNormalizado(documento.status);
-  return !documento.fluxoStatus && ["aberto", "registrado", "em analise"].includes(status);
+  return (
+    !documento.fluxoStatus &&
+    ["aberto", "registrado", "em analise"].includes(status)
+  );
 }
 
 function estiloPendencia(tom: string, ativo: boolean) {
-  const base = "group rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-lg";
+  const base =
+    "group rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-lg";
   const estilos: Record<string, string> = {
-    amber: ativo ? "border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/15 dark:text-amber-100" : "border-amber-200/70 bg-white text-slate-800 dark:border-amber-500/20 dark:bg-slate-900 dark:text-slate-100",
-    blue: ativo ? "border-blue-400 bg-blue-50 text-blue-900 dark:border-blue-400/50 dark:bg-blue-500/15 dark:text-blue-100" : "border-blue-200/70 bg-white text-slate-800 dark:border-blue-500/20 dark:bg-slate-900 dark:text-slate-100",
-    violet: ativo ? "border-violet-400 bg-violet-50 text-violet-900 dark:border-violet-400/50 dark:bg-violet-500/15 dark:text-violet-100" : "border-violet-200/70 bg-white text-slate-800 dark:border-violet-500/20 dark:bg-slate-900 dark:text-slate-100",
-    orange: ativo ? "border-orange-400 bg-orange-50 text-orange-900 dark:border-orange-400/50 dark:bg-orange-500/15 dark:text-orange-100" : "border-orange-200/70 bg-white text-slate-800 dark:border-orange-500/20 dark:bg-slate-900 dark:text-slate-100",
-    emerald: ativo ? "border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-500/15 dark:text-emerald-100" : "border-emerald-200/70 bg-white text-slate-800 dark:border-emerald-500/20 dark:bg-slate-900 dark:text-slate-100",
-    red: ativo ? "border-red-400 bg-red-50 text-red-900 dark:border-red-400/50 dark:bg-red-500/15 dark:text-red-100" : "border-red-200/70 bg-white text-slate-800 dark:border-red-500/20 dark:bg-slate-900 dark:text-slate-100",
-    rose: ativo ? "border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-400/50 dark:bg-rose-500/15 dark:text-rose-100" : "border-rose-200/70 bg-white text-slate-800 dark:border-rose-500/20 dark:bg-slate-900 dark:text-slate-100",
-    slate: ativo ? "border-slate-400 bg-slate-100 text-slate-900 dark:border-slate-500 dark:bg-slate-800 dark:text-white" : "border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100",
+    amber: ativo
+      ? "border-amber-400 bg-amber-50 text-amber-900 dark:border-amber-400/50 dark:bg-amber-500/15 dark:text-amber-100"
+      : "border-amber-200/70 bg-white text-slate-800 dark:border-amber-500/20 dark:bg-slate-900 dark:text-slate-100",
+    blue: ativo
+      ? "border-blue-400 bg-blue-50 text-blue-900 dark:border-blue-400/50 dark:bg-blue-500/15 dark:text-blue-100"
+      : "border-blue-200/70 bg-white text-slate-800 dark:border-blue-500/20 dark:bg-slate-900 dark:text-slate-100",
+    violet: ativo
+      ? "border-violet-400 bg-violet-50 text-violet-900 dark:border-violet-400/50 dark:bg-violet-500/15 dark:text-violet-100"
+      : "border-violet-200/70 bg-white text-slate-800 dark:border-violet-500/20 dark:bg-slate-900 dark:text-slate-100",
+    orange: ativo
+      ? "border-orange-400 bg-orange-50 text-orange-900 dark:border-orange-400/50 dark:bg-orange-500/15 dark:text-orange-100"
+      : "border-orange-200/70 bg-white text-slate-800 dark:border-orange-500/20 dark:bg-slate-900 dark:text-slate-100",
+    emerald: ativo
+      ? "border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-400/50 dark:bg-emerald-500/15 dark:text-emerald-100"
+      : "border-emerald-200/70 bg-white text-slate-800 dark:border-emerald-500/20 dark:bg-slate-900 dark:text-slate-100",
+    red: ativo
+      ? "border-red-400 bg-red-50 text-red-900 dark:border-red-400/50 dark:bg-red-500/15 dark:text-red-100"
+      : "border-red-200/70 bg-white text-slate-800 dark:border-red-500/20 dark:bg-slate-900 dark:text-slate-100",
+    rose: ativo
+      ? "border-rose-400 bg-rose-50 text-rose-900 dark:border-rose-400/50 dark:bg-rose-500/15 dark:text-rose-100"
+      : "border-rose-200/70 bg-white text-slate-800 dark:border-rose-500/20 dark:bg-slate-900 dark:text-slate-100",
+    slate: ativo
+      ? "border-slate-400 bg-slate-100 text-slate-900 dark:border-slate-500 dark:bg-slate-800 dark:text-white"
+      : "border-slate-200 bg-white text-slate-800 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100",
   };
   return `${base} ${estilos[tom] || estilos.slate}`;
 }
@@ -188,10 +246,14 @@ function statusAssinaturaClasse(status: DocumentoCentral["assinaturaStatus"]) {
 }
 
 function statusTratativaClasse(status?: string | null) {
-  if (status === "Aprovado") return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200";
-  if (status === "Devolvido") return "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200";
-  if (status === "Em Revisao") return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200";
-  if (status === "Aguardando Revisao") return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200";
+  if (status === "Aprovado")
+    return "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-200";
+  if (status === "Devolvido")
+    return "border-red-200 bg-red-50 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-200";
+  if (status === "Em Revisao")
+    return "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200";
+  if (status === "Aguardando Revisao")
+    return "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200";
   return "border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300";
 }
 
@@ -212,7 +274,12 @@ export default function CentralDocumentos() {
   const [anulacoes, setAnulacoes] = useState<SolicitacaoAnulacao[]>([]);
   const [pendencias, setPendencias] = useState<PendenciaOperacional[]>([]);
   const [selecionado, setSelecionado] = useState<DocumentoCentral | null>(null);
-  const [resumo, setResumo] = useState<Resumo>({ total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
+  const [resumo, setResumo] = useState<Resumo>({
+    total: 0,
+    assinados: 0,
+    pendentes: 0,
+    comPdf: 0,
+  });
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
   const [modulo, setModulo] = useState("");
@@ -222,8 +289,12 @@ export default function CentralDocumentos() {
   const [acaoPendente, setAcaoPendente] = useState("");
   const [inicio, setInicio] = useState("");
   const [fim, setFim] = useState("");
-  const [motivoDevolucao, setMotivoDevolucao] = useState("Ajustes solicitados pela revisão documental.");
-  const [motivoReabertura, setMotivoReabertura] = useState("Reabertura para ajuste controlado.");
+  const [motivoDevolucao, setMotivoDevolucao] = useState(
+    "Ajustes solicitados pela revisão documental.",
+  );
+  const [motivoReabertura, setMotivoReabertura] = useState(
+    "Reabertura para ajuste controlado.",
+  );
   const [observacaoAcordo, setObservacaoAcordo] = useState("");
   const [justificativaAnulacao, setJustificativaAnulacao] = useState("");
   const [processandoTratativa, setProcessandoTratativa] = useState(false);
@@ -232,29 +303,51 @@ export default function CentralDocumentos() {
   const unidades = useMemo(() => unidadesPermitidasUsuario(), []);
   const usuario = usuarioAtual();
 
-  const params = useMemo(() => ({
-    busca,
-    modulo,
-    unidade,
-    assinatura,
-    inicio,
-    fim,
-  }), [assinatura, busca, fim, inicio, modulo, unidade]);
+  const params = useMemo(
+    () => ({
+      busca,
+      modulo,
+      unidade,
+      assinatura,
+      inicio,
+      fim,
+    }),
+    [assinatura, busca, fim, inicio, modulo, unidade],
+  );
 
   const carregarDocumentos = useCallback(async () => {
     setCarregando(true);
     try {
-      const [documentosResponse, anulacoesResponse, pendenciasResponse] = await Promise.allSettled([
-        api.get("/documentos", { params }),
-        api.get("/anulacoes"),
-        api.get("/gestao/pendencias"),
-      ]);
-      const dadosDocumentos = documentosResponse.status === "fulfilled" ? documentosResponse.value.data : {};
+      const [documentosResponse, anulacoesResponse, pendenciasResponse] =
+        await Promise.allSettled([
+          api.get("/documentos", { params }),
+          api.get("/anulacoes"),
+          api.get("/gestao/pendencias"),
+        ]);
+      const dadosDocumentos =
+        documentosResponse.status === "fulfilled"
+          ? documentosResponse.value.data
+          : {};
       const lista = dadosDocumentos.documentos || [];
       setDocumentos(lista);
-      setResumo(dadosDocumentos.resumo || { total: 0, assinados: 0, pendentes: 0, comPdf: 0 });
-      setAnulacoes(anulacoesResponse.status === "fulfilled" ? anulacoesResponse.value.data || [] : []);
-      setPendencias(pendenciasResponse.status === "fulfilled" ? pendenciasResponse.value.data || [] : []);
+      setResumo(
+        dadosDocumentos.resumo || {
+          total: 0,
+          assinados: 0,
+          pendentes: 0,
+          comPdf: 0,
+        },
+      );
+      setAnulacoes(
+        anulacoesResponse.status === "fulfilled"
+          ? anulacoesResponse.value.data || []
+          : [],
+      );
+      setPendencias(
+        pendenciasResponse.status === "fulfilled"
+          ? pendenciasResponse.value.data || []
+          : [],
+      );
       setSelecionado(null);
     } finally {
       setCarregando(false);
@@ -291,19 +384,31 @@ export default function CentralDocumentos() {
     }
 
     if (acaoPendente === "assinatura-pendente") {
-      return lista.filter((documento) => documento.assinaturaStatus === "Pendente");
+      return lista.filter(
+        (documento) => documento.assinaturaStatus === "Pendente",
+      );
     }
     if (acaoPendente === "analise-pendente") {
       return lista.filter(documentoAguardandoAnalise);
     }
     if (acaoPendente === "aprovacao-pendente") {
-      return lista.filter((documento) => documento.fluxoStatus === "Aguardando Revisao" || statusNormalizado(documento.status).includes("aguardando aprovacao"));
+      return lista.filter(
+        (documento) =>
+          documento.fluxoStatus === "Aguardando Revisao" ||
+          statusNormalizado(documento.status).includes("aguardando aprovacao"),
+      );
     }
     if (acaoPendente === "investigacao-aberta") {
-      return lista.filter((documento) => documento.modulo === "Investigacao" && !estaConcluido(documento.status));
+      return lista.filter(
+        (documento) =>
+          documento.modulo === "Investigacao" &&
+          !estaConcluido(documento.status),
+      );
     }
     if (acaoPendente === "aguardando-decisao") {
-      return lista.filter((documento) => documento.fluxoStatus === "Aguardando Revisao");
+      return lista.filter(
+        (documento) => documento.fluxoStatus === "Aguardando Revisao",
+      );
     }
     if (acaoPendente === "em-ajuste") {
       return lista.filter((documento) => documento.fluxoStatus === "Devolvido");
@@ -313,45 +418,87 @@ export default function CentralDocumentos() {
     }
     if (acaoPendente === "anulacao-pendente") {
       return lista.filter((documento) =>
-        anulacoes.some((item) => item.modulo === documento.modulo && item.registroId === documento.registroId && item.status === "Pendente")
+        anulacoes.some(
+          (item) =>
+            item.modulo === documento.modulo &&
+            item.registroId === documento.registroId &&
+            item.status === "Pendente",
+        ),
       );
     }
     if (acaoPendente === "ccos-aberto") {
-      return lista.filter((documento) => documento.modulo === "PassagemTurno" && !estaConcluido(documento.status));
+      return lista.filter(
+        (documento) =>
+          documento.modulo === "PassagemTurno" &&
+          !estaConcluido(documento.status),
+      );
     }
     if (acaoPendente === "checklist-aberto") {
-      return lista.filter((documento) => documento.modulo === "ChecklistInspecao" && !estaConcluido(documento.status));
+      return lista.filter(
+        (documento) =>
+          documento.modulo === "ChecklistInspecao" &&
+          !estaConcluido(documento.status),
+      );
     }
     if (acaoPendente === "risco-pendente") {
-      return lista.filter((documento) => documento.modulo === "AnaliseRisco" && !estaConcluido(documento.status));
+      return lista.filter(
+        (documento) =>
+          documento.modulo === "AnaliseRisco" &&
+          !estaConcluido(documento.status),
+      );
     }
     if (acaoPendente === "cftv-critico") {
       return lista.filter((documento) => documento.modulo === "RelatorioCftv");
     }
     if (acaoPendente === "tarefas-atrasadas") {
-      return lista.filter((documento) => ["Devolvido", "Aguardando Revisao"].includes(String(documento.fluxoStatus || "")));
+      return lista.filter((documento) =>
+        ["Devolvido", "Aguardando Revisao"].includes(
+          String(documento.fluxoStatus || ""),
+        ),
+      );
     }
 
     return lista;
   }, [acaoPendente, anulacoes, documentos, tratativa]);
 
-  const resumoTratativas = useMemo(() => ({
-    aguardando: documentos.filter((item) => item.fluxoStatus === "Aguardando Revisao").length,
-    revisao: documentos.filter((item) => item.fluxoStatus === "Em Revisao").length,
-    ajuste: documentos.filter((item) => item.fluxoStatus === "Devolvido").length,
-    aprovados: documentos.filter((item) => item.fluxoStatus === "Aprovado").length,
-  }), [documentos]);
+  const resumoTratativas = useMemo(
+    () => ({
+      aguardando: documentos.filter(
+        (item) => item.fluxoStatus === "Aguardando Revisao",
+      ).length,
+      revisao: documentos.filter((item) => item.fluxoStatus === "Em Revisao")
+        .length,
+      ajuste: documentos.filter((item) => item.fluxoStatus === "Devolvido")
+        .length,
+      aprovados: documentos.filter((item) => item.fluxoStatus === "Aprovado")
+        .length,
+    }),
+    [documentos],
+  );
 
-  const resumoAnulacoes = useMemo(() => ({
-    pendentes: anulacoes.filter((item) => item.status === "Pendente").length,
-    anuladas: anulacoes.filter((item) => item.status === "Anulado").length,
-    recusadas: anulacoes.filter((item) => item.status === "Recusado").length,
-  }), [anulacoes]);
+  const resumoAnulacoes = useMemo(
+    () => ({
+      pendentes: anulacoes.filter((item) => item.status === "Pendente").length,
+      anuladas: anulacoes.filter((item) => item.status === "Anulado").length,
+      recusadas: anulacoes.filter((item) => item.status === "Recusado").length,
+    }),
+    [anulacoes],
+  );
 
   const painelPendencias = useMemo(() => {
-    const pendenciasRisco = pendencias.filter((item) => statusNormalizado(item.modulo).includes("risco") && !estaConcluido(item.status)).length;
-    const tarefasAtrasadas = pendencias.filter((item) => (item.dias ?? 1) < 0).length;
-    const cftvCritico = pendencias.filter((item) => statusNormalizado(item.modulo).includes("camera") || statusNormalizado(item.modulo).includes("cftv")).length;
+    const pendenciasRisco = pendencias.filter(
+      (item) =>
+        statusNormalizado(item.modulo).includes("risco") &&
+        !estaConcluido(item.status),
+    ).length;
+    const tarefasAtrasadas = pendencias.filter(
+      (item) => (item.dias ?? 1) < 0,
+    ).length;
+    const cftvCritico = pendencias.filter(
+      (item) =>
+        statusNormalizado(item.modulo).includes("camera") ||
+        statusNormalizado(item.modulo).includes("cftv"),
+    ).length;
 
     return [
       {
@@ -365,7 +512,11 @@ export default function CentralDocumentos() {
       {
         id: "aprovacao-pendente",
         titulo: "Aguardando aprovacao",
-        valor: documentos.filter((item) => item.fluxoStatus === "Aguardando Revisao" || statusNormalizado(item.status).includes("aguardando aprovacao")).length,
+        valor: documentos.filter(
+          (item) =>
+            item.fluxoStatus === "Aguardando Revisao" ||
+            statusNormalizado(item.status).includes("aguardando aprovacao"),
+        ).length,
         detalhe: "Analise concluida e decisao pendente",
         Icon: ShieldCheck,
         tom: "blue",
@@ -373,7 +524,10 @@ export default function CentralDocumentos() {
       {
         id: "investigacao-aberta",
         titulo: "Investigacoes abertas",
-        valor: documentos.filter((item) => item.modulo === "Investigacao" && !estaConcluido(item.status)).length,
+        valor: documentos.filter(
+          (item) =>
+            item.modulo === "Investigacao" && !estaConcluido(item.status),
+        ).length,
         detalhe: "RI vinculadas em acompanhamento",
         Icon: Search,
         tom: "violet",
@@ -389,7 +543,10 @@ export default function CentralDocumentos() {
       {
         id: "ccos-aberto",
         titulo: "CCOS aberto",
-        valor: documentos.filter((item) => item.modulo === "PassagemTurno" && !estaConcluido(item.status)).length,
+        valor: documentos.filter(
+          (item) =>
+            item.modulo === "PassagemTurno" && !estaConcluido(item.status),
+        ).length,
         detalhe: "Passagem operacional em andamento",
         Icon: ClipboardCheck,
         tom: "emerald",
@@ -397,7 +554,10 @@ export default function CentralDocumentos() {
       {
         id: "checklist-aberto",
         titulo: "CIP aberto",
-        valor: documentos.filter((item) => item.modulo === "ChecklistInspecao" && !estaConcluido(item.status)).length,
+        valor: documentos.filter(
+          (item) =>
+            item.modulo === "ChecklistInspecao" && !estaConcluido(item.status),
+        ).length,
         detalhe: "Inspecoes preventivas pendentes",
         Icon: CheckCircle2,
         tom: "slate",
@@ -413,7 +573,12 @@ export default function CentralDocumentos() {
       {
         id: "risco-pendente",
         titulo: "Riscos ativos",
-        valor: pendenciasRisco || documentos.filter((item) => item.modulo === "AnaliseRisco" && !estaConcluido(item.status)).length,
+        valor:
+          pendenciasRisco ||
+          documentos.filter(
+            (item) =>
+              item.modulo === "AnaliseRisco" && !estaConcluido(item.status),
+          ).length,
         detalhe: "Planos e riscos em aberto",
         Icon: Activity,
         tom: "rose",
@@ -431,20 +596,39 @@ export default function CentralDocumentos() {
 
   const anulacaoSelecionada = useMemo(() => {
     if (!selecionado) return null;
-    return anulacoes.find((item) => item.modulo === selecionado.modulo && item.registroId === selecionado.registroId) || null;
+    return (
+      anulacoes.find(
+        (item) =>
+          item.modulo === selecionado.modulo &&
+          item.registroId === selecionado.registroId,
+      ) || null
+    );
   }, [anulacoes, selecionado]);
 
   const meuAcordoAnulacao = useMemo(() => {
     if (!anulacaoSelecionada || !usuario?.id) return null;
-    return anulacaoSelecionada.acordos.find((acordo) => acordo.analistaId === usuario.id) || null;
+    return (
+      anulacaoSelecionada.acordos.find(
+        (acordo) => acordo.analistaId === usuario.id,
+      ) || null
+    );
   }, [anulacaoSelecionada, usuario?.id]);
 
   const todosAcordosAprovados = anulacaoSelecionada
-    ? anulacaoSelecionada.acordos.length === 0 || anulacaoSelecionada.acordos.every((acordo) => acordo.status === "Aprovado")
+    ? anulacaoSelecionada.acordos.length === 0 ||
+      anulacaoSelecionada.acordos.every(
+        (acordo) => acordo.status === "Aprovado",
+      )
     : false;
 
-  const podeResponderAnulacao = anulacaoSelecionada?.status === "Pendente" && meuAcordoAnulacao?.status === "Pendente";
-  const podeDecidirAnulacao = Boolean(anulacaoSelecionada && podeAdministrar() && anulacaoSelecionada.status === "Pendente");
+  const podeResponderAnulacao =
+    anulacaoSelecionada?.status === "Pendente" &&
+    meuAcordoAnulacao?.status === "Pendente";
+  const podeDecidirAnulacao = Boolean(
+    anulacaoSelecionada &&
+      podeAdministrar() &&
+      anulacaoSelecionada.status === "Pendente",
+  );
 
   async function executarTratativa(documento: DocumentoCentral, acao: string) {
     const moduloTratativa = moduloWorkflow(documento);
@@ -456,14 +640,19 @@ export default function CentralDocumentos() {
     };
 
     if (acao === "aprovar") {
-      const pinOperacional = await solicitarPinOperacional("Informe seu PIN para assinar eletronicamente esta tratativa.");
+      const pinOperacional = await solicitarPinOperacional(
+        "Informe seu PIN para assinar eletronicamente esta tratativa.",
+      );
       if (!pinOperacional) return;
       payload.pinOperacional = pinOperacional;
     }
 
     setProcessandoTratativa(true);
     try {
-      await api.post(`/workflow/${moduloTratativa}/${documento.registroId}`, payload);
+      await api.post(
+        `/workflow/${moduloTratativa}/${documento.registroId}`,
+        payload,
+      );
       await carregarDocumentos();
       alert("Tratativa registrada com sucesso.");
     } finally {
@@ -473,9 +662,12 @@ export default function CentralDocumentos() {
 
   async function registrarAcordoAnulacao(status: string) {
     if (!anulacaoSelecionada) return;
-    const pinOperacional = status === "Aprovado"
-      ? await solicitarPinOperacional("Informe seu PIN para aprovar o acordo de anulação deste documento.")
-      : null;
+    const pinOperacional =
+      status === "Aprovado"
+        ? await solicitarPinOperacional(
+            "Informe seu PIN para aprovar o acordo de anulação deste documento.",
+          )
+        : null;
     if (status === "Aprovado" && !pinOperacional) return;
 
     setProcessandoAnulacao(true);
@@ -495,9 +687,12 @@ export default function CentralDocumentos() {
 
   async function decidirAnulacao(decisao: string) {
     if (!anulacaoSelecionada) return;
-    const pinOperacional = decisao === "Aprovado"
-      ? await solicitarPinOperacional("Informe seu PIN para anular definitivamente este documento.")
-      : null;
+    const pinOperacional =
+      decisao === "Aprovado"
+        ? await solicitarPinOperacional(
+            "Informe seu PIN para anular definitivamente este documento.",
+          )
+        : null;
     if (decisao === "Aprovado" && !pinOperacional) return;
 
     setProcessandoAnulacao(true);
@@ -518,13 +713,15 @@ export default function CentralDocumentos() {
   async function excluirDocumento(documento: DocumentoCentral) {
     if (!podeSuperAdmin()) return;
     const confirmar = window.prompt(
-      `Exclusão definitiva do documento ${documento.protocolo}.\n\nEsta ação remove o relatório e vínculos de assinatura, anulação, menções e comentários.\n\nDigite EXCLUIR para confirmar.`
+      `Exclusão definitiva do documento ${documento.protocolo}.\n\nEsta ação remove o relatório e vínculos de assinatura, anulação, menções e comentários.\n\nDigite EXCLUIR para confirmar.`,
     );
     if (confirmar !== "EXCLUIR") return;
 
     setExcluindoDocumento(true);
     try {
-      await api.delete(`/documentos/${documento.modulo}/${documento.registroId}`);
+      await api.delete(
+        `/documentos/${documento.modulo}/${documento.registroId}`,
+      );
       setSelecionado(null);
       await carregarDocumentos();
       alert("Documento excluído definitivamente com sucesso.");
@@ -536,10 +733,15 @@ export default function CentralDocumentos() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Relatórios e documentos</p>
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Central de Documentos</h1>
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+            Relatórios e documentos
+          </p>
+          <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+            Central de Documentos
+          </h1>
           <p className="mt-1 max-w-3xl text-slate-500 dark:text-slate-400">
-            Mesa documental para consultar protocolos, assinaturas eletrônicas, validações e PDFs emitidos pelo JetGuard.
+            Mesa documental para consultar protocolos, assinaturas eletrônicas,
+            validações e PDFs emitidos pelo JetGuard.
           </p>
         </div>
 
@@ -560,16 +762,24 @@ export default function CentralDocumentos() {
               <Filter className="text-blue-600 dark:text-blue-300" size={18} />
               Filtros
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Refine a consulta documental sem afastar a lista de documentos.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Refine a consulta documental sem afastar a lista de documentos.
+            </p>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
             {documentosTratados.length} encontrados
           </span>
         </div>
 
-        <form onSubmit={aplicarFiltros} className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_170px_190px_170px_190px_145px_145px_auto_auto] xl:items-end">
+        <form
+          onSubmit={aplicarFiltros}
+          className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(220px,1.2fr)_170px_190px_170px_190px_145px_145px_auto_auto] xl:items-end"
+        >
           <label className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-3.5 text-slate-400" size={16} />
+            <Search
+              className="pointer-events-none absolute left-3 top-3.5 text-slate-400"
+              size={16}
+            />
             <input
               value={busca}
               onChange={(event) => setBusca(event.target.value)}
@@ -578,38 +788,87 @@ export default function CentralDocumentos() {
             />
           </label>
 
-          <select value={modulo} onChange={(event) => setModulo(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-            {modulos.map((item) => <option key={item.valor} value={item.valor}>{item.label}</option>)}
+          <select
+            value={modulo}
+            onChange={(event) => setModulo(event.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          >
+            {modulos.map((item) => (
+              <option key={item.valor} value={item.valor}>
+                {item.label}
+              </option>
+            ))}
           </select>
 
-          <select value={unidade} onChange={(event) => setUnidade(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+          <select
+            value={unidade}
+            onChange={(event) => setUnidade(event.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          >
             <option value="">Todas as unidades permitidas</option>
-            {unidades.map((item) => <option key={item} value={item}>{item}</option>)}
+            {unidades.map((item) => (
+              <option key={item} value={item}>
+                {item}
+              </option>
+            ))}
           </select>
 
-          <select value={assinatura} onChange={(event) => setAssinatura(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+          <select
+            value={assinatura}
+            onChange={(event) => setAssinatura(event.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          >
             <option value="">Todas as assinaturas</option>
             <option value="Assinado">Assinados</option>
             <option value="Pendente">Pendentes</option>
           </select>
 
-          <select value={acaoPendente} onChange={(event) => setAcaoPendente(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-            {filtrosAcaoPendente.map((item) => <option key={item.valor} value={item.valor}>{item.label}</option>)}
+          <select
+            value={acaoPendente}
+            onChange={(event) => setAcaoPendente(event.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          >
+            {filtrosAcaoPendente.map((item) => (
+              <option key={item.valor} value={item.valor}>
+                {item.label}
+              </option>
+            ))}
           </select>
 
           <label className="space-y-1">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Data inicial</span>
-            <input type="date" value={inicio} onChange={(event) => setInicio(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Data inicial
+            </span>
+            <input
+              type="date"
+              value={inicio}
+              onChange={(event) => setInicio(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
           </label>
           <label className="space-y-1">
-            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Data final</span>
-            <input type="date" value={fim} onChange={(event) => setFim(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Data final
+            </span>
+            <input
+              type="date"
+              value={fim}
+              onChange={(event) => setFim(event.target.value)}
+              className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
           </label>
 
-          <button type="button" onClick={limparFiltros} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300">
+          <button
+            type="button"
+            onClick={limparFiltros}
+            className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300"
+          >
             Limpar
           </button>
-          <button type="submit" className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500">
+          <button
+            type="submit"
+            className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500"
+          >
             Aplicar
           </button>
         </form>
@@ -617,13 +876,22 @@ export default function CentralDocumentos() {
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {cardsResumo.map(({ label, chave, Icon, cor, fundo }) => (
-          <div key={label} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${fundo} ${cor}`}>
+          <div
+            key={label}
+            className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${fundo} ${cor}`}
+            >
               <Icon size={18} />
             </div>
             <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
-              <p className="text-xl font-bold leading-tight text-slate-900 dark:text-white">{resumo[chave]}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {label}
+              </p>
+              <p className="text-xl font-bold leading-tight text-slate-900 dark:text-white">
+                {resumo[chave]}
+              </p>
             </div>
           </div>
         ))}
@@ -633,10 +901,16 @@ export default function CentralDocumentos() {
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-slate-800">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-black uppercase tracking-wide text-slate-900 dark:text-white">
-              <Activity size={17} className="text-blue-600 dark:text-blue-300" />
+              <Activity
+                size={17}
+                className="text-blue-600 dark:text-blue-300"
+              />
               Pendências inteligentes
             </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Ações que precisam de leitura, decisão, assinatura ou acompanhamento.</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Ações que precisam de leitura, decisão, assinatura ou
+              acompanhamento.
+            </p>
           </div>
           <button
             type="button"
@@ -657,13 +931,17 @@ export default function CentralDocumentos() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-2xl font-black leading-none">{valor}</p>
-                  <p className="mt-1 truncate text-xs font-black uppercase tracking-wide">{titulo}</p>
+                  <p className="mt-1 truncate text-xs font-black uppercase tracking-wide">
+                    {titulo}
+                  </p>
                 </div>
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-slate-950/5 text-slate-700 transition group-hover:scale-105 dark:bg-white/10 dark:text-white">
                   <Icon size={16} />
                 </span>
               </div>
-              <p className="mt-2 line-clamp-1 text-[11px] text-slate-500 dark:text-slate-400">{detalhe}</p>
+              <p className="mt-2 line-clamp-1 text-[11px] text-slate-500 dark:text-slate-400">
+                {detalhe}
+              </p>
             </button>
           ))}
         </div>
@@ -674,15 +952,22 @@ export default function CentralDocumentos() {
           <section className="hidden">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <h2 className="font-bold text-slate-900 dark:text-white">Filtros</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Refine a consulta documental.</p>
+                <h2 className="font-bold text-slate-900 dark:text-white">
+                  Filtros
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Refine a consulta documental.
+                </p>
               </div>
               <Filter className="text-blue-600 dark:text-blue-300" size={20} />
             </div>
 
             <form onSubmit={aplicarFiltros} className="space-y-3">
               <label className="relative block">
-                <Search className="pointer-events-none absolute left-3 top-3.5 text-slate-400" size={16} />
+                <Search
+                  className="pointer-events-none absolute left-3 top-3.5 text-slate-400"
+                  size={16}
+                />
                 <input
                   value={busca}
                   onChange={(event) => setBusca(event.target.value)}
@@ -691,16 +976,36 @@ export default function CentralDocumentos() {
                 />
               </label>
 
-              <select value={modulo} onChange={(event) => setModulo(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                {modulos.map((item) => <option key={item.valor} value={item.valor}>{item.label}</option>)}
+              <select
+                value={modulo}
+                onChange={(event) => setModulo(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              >
+                {modulos.map((item) => (
+                  <option key={item.valor} value={item.valor}>
+                    {item.label}
+                  </option>
+                ))}
               </select>
 
-              <select value={unidade} onChange={(event) => setUnidade(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+              <select
+                value={unidade}
+                onChange={(event) => setUnidade(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              >
                 <option value="">Todas as unidades permitidas</option>
-                {unidades.map((item) => <option key={item} value={item}>{item}</option>)}
+                {unidades.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
               </select>
 
-              <select value={assinatura} onChange={(event) => setAssinatura(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+              <select
+                value={assinatura}
+                onChange={(event) => setAssinatura(event.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+              >
                 <option value="">Todas as assinaturas</option>
                 <option value="Assinado">Assinados</option>
                 <option value="Pendente">Pendentes</option>
@@ -708,20 +1013,41 @@ export default function CentralDocumentos() {
 
               <div className="grid grid-cols-2 gap-3">
                 <label className="space-y-1">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Data inicial</span>
-                  <input type="date" value={inicio} onChange={(event) => setInicio(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Data inicial
+                  </span>
+                  <input
+                    type="date"
+                    value={inicio}
+                    onChange={(event) => setInicio(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  />
                 </label>
                 <label className="space-y-1">
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Data final</span>
-                  <input type="date" value={fim} onChange={(event) => setFim(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    Data final
+                  </span>
+                  <input
+                    type="date"
+                    value={fim}
+                    onChange={(event) => setFim(event.target.value)}
+                    className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  />
                 </label>
               </div>
 
               <div className="grid grid-cols-2 gap-3 pt-1">
-                <button type="button" onClick={limparFiltros} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300">
+                <button
+                  type="button"
+                  onClick={limparFiltros}
+                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-300"
+                >
                   Limpar
                 </button>
-                <button type="submit" className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500">
+                <button
+                  type="submit"
+                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-500"
+                >
                   Aplicar
                 </button>
               </div>
@@ -730,12 +1056,21 @@ export default function CentralDocumentos() {
 
           <section className="hidden">
             {cardsResumo.map(({ label, chave, Icon, cor, fundo }) => (
-              <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-                <div className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${fundo} ${cor}`}>
+              <div
+                key={label}
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+              >
+                <div
+                  className={`mb-3 flex h-10 w-10 items-center justify-center rounded-xl ${fundo} ${cor}`}
+                >
                   <Icon size={20} />
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">{label}</p>
-                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{resumo[chave]}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {label}
+                </p>
+                <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
+                  {resumo[chave]}
+                </p>
               </div>
             ))}
           </section>
@@ -743,16 +1078,35 @@ export default function CentralDocumentos() {
           <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <h2 className="font-bold text-slate-900 dark:text-white">Tratativas</h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Revisões e aprovações no mesmo fluxo documental.</p>
+                <h2 className="font-bold text-slate-900 dark:text-white">
+                  Tratativas
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Revisões e aprovações no mesmo fluxo documental.
+                </p>
               </div>
-              <UserCheck className="text-blue-600 dark:text-blue-300" size={20} />
+              <UserCheck
+                className="text-blue-600 dark:text-blue-300"
+                size={20}
+              />
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="rounded-2xl bg-amber-50 p-3 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200"><b className="block text-lg">{resumoTratativas.aguardando}</b>Aguardando</div>
-              <div className="rounded-2xl bg-blue-50 p-3 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200"><b className="block text-lg">{resumoTratativas.revisao}</b>Em revisão</div>
-              <div className="rounded-2xl bg-red-50 p-3 text-red-700 dark:bg-red-500/10 dark:text-red-200"><b className="block text-lg">{resumoTratativas.ajuste}</b>Em ajuste</div>
-              <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200"><b className="block text-lg">{resumoTratativas.aprovados}</b>Aprovados</div>
+              <div className="rounded-2xl bg-amber-50 p-3 text-amber-700 dark:bg-amber-500/10 dark:text-amber-200">
+                <b className="block text-lg">{resumoTratativas.aguardando}</b>
+                Aguardando
+              </div>
+              <div className="rounded-2xl bg-blue-50 p-3 text-blue-700 dark:bg-blue-500/10 dark:text-blue-200">
+                <b className="block text-lg">{resumoTratativas.revisao}</b>Em
+                revisão
+              </div>
+              <div className="rounded-2xl bg-red-50 p-3 text-red-700 dark:bg-red-500/10 dark:text-red-200">
+                <b className="block text-lg">{resumoTratativas.ajuste}</b>Em
+                ajuste
+              </div>
+              <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-200">
+                <b className="block text-lg">{resumoTratativas.aprovados}</b>
+                Aprovados
+              </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
               {filtrosTratativa.map((item) => (
@@ -772,17 +1126,30 @@ export default function CentralDocumentos() {
                 Solicitações de anulação
               </div>
               <div className="grid grid-cols-3 gap-2">
-                <span><b className="block text-base">{resumoAnulacoes.pendentes}</b>Pendentes</span>
-                <span><b className="block text-base">{resumoAnulacoes.anuladas}</b>Anuladas</span>
-                <span><b className="block text-base">{resumoAnulacoes.recusadas}</b>Recusadas</span>
+                <span>
+                  <b className="block text-base">{resumoAnulacoes.pendentes}</b>
+                  Pendentes
+                </span>
+                <span>
+                  <b className="block text-base">{resumoAnulacoes.anuladas}</b>
+                  Anuladas
+                </span>
+                <span>
+                  <b className="block text-base">{resumoAnulacoes.recusadas}</b>
+                  Recusadas
+                </span>
               </div>
             </div>
           </section>
 
           <section className="order-first overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="border-b border-slate-100 p-4 dark:border-slate-800">
-              <h2 className="font-bold text-slate-900 dark:text-white">Documentos encontrados</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Clique em um documento para abrir a prévia.</p>
+              <h2 className="font-bold text-slate-900 dark:text-white">
+                Documentos encontrados
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Clique em um documento para abrir a prévia.
+              </p>
             </div>
 
             {carregando ? (
@@ -793,7 +1160,11 @@ export default function CentralDocumentos() {
               <div className="max-h-[640px] space-y-2 overflow-y-auto p-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
                 {documentosTratados.map((documento) => {
                   const ativo = selecionado?.id === documento.id;
-                  const anulacaoDocumento = anulacoes.find((item) => item.modulo === documento.modulo && item.registroId === documento.registroId);
+                  const anulacaoDocumento = anulacoes.find(
+                    (item) =>
+                      item.modulo === documento.modulo &&
+                      item.registroId === documento.registroId,
+                  );
                   return (
                     <button
                       key={documento.id}
@@ -807,8 +1178,12 @@ export default function CentralDocumentos() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate font-bold text-slate-900 dark:text-white">{documento.protocolo}</p>
-                          <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">{documento.titulo}</p>
+                          <p className="truncate font-bold text-slate-900 dark:text-white">
+                            {documento.protocolo}
+                          </p>
+                          <p className="mt-1 line-clamp-2 text-xs text-slate-500 dark:text-slate-400">
+                            {documento.titulo}
+                          </p>
                         </div>
                         <span className="shrink-0 rounded-full bg-slate-900 px-2 py-1 text-[10px] font-bold text-white dark:bg-slate-700">
                           {documento.tipo}
@@ -820,10 +1195,14 @@ export default function CentralDocumentos() {
                           <CalendarDays size={12} />
                           {formatarData(documento.emitidoEm)}
                         </span>
-                        <span className={`rounded-full border px-2 py-0.5 font-bold ${statusAssinaturaClasse(documento.assinaturaStatus)}`}>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 font-bold ${statusAssinaturaClasse(documento.assinaturaStatus)}`}
+                        >
                           {documento.assinaturaStatus}
                         </span>
-                        <span className={`rounded-full border px-2 py-0.5 font-bold ${statusTratativaClasse(documento.fluxoStatus)}`}>
+                        <span
+                          className={`rounded-full border px-2 py-0.5 font-bold ${statusTratativaClasse(documento.fluxoStatus)}`}
+                        >
                           {documento.fluxoStatus || "Sem tratativa"}
                         </span>
                         {anulacaoDocumento && (
@@ -852,30 +1231,52 @@ export default function CentralDocumentos() {
               <div className="border-b border-slate-100 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-950">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">{selecionado.tipo}</p>
-                    <h2 className="mt-1 truncate text-2xl font-bold text-slate-900 dark:text-white">{selecionado.protocolo}</h2>
-                    <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">{selecionado.titulo}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+                      {selecionado.tipo}
+                    </p>
+                    <h2 className="mt-1 truncate text-2xl font-bold text-slate-900 dark:text-white">
+                      {selecionado.protocolo}
+                    </h2>
+                    <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
+                      {selecionado.titulo}
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap gap-2">
                     {selecionado.pdfUrl && (
                       <>
-                        <a href={selecionado.pdfUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700">
+                        <a
+                          href={selecionado.pdfUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
+                        >
                           <Maximize2 size={16} />
                           Abrir
                         </a>
-                        <a href={selecionado.pdfUrl} download className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200">
+                        <a
+                          href={selecionado.pdfUrl}
+                          download
+                          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition hover:border-blue-300 hover:text-blue-700 dark:border-slate-700 dark:text-slate-200"
+                        >
                           <Download size={16} />
                           Baixar
                         </a>
                       </>
                     )}
-                    {selecionado.validacaoUrl && selecionado.assinaturaStatus === "Assinado" && (
-                      <a href={selecionado.validacaoUrl} target="_blank" rel="noreferrer" title="Abre a página pública de validação da assinatura eletrônica" className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-200 dark:hover:bg-emerald-500/10">
-                        <ExternalLink size={16} />
-                        Validar assinatura
-                      </a>
-                    )}
+                    {selecionado.validacaoUrl &&
+                      selecionado.assinaturaStatus === "Assinado" && (
+                        <a
+                          href={selecionado.validacaoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          title="Abre a página pública de validação da assinatura eletrônica"
+                          className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-500/30 dark:text-emerald-200 dark:hover:bg-emerald-500/10"
+                        >
+                          <ExternalLink size={16} />
+                          Validar assinatura
+                        </a>
+                      )}
                     {podeSuperAdmin() && (
                       <button
                         type="button"
@@ -894,19 +1295,29 @@ export default function CentralDocumentos() {
                 <div className="mt-4 grid grid-cols-1 gap-3 text-sm md:grid-cols-4">
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                     <p className="text-xs uppercase text-slate-500">Unidade</p>
-                    <p className="mt-1 font-bold text-slate-900 dark:text-white">{selecionado.unidade}</p>
+                    <p className="mt-1 font-bold text-slate-900 dark:text-white">
+                      {selecionado.unidade}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                     <p className="text-xs uppercase text-slate-500">Status</p>
-                    <p className="mt-1 font-bold text-slate-900 dark:text-white">{selecionado.status}</p>
+                    <p className="mt-1 font-bold text-slate-900 dark:text-white">
+                      {selecionado.status}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
-                    <p className="text-xs uppercase text-slate-500">Assinatura</p>
-                    <p className="mt-1 font-bold text-slate-900 dark:text-white">{selecionado.assinaturaStatus}</p>
+                    <p className="text-xs uppercase text-slate-500">
+                      Assinatura
+                    </p>
+                    <p className="mt-1 font-bold text-slate-900 dark:text-white">
+                      {selecionado.assinaturaStatus}
+                    </p>
                   </div>
                   <div className="rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-800 dark:bg-slate-900">
                     <p className="text-xs uppercase text-slate-500">Emissão</p>
-                    <p className="mt-1 font-bold text-slate-900 dark:text-white">{formatarData(selecionado.emitidoEm)}</p>
+                    <p className="mt-1 font-bold text-slate-900 dark:text-white">
+                      {formatarData(selecionado.emitidoEm)}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -921,13 +1332,24 @@ export default function CentralDocumentos() {
                 ) : (
                   <div className="flex min-h-[680px] items-center justify-center p-8">
                     <div className="max-w-md rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900">
-                      <FileSearch className="mx-auto text-slate-400" size={42} />
-                      <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">Prévia indisponível</h3>
+                      <FileSearch
+                        className="mx-auto text-slate-400"
+                        size={42}
+                      />
+                      <h3 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">
+                        Prévia indisponível
+                      </h3>
                       <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                        Este documento está registrado na central, mas ainda não possui rota de reemissão direta do PDF.
+                        Este documento está registrado na central, mas ainda não
+                        possui rota de reemissão direta do PDF.
                       </p>
                       {selecionado.validacaoUrl && (
-                        <a href={selecionado.validacaoUrl} target="_blank" rel="noreferrer" className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700">
+                        <a
+                          href={selecionado.validacaoUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700"
+                        >
                           <ExternalLink size={16} />
                           Abrir validação
                         </a>
@@ -942,62 +1364,117 @@ export default function CentralDocumentos() {
                   <div className="mb-5 rounded-3xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Tratativa documental</p>
-                        <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{selecionado.fluxoStatus || "Sem tratativa iniciada"}</h3>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+                          Tratativa documental
+                        </p>
+                        <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+                          {selecionado.fluxoStatus || "Sem tratativa iniciada"}
+                        </h3>
                         {selecionado.motivoDevolucao && (
-                          <p className="mt-1 text-sm text-red-600 dark:text-red-300">Motivo: {selecionado.motivoDevolucao}</p>
+                          <p className="mt-1 text-sm text-red-600 dark:text-red-300">
+                            Motivo: {selecionado.motivoDevolucao}
+                          </p>
                         )}
                       </div>
-                      <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusTratativaClasse(selecionado.fluxoStatus)}`}>
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-bold ${statusTratativaClasse(selecionado.fluxoStatus)}`}
+                      >
                         {selecionado.fluxoStatus || "Sem tratativa"}
                       </span>
                     </div>
 
                     {podeAnalisar() && (
                       <div className="mt-4 space-y-3">
-                        <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Motivo para devolução ou ajuste</label>
+                        <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+                          Motivo para devolução ou ajuste
+                        </label>
                         <input
                           value={motivoDevolucao}
-                          onChange={(event) => setMotivoDevolucao(event.target.value)}
+                          onChange={(event) =>
+                            setMotivoDevolucao(event.target.value)
+                          }
                           className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                         />
                         {podeSuperAdmin() && (
                           <>
-                            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Justificativa para reabertura</label>
+                            <label className="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+                              Justificativa para reabertura
+                            </label>
                             <input
                               value={motivoReabertura}
-                              onChange={(event) => setMotivoReabertura(event.target.value)}
+                              onChange={(event) =>
+                                setMotivoReabertura(event.target.value)
+                              }
                               className="w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                             />
                           </>
                         )}
                         <div className="flex flex-wrap gap-2">
-                          {!estaAprovado(selecionado) && !estaEmRevisao(selecionado) && (
-                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "revisar")} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
-                              <UserCheck size={15} /> Iniciar revisão
-                            </button>
-                          )}
-                          {!estaAprovado(selecionado) && estaEmRevisao(selecionado) && (
-                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "concluir_revisao")} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
-                              <ClipboardCheck size={15} /> Concluir revisão
-                            </button>
-                          )}
-                          {!estaAprovado(selecionado) && !estaEmRevisao(selecionado) && (
-                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "aprovar")} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
-                              <CheckCircle2 size={15} /> Aprovar
-                            </button>
-                          )}
+                          {!estaAprovado(selecionado) &&
+                            !estaEmRevisao(selecionado) && (
+                              <button
+                                disabled={processandoTratativa}
+                                onClick={() =>
+                                  executarTratativa(selecionado, "revisar")
+                                }
+                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                              >
+                                <UserCheck size={15} /> Iniciar revisão
+                              </button>
+                            )}
+                          {!estaAprovado(selecionado) &&
+                            estaEmRevisao(selecionado) && (
+                              <button
+                                disabled={processandoTratativa}
+                                onClick={() =>
+                                  executarTratativa(
+                                    selecionado,
+                                    "concluir_revisao",
+                                  )
+                                }
+                                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                              >
+                                <ClipboardCheck size={15} /> Concluir revisão
+                              </button>
+                            )}
+                          {!estaAprovado(selecionado) &&
+                            !estaEmRevisao(selecionado) && (
+                              <button
+                                disabled={processandoTratativa}
+                                onClick={() =>
+                                  executarTratativa(selecionado, "aprovar")
+                                }
+                                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                              >
+                                <CheckCircle2 size={15} /> Aprovar
+                              </button>
+                            )}
                           {!estaAprovado(selecionado) && (
-                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "devolver")} className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                            <button
+                              disabled={processandoTratativa}
+                              onClick={() =>
+                                executarTratativa(selecionado, "devolver")
+                              }
+                              className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                            >
                               <XCircle size={15} /> Devolver
                             </button>
                           )}
                           {podeSuperAdmin() && (
-                            <button disabled={processandoTratativa} onClick={() => executarTratativa(selecionado, "reabrir")} className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-slate-700">
+                            <button
+                              disabled={processandoTratativa}
+                              onClick={() =>
+                                executarTratativa(selecionado, "reabrir")
+                              }
+                              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-slate-700"
+                            >
                               <RotateCcw size={15} /> Reabrir
                             </button>
                           )}
-                          <a href={`/timeline/${moduloWorkflow(selecionado)}/${selecionado.registroId}`} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200">
+                          <a
+                            href={`/timeline/${moduloWorkflow(selecionado)}/${selecionado.registroId}`}
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+                          >
                             <History size={15} /> Timeline
                           </a>
                         </div>
@@ -1014,9 +1491,14 @@ export default function CentralDocumentos() {
                           <AlertTriangle size={15} />
                           Solicitação de anulação
                         </p>
-                        <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">{anulacaoSelecionada.status}</h3>
+                        <h3 className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+                          {anulacaoSelecionada.status}
+                        </h3>
                         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                          Solicitado por {anulacaoSelecionada.solicitante.apelido || anulacaoSelecionada.solicitante.nome} em {formatarData(anulacaoSelecionada.createdAt)}
+                          Solicitado por{" "}
+                          {anulacaoSelecionada.solicitante.apelido ||
+                            anulacaoSelecionada.solicitante.nome}{" "}
+                          em {formatarData(anulacaoSelecionada.createdAt)}
                         </p>
                       </div>
                       <span className="rounded-full border border-orange-300 bg-white px-3 py-1 text-xs font-bold text-orange-700 dark:border-orange-500/30 dark:bg-slate-950 dark:text-orange-200">
@@ -1027,20 +1509,36 @@ export default function CentralDocumentos() {
                     <div className="mt-4 rounded-2xl bg-white p-3 text-sm text-slate-700 dark:bg-slate-950 dark:text-slate-200">
                       <b>Motivo:</b> {anulacaoSelecionada.motivo}
                       {anulacaoSelecionada.decisaoMotivo && (
-                        <p className="mt-2"><b>Decisão:</b> {anulacaoSelecionada.decisaoMotivo}</p>
+                        <p className="mt-2">
+                          <b>Decisão:</b> {anulacaoSelecionada.decisaoMotivo}
+                        </p>
                       )}
                     </div>
 
                     <div className="mt-4">
-                      <h4 className="font-bold text-slate-900 dark:text-white">Acordo dos analistas</h4>
+                      <h4 className="font-bold text-slate-900 dark:text-white">
+                        Acordo dos analistas
+                      </h4>
                       <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
                         {anulacaoSelecionada.acordos.map((acordo) => (
-                          <div key={acordo.id} className="rounded-2xl border border-orange-100 bg-white p-3 text-sm dark:border-orange-500/20 dark:bg-slate-950">
+                          <div
+                            key={acordo.id}
+                            className="rounded-2xl border border-orange-100 bg-white p-3 text-sm dark:border-orange-500/20 dark:bg-slate-950"
+                          >
                             <div className="flex items-center justify-between gap-3">
-                              <span className="font-semibold text-slate-800 dark:text-slate-100">{acordo.analista.apelido || acordo.analista.nome}</span>
-                              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{acordo.status}</span>
+                              <span className="font-semibold text-slate-800 dark:text-slate-100">
+                                {acordo.analista.apelido ||
+                                  acordo.analista.nome}
+                              </span>
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                                {acordo.status}
+                              </span>
                             </div>
-                            {acordo.observacao && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{acordo.observacao}</p>}
+                            {acordo.observacao && (
+                              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                                {acordo.observacao}
+                              </p>
+                            )}
                           </div>
                         ))}
                         {anulacaoSelecionada.acordos.length === 0 && (
@@ -1060,13 +1558,23 @@ export default function CentralDocumentos() {
                           className="min-h-[80px] w-full rounded-xl border border-blue-200 bg-white p-3 text-sm text-slate-900 outline-none dark:border-blue-500/20 dark:bg-slate-950 dark:text-white"
                           placeholder="Observação opcional"
                           value={observacaoAcordo}
-                          onChange={(event) => setObservacaoAcordo(event.target.value)}
+                          onChange={(event) =>
+                            setObservacaoAcordo(event.target.value)
+                          }
                         />
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <button disabled={processandoAnulacao} onClick={() => registrarAcordoAnulacao("Aprovado")} className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                          <button
+                            disabled={processandoAnulacao}
+                            onClick={() => registrarAcordoAnulacao("Aprovado")}
+                            className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                          >
                             Concordo
                           </button>
-                          <button disabled={processandoAnulacao} onClick={() => registrarAcordoAnulacao("Recusado")} className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60">
+                          <button
+                            disabled={processandoAnulacao}
+                            onClick={() => registrarAcordoAnulacao("Recusado")}
+                            className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
+                          >
                             Recusar
                           </button>
                         </div>
@@ -1076,19 +1584,34 @@ export default function CentralDocumentos() {
                     {podeDecidirAnulacao && (
                       <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
                         <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                          Decisão administrativa {todosAcordosAprovados ? "" : "(aguardando acordo de todos os analistas)"}
+                          Decisão administrativa{" "}
+                          {todosAcordosAprovados
+                            ? ""
+                            : "(aguardando acordo de todos os analistas)"}
                         </p>
                         <textarea
                           className="mt-2 min-h-[80px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                           placeholder="Justificativa da decisão"
                           value={justificativaAnulacao}
-                          onChange={(event) => setJustificativaAnulacao(event.target.value)}
+                          onChange={(event) =>
+                            setJustificativaAnulacao(event.target.value)
+                          }
                         />
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <button disabled={!todosAcordosAprovados || processandoAnulacao} onClick={() => decidirAnulacao("Aprovado")} className="rounded-xl bg-orange-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">
+                          <button
+                            disabled={
+                              !todosAcordosAprovados || processandoAnulacao
+                            }
+                            onClick={() => decidirAnulacao("Aprovado")}
+                            className="rounded-xl bg-orange-600 px-3 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          >
                             Aprovar anulação
                           </button>
-                          <button disabled={processandoAnulacao} onClick={() => decidirAnulacao("Recusado")} className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-slate-700">
+                          <button
+                            disabled={processandoAnulacao}
+                            onClick={() => decidirAnulacao("Recusado")}
+                            className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-bold text-white disabled:opacity-60 dark:bg-slate-700"
+                          >
                             Recusar solicitação
                           </button>
                         </div>
@@ -1099,16 +1622,28 @@ export default function CentralDocumentos() {
 
                 <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-3">
                   <div>
-                    <p className="text-xs font-semibold uppercase text-slate-500">Assinado por</p>
-                    <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">{selecionado.assinadoPor || "Pendente de assinatura"}</p>
+                    <p className="text-xs font-semibold uppercase text-slate-500">
+                      Assinado por
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
+                      {selecionado.assinadoPor || "Pendente de assinatura"}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase text-slate-500">Data da assinatura</p>
-                    <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">{formatarData(selecionado.assinadoEm)}</p>
+                    <p className="text-xs font-semibold uppercase text-slate-500">
+                      Data da assinatura
+                    </p>
+                    <p className="mt-1 font-semibold text-slate-800 dark:text-slate-100">
+                      {formatarData(selecionado.assinadoEm)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase text-slate-500">Token</p>
-                    <p className="mt-1 truncate font-mono text-xs text-slate-600 dark:text-slate-300">{selecionado.assinaturaToken || "Não gerado"}</p>
+                    <p className="text-xs font-semibold uppercase text-slate-500">
+                      Token
+                    </p>
+                    <p className="mt-1 truncate font-mono text-xs text-slate-600 dark:text-slate-300">
+                      {selecionado.assinaturaToken || "Não gerado"}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1117,9 +1652,12 @@ export default function CentralDocumentos() {
             <div className="flex min-h-[680px] items-center justify-center p-8 text-center">
               <div>
                 <FileSearch className="mx-auto text-slate-400" size={46} />
-                <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Nenhum documento selecionado</h2>
+                <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">
+                  Nenhum documento selecionado
+                </h2>
                 <p className="mt-2 max-w-md text-sm text-slate-500 dark:text-slate-400">
-                  Use os filtros ao lado para localizar um documento e abrir a prévia do PDF.
+                  Use os filtros ao lado para localizar um documento e abrir a
+                  prévia do PDF.
                 </p>
               </div>
             </div>
@@ -1129,4 +1667,3 @@ export default function CentralDocumentos() {
     </div>
   );
 }
-

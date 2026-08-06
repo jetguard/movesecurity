@@ -1,9 +1,30 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Activity, AlertTriangle, Camera, ChevronDown, ClipboardCheck, FileText, History, Pencil, Radio, ShieldCheck, Trash2, Wifi, WifiOff, Wrench, X } from "lucide-react";
+﻿import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Activity,
+  AlertTriangle,
+  Camera,
+  ChevronDown,
+  ClipboardCheck,
+  FileText,
+  History,
+  Pencil,
+  Radio,
+  ShieldCheck,
+  Trash2,
+  Wifi,
+  WifiOff,
+  Wrench,
+  X,
+} from "lucide-react";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
-import { podeAdministrar, podeAnalisar, podeSuperAdmin, somenteTecnicoManutencao } from "../utils/permissoes";
+import {
+  podeAdministrar,
+  podeAnalisar,
+  podeSuperAdmin,
+  somenteTecnicoManutencao,
+} from "../utils/permissoes";
 
 type CameraItem = {
   id: number;
@@ -66,11 +87,24 @@ type DashboardCameras = {
   camerasAtencao: number;
   camerasCriticas: number;
   camerasDesconectadas: number;
-  menorRetencao: Array<{ id: number; numeroCamera: string; servidor: string; area: string; status: string; diasRetencao: number; dataMaisAntiga?: string; dataMaisRecente?: string }>;
+  menorRetencao: Array<{
+    id: number;
+    numeroCamera: string;
+    servidor: string;
+    area: string;
+    status: string;
+    diasRetencao: number;
+    dataMaisAntiga?: string;
+    dataMaisRecente?: string;
+  }>;
   sla: number;
   metaSla?: number;
   indicadorSla: string;
-  digifort?: { statusIntegracao: string; tipoSistemaPadrao: string; camposMapeados: string[] };
+  digifort?: {
+    statusIntegracao: string;
+    tipoSistemaPadrao: string;
+    camposMapeados: string[];
+  };
   porTipoCamera: Record<string, number>;
   porTecnologia: Record<string, number>;
   porServidor: Record<string, number>;
@@ -79,10 +113,40 @@ type DashboardCameras = {
   falhasPorServidor: [string, number][];
   resolucaoPorOperador: [string, number][];
   falhasPorDia: [string, number][];
-  timeline: Array<{ id: number; camera: string; area: string; status: string; iniciadoEm: string; encerradoEm?: string; duracao?: number; observacao?: string }>;
-  mapaOperacional: Array<{ id: number; numeroCamera: string; servidor: string; area: string; local: string; status: string; tipoCamera: string; tecnologia: string; diasRetencao?: number | null; offlineMinutos: number }>;
-  alertas: Array<{ id: number; titulo: string; mensagem: string; minutos: number; slaViolado?: boolean }>;
-  alertasAutomaticos?: Array<{ tipo: string; mensagem: string; severidade: string }>;
+  timeline: Array<{
+    id: number;
+    camera: string;
+    area: string;
+    status: string;
+    iniciadoEm: string;
+    encerradoEm?: string;
+    duracao?: number;
+    observacao?: string;
+  }>;
+  mapaOperacional: Array<{
+    id: number;
+    numeroCamera: string;
+    servidor: string;
+    area: string;
+    local: string;
+    status: string;
+    tipoCamera: string;
+    tecnologia: string;
+    diasRetencao?: number | null;
+    offlineMinutos: number;
+  }>;
+  alertas: Array<{
+    id: number;
+    titulo: string;
+    mensagem: string;
+    minutos: number;
+    slaViolado?: boolean;
+  }>;
+  alertasAutomaticos?: Array<{
+    tipo: string;
+    mensagem: string;
+    severidade: string;
+  }>;
 };
 
 type IndisponibilidadeCamera = {
@@ -117,7 +181,8 @@ const checklistInicial = {
   statusAtual: "Conectada",
   dataInicialGravacao: "",
   dataMaisRecenteGravacao: "",
-  retencaoEstimadaTexto: "Retencao atual: informe as datas reais encontradas no Digifort",
+  retencaoEstimadaTexto:
+    "Retencao atual: informe as datas reais encontradas no Digifort",
   observacoesOperacionais: "",
 };
 
@@ -166,8 +231,12 @@ function minutosEntreDatas(inicio: string, fim?: string) {
   if (!inicio) return 0;
   const dataInicio = new Date(inicio);
   const dataFim = fim ? new Date(fim) : new Date();
-  if (Number.isNaN(dataInicio.getTime()) || Number.isNaN(dataFim.getTime())) return 0;
-  return Math.max(0, Math.round((dataFim.getTime() - dataInicio.getTime()) / 60000));
+  if (Number.isNaN(dataInicio.getTime()) || Number.isNaN(dataFim.getTime()))
+    return 0;
+  return Math.max(
+    0,
+    Math.round((dataFim.getTime() - dataInicio.getTime()) / 60000),
+  );
 }
 
 function paraDatetimeLocal(valor?: string | null) {
@@ -189,7 +258,9 @@ function dataAntigaOperacional(valor?: string | null, status?: string) {
   if (status !== "Conectada") return dataParaDatetimeLocal(dataReal);
 
   const limiteJanela = new Date(Date.now() - RETENCAO_MAXIMA_MS);
-  return dataParaDatetimeLocal(dataReal > limiteJanela ? dataReal : limiteJanela);
+  return dataParaDatetimeLocal(
+    dataReal > limiteJanela ? dataReal : limiteJanela,
+  );
 }
 
 function formatarRetencao(minutosTotais: number) {
@@ -220,17 +291,35 @@ function formatarDiaGrafico(valor: string) {
   return valor;
 }
 
-function calcularRetencaoChecklist(_camera: CameraItem | null, dados: typeof checklistInicial) {
+function calcularRetencaoChecklist(
+  _camera: CameraItem | null,
+  dados: typeof checklistInicial,
+) {
   if (!dados.dataInicialGravacao) {
     return "informe a data e hora mais antiga encontrada no Digifort";
   }
   if (dados.statusAtual === "Desconectada" && !dados.dataMaisRecenteGravacao) {
     return "informe a data e hora da última gravação antes da desconexão";
   }
-  return formatarRetencao(minutosEntreDatas(dados.dataInicialGravacao, dados.dataMaisRecenteGravacao || undefined));
+  return formatarRetencao(
+    minutosEntreDatas(
+      dados.dataInicialGravacao,
+      dados.dataMaisRecenteGravacao || undefined,
+    ),
+  );
 }
 
-function Barra({ nome, valor, maximo, cor = "bg-cyan-400" }: { nome: string; valor: number; maximo: number; cor?: string }) {
+function Barra({
+  nome,
+  valor,
+  maximo,
+  cor = "bg-cyan-400",
+}: {
+  nome: string;
+  valor: number;
+  maximo: number;
+  cor?: string;
+}) {
   return (
     <div>
       <div className="mb-1 flex justify-between gap-3 text-xs text-slate-300">
@@ -238,13 +327,30 @@ function Barra({ nome, valor, maximo, cor = "bg-cyan-400" }: { nome: string; val
         <strong>{valor}</strong>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-        <div className={`h-full rounded-full ${cor}`} style={{ width: `${Math.max((valor / Math.max(maximo, 1)) * 100, valor ? 8 : 0)}%` }} />
+        <div
+          className={`h-full rounded-full ${cor}`}
+          style={{
+            width: `${Math.max((valor / Math.max(maximo, 1)) * 100, valor ? 8 : 0)}%`,
+          }}
+        />
       </div>
     </div>
   );
 }
 
-function CardSoc({ titulo, valor, subtitulo, icon: Icon, tom }: { titulo: string; valor: string | number; subtitulo: string; icon: typeof Camera; tom: string }) {
+function CardSoc({
+  titulo,
+  valor,
+  subtitulo,
+  icon: Icon,
+  tom,
+}: {
+  titulo: string;
+  valor: string | number;
+  subtitulo: string;
+  icon: typeof Camera;
+  tom: string;
+}) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 shadow-xl shadow-slate-950/20">
       <div className="flex items-start justify-between">
@@ -285,7 +391,13 @@ function BotaoAcaoCamera({
   );
 }
 
-function CampoChecklist({ label, children }: { label: string; children: ReactNode }) {
+function CampoChecklist({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
   return (
     <label className="space-y-2 text-sm font-bold text-slate-700 dark:text-slate-200">
       <span>{label}</span>
@@ -300,27 +412,50 @@ export default function Cameras() {
   const [formAberto, setFormAberto] = useState(false);
   const [estatisticasAbertas, setEstatisticasAbertas] = useState(false);
   const [cameraEditando, setCameraEditando] = useState<CameraItem | null>(null);
-  const [cameraChecklist, setCameraChecklist] = useState<CameraItem | null>(null);
-  const [cameraHistorico, setCameraHistorico] = useState<CameraItem | null>(null);
+  const [cameraChecklist, setCameraChecklist] = useState<CameraItem | null>(
+    null,
+  );
+  const [cameraHistorico, setCameraHistorico] = useState<CameraItem | null>(
+    null,
+  );
   const [cameraTimeline, setCameraTimeline] = useState<CameraItem | null>(null);
   const [buscaCamera, setBuscaCamera] = useState("");
   const [statusFiltroCamera, setStatusFiltroCamera] = useState("");
   const [camerasSelecionadas, setCamerasSelecionadas] = useState<number[]>([]);
-  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
-  const [modalOrdemServico, setModalOrdemServico] = useState<(Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> & Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>) | null>(null);
+  const [pdfLightbox, setPdfLightbox] = useState<{
+    url: string;
+    titulo: string;
+    nomeArquivo: string;
+  } | null>(null);
+  const [modalOrdemServico, setModalOrdemServico] = useState<
+    | (Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> &
+        Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>)
+    | null
+  >(null);
   const resolverOrdemServico = useRef<((abrir: boolean) => void) | null>(null);
   const tecnicoSomenteLeitura = somenteTecnicoManutencao();
-  const [indisponibilidades, setIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
-  const [timelineChecklists, setTimelineChecklists] = useState<CameraChecklistHistorico[]>([]);
-  const [timelineIndisponibilidades, setTimelineIndisponibilidades] = useState<IndisponibilidadeCamera[]>([]);
+  const [indisponibilidades, setIndisponibilidades] = useState<
+    IndisponibilidadeCamera[]
+  >([]);
+  const [timelineChecklists, setTimelineChecklists] = useState<
+    CameraChecklistHistorico[]
+  >([]);
+  const [timelineIndisponibilidades, setTimelineIndisponibilidades] = useState<
+    IndisponibilidadeCamera[]
+  >([]);
   const [timelineAgora, setTimelineAgora] = useState(0);
   const [carregandoTimeline, setCarregandoTimeline] = useState(false);
-  const [formIndisponibilidade, setFormIndisponibilidade] = useState(indisponibilidadeInicial);
-  const [indisponibilidadeEditando, setIndisponibilidadeEditando] = useState<IndisponibilidadeCamera | null>(null);
-  const [formIndisponibilidadeAberto, setFormIndisponibilidadeAberto] = useState(false);
+  const [formIndisponibilidade, setFormIndisponibilidade] = useState(
+    indisponibilidadeInicial,
+  );
+  const [indisponibilidadeEditando, setIndisponibilidadeEditando] =
+    useState<IndisponibilidadeCamera | null>(null);
+  const [formIndisponibilidadeAberto, setFormIndisponibilidadeAberto] =
+    useState(false);
   const [form, setForm] = useState(cameraInicial);
   const [checklist, setChecklist] = useState(checklistInicial);
-  const [ultimaVerificacaoAutomatica, setUltimaVerificacaoAutomatica] = useState<Date | null>(null);
+  const [ultimaVerificacaoAutomatica, setUltimaVerificacaoAutomatica] =
+    useState<Date | null>(null);
 
   async function carregar() {
     const [camerasResponse, dashboardResponse] = await Promise.all([
@@ -338,38 +473,76 @@ export default function Cameras() {
     return () => window.clearInterval(intervalo);
   }, []);
 
-  const maxFalhas = useMemo(() => Math.max(...(dashboard?.instabilidadePorCamera || []).map(([, valor]) => valor), 1), [dashboard]);
-  const maxAreas = useMemo(() => Math.max(...(dashboard?.falhasPorArea || []).map(([, valor]) => valor), 1), [dashboard]);
+  const maxFalhas = useMemo(
+    () =>
+      Math.max(
+        ...(dashboard?.instabilidadePorCamera || []).map(([, valor]) => valor),
+        1,
+      ),
+    [dashboard],
+  );
+  const maxAreas = useMemo(
+    () =>
+      Math.max(
+        ...(dashboard?.falhasPorArea || []).map(([, valor]) => valor),
+        1,
+      ),
+    [dashboard],
+  );
   const camerasFiltradas = useMemo(() => {
     const busca = buscaCamera.trim().toLocaleLowerCase("pt-BR");
     return cameras.filter((camera) => {
-      const texto = `${camera.numeroCamera} ${camera.nomeCamera || ""}`.toLocaleLowerCase("pt-BR");
-      return (!busca || texto.includes(busca)) && (!statusFiltroCamera || camera.status === statusFiltroCamera);
+      const texto =
+        `${camera.numeroCamera} ${camera.nomeCamera || ""}`.toLocaleLowerCase(
+          "pt-BR",
+        );
+      return (
+        (!busca || texto.includes(busca)) &&
+        (!statusFiltroCamera || camera.status === statusFiltroCamera)
+      );
     });
   }, [buscaCamera, cameras, statusFiltroCamera]);
-  const todasFiltradasSelecionadas = camerasFiltradas.length > 0 && camerasFiltradas.every((camera) => camerasSelecionadas.includes(camera.id));
+  const todasFiltradasSelecionadas =
+    camerasFiltradas.length > 0 &&
+    camerasFiltradas.every((camera) => camerasSelecionadas.includes(camera.id));
   const checklistReferenciaTimeline = useMemo(() => {
-    return [...timelineChecklists]
-      .filter((item) => item.dataInicialGravacao)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0] || null;
+    return (
+      [...timelineChecklists]
+        .filter((item) => item.dataInicialGravacao)
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0] || null
+    );
   }, [timelineChecklists]);
   const periodoTimeline = useMemo(() => {
-    if (!checklistReferenciaTimeline?.dataInicialGravacao || !timelineAgora) return null;
-    const dataInicialOperacional = dataAntigaOperacional(checklistReferenciaTimeline.dataInicialGravacao, cameraTimeline?.status);
-    const inicio = new Date(dataInicialOperacional || checklistReferenciaTimeline.dataInicialGravacao).getTime();
+    if (!checklistReferenciaTimeline?.dataInicialGravacao || !timelineAgora)
+      return null;
+    const dataInicialOperacional = dataAntigaOperacional(
+      checklistReferenciaTimeline.dataInicialGravacao,
+      cameraTimeline?.status,
+    );
+    const inicio = new Date(
+      dataInicialOperacional || checklistReferenciaTimeline.dataInicialGravacao,
+    ).getTime();
     const fim = timelineAgora;
-    if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio) return null;
+    if (!Number.isFinite(inicio) || !Number.isFinite(fim) || fim <= inicio)
+      return null;
 
     return { inicio, fim, totalMinutos: Math.round((fim - inicio) / 60000) };
   }, [cameraTimeline?.status, checklistReferenciaTimeline, timelineAgora]);
-  const segmentosIndisponibilidade = useMemo<SegmentoIndisponibilidade[]>(() => {
+  const segmentosIndisponibilidade = useMemo<
+    SegmentoIndisponibilidade[]
+  >(() => {
     if (!periodoTimeline) return [];
     const total = Math.max(periodoTimeline.fim - periodoTimeline.inicio, 1);
 
     return timelineIndisponibilidades
       .map((evento) => {
         const inicioOriginal = new Date(evento.iniciadoEm).getTime();
-        const fimOriginal = evento.encerradoEm ? new Date(evento.encerradoEm).getTime() : timelineAgora;
+        const fimOriginal = evento.encerradoEm
+          ? new Date(evento.encerradoEm).getTime()
+          : timelineAgora;
         const inicio = Math.max(inicioOriginal, periodoTimeline.inicio);
         const fim = Math.min(fimOriginal, periodoTimeline.fim);
         const largura = ((fim - inicio) / total) * 100;
@@ -383,7 +556,13 @@ export default function Cameras() {
           motivo: evento.motivo || evento.observacao,
         };
       })
-      .filter((evento) => Number.isFinite(evento.inicio) && Number.isFinite(evento.fim) && evento.fim > evento.inicio && evento.width > 0);
+      .filter(
+        (evento) =>
+          Number.isFinite(evento.inicio) &&
+          Number.isFinite(evento.fim) &&
+          evento.fim > evento.inicio &&
+          evento.width > 0,
+      );
   }, [periodoTimeline, timelineAgora, timelineIndisponibilidades]);
   const blocosDisponibilidade = useMemo(() => {
     if (!periodoTimeline) return [];
@@ -392,21 +571,38 @@ export default function Cameras() {
     return Array.from({ length: blocos }, (_, index) => {
       const blocoInicio = periodoTimeline.inicio + (total / blocos) * index;
       const blocoFim = periodoTimeline.inicio + (total / blocos) * (index + 1);
-      const falha = segmentosIndisponibilidade.some((evento) => evento.inicio < blocoFim && evento.fim > blocoInicio);
+      const falha = segmentosIndisponibilidade.some(
+        (evento) => evento.inicio < blocoFim && evento.fim > blocoInicio,
+      );
       return { index, falha };
     });
   }, [periodoTimeline, segmentosIndisponibilidade]);
   const resumoTimeline = useMemo(() => {
     if (!periodoTimeline) {
-      return { cronologica: null, efetiva: null, falhas: 0, indisponibilidade: 0 };
+      return {
+        cronologica: null,
+        efetiva: null,
+        falhas: 0,
+        indisponibilidade: 0,
+      };
     }
 
     const indisponibilidade = segmentosIndisponibilidade.reduce(
-      (total, item) => total + sobreposicaoMinutos(item.inicio, item.fim, periodoTimeline.inicio, periodoTimeline.fim),
-      0
+      (total, item) =>
+        total +
+        sobreposicaoMinutos(
+          item.inicio,
+          item.fim,
+          periodoTimeline.inicio,
+          periodoTimeline.fim,
+        ),
+      0,
     );
     const cronologica = periodoTimeline.totalMinutos;
-    const efetiva = Math.max(0, periodoTimeline.totalMinutos - indisponibilidade);
+    const efetiva = Math.max(
+      0,
+      periodoTimeline.totalMinutos - indisponibilidade,
+    );
     return {
       cronologica,
       efetiva,
@@ -446,7 +642,10 @@ export default function Cameras() {
 
   useEffect(() => {
     if (!cameraTimeline) return;
-    const intervalo = window.setInterval(() => setTimelineAgora(new Date().getTime()), 60000);
+    const intervalo = window.setInterval(
+      () => setTimelineAgora(new Date().getTime()),
+      60000,
+    );
     return () => window.clearInterval(intervalo);
   }, [cameraTimeline]);
 
@@ -476,30 +675,43 @@ export default function Cameras() {
     setFormAberto(true);
   }
 
-  async function confirmarAberturaOrdemServico(camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> & Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>) {
+  async function confirmarAberturaOrdemServico(
+    camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> &
+      Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>,
+  ) {
     return new Promise<boolean>((resolve) => {
       resolverOrdemServico.current = resolve;
       setModalOrdemServico(camera);
     });
   }
 
-  async function criarOrdemServicoCamera(camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera">) {
+  async function criarOrdemServicoCamera(
+    camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera">,
+  ) {
     try {
       const resposta = await api.post("/ordens-servico", {
         cameraId: camera.id,
         descricao: "Camera marcada como desconectada pelo operador.",
       });
 
-    alert(resposta.data?.existente
-      ? "Já existe uma ordem de serviço em aberto para esta câmera."
-      : "Ordem de serviço aberta para manutenção.");
+      alert(
+        resposta.data?.existente
+          ? "Já existe uma ordem de serviço em aberto para esta câmera."
+          : "Ordem de serviço aberta para manutenção.",
+      );
     } catch (error: any) {
-      alert(error?.response?.data?.error || "Nao foi possivel abrir a ordem de servico.");
+      alert(
+        error?.response?.data?.error ||
+          "Nao foi possivel abrir a ordem de servico.",
+      );
       throw error;
     }
   }
 
-  async function perguntarAbrirOrdemServico(camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> & Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>) {
+  async function perguntarAbrirOrdemServico(
+    camera: Pick<CameraItem, "id" | "numeroCamera" | "nomeCamera"> &
+      Partial<Pick<CameraItem, "areaMonitorada" | "localInstalado">>,
+  ) {
     const confirmar = await confirmarAberturaOrdemServico(camera);
     if (!confirmar) return;
     await criarOrdemServicoCamera(camera);
@@ -522,7 +734,9 @@ export default function Cameras() {
       cameraSalva = resposta.data;
     }
 
-    const mudouParaDesconectada = form.status === "Desconectada" && cameraEditando?.status !== "Desconectada";
+    const mudouParaDesconectada =
+      form.status === "Desconectada" &&
+      cameraEditando?.status !== "Desconectada";
     if (cameraSalva && mudouParaDesconectada) {
       await perguntarAbrirOrdemServico(cameraSalva);
     }
@@ -535,7 +749,7 @@ export default function Cameras() {
 
   async function excluirCamera(camera: CameraItem) {
     const confirmar = window.confirm(
-      `Deseja realmente excluir a câmera ${camera.numeroCamera}?\n\nEssa ação também removerá o histórico de checklists e eventos desta câmera.`
+      `Deseja realmente excluir a câmera ${camera.numeroCamera}?\n\nEssa ação também removerá o histórico de checklists e eventos desta câmera.`,
     );
     if (!confirmar) return;
 
@@ -546,8 +760,8 @@ export default function Cameras() {
 
   async function removerCamera(camera: CameraItem) {
     const motivo = window.prompt(
-      `Informe o motivo para remover/inativar a câmera ${camera.numeroCamera}:`,
-      "Remoção operacional"
+      `Informe o motivo para remover/inativar a cÃ¢mera ${camera.numeroCamera}:`,
+      "Remoção operacional",
     );
     if (!motivo) return;
 
@@ -558,7 +772,7 @@ export default function Cameras() {
 
   async function excluirCameraDefinitivo(camera: CameraItem) {
     const confirmar = window.confirm(
-      `Deseja realmente excluir definitivamente a câmera ${camera.numeroCamera}?\n\nEssa ação é permitida somente para Super Admin e remove o histórico de checklists e eventos.`
+      `Deseja realmente excluir definitivamente a câmera ${camera.numeroCamera}?\n\nEssa ação é permitida somente para Super Admin e remove o histórico de checklists e eventos.`,
     );
     if (!confirmar) return;
 
@@ -571,8 +785,14 @@ export default function Cameras() {
     const proximoChecklist = {
       ...checklistInicial,
       statusAtual: camera.status,
-      dataInicialGravacao: dataAntigaOperacional(ultimoChecklist?.dataInicialGravacao, camera.status),
-      dataMaisRecenteGravacao: camera.status === "Desconectada" ? paraDatetimeLocal(ultimoChecklist?.dataMaisRecenteGravacao) : "",
+      dataInicialGravacao: dataAntigaOperacional(
+        ultimoChecklist?.dataInicialGravacao,
+        camera.status,
+      ),
+      dataMaisRecenteGravacao:
+        camera.status === "Desconectada"
+          ? paraDatetimeLocal(ultimoChecklist?.dataMaisRecenteGravacao)
+          : "",
     };
 
     setCameraChecklist(camera);
@@ -598,10 +818,11 @@ export default function Cameras() {
     setTimelineAgora(new Date().getTime());
     setCarregandoTimeline(true);
     try {
-      const [checklistsResponse, indisponibilidadesResponse] = await Promise.all([
-        api.get(`/cameras/${camera.id}/checklists`),
-        api.get(`/cameras/${camera.id}/indisponibilidades`),
-      ]);
+      const [checklistsResponse, indisponibilidadesResponse] =
+        await Promise.all([
+          api.get(`/cameras/${camera.id}/checklists`),
+          api.get(`/cameras/${camera.id}/indisponibilidades`),
+        ]);
       setTimelineChecklists(checklistsResponse.data);
       setTimelineIndisponibilidades(indisponibilidadesResponse.data);
     } finally {
@@ -613,7 +834,9 @@ export default function Cameras() {
     setIndisponibilidadeEditando(registro);
     setFormIndisponibilidade({
       iniciadoEm: registro.iniciadoEm ? registro.iniciadoEm.slice(0, 16) : "",
-      encerradoEm: registro.encerradoEm ? registro.encerradoEm.slice(0, 16) : "",
+      encerradoEm: registro.encerradoEm
+        ? registro.encerradoEm.slice(0, 16)
+        : "",
       motivo: registro.motivo || "",
       observacao: registro.observacao || "",
     });
@@ -624,20 +847,34 @@ export default function Cameras() {
     e.preventDefault();
     if (!cameraHistorico) return;
 
-    const inicio = formIndisponibilidade.iniciadoEm ? new Date(formIndisponibilidade.iniciadoEm) : null;
-    const fim = formIndisponibilidade.encerradoEm ? new Date(formIndisponibilidade.encerradoEm) : null;
+    const inicio = formIndisponibilidade.iniciadoEm
+      ? new Date(formIndisponibilidade.iniciadoEm)
+      : null;
+    const fim = formIndisponibilidade.encerradoEm
+      ? new Date(formIndisponibilidade.encerradoEm)
+      : null;
 
     if (inicio && fim && inicio > fim) {
-      alert("A data/hora inicial da indisponibilidade não pode ser maior que a data/hora final.");
+      alert(
+        "A data/hora inicial da indisponibilidade não pode ser maior que a data/hora final.",
+      );
       return;
     }
 
     if (indisponibilidadeEditando) {
-      await api.put(`/cameras/${cameraHistorico.id}/indisponibilidades/${indisponibilidadeEditando.id}`, formIndisponibilidade);
+      await api.put(
+        `/cameras/${cameraHistorico.id}/indisponibilidades/${indisponibilidadeEditando.id}`,
+        formIndisponibilidade,
+      );
     } else {
-      await api.post(`/cameras/${cameraHistorico.id}/indisponibilidades`, formIndisponibilidade);
+      await api.post(
+        `/cameras/${cameraHistorico.id}/indisponibilidades`,
+        formIndisponibilidade,
+      );
     }
-    const response = await api.get(`/cameras/${cameraHistorico.id}/indisponibilidades`);
+    const response = await api.get(
+      `/cameras/${cameraHistorico.id}/indisponibilidades`,
+    );
     setIndisponibilidades(response.data);
     setFormIndisponibilidade(indisponibilidadeInicial);
     setIndisponibilidadeEditando(null);
@@ -649,22 +886,37 @@ export default function Cameras() {
     e.preventDefault();
     if (!cameraChecklist) return;
 
-    const dataAntiga = checklist.dataInicialGravacao ? new Date(checklist.dataInicialGravacao) : null;
+    const dataAntiga = checklist.dataInicialGravacao
+      ? new Date(checklist.dataInicialGravacao)
+      : null;
     const dataRecente = checklist.dataMaisRecenteGravacao
       ? new Date(checklist.dataMaisRecenteGravacao)
       : new Date();
 
     if (dataAntiga && dataAntiga > dataRecente) {
-      alert("A data mais antiga encontrada no Digifort não pode ser maior que a data mais recente.");
+      alert(
+        "A data mais antiga encontrada no Digifort não pode ser maior que a data mais recente.",
+      );
       return;
     }
 
-    const resposta = await api.post(`/cameras/${cameraChecklist.id}/checklists`, checklist);
-    const mudouParaDesconectada = checklist.statusAtual === "Desconectada" && cameraChecklist.status !== "Desconectada";
-    const cameraAtualizada = resposta.data?.camera ? { ...cameraChecklist, ...resposta.data.camera } : { ...cameraChecklist, status: checklist.statusAtual };
+    const resposta = await api.post(
+      `/cameras/${cameraChecklist.id}/checklists`,
+      checklist,
+    );
+    const mudouParaDesconectada =
+      checklist.statusAtual === "Desconectada" &&
+      cameraChecklist.status !== "Desconectada";
+    const cameraAtualizada = resposta.data?.camera
+      ? { ...cameraChecklist, ...resposta.data.camera }
+      : { ...cameraChecklist, status: checklist.statusAtual };
     const cameraDoChecklist = cameraAtualizada;
     setCameras((atuais) =>
-      atuais.map((camera) => (camera.id === cameraChecklist.id ? { ...camera, ...cameraAtualizada } : camera)),
+      atuais.map((camera) =>
+        camera.id === cameraChecklist.id
+          ? { ...camera, ...cameraAtualizada }
+          : camera,
+      ),
     );
     await carregar();
     setCameraChecklist(null);
@@ -676,7 +928,9 @@ export default function Cameras() {
   }
 
   async function exportar(tipo: "inventario" | "historico") {
-    const response = await api.get(`/cameras/exportar/${tipo}`, { responseType: "blob" });
+    const response = await api.get(`/cameras/exportar/${tipo}`, {
+      responseType: "blob",
+    });
     const url = URL.createObjectURL(response.data);
     const link = document.createElement("a");
     link.href = url;
@@ -687,7 +941,9 @@ export default function Cameras() {
 
   function alternarCameraSelecionada(cameraId: number) {
     setCamerasSelecionadas((atuais) =>
-      atuais.includes(cameraId) ? atuais.filter((id) => id !== cameraId) : [...atuais, cameraId]
+      atuais.includes(cameraId)
+        ? atuais.filter((id) => id !== cameraId)
+        : [...atuais, cameraId],
     );
   }
 
@@ -706,14 +962,18 @@ export default function Cameras() {
       alert("Selecione ao menos uma câmera para gerar o relatório.");
       return;
     }
-    const pinOperacional = await solicitarPinOperacional("Informe seu PIN para assinar e emitir o relatório técnico CFTV.");
+    const pinOperacional = await solicitarPinOperacional(
+      "Informe seu PIN para assinar e emitir o relatório técnico CFTV.",
+    );
     if (!pinOperacional) return;
     const response = await api.post(
       "/cameras/relatorio-disponibilidade/pdf",
       { cameraIds: camerasSelecionadas, pinOperacional },
-      { responseType: "blob" }
+      { responseType: "blob" },
     );
-    const url = URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
+    const url = URL.createObjectURL(
+      new Blob([response.data], { type: "application/pdf" }),
+    );
     setPdfLightbox({
       url,
       titulo: "Relatório Técnico CFTV",
@@ -735,21 +995,33 @@ export default function Cameras() {
               <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-cyan-300">
                 <Radio size={16} /> Centro de Operações CFTV
               </p>
-              <h1 className="mt-3 text-2xl font-black tracking-normal sm:text-3xl">Gestão e Monitoramento de Câmeras</h1>
+              <h1 className="mt-3 text-2xl font-black tracking-normal sm:text-3xl">
+                Gestão e Monitoramento de Câmeras
+              </h1>
               <p className="mt-2 max-w-3xl text-sm text-slate-300">
-                Monitoramento operacional por unidade, status em tempo real, checklist semanal, indisponibilidade e indicadores SOC.
+                Monitoramento operacional por unidade, status em tempo real,
+                checklist semanal, indisponibilidade e indicadores SOC.
               </p>
             </div>
             {podeAnalisar() && (
               <div className="flex flex-wrap gap-3">
-                <button onClick={() => exportar("inventario")} className="rounded-xl border border-cyan-400/40 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-400/10">
+                <button
+                  onClick={() => exportar("inventario")}
+                  className="rounded-xl border border-cyan-400/40 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-400/10"
+                >
                   Exportar Inventário
                 </button>
-                <button onClick={() => exportar("historico")} className="rounded-xl border border-cyan-400/40 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-400/10">
+                <button
+                  onClick={() => exportar("historico")}
+                  className="rounded-xl border border-cyan-400/40 px-4 py-2 text-sm font-bold text-cyan-100 transition hover:bg-cyan-400/10"
+                >
                   Exportar Histórico
                 </button>
-                <button onClick={novaCamera} className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:bg-cyan-300">
-                  Nova Câmera
+                <button
+                  onClick={novaCamera}
+                  className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:bg-cyan-300"
+                >
+                  Nova CÃ¢mera
                 </button>
               </div>
             )}
@@ -765,184 +1037,412 @@ export default function Cameras() {
               aria-expanded={estatisticasAbertas}
             >
               <div>
-                <h2 className="text-base font-black text-slate-100">Estatísticas CFTV</h2>
-                <p className="mt-1 text-xs text-slate-400">Indicadores, mapas, rankings, gráficos e timeline operacional.</p>
+                <h2 className="text-base font-black text-slate-100">
+                  Estatísticas CFTV
+                </h2>
+                <p className="mt-1 text-xs text-slate-400">
+                  Indicadores, mapas, rankings, gráficos e timeline operacional.
+                </p>
               </div>
               <span className="flex items-center gap-3 rounded-full border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-black text-cyan-200">
                 {estatisticasAbertas ? "Ocultar" : "Mostrar"}
-                <ChevronDown size={16} className={`transition ${estatisticasAbertas ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  size={16}
+                  className={`transition ${estatisticasAbertas ? "rotate-180" : ""}`}
+                />
               </span>
             </button>
 
             {estatisticasAbertas && (
               <div className="space-y-6 border-t border-slate-800 p-5 sm:p-6">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <CardSoc titulo="Câmeras cadastradas" valor={dashboard.total} subtitulo="Inventário ativo da unidade" icon={Camera} tom="text-white" />
-              <CardSoc titulo="Online" valor={dashboard.online} subtitulo={`${dashboard.disponibilidade}% de disponibilidade`} icon={Wifi} tom="text-emerald-300" />
-              <CardSoc titulo="Offline" valor={dashboard.offline} subtitulo={`${dashboard.indisponibilidade}% indisponível`} icon={WifiOff} tom="text-red-300" />
-              <CardSoc titulo="SLA operacional" valor={`${dashboard.sla}%`} subtitulo={`${dashboard.indicadorSla} | meta ${dashboard.metaSla || 98}%`} icon={ShieldCheck} tom={dashboard.sla >= (dashboard.metaSla || 98) ? "text-emerald-300" : dashboard.sla >= 90 ? "text-amber-300" : "text-red-300"} />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-              <CardSoc titulo="Retencao media" valor={`${dashboard.retencaoMedia || 0} dias`} subtitulo="Media real pelo Digifort" icon={ShieldCheck} tom="text-cyan-300" />
-              <CardSoc titulo="Em conformidade" valor={dashboard.camerasConformidade || 0} subtitulo="Retencao acima de 180 dias" icon={Wifi} tom="text-emerald-300" />
-              <CardSoc titulo="Em atencao" valor={dashboard.camerasAtencao || 0} subtitulo="Retencao entre 150 e 179 dias" icon={AlertTriangle} tom="text-amber-300" />
-              <CardSoc titulo="Criticas" valor={dashboard.camerasCriticas || 0} subtitulo="Retencao abaixo de 150 dias" icon={AlertTriangle} tom="text-red-300" />
-              <CardSoc titulo="Sem gravacao" valor={dashboard.camerasDesconectadas || 0} subtitulo="Cameras desconectadas agora" icon={WifiOff} tom="text-red-300" />
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 lg:col-span-2">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-bold text-slate-100">Mapa operacional das áreas monitoradas</h2>
-                  <span className="text-xs text-slate-500">Atualização dinâmica</span>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  <CardSoc
+                    titulo="Câmeras cadastradas"
+                    valor={dashboard.total}
+                    subtitulo="Inventário ativo da unidade"
+                    icon={Camera}
+                    tom="text-white"
+                  />
+                  <CardSoc
+                    titulo="Online"
+                    valor={dashboard.online}
+                    subtitulo={`${dashboard.disponibilidade}% de disponibilidade`}
+                    icon={Wifi}
+                    tom="text-emerald-300"
+                  />
+                  <CardSoc
+                    titulo="Offline"
+                    valor={dashboard.offline}
+                    subtitulo={`${dashboard.indisponibilidade}% indisponível`}
+                    icon={WifiOff}
+                    tom="text-red-300"
+                  />
+                  <CardSoc
+                    titulo="SLA operacional"
+                    valor={`${dashboard.sla}%`}
+                    subtitulo={`${dashboard.indicadorSla} | meta ${dashboard.metaSla || 98}%`}
+                    icon={ShieldCheck}
+                    tom={
+                      dashboard.sla >= (dashboard.metaSla || 98)
+                        ? "text-emerald-300"
+                        : dashboard.sla >= 90
+                          ? "text-amber-300"
+                          : "text-red-300"
+                    }
+                  />
                 </div>
-                <div className="mt-4 grid max-h-[310px] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
-                  {dashboard.mapaOperacional.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        if (!tecnicoSomenteLeitura) {
-                          editarCamera(cameras.find((c) => c.id === item.id)!);
-                        }
-                      }}
-                      className={`rounded-xl border p-3 text-left transition ${tecnicoSomenteLeitura ? "cursor-default" : "hover:-translate-y-0.5"} ${item.status === "Conectada" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <strong className="text-sm text-slate-100">Câmera {item.numeroCamera}</strong>
-                        <span className={`h-2.5 w-2.5 rounded-full ${item.status === "Conectada" ? "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,.7)]" : "bg-red-400 shadow-[0_0_14px_rgba(248,113,113,.7)]"}`} />
-                      </div>
-                      <p className="mt-1 truncate text-xs font-semibold text-slate-300">{item.area}</p>
-                      <p className="truncate text-[11px] text-slate-500">{item.local} | Servidor {item.servidor}</p>
-                      {item.offlineMinutos > 0 && <p className="mt-1 text-[11px] font-bold text-red-300">Offline há {minutos(item.offlineMinutos)}</p>}
-                    </button>
-                  ))}
-                </div>
-              </div>
 
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="flex items-center gap-2 font-bold text-slate-100"><AlertTriangle size={18} /> Alertas ativos</h2>
-                  <span className="rounded-full bg-slate-900 px-2 py-1 text-xs font-bold text-slate-300">{dashboard.alertas.length + (dashboard.alertasAutomaticos || []).length}</span>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                  <CardSoc
+                    titulo="Retencao media"
+                    valor={`${dashboard.retencaoMedia || 0} dias`}
+                    subtitulo="Media real pelo Digifort"
+                    icon={ShieldCheck}
+                    tom="text-cyan-300"
+                  />
+                  <CardSoc
+                    titulo="Em conformidade"
+                    valor={dashboard.camerasConformidade || 0}
+                    subtitulo="Retencao acima de 180 dias"
+                    icon={Wifi}
+                    tom="text-emerald-300"
+                  />
+                  <CardSoc
+                    titulo="Em atencao"
+                    valor={dashboard.camerasAtencao || 0}
+                    subtitulo="Retencao entre 150 e 179 dias"
+                    icon={AlertTriangle}
+                    tom="text-amber-300"
+                  />
+                  <CardSoc
+                    titulo="Criticas"
+                    valor={dashboard.camerasCriticas || 0}
+                    subtitulo="Retencao abaixo de 150 dias"
+                    icon={AlertTriangle}
+                    tom="text-red-300"
+                  />
+                  <CardSoc
+                    titulo="Sem gravacao"
+                    valor={dashboard.camerasDesconectadas || 0}
+                    subtitulo="Cameras desconectadas agora"
+                    icon={WifiOff}
+                    tom="text-red-300"
+                  />
                 </div>
-                <div className="mt-4 max-h-[330px] space-y-2 overflow-y-auto pr-1 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
-                  {dashboard.alertas.length === 0 ? (
-                    <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-200">Nenhuma câmera desconectada neste momento.</p>
-                  ) : (
-                    dashboard.alertas.map((alerta) => (
-                      <div key={alerta.id} className="rounded-xl border border-red-500/30 bg-red-500/10 p-3">
-                        <p className="text-sm font-bold text-red-200">{alerta.titulo}</p>
-                        <p className="text-xs text-slate-300">{alerta.mensagem}</p>
-                        <p className="mt-1 text-xs text-red-300">Indisponível há {minutos(alerta.minutos)} {alerta.slaViolado ? "| SLA violado" : ""}</p>
-                      </div>
-                    ))
-                  )}
-                  {(dashboard.alertasAutomaticos || []).map((alerta, index) => (
-                    <div key={`${alerta.tipo}-${index}`} className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                      <p className="text-sm font-bold text-amber-200">{alerta.tipo}</p>
-                      <p className="text-xs text-slate-300">{alerta.mensagem}</p>
-                      <p className="mt-1 text-xs text-amber-300">{alerta.severidade}</p>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5 lg:col-span-2">
+                    <div className="flex items-center justify-between">
+                      <h2 className="font-bold text-slate-100">
+                        Mapa operacional das áreas monitoradas
+                      </h2>
+                      <span className="text-xs text-slate-500">
+                        Atualização dinâmica
+                      </span>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-400">Tempo médio de solução</p>
-                <p className="mt-3 text-3xl font-black text-cyan-300">{minutos(dashboard.mediaSolucao)}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-400">Média offline por câmera</p>
-                <p className="mt-3 text-3xl font-black text-amber-300">{minutos(dashboard.mediaOfflinePorCamera)}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-400">Indisponibilidade histórica</p>
-                <p className="mt-3 text-3xl font-black text-red-300">{minutos(dashboard.totalOfflineHistorico)}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-400">Checklists recentes</p>
-                <p className="mt-3 text-3xl font-black text-emerald-300">{dashboard.timeline.length}</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-              <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <h2 className="font-bold text-slate-100">Ranking de instabilidade</h2>
-                <div className="max-h-[230px] space-y-4 overflow-y-auto pr-2 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
-                  {dashboard.instabilidadePorCamera.map(([nome, valor]) => <Barra key={nome} nome={nome} valor={valor} maximo={maxFalhas} cor="bg-red-400" />)}
-                </div>
-              </div>
-              <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <h2 className="font-bold text-slate-100">Áreas mais críticas</h2>
-                <div className="max-h-[230px] space-y-4 overflow-y-auto pr-2 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
-                  {dashboard.falhasPorArea.map(([nome, valor]) => <Barra key={nome} nome={nome} valor={valor} maximo={maxAreas} cor="bg-amber-400" />)}
-                </div>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <h2 className="font-bold text-slate-100">Comparativos técnicos</h2>
-                <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                  {Object.entries(dashboard.porTipoCamera).map(([nome, valor]) => <div key={nome} className="rounded-xl bg-slate-900 p-3"><p className="text-slate-400">{nome}</p><strong>{valor}</strong></div>)}
-                  {Object.entries(dashboard.porTecnologia).map(([nome, valor]) => <div key={nome} className="rounded-xl bg-slate-900 p-3"><p className="text-slate-400">{nome}</p><strong>{valor}</strong></div>)}
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-              <h2 className="font-bold text-slate-100">10 cameras com menor retencao real</h2>
-              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-                {dashboard.menorRetencao.length === 0 ? (
-                  <p className="text-sm text-slate-500">Nenhum checklist de retencao registrado.</p>
-                ) : dashboard.menorRetencao.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-                    <p className="text-sm font-bold text-slate-100">Camera {item.numeroCamera}</p>
-                    <p className="mt-1 text-2xl font-black text-amber-300">{item.diasRetencao} dias</p>
-                    <p className="text-xs text-slate-400">{item.area} | Servidor {item.servidor}</p>
+                    <div className="mt-4 grid max-h-[310px] grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
+                      {dashboard.mapaOperacional.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => {
+                            if (!tecnicoSomenteLeitura) {
+                              editarCamera(
+                                cameras.find((c) => c.id === item.id)!,
+                              );
+                            }
+                          }}
+                          className={`rounded-xl border p-3 text-left transition ${tecnicoSomenteLeitura ? "cursor-default" : "hover:-translate-y-0.5"} ${item.status === "Conectada" ? "border-emerald-500/30 bg-emerald-500/10" : "border-red-500/40 bg-red-500/10"}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <strong className="text-sm text-slate-100">
+                              CÃ¢mera {item.numeroCamera}
+                            </strong>
+                            <span
+                              className={`h-2.5 w-2.5 rounded-full ${item.status === "Conectada" ? "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,.7)]" : "bg-red-400 shadow-[0_0_14px_rgba(248,113,113,.7)]"}`}
+                            />
+                          </div>
+                          <p className="mt-1 truncate text-xs font-semibold text-slate-300">
+                            {item.area}
+                          </p>
+                          <p className="truncate text-[11px] text-slate-500">
+                            {item.local} | Servidor {item.servidor}
+                          </p>
+                          {item.offlineMinutos > 0 && (
+                            <p className="mt-1 text-[11px] font-bold text-red-300">
+                              Offline há {minutos(item.offlineMinutos)}
+                            </p>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
-            </div>
 
-            {dashboard.digifort && (
-              <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
-                <h2 className="font-bold text-cyan-100">Preparação para integração Digifort</h2>
-                <p className="mt-2 text-sm text-slate-300">{dashboard.digifort.statusIntegracao} | Sistema padrão: {dashboard.digifort.tipoSistemaPadrao}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {dashboard.digifort.camposMapeados.map((campo) => (
-                    <span key={campo} className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-cyan-100">{campo}</span>
-                  ))}
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <h2 className="flex items-center gap-2 font-bold text-slate-100">
+                        <AlertTriangle size={18} /> Alertas ativos
+                      </h2>
+                      <span className="rounded-full bg-slate-900 px-2 py-1 text-xs font-bold text-slate-300">
+                        {dashboard.alertas.length +
+                          (dashboard.alertasAutomaticos || []).length}
+                      </span>
+                    </div>
+                    <div className="mt-4 max-h-[330px] space-y-2 overflow-y-auto pr-1 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
+                      {dashboard.alertas.length === 0 ? (
+                        <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                          Nenhuma cÃ¢mera desconectada neste momento.
+                        </p>
+                      ) : (
+                        dashboard.alertas.map((alerta) => (
+                          <div
+                            key={alerta.id}
+                            className="rounded-xl border border-red-500/30 bg-red-500/10 p-3"
+                          >
+                            <p className="text-sm font-bold text-red-200">
+                              {alerta.titulo}
+                            </p>
+                            <p className="text-xs text-slate-300">
+                              {alerta.mensagem}
+                            </p>
+                            <p className="mt-1 text-xs text-red-300">
+                              Indisponível há {minutos(alerta.minutos)}{" "}
+                              {alerta.slaViolado ? "| SLA violado" : ""}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                      {(dashboard.alertasAutomaticos || []).map(
+                        (alerta, index) => (
+                          <div
+                            key={`${alerta.tipo}-${index}`}
+                            className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3"
+                          >
+                            <p className="text-sm font-bold text-amber-200">
+                              {alerta.tipo}
+                            </p>
+                            <p className="text-xs text-slate-300">
+                              {alerta.mensagem}
+                            </p>
+                            <p className="mt-1 text-xs text-amber-300">
+                              {alerta.severidade}
+                            </p>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
 
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <h2 className="font-bold text-slate-100">Histórico gráfico de falhas</h2>
-                <div className="mt-6 flex h-52 items-end gap-3 overflow-x-auto">
-                  {dashboard.falhasPorDia.length === 0 ? <p className="self-start text-sm text-slate-500">Sem falhas registradas.</p> : dashboard.falhasPorDia.map(([dia, valor]) => (
-                    <div key={dia} className="flex min-w-14 flex-col items-center gap-2">
-                      <div className="w-8 rounded-t bg-cyan-400" style={{ height: `${Math.max(valor * 28, 8)}px` }} />
-                      <span className="text-[10px] text-slate-500">{formatarDiaGrafico(dia)}</span>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <p className="text-sm text-slate-400">
+                      Tempo médio de solução
+                    </p>
+                    <p className="mt-3 text-3xl font-black text-cyan-300">
+                      {minutos(dashboard.mediaSolucao)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <p className="text-sm text-slate-400">
+                      Média offline por câmera
+                    </p>
+                    <p className="mt-3 text-3xl font-black text-amber-300">
+                      {minutos(dashboard.mediaOfflinePorCamera)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <p className="text-sm text-slate-400">
+                      Indisponibilidade histórica
+                    </p>
+                    <p className="mt-3 text-3xl font-black text-red-300">
+                      {minutos(dashboard.totalOfflineHistorico)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <p className="text-sm text-slate-400">
+                      Checklists recentes
+                    </p>
+                    <p className="mt-3 text-3xl font-black text-emerald-300">
+                      {dashboard.timeline.length}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
-                <h2 className="font-bold text-slate-100">Timeline operacional</h2>
-                <div className="mt-4 max-h-64 space-y-3 overflow-auto pr-2">
-                  {dashboard.timeline.map((evento) => (
-                    <div key={evento.id} className="rounded-xl border border-slate-800 bg-slate-900 p-3">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="font-bold">Câmera {evento.camera} | {evento.status}</p>
-                        <span className="text-xs text-slate-500">{new Date(evento.iniciadoEm).toLocaleString("pt-BR")}</span>
-                      </div>
-                      <p className="text-sm text-slate-400">{evento.area} {evento.duracao ? `| ${minutos(evento.duracao)}` : ""}</p>
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                  <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <h2 className="font-bold text-slate-100">
+                      Ranking de instabilidade
+                    </h2>
+                    <div className="max-h-[230px] space-y-4 overflow-y-auto pr-2 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
+                      {dashboard.instabilidadePorCamera.map(([nome, valor]) => (
+                        <Barra
+                          key={nome}
+                          nome={nome}
+                          valor={valor}
+                          maximo={maxFalhas}
+                          cor="bg-red-400"
+                        />
+                      ))}
                     </div>
-                  ))}
+                  </div>
+                  <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <h2 className="font-bold text-slate-100">
+                      Áreas mais críticas
+                    </h2>
+                    <div className="max-h-[230px] space-y-4 overflow-y-auto pr-2 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
+                      {dashboard.falhasPorArea.map(([nome, valor]) => (
+                        <Barra
+                          key={nome}
+                          nome={nome}
+                          valor={valor}
+                          maximo={maxAreas}
+                          cor="bg-amber-400"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <h2 className="font-bold text-slate-100">
+                      Comparativos técnicos
+                    </h2>
+                    <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                      {Object.entries(dashboard.porTipoCamera).map(
+                        ([nome, valor]) => (
+                          <div
+                            key={nome}
+                            className="rounded-xl bg-slate-900 p-3"
+                          >
+                            <p className="text-slate-400">{nome}</p>
+                            <strong>{valor}</strong>
+                          </div>
+                        ),
+                      )}
+                      {Object.entries(dashboard.porTecnologia).map(
+                        ([nome, valor]) => (
+                          <div
+                            key={nome}
+                            className="rounded-xl bg-slate-900 p-3"
+                          >
+                            <p className="text-slate-400">{nome}</p>
+                            <strong>{valor}</strong>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                  <h2 className="font-bold text-slate-100">
+                    10 cameras com menor retencao real
+                  </h2>
+                  <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+                    {dashboard.menorRetencao.length === 0 ? (
+                      <p className="text-sm text-slate-500">
+                        Nenhum checklist de retencao registrado.
+                      </p>
+                    ) : (
+                      dashboard.menorRetencao.map((item) => (
+                        <div
+                          key={item.id}
+                          className="rounded-xl border border-slate-800 bg-slate-900 p-3"
+                        >
+                          <p className="text-sm font-bold text-slate-100">
+                            Camera {item.numeroCamera}
+                          </p>
+                          <p className="mt-1 text-2xl font-black text-amber-300">
+                            {item.diasRetencao} dias
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {item.area} | Servidor {item.servidor}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+
+                {dashboard.digifort && (
+                  <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-5">
+                    <h2 className="font-bold text-cyan-100">
+                      Preparação para integração Digifort
+                    </h2>
+                    <p className="mt-2 text-sm text-slate-300">
+                      {dashboard.digifort.statusIntegracao} | Sistema padrão:{" "}
+                      {dashboard.digifort.tipoSistemaPadrao}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {dashboard.digifort.camposMapeados.map((campo) => (
+                        <span
+                          key={campo}
+                          className="rounded-full bg-slate-950 px-3 py-1 text-xs font-bold text-cyan-100"
+                        >
+                          {campo}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <h2 className="font-bold text-slate-100">
+                      Histórico gráfico de falhas
+                    </h2>
+                    <div className="mt-6 flex h-52 items-end gap-3 overflow-x-auto">
+                      {dashboard.falhasPorDia.length === 0 ? (
+                        <p className="self-start text-sm text-slate-500">
+                          Sem falhas registradas.
+                        </p>
+                      ) : (
+                        dashboard.falhasPorDia.map(([dia, valor]) => (
+                          <div
+                            key={dia}
+                            className="flex min-w-14 flex-col items-center gap-2"
+                          >
+                            <div
+                              className="w-8 rounded-t bg-cyan-400"
+                              style={{ height: `${Math.max(valor * 28, 8)}px` }}
+                            />
+                            <span className="text-[10px] text-slate-500">
+                              {formatarDiaGrafico(dia)}
+                            </span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                    <h2 className="font-bold text-slate-100">
+                      Timeline operacional
+                    </h2>
+                    <div className="mt-4 max-h-64 space-y-3 overflow-auto pr-2">
+                      {dashboard.timeline.map((evento) => (
+                        <div
+                          key={evento.id}
+                          className="rounded-xl border border-slate-800 bg-slate-900 p-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <p className="font-bold">
+                              CÃ¢mera {evento.camera} | {evento.status}
+                            </p>
+                            <span className="text-xs text-slate-500">
+                              {new Date(evento.iniciadoEm).toLocaleString(
+                                "pt-BR",
+                              )}
+                            </span>
+                          </div>
+                          <p className="text-sm text-slate-400">
+                            {evento.area}{" "}
+                            {evento.duracao
+                              ? `| ${minutos(evento.duracao)}`
+                              : ""}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -951,82 +1451,161 @@ export default function Cameras() {
 
       {formAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <form id="form-camera" onSubmit={salvarCamera} className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">{cameraEditando ? "Editar câmera" : "Cadastrar câmera"}</h2>
-              <p className="text-sm text-slate-500">Inventário individual por unidade operacional.</p>
+          <form
+            id="form-camera"
+            onSubmit={salvarCamera}
+            className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl"
+          >
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {cameraEditando ? "Editar cÃ¢mera" : "Cadastrar cÃ¢mera"}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Inventário individual por unidade operacional.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormAberto(false)}
+                className="rounded-lg bg-slate-100 px-3 py-2"
+              >
+                Fechar
+              </button>
             </div>
-            <button type="button" onClick={() => setFormAberto(false)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
-          </div>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Nº da câmera</span>
-              <input className="w-full rounded-lg border p-3" placeholder="Ex: CF001" value={form.numeroCamera} onChange={(e) => campo("numeroCamera", e.target.value.toUpperCase())} required />
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Nome da câmera</span>
-              <input className="w-full rounded-lg border p-3" placeholder="Ex: Gate 1 - Entrada" value={form.nomeCamera} onChange={(e) => campo("nomeCamera", e.target.value)} />
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Nº do servidor</span>
-              <input className="w-full rounded-lg border p-3" placeholder="Ex: SJJ-1" value={form.numeroServidor} onChange={(e) => campo("numeroServidor", e.target.value.toUpperCase())} required />
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Tipo de sistema</span>
-              <select className="w-full rounded-lg border p-3" value={form.tipoSistema} onChange={(e) => campo("tipoSistema", e.target.value)} required>
-                <option value="">Selecione</option>
-                <option>DIGIFORT</option>
-              </select>
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Tecnologia</span>
-              <select className="w-full rounded-lg border p-3" value={form.tecnologia} onChange={(e) => campo("tecnologia", e.target.value)} required>
-                <option value="">Selecione</option>
-                <option>Analógica</option>
-                <option>Digital</option>
-              </select>
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Tipo da câmera</span>
-              <select className="w-full rounded-lg border p-3" value={form.tipoCamera} onChange={(e) => campo("tipoCamera", e.target.value)} required>
-                <option value="">Selecione</option>
-                <option>Speed Dome</option>
-                <option>Fixa</option>
-                <option>Bullet</option>
-                <option>PTZ</option>
-              </select>
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Local instalado</span>
-              <input className="w-full rounded-lg border p-3" placeholder="Ex: Portão principal" value={form.localInstalado} onChange={(e) => campo("localInstalado", e.target.value)} required />
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Área monitorada</span>
-              <input className="w-full rounded-lg border p-3" placeholder="Ex: Gate 1" value={form.areaMonitorada} onChange={(e) => campo("areaMonitorada", e.target.value)} required />
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Infravermelho</span>
-              <select className="w-full rounded-lg border p-3" value={form.infravermelho} onChange={(e) => campo("infravermelho", e.target.value)} required>
-                <option value="">Selecione</option>
-                <option>Sim</option>
-                <option>Não</option>
-              </select>
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700">
-              <span>Monitoramento</span>
-              <select className="w-full rounded-lg border p-3" value={form.monitoramento} onChange={(e) => campo("monitoramento", e.target.value)} required>
-                <option value="">Selecione</option>
-                <option>Ativo</option>
-                <option>Inativo</option>
-              </select>
-            </label>
-            <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-3">
-              <span>Observações técnicas</span>
-              <textarea className="w-full rounded-lg border p-3" placeholder="Informações técnicas, localização detalhada ou observações relevantes" value={form.observacoesTecnicas} onChange={(e) => campo("observacoesTecnicas", e.target.value)} />
-            </label>
-          </div>
-          <button className="mt-5 rounded-lg bg-blue-600 px-5 py-3 font-bold text-white">Salvar câmera</button>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Nº da câmera</span>
+                <input
+                  className="w-full rounded-lg border p-3"
+                  placeholder="Ex: CF001"
+                  value={form.numeroCamera}
+                  onChange={(e) =>
+                    campo("numeroCamera", e.target.value.toUpperCase())
+                  }
+                  required
+                />
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Nome da cÃ¢mera</span>
+                <input
+                  className="w-full rounded-lg border p-3"
+                  placeholder="Ex: Gate 1 - Entrada"
+                  value={form.nomeCamera}
+                  onChange={(e) => campo("nomeCamera", e.target.value)}
+                />
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Nº do servidor</span>
+                <input
+                  className="w-full rounded-lg border p-3"
+                  placeholder="Ex: SJJ-1"
+                  value={form.numeroServidor}
+                  onChange={(e) =>
+                    campo("numeroServidor", e.target.value.toUpperCase())
+                  }
+                  required
+                />
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Tipo de sistema</span>
+                <select
+                  className="w-full rounded-lg border p-3"
+                  value={form.tipoSistema}
+                  onChange={(e) => campo("tipoSistema", e.target.value)}
+                  required
+                >
+                  <option value="">Selecione</option>
+                  <option>DIGIFORT</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Tecnologia</span>
+                <select
+                  className="w-full rounded-lg border p-3"
+                  value={form.tecnologia}
+                  onChange={(e) => campo("tecnologia", e.target.value)}
+                  required
+                >
+                  <option value="">Selecione</option>
+                  <option>Analógica</option>
+                  <option>Digital</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Tipo da cÃ¢mera</span>
+                <select
+                  className="w-full rounded-lg border p-3"
+                  value={form.tipoCamera}
+                  onChange={(e) => campo("tipoCamera", e.target.value)}
+                  required
+                >
+                  <option value="">Selecione</option>
+                  <option>Speed Dome</option>
+                  <option>Fixa</option>
+                  <option>Bullet</option>
+                  <option>PTZ</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Local instalado</span>
+                <input
+                  className="w-full rounded-lg border p-3"
+                  placeholder="Ex: Portão principal"
+                  value={form.localInstalado}
+                  onChange={(e) => campo("localInstalado", e.target.value)}
+                  required
+                />
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Área monitorada</span>
+                <input
+                  className="w-full rounded-lg border p-3"
+                  placeholder="Ex: Gate 1"
+                  value={form.areaMonitorada}
+                  onChange={(e) => campo("areaMonitorada", e.target.value)}
+                  required
+                />
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Infravermelho</span>
+                <select
+                  className="w-full rounded-lg border p-3"
+                  value={form.infravermelho}
+                  onChange={(e) => campo("infravermelho", e.target.value)}
+                  required
+                >
+                  <option value="">Selecione</option>
+                  <option>Sim</option>
+                  <option>Não</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span>Monitoramento</span>
+                <select
+                  className="w-full rounded-lg border p-3"
+                  value={form.monitoramento}
+                  onChange={(e) => campo("monitoramento", e.target.value)}
+                  required
+                >
+                  <option value="">Selecione</option>
+                  <option>Ativo</option>
+                  <option>Inativo</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-3">
+                <span>Observações técnicas</span>
+                <textarea
+                  className="w-full rounded-lg border p-3"
+                  placeholder="Informações técnicas, localização detalhada ou observações relevantes"
+                  value={form.observacoesTecnicas}
+                  onChange={(e) => campo("observacoesTecnicas", e.target.value)}
+                />
+              </label>
+            </div>
+            <button className="mt-5 rounded-lg bg-blue-600 px-5 py-3 font-bold text-white">
+              Salvar cÃ¢mera
+            </button>
           </form>
         </div>
       )}
@@ -1034,8 +1613,13 @@ export default function Cameras() {
       <section className="rounded-2xl bg-white p-5 shadow">
         <div className="mb-5 flex flex-col justify-between gap-3 lg:flex-row lg:items-center">
           <div>
-            <h2 className="text-xl font-bold text-slate-900">Inventário operacional</h2>
-            <p className="text-sm text-slate-500">Cadastro, inspeção operacional e retenção recalculada automaticamente.</p>
+            <h2 className="text-xl font-bold text-slate-900">
+              Inventário operacional
+            </h2>
+            <p className="text-sm text-slate-500">
+              Cadastro, inspeção operacional e retenção recalculada
+              automaticamente.
+            </p>
           </div>
           <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-[minmax(220px,320px)_180px] lg:w-auto">
             <input
@@ -1061,14 +1645,19 @@ export default function Cameras() {
               <Activity size={19} />
             </span>
             <div>
-              <p className="text-sm font-black text-emerald-100">Verificação automática da retenção</p>
+              <p className="text-sm font-black text-emerald-100">
+                Verificação automática da retenção
+              </p>
               <p className="text-xs text-emerald-100/70">
-                O JetGuard recalcula os dias disponíveis de gravação considerando a data e hora atuais.
+                O JetGuard recalcula os dias disponíveis de gravação
+                considerando a data e hora atuais.
               </p>
             </div>
           </div>
           <div className="rounded-xl border border-emerald-300/15 bg-slate-950/30 px-3 py-2 text-left sm:text-right">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/70">Última verificação</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200/70">
+              Última verificação
+            </p>
             <p className="mt-0.5 text-sm font-black text-white">
               {ultimaVerificacaoAutomatica
                 ? ultimaVerificacaoAutomatica.toLocaleString("pt-BR", {
@@ -1081,19 +1670,30 @@ export default function Cameras() {
                   })
                 : "Aguardando verificação"}
             </p>
-            <p className="mt-0.5 text-[10px] text-emerald-100/60">Atualização automática a cada 30 segundos</p>
+            <p className="mt-0.5 text-[10px] text-emerald-100/60">
+              Atualização automática a cada 30 segundos
+            </p>
           </div>
         </div>
         <div className="mb-4 flex flex-col justify-between gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 sm:flex-row sm:items-center dark:border-blue-500/20 dark:bg-blue-500/10">
           <div>
-            <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Relatório Técnico CFTV</p>
+            <p className="text-sm font-bold text-blue-900 dark:text-blue-100">
+              Relatório Técnico CFTV
+            </p>
             <p className="text-xs text-blue-700 dark:text-slate-200">
-              Selecione câmeras filtradas ou específicas para emitir um PDF com status, retenção e histórico de conexão/desconexão.
+              Selecione câmeras filtradas ou específicas para emitir um PDF com
+              status, retenção e histórico de conexão/desconexão.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={alternarTodasFiltradas} className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-sm hover:bg-blue-100">
-              {todasFiltradasSelecionadas ? "Limpar filtradas" : "Selecionar filtradas"}
+            <button
+              type="button"
+              onClick={alternarTodasFiltradas}
+              className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-blue-700 shadow-sm hover:bg-blue-100"
+            >
+              {todasFiltradasSelecionadas
+                ? "Limpar filtradas"
+                : "Selecionar filtradas"}
             </button>
             <button
               type="button"
@@ -1116,10 +1716,10 @@ export default function Cameras() {
                     className="h-4 w-4 accent-blue-600"
                     checked={todasFiltradasSelecionadas}
                     onChange={alternarTodasFiltradas}
-                    aria-label="Selecionar todas as câmeras filtradas"
+                    aria-label="Selecionar todas as cÃ¢meras filtradas"
                   />
                 </th>
-                <th className="p-3">Câmera</th>
+                <th className="p-3">CÃ¢mera</th>
                 <th className="p-3">Servidor</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Tipo</th>
@@ -1139,18 +1739,30 @@ export default function Cameras() {
                       className="h-4 w-4 accent-blue-600"
                       checked={camerasSelecionadas.includes(camera.id)}
                       onChange={() => alternarCameraSelecionada(camera.id)}
-                      aria-label={`Selecionar câmera ${camera.numeroCamera}`}
+                      aria-label={`Selecionar cÃ¢mera ${camera.numeroCamera}`}
                     />
                   </td>
-                  <td className="p-3 font-bold">{camera.numeroCamera}{camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}</td>
+                  <td className="p-3 font-bold">
+                    {camera.numeroCamera}
+                    {camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}
+                  </td>
                   <td className="p-3">{camera.numeroServidor}</td>
-                  <td className="p-3"><span className={`rounded-full px-3 py-1 text-xs font-bold ${camera.status === "Conectada" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}>{camera.status}</span></td>
+                  <td className="p-3">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${camera.status === "Conectada" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}`}
+                    >
+                      {camera.status}
+                    </span>
+                  </td>
                   <td className="p-3">{camera.tipoCamera}</td>
                   <td className="p-3">{camera.tecnologia}</td>
                   <td className="p-3">{camera.areaMonitorada}</td>
                   <td className="p-3 font-bold">
                     <div className="flex items-center gap-2">
-                      <span>{camera.checklists?.[0]?.tempoGravacaoDisponivel ?? "Sem checklist"}</span>
+                      <span>
+                        {camera.checklists?.[0]?.tempoGravacaoDisponivel ??
+                          "Sem checklist"}
+                      </span>
                       <button
                         type="button"
                         onClick={() => abrirTimelineRetencao(camera)}
@@ -1165,7 +1777,11 @@ export default function Cameras() {
                   <td className="p-3">
                     <div className="flex flex-nowrap items-center gap-1.5">
                       {podeAnalisar() && (
-                        <BotaoAcaoCamera titulo="Editar camera" onClick={() => editarCamera(camera)} icon={Pencil} />
+                        <BotaoAcaoCamera
+                          titulo="Editar camera"
+                          onClick={() => editarCamera(camera)}
+                          icon={Pencil}
+                        />
                       )}
                       {podeAnalisar() && (
                         <BotaoAcaoCamera
@@ -1204,7 +1820,7 @@ export default function Cameras() {
               {camerasFiltradas.length === 0 && (
                 <tr>
                   <td className="p-6 text-center text-slate-500" colSpan={10}>
-                    Nenhuma câmera encontrada com os filtros selecionados.
+                    Nenhuma cÃ¢mera encontrada com os filtros selecionados.
                   </td>
                 </tr>
               )}
@@ -1222,14 +1838,20 @@ export default function Cameras() {
                   <Activity size={16} /> Linha do tempo de retencao
                 </p>
                 <h2 className="mt-3 text-2xl font-black">
-                  Retencao de Gravacao - Camera {cameraTimeline.numeroCamera}{cameraTimeline.nomeCamera ? ` - ${cameraTimeline.nomeCamera}` : ""}
+                  Retencao de Gravacao - Camera {cameraTimeline.numeroCamera}
+                  {cameraTimeline.nomeCamera
+                    ? ` - ${cameraTimeline.nomeCamera}`
+                    : ""}
                 </h2>
                 <p className="mt-1 text-sm text-slate-400">
-                  {cameraTimeline.areaMonitorada} | {cameraTimeline.localInstalado} | Servidor {cameraTimeline.numeroServidor}
+                  {cameraTimeline.areaMonitorada} |{" "}
+                  {cameraTimeline.localInstalado} | Servidor{" "}
+                  {cameraTimeline.numeroServidor}
                 </p>
                 {periodoTimeline && (
                   <p className="mt-2 text-sm text-slate-300">
-                    Periodo: {formatarDataHora(periodoTimeline.inicio)} ate {formatarDataHora(periodoTimeline.fim)}
+                    Periodo: {formatarDataHora(periodoTimeline.inicio)} ate{" "}
+                    {formatarDataHora(periodoTimeline.fim)}
                   </p>
                 )}
               </div>
@@ -1247,38 +1869,68 @@ export default function Cameras() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
                 <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
                   <p className="text-xs text-blue-200">Data mais antiga</p>
-                  <p className="mt-2 text-xl font-black text-white">{periodoTimeline ? formatarDataHora(periodoTimeline.inicio) : "Sem dados"}</p>
+                  <p className="mt-2 text-xl font-black text-white">
+                    {periodoTimeline
+                      ? formatarDataHora(periodoTimeline.inicio)
+                      : "Sem dados"}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-blue-500/20 bg-blue-500/10 p-4">
                   <p className="text-xs text-blue-200">Data atual</p>
-                  <p className="mt-2 text-xl font-black text-white">{periodoTimeline ? formatarDataHora(periodoTimeline.fim) : "Sem dados"}</p>
+                  <p className="mt-2 text-xl font-black text-white">
+                    {periodoTimeline
+                      ? formatarDataHora(periodoTimeline.fim)
+                      : "Sem dados"}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-slate-700 bg-slate-900 p-4">
                   <p className="text-xs text-slate-400">Retencao cronologica</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.cronologica === null ? "Sem dados" : formatarRetencao(resumoTimeline.cronologica)}</p>
+                  <p className="mt-2 text-2xl font-black text-white">
+                    {resumoTimeline.cronologica === null
+                      ? "Sem dados"
+                      : formatarRetencao(resumoTimeline.cronologica)}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
                   <p className="text-xs text-red-200">Periodos de falha</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.indisponibilidade ? minutos(resumoTimeline.indisponibilidade) : "0 min"}</p>
+                  <p className="mt-2 text-2xl font-black text-white">
+                    {resumoTimeline.indisponibilidade
+                      ? minutos(resumoTimeline.indisponibilidade)
+                      : "0 min"}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4">
                   <p className="text-xs text-emerald-200">Retencao efetiva</p>
-                  <p className="mt-2 text-2xl font-black text-white">{resumoTimeline.efetiva === null ? "Sem dados" : formatarRetencao(resumoTimeline.efetiva)}</p>
+                  <p className="mt-2 text-2xl font-black text-white">
+                    {resumoTimeline.efetiva === null
+                      ? "Sem dados"
+                      : formatarRetencao(resumoTimeline.efetiva)}
+                  </p>
                 </div>
               </div>
 
               <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-4">
                 <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <h3 className="font-bold text-slate-100">Linha temporal da gravacao atual</h3>
+                    <h3 className="font-bold text-slate-100">
+                      Linha temporal da gravacao atual
+                    </h3>
                     <p className="text-sm text-slate-400">
-                      Mostra a data mais antiga operacional ajustada pela retenção até a data atual. Trechos vermelhos indicam falhas dentro deste intervalo.
+                      Mostra a data mais antiga operacional ajustada pela
+                      retenção até a data atual. Trechos vermelhos indicam
+                      falhas dentro deste intervalo.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2 text-xs">
-                    <span className="rounded-full bg-emerald-500/15 px-3 py-1 font-bold text-emerald-200">Verde: gravacao disponivel</span>
-                    <span className="rounded-full bg-red-500/15 px-3 py-1 font-bold text-red-200">Vermelho: falha de conexao</span>
-                    <span className="rounded-full bg-blue-500/15 px-3 py-1 font-bold text-blue-200">Atualiza em tempo real</span>
+                    <span className="rounded-full bg-emerald-500/15 px-3 py-1 font-bold text-emerald-200">
+                      Verde: gravacao disponivel
+                    </span>
+                    <span className="rounded-full bg-red-500/15 px-3 py-1 font-bold text-red-200">
+                      Vermelho: falha de conexao
+                    </span>
+                    <span className="rounded-full bg-blue-500/15 px-3 py-1 font-bold text-blue-200">
+                      Atualiza em tempo real
+                    </span>
                   </div>
                 </div>
 
@@ -1289,8 +1941,13 @@ export default function Cameras() {
                 ) : !periodoTimeline ? (
                   <div className="flex h-96 flex-col items-center justify-center rounded-2xl border border-slate-800 bg-slate-950 text-center text-slate-400">
                     <Activity size={34} className="mb-3 text-slate-600" />
-                    <p className="font-bold text-slate-200">Sem data mais antiga para acompanhar</p>
-                    <p className="mt-1 max-w-md text-sm">Registre um checklist com a data mais antiga encontrada no Digifort para gerar a linha temporal.</p>
+                    <p className="font-bold text-slate-200">
+                      Sem data mais antiga para acompanhar
+                    </p>
+                    <p className="mt-1 max-w-md text-sm">
+                      Registre um checklist com a data mais antiga encontrada no
+                      Digifort para gerar a linha temporal.
+                    </p>
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-slate-800 bg-slate-950 p-5">
@@ -1307,7 +1964,10 @@ export default function Cameras() {
                             key={segmento.id}
                             title={`${segmento.motivo || "Falha de conexão"} | ${segmento.label}`}
                             className="absolute top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-red-500 shadow-[0_0_14px_rgba(239,68,68,.45)]"
-                            style={{ left: `${segmento.left}%`, width: `${Math.min(Math.max(segmento.width, 0.8), 100 - segmento.left)}%` }}
+                            style={{
+                              left: `${segmento.left}%`,
+                              width: `${Math.min(Math.max(segmento.width, 0.8), 100 - segmento.left)}%`,
+                            }}
                           />
                         ))}
                       </div>
@@ -1318,9 +1978,16 @@ export default function Cameras() {
                     {segmentosIndisponibilidade.length > 0 && (
                       <div className="mt-4 grid grid-cols-1 gap-2 md:grid-cols-2">
                         {segmentosIndisponibilidade.map((segmento) => (
-                          <div key={segmento.id} className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-100">
-                            <strong>{segmento.motivo || "Falha de conexao"}</strong>
-                            <p className="mt-1 text-red-200">{segmento.label}</p>
+                          <div
+                            key={segmento.id}
+                            className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-100"
+                          >
+                            <strong>
+                              {segmento.motivo || "Falha de conexao"}
+                            </strong>
+                            <p className="mt-1 text-red-200">
+                              {segmento.label}
+                            </p>
                           </div>
                         ))}
                       </div>
@@ -1330,13 +1997,19 @@ export default function Cameras() {
                       {blocosDisponibilidade.map((bloco) => (
                         <span
                           key={bloco.index}
-                          title={bloco.falha ? "Periodo com falha de gravacao" : "Periodo com gravacao operacional"}
+                          title={
+                            bloco.falha
+                              ? "Periodo com falha de gravacao"
+                              : "Periodo com gravacao operacional"
+                          }
                           className={`h-4 flex-1 rounded-sm ${bloco.falha ? "bg-red-500" : "bg-emerald-500"}`}
                         />
                       ))}
                     </div>
                     <p className="mt-3 text-center text-xs text-slate-400">
-                      Retencao efetiva = data atual - data mais antiga - periodos de indisponibilidade registrados dentro do intervalo.
+                      Retencao efetiva = data atual - data mais antiga -
+                      periodos de indisponibilidade registrados dentro do
+                      intervalo.
                     </p>
                   </div>
                 )}
@@ -1344,35 +2017,64 @@ export default function Cameras() {
 
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                  <h3 className="font-bold text-slate-100">Ultimos checklists</h3>
+                  <h3 className="font-bold text-slate-100">
+                    Ultimos checklists
+                  </h3>
                   <div className="mt-3 max-h-56 space-y-2 overflow-auto pr-2">
                     {timelineChecklists.slice(0, 8).map((item) => (
-                      <div key={item.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm">
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-slate-800 bg-slate-950 p-3 text-sm"
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <strong>{formatarDataHora(item.createdAt)}</strong>
-                          <span className={`rounded-full px-2 py-1 text-xs font-bold ${item.statusAtual === "Conectada" ? "bg-emerald-500/15 text-emerald-200" : "bg-red-500/15 text-red-200"}`}>
+                          <span
+                            className={`rounded-full px-2 py-1 text-xs font-bold ${item.statusAtual === "Conectada" ? "bg-emerald-500/15 text-emerald-200" : "bg-red-500/15 text-red-200"}`}
+                          >
                             {item.statusAtual || "Nao informado"}
                           </span>
                         </div>
-                        <p className="mt-1 text-slate-400">Retencao: {item.retencaoEstimadaTexto || `${item.tempoGravacaoDisponivel} dias`}</p>
+                        <p className="mt-1 text-slate-400">
+                          Retencao:{" "}
+                          {item.retencaoEstimadaTexto ||
+                            `${item.tempoGravacaoDisponivel} dias`}
+                        </p>
                       </div>
                     ))}
-                    {timelineChecklists.length === 0 && <p className="text-sm text-slate-500">Nenhum checklist registrado.</p>}
+                    {timelineChecklists.length === 0 && (
+                      <p className="text-sm text-slate-500">
+                        Nenhum checklist registrado.
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
-                  <h3 className="font-bold text-slate-100">Periodos de indisponibilidade</h3>
+                  <h3 className="font-bold text-slate-100">
+                    Periodos de indisponibilidade
+                  </h3>
                   <div className="mt-3 max-h-56 space-y-2 overflow-auto pr-2">
                     {timelineIndisponibilidades.slice(0, 8).map((item) => (
-                      <div key={item.id} className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm">
+                      <div
+                        key={item.id}
+                        className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-sm"
+                      >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <strong>{item.motivo || "Indisponibilidade"}</strong>
-                          <span className="rounded-full bg-red-500/15 px-2 py-1 text-xs font-bold text-red-200">{item.tempoIndisponibilidade}</span>
+                          <span className="rounded-full bg-red-500/15 px-2 py-1 text-xs font-bold text-red-200">
+                            {item.tempoIndisponibilidade}
+                          </span>
                         </div>
-                        <p className="mt-1 text-slate-400">{formatarDataHora(item.iniciadoEm)} ate {formatarDataHora(item.encerradoEm)}</p>
+                        <p className="mt-1 text-slate-400">
+                          {formatarDataHora(item.iniciadoEm)} ate{" "}
+                          {formatarDataHora(item.encerradoEm)}
+                        </p>
                       </div>
                     ))}
-                    {timelineIndisponibilidades.length === 0 && <p className="text-sm text-slate-500">Nenhum periodo de indisponibilidade registrado.</p>}
+                    {timelineIndisponibilidades.length === 0 && (
+                      <p className="text-sm text-slate-500">
+                        Nenhum periodo de indisponibilidade registrado.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1386,9 +2088,19 @@ export default function Cameras() {
           <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl">
             <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">Histórico de Indisponibilidade</p>
-                <h2 className="text-xl font-bold text-slate-900">Câmera {cameraHistorico.numeroCamera}{cameraHistorico.nomeCamera ? ` - ${cameraHistorico.nomeCamera}` : ""}</h2>
-                <p className="text-sm text-slate-500">{cameraHistorico.areaMonitorada} | Servidor {cameraHistorico.numeroServidor}</p>
+                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-600">
+                  Histórico de Indisponibilidade
+                </p>
+                <h2 className="text-xl font-bold text-slate-900">
+                  CÃ¢mera {cameraHistorico.numeroCamera}
+                  {cameraHistorico.nomeCamera
+                    ? ` - ${cameraHistorico.nomeCamera}`
+                    : ""}
+                </h2>
+                <p className="text-sm text-slate-500">
+                  {cameraHistorico.areaMonitorada} | Servidor{" "}
+                  {cameraHistorico.numeroServidor}
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button
@@ -1402,36 +2114,87 @@ export default function Cameras() {
                 >
                   + Registrar Indisponibilidade
                 </button>
-                <button type="button" onClick={() => setCameraHistorico(null)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
+                <button
+                  type="button"
+                  onClick={() => setCameraHistorico(null)}
+                  className="rounded-lg bg-slate-100 px-3 py-2"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
 
             {formIndisponibilidadeAberto && (
-              <form onSubmit={salvarIndisponibilidade} className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <form
+                onSubmit={salvarIndisponibilidade}
+                className="mb-5 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              >
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <label className="space-y-2 text-sm font-bold text-slate-700">
                     <span>Data/Hora Inicial</span>
-                    <input type="datetime-local" className="w-full rounded-lg border p-3" value={formIndisponibilidade.iniciadoEm} onChange={(e) => campoIndisponibilidade("iniciadoEm", e.target.value)} required />
+                    <input
+                      type="datetime-local"
+                      className="w-full rounded-lg border p-3"
+                      value={formIndisponibilidade.iniciadoEm}
+                      onChange={(e) =>
+                        campoIndisponibilidade("iniciadoEm", e.target.value)
+                      }
+                      required
+                    />
                   </label>
                   <label className="space-y-2 text-sm font-bold text-slate-700">
                     <span>Data/Hora Final</span>
-                    <input type="datetime-local" className="w-full rounded-lg border p-3" value={formIndisponibilidade.encerradoEm} onChange={(e) => campoIndisponibilidade("encerradoEm", e.target.value)} required />
+                    <input
+                      type="datetime-local"
+                      className="w-full rounded-lg border p-3"
+                      value={formIndisponibilidade.encerradoEm}
+                      onChange={(e) =>
+                        campoIndisponibilidade("encerradoEm", e.target.value)
+                      }
+                      required
+                    />
                   </label>
                   <label className="space-y-2 text-sm font-bold text-slate-700">
                     <span>Motivo</span>
-                    <select className="w-full rounded-lg border p-3" value={formIndisponibilidade.motivo} onChange={(e) => campoIndisponibilidade("motivo", e.target.value)} required>
+                    <select
+                      className="w-full rounded-lg border p-3"
+                      value={formIndisponibilidade.motivo}
+                      onChange={(e) =>
+                        campoIndisponibilidade("motivo", e.target.value)
+                      }
+                      required
+                    >
                       <option value="">Selecione o motivo</option>
-                      {motivosIndisponibilidade.map((motivo) => <option key={motivo}>{motivo}</option>)}
+                      {motivosIndisponibilidade.map((motivo) => (
+                        <option key={motivo}>{motivo}</option>
+                      ))}
                     </select>
                   </label>
                   <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2">
                     <span>Observação</span>
-                    <textarea className="w-full rounded-lg border p-3" placeholder="Detalhe a indisponibilidade, evidências e tratativas realizadas" value={formIndisponibilidade.observacao} onChange={(e) => campoIndisponibilidade("observacao", e.target.value)} />
+                    <textarea
+                      className="w-full rounded-lg border p-3"
+                      placeholder="Detalhe a indisponibilidade, evidências e tratativas realizadas"
+                      value={formIndisponibilidade.observacao}
+                      onChange={(e) =>
+                        campoIndisponibilidade("observacao", e.target.value)
+                      }
+                    />
                   </label>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
-                  <button className="rounded-lg bg-green-600 px-5 py-3 font-bold text-white">{indisponibilidadeEditando ? "Salvar alteração" : "Salvar registro"}</button>
-                  <button type="button" onClick={() => setFormIndisponibilidadeAberto(false)} className="rounded-lg bg-slate-200 px-5 py-3 font-bold text-slate-700">Cancelar</button>
+                  <button className="rounded-lg bg-green-600 px-5 py-3 font-bold text-white">
+                    {indisponibilidadeEditando
+                      ? "Salvar alteração"
+                      : "Salvar registro"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormIndisponibilidadeAberto(false)}
+                    className="rounded-lg bg-slate-200 px-5 py-3 font-bold text-slate-700"
+                  >
+                    Cancelar
+                  </button>
                 </div>
               </form>
             )}
@@ -1451,22 +2214,57 @@ export default function Cameras() {
                 </thead>
                 <tbody>
                   {indisponibilidades.length === 0 ? (
-                    <tr><td className="p-4 text-slate-500" colSpan={podeAdministrar() ? 7 : 6}>Nenhum período de indisponibilidade registrado.</td></tr>
-                  ) : indisponibilidades.map((registro) => (
-                    <tr key={registro.id} className="border-b border-slate-100">
-                      <td className="p-3">{new Date(registro.iniciadoEm).toLocaleString("pt-BR")}</td>
-                      <td className="p-3">{registro.encerradoEm ? new Date(registro.encerradoEm).toLocaleString("pt-BR") : "Em aberto"}</td>
-                      <td className="p-3 font-bold">{registro.tempoIndisponibilidade}</td>
-                      <td className="p-3">{registro.motivo || "Não informado"}</td>
-                      <td className="p-3">{registro.responsavel?.nome || "Sistema"}</td>
-                      <td className="p-3">{new Date(registro.createdAt).toLocaleString("pt-BR")}</td>
-                      {podeAdministrar() && (
-                        <td className="p-3">
-                          <button onClick={() => editarIndisponibilidade(registro)} className="rounded bg-slate-200 px-3 py-1 text-slate-700">Editar</button>
-                        </td>
-                      )}
+                    <tr>
+                      <td
+                        className="p-4 text-slate-500"
+                        colSpan={podeAdministrar() ? 7 : 6}
+                      >
+                        Nenhum período de indisponibilidade registrado.
+                      </td>
                     </tr>
-                  ))}
+                  ) : (
+                    indisponibilidades.map((registro) => (
+                      <tr
+                        key={registro.id}
+                        className="border-b border-slate-100"
+                      >
+                        <td className="p-3">
+                          {new Date(registro.iniciadoEm).toLocaleString(
+                            "pt-BR",
+                          )}
+                        </td>
+                        <td className="p-3">
+                          {registro.encerradoEm
+                            ? new Date(registro.encerradoEm).toLocaleString(
+                                "pt-BR",
+                              )
+                            : "Em aberto"}
+                        </td>
+                        <td className="p-3 font-bold">
+                          {registro.tempoIndisponibilidade}
+                        </td>
+                        <td className="p-3">
+                          {registro.motivo || "Não informado"}
+                        </td>
+                        <td className="p-3">
+                          {registro.responsavel?.nome || "Sistema"}
+                        </td>
+                        <td className="p-3">
+                          {new Date(registro.createdAt).toLocaleString("pt-BR")}
+                        </td>
+                        {podeAdministrar() && (
+                          <td className="p-3">
+                            <button
+                              onClick={() => editarIndisponibilidade(registro)}
+                              className="rounded bg-slate-200 px-3 py-1 text-slate-700"
+                            >
+                              Editar
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1476,36 +2274,90 @@ export default function Cameras() {
 
       {cameraChecklist && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <form onSubmit={salvarChecklist} className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl">
+          <form
+            onSubmit={salvarChecklist}
+            className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl bg-white p-5 shadow-2xl"
+          >
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-bold text-slate-900">Checklist operacional semanal</h2>
-                <p className="text-sm text-slate-500">Câmera {cameraChecklist.numeroCamera} | {cameraChecklist.areaMonitorada}</p>
+                <h2 className="text-xl font-bold text-slate-900">
+                  Checklist operacional semanal
+                </h2>
+                <p className="text-sm text-slate-500">
+                  CÃ¢mera {cameraChecklist.numeroCamera} |{" "}
+                  {cameraChecklist.areaMonitorada}
+                </p>
               </div>
-              <button type="button" onClick={() => setCameraChecklist(null)} className="rounded-lg bg-slate-100 px-3 py-2">Fechar</button>
+              <button
+                type="button"
+                onClick={() => setCameraChecklist(null)}
+                className="rounded-lg bg-slate-100 px-3 py-2"
+              >
+                Fechar
+              </button>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <CampoChecklist label="Data mais antiga encontrada no Digifort">
-                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Data e hora mais antiga de gravação encontrada durante a consulta no Digifort" value={checklist.dataInicialGravacao} onChange={(e) => campoChecklist("dataInicialGravacao", e.target.value)} required />
+                <input
+                  className="w-full rounded-lg border p-3"
+                  type="datetime-local"
+                  title="Data e hora mais antiga de gravação encontrada durante a consulta no Digifort"
+                  value={checklist.dataInicialGravacao}
+                  onChange={(e) =>
+                    campoChecklist("dataInicialGravacao", e.target.value)
+                  }
+                  required
+                />
               </CampoChecklist>
               <CampoChecklist label="Data mais recente encontrada no Digifort">
-                <input className="w-full rounded-lg border p-3" type="datetime-local" title="Obrigatória somente quando a câmera estiver desconectada; se estiver conectada, o sistema usa a data e hora atual" value={checklist.dataMaisRecenteGravacao} onChange={(e) => campoChecklist("dataMaisRecenteGravacao", e.target.value)} required={checklist.statusAtual === "Desconectada"} />
+                <input
+                  className="w-full rounded-lg border p-3"
+                  type="datetime-local"
+                  title="Obrigatória somente quando a câmera estiver desconectada; se estiver conectada, o sistema usa a data e hora atual"
+                  value={checklist.dataMaisRecenteGravacao}
+                  onChange={(e) =>
+                    campoChecklist("dataMaisRecenteGravacao", e.target.value)
+                  }
+                  required={checklist.statusAtual === "Desconectada"}
+                />
               </CampoChecklist>
               <CampoChecklist label="Status atual da camera">
-                <select className="w-full rounded-lg border p-3" title="Status atual da camera no momento do checklist" value={checklist.statusAtual} onChange={(e) => campoChecklist("statusAtual", e.target.value)}>
+                <select
+                  className="w-full rounded-lg border p-3"
+                  title="Status atual da camera no momento do checklist"
+                  value={checklist.statusAtual}
+                  onChange={(e) =>
+                    campoChecklist("statusAtual", e.target.value)
+                  }
+                >
                   <option>Conectada</option>
                   <option>Desconectada</option>
                 </select>
               </CampoChecklist>
               <CampoChecklist label="Retencao atual calculada">
-                <input className="w-full rounded-lg border bg-slate-50 p-3 text-slate-700" readOnly title="Diferenca real entre a data mais antiga e a data mais recente encontradas no Digifort" value={checklist.retencaoEstimadaTexto} />
+                <input
+                  className="w-full rounded-lg border bg-slate-50 p-3 text-slate-700"
+                  readOnly
+                  title="Diferenca real entre a data mais antiga e a data mais recente encontradas no Digifort"
+                  value={checklist.retencaoEstimadaTexto}
+                />
               </CampoChecklist>
               <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2 dark:text-slate-200">
                 <span>Observacoes do operador</span>
-                <textarea className="w-full rounded-lg border p-3" placeholder="Descreva o resultado da consulta no Digifort, falhas, ausencia de gravacao ou observacoes relevantes" title="Observacoes operacionais do checklist" value={checklist.observacoesOperacionais} onChange={(e) => campoChecklist("observacoesOperacionais", e.target.value)} />
+                <textarea
+                  className="w-full rounded-lg border p-3"
+                  placeholder="Descreva o resultado da consulta no Digifort, falhas, ausencia de gravacao ou observacoes relevantes"
+                  title="Observacoes operacionais do checklist"
+                  value={checklist.observacoesOperacionais}
+                  onChange={(e) =>
+                    campoChecklist("observacoesOperacionais", e.target.value)
+                  }
+                />
               </label>
             </div>
-            <button className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-bold text-white">Salvar checklist</button>
+            <button className="mt-5 rounded-lg bg-green-600 px-5 py-3 font-bold text-white">
+              Salvar checklist
+            </button>
           </form>
         </div>
       )}
@@ -1523,11 +2375,21 @@ export default function Cameras() {
                   <AlertTriangle size={26} />
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">Câmera desconectada</p>
-                  <h2 className="mt-2 text-2xl font-black text-white">Abrir ordem de serviço?</h2>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">
+                    CÃ¢mera desconectada
+                  </p>
+                  <h2 className="mt-2 text-2xl font-black text-white">
+                    Abrir ordem de serviço?
+                  </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
-                    A câmera <strong className="text-white">{modalOrdemServico.numeroCamera}</strong>
-                    {modalOrdemServico.nomeCamera ? ` - ${modalOrdemServico.nomeCamera}` : ""} foi marcada como desconectada.
+                    A cÃ¢mera{" "}
+                    <strong className="text-white">
+                      {modalOrdemServico.numeroCamera}
+                    </strong>
+                    {modalOrdemServico.nomeCamera
+                      ? ` - ${modalOrdemServico.nomeCamera}`
+                      : ""}{" "}
+                    foi marcada como desconectada.
                   </p>
                 </div>
               </div>
@@ -1536,17 +2398,26 @@ export default function Cameras() {
             <div className="space-y-4 p-5">
               <div className="grid gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 text-sm text-slate-300">
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">Área</span>
-                  <p className="mt-1 font-bold text-white">{modalOrdemServico.areaMonitorada || "Não informada"}</p>
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">
+                    Área
+                  </span>
+                  <p className="mt-1 font-bold text-white">
+                    {modalOrdemServico.areaMonitorada || "Não informada"}
+                  </p>
                 </div>
                 <div>
-                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">Local</span>
-                  <p className="mt-1 font-bold text-white">{modalOrdemServico.localInstalado || "Não informado"}</p>
+                  <span className="text-xs font-bold uppercase tracking-[0.16em] text-sky-300">
+                    Local
+                  </span>
+                  <p className="mt-1 font-bold text-white">
+                    {modalOrdemServico.localInstalado || "Não informado"}
+                  </p>
                 </div>
               </div>
 
               <p className="text-sm leading-6 text-slate-300">
-                Se abrir a OS, o chamado ficará disponível para o perfil Técnico/Manutenção tratar a ocorrência.
+                Se abrir a OS, o chamado ficará disponível para o perfil
+                Técnico/Manutenção tratar a ocorrência.
               </p>
 
               <div className="grid gap-3 sm:grid-cols-[1fr_1.35fr]">
@@ -1583,7 +2454,12 @@ export default function Cameras() {
   );
 }
 
-function sobreposicaoMinutos(inicioA: number, fimA: number, inicioB: number, fimB: number) {
+function sobreposicaoMinutos(
+  inicioA: number,
+  fimA: number,
+  inicioB: number,
+  fimB: number,
+) {
   const inicio = Math.max(inicioA, inicioB);
   const fim = Math.min(fimA, fimB);
   return Math.max(0, Math.round((fim - inicio) / 60000));

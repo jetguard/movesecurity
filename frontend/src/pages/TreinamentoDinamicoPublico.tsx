@@ -61,8 +61,8 @@ const formInicial = {
 const perguntasAvaliacaoTreinamento = [
   {
     id: "satisfacao",
-    titulo: "SatisfaÃ§Ã£o com o treinamento",
-    pergunta: "Como vocÃª avalia sua satisfaÃ§Ã£o com o treinamento?",
+    titulo: "Satisfação com o treinamento",
+    pergunta: "Como você avalia sua satisfação com o treinamento?",
     opcoes: [
       "Muito satisfeito(a)",
       "Satisfeito(a)",
@@ -74,30 +74,30 @@ const perguntasAvaliacaoTreinamento = [
   {
     id: "aprendizado",
     titulo: "Aprendizado",
-    pergunta: "VocÃª considera que aprendeu algo novo durante o treinamento?",
+    pergunta: "Você considera que aprendeu algo novo durante o treinamento?",
     opcoes: [
       "Sim, aprendi muito.",
       "Sim, aprendi um pouco.",
-      "NÃ£o aprendi nada novo.",
-      "JÃ¡ conhecia todo o conteÃºdo.",
+      "Não aprendi nada novo.",
+      "Já conhecia todo o conteúdo.",
     ],
   },
   {
     id: "aplicacao",
-    titulo: "AplicaÃ§Ã£o do conhecimento",
+    titulo: "Aplicação do conhecimento",
     pergunta:
-      "VocÃª acredita que conseguirÃ¡ aplicar o que aprendeu no seu trabalho?",
+      "Você acredita que conseguirá aplicar o que aprendeu no seu trabalho?",
     opcoes: [
       "Sim, totalmente.",
       "Sim, parcialmente.",
-      "Ainda tenho dÃºvidas.",
-      "NÃ£o.",
+      "Ainda tenho dúvidas.",
+      "Não.",
     ],
   },
   {
     id: "qualidade",
-    titulo: "Qualidade do conteÃºdo",
-    pergunta: "O conteÃºdo apresentado foi claro e fÃ¡cil de entender?",
+    titulo: "Qualidade do conteúdo",
+    pergunta: "O conteúdo apresentado foi claro e fácil de entender?",
     opcoes: [
       "Muito claro.",
       "Claro.",
@@ -108,14 +108,14 @@ const perguntasAvaliacaoTreinamento = [
   },
   {
     id: "instrutor",
-    titulo: "AvaliaÃ§Ã£o do instrutor",
-    pergunta: "Como vocÃª avalia a conduÃ§Ã£o do instrutor?",
-    opcoes: ["Excelente.", "Boa.", "Regular.", "Ruim.", "PÃ©ssima."],
+    titulo: "Avaliação do instrutor",
+    pergunta: "Como você avalia a condução do instrutor?",
+    opcoes: ["Excelente.", "Boa.", "Regular.", "Ruim.", "Péssima."],
   },
   {
     id: "duracao",
-    titulo: "DuraÃ§Ã£o do treinamento",
-    pergunta: "A duraÃ§Ã£o do treinamento foi adequada?",
+    titulo: "Duração do treinamento",
+    pergunta: "A duração do treinamento foi adequada?",
     opcoes: [
       "Sim.",
       "Poderia ser um pouco maior.",
@@ -124,9 +124,9 @@ const perguntasAvaliacaoTreinamento = [
   },
   {
     id: "avaliacaoGeral",
-    titulo: "AvaliaÃ§Ã£o geral",
-    pergunta: "De forma geral, como vocÃª avalia este treinamento?",
-    opcoes: ["Excelente.", "Bom.", "Regular.", "Ruim.", "PÃ©ssimo."],
+    titulo: "Avaliação geral",
+    pergunta: "De forma geral, como você avalia este treinamento?",
+    opcoes: ["Excelente.", "Bom.", "Regular.", "Ruim.", "Péssimo."],
   },
 ];
 
@@ -176,9 +176,7 @@ export default function TreinamentoDinamicoPublico() {
     axios
       .get(`/api/public/treinamentos-dinamicos/${slug}`)
       .then((response) => setModelo(response.data?.treinamento))
-      .catch(() =>
-        setMensagem("Treinamento nÃ£o encontrado ou indisponÃ­vel."),
-      );
+      .catch(() => setMensagem("Treinamento não encontrado ou indisponível."));
   }, [slug]);
 
   function alterar(valor: string) {
@@ -212,7 +210,7 @@ export default function TreinamentoDinamicoPublico() {
     } catch (error: any) {
       setMensagem(
         error.response?.data?.error ||
-          "NÃ£o foi possÃ­vel iniciar o treinamento.",
+          "Não foi possível iniciar o treinamento.",
       );
     } finally {
       setCarregando(false);
@@ -239,7 +237,7 @@ export default function TreinamentoDinamicoPublico() {
       rolarTopo();
     } catch (error: any) {
       setMensagem(
-        error.response?.data?.error || "NÃ£o foi possÃ­vel salvar a etapa.",
+        error.response?.data?.error || "Não foi possível salvar a etapa.",
       );
     } finally {
       setCarregando(false);
@@ -271,13 +269,12 @@ export default function TreinamentoDinamicoPublico() {
       rolarTopo();
       setMensagem(
         response.data.aprovado
-          ? "VocÃª atingiu a nota mÃ­nima. Avance para avaliar o treinamento."
-          : "VocÃª nÃ£o atingiu a nota mÃ­nima. Revise as perguntas e tente novamente.",
+          ? "Você atingiu a nota mínima. Avance para avaliar o treinamento."
+          : "Você não atingiu a nota mínima. Revise as perguntas e tente novamente.",
       );
     } catch (error: any) {
       setMensagem(
-        error.response?.data?.error ||
-          "NÃ£o foi possÃ­vel validar a avaliaÃ§Ã£o.",
+        error.response?.data?.error || "Não foi possível validar a avaliação.",
       );
     } finally {
       setCarregando(false);
@@ -291,7 +288,7 @@ export default function TreinamentoDinamicoPublico() {
     );
     if (faltantes.length) {
       setMensagem(
-        "Responda todos os itens obrigatÃ³rios da avaliaÃ§Ã£o do treinamento.",
+        "Responda todos os itens obrigatórios da avaliação do treinamento.",
       );
       return;
     }
@@ -308,14 +305,14 @@ export default function TreinamentoDinamicoPublico() {
       setParticipante(response.data.participante);
       setMensagem(
         response.data.mensagem ||
-          "AvaliaÃ§Ã£o do treinamento registrada com sucesso.",
+          "Avaliação do treinamento registrada com sucesso.",
       );
       setIndice(indiceAssinatura);
       rolarTopo();
     } catch (error: any) {
       setMensagem(
         error.response?.data?.error ||
-          "NÃ£o foi possÃ­vel salvar a avaliaÃ§Ã£o do treinamento.",
+          "Não foi possível salvar a avaliação do treinamento.",
       );
     } finally {
       setCarregando(false);
@@ -326,7 +323,7 @@ export default function TreinamentoDinamicoPublico() {
     if (perguntaAvaliacaoAtual < perguntasAvaliacaoTreinamento.length) {
       const atual = perguntasAvaliacaoTreinamento[perguntaAvaliacaoAtual];
       if (!avaliacaoTreinamento[atual.id]) {
-        setMensagem("Selecione uma opÃ§Ã£o para avanÃ§ar.");
+        setMensagem("Selecione uma opção para avançar.");
         return;
       }
     }
@@ -410,8 +407,7 @@ export default function TreinamentoDinamicoPublico() {
       setMensagem(response.data.mensagem || "Certificado emitido com sucesso.");
     } catch (error: any) {
       setMensagem(
-        error.response?.data?.error ||
-          "NÃ£o foi possÃ­vel emitir o certificado.",
+        error.response?.data?.error || "Não foi possível emitir o certificado.",
       );
     } finally {
       setCarregando(false);
@@ -467,7 +463,7 @@ export default function TreinamentoDinamicoPublico() {
               Acesso ao treinamento
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">
-              IdentificaÃ§Ã£o do participante
+              Identificação do participante
             </h2>
             <p className="mt-2 text-sm font-extrabold leading-6 text-slate-800">
               Preencha seus dados para iniciar ou continuar este treinamento.
@@ -500,9 +496,9 @@ export default function TreinamentoDinamicoPublico() {
             <div className="grid gap-2 md:grid-cols-5">
               {[
                 "Etapas",
-                "AvaliaÃ§Ã£o",
+                "Avaliação",
                 "Resultado",
-                "OpiniÃ£o",
+                "Opinião",
                 "Assinatura",
               ].map((label, pos) => {
                 const ativo =
@@ -570,7 +566,7 @@ export default function TreinamentoDinamicoPublico() {
             {indice === indiceQuiz && (
               <section className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
-                  AvaliaÃ§Ã£o final
+                  Avaliação final
                 </p>
                 <h2 className="mt-2 text-3xl font-black text-slate-950">
                   Pergunta {perguntaAtual + 1} de {perguntas.length}
@@ -627,7 +623,7 @@ export default function TreinamentoDinamicoPublico() {
                       }
                       className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white"
                     >
-                      PrÃ³xima pergunta
+                      Próxima pergunta
                     </button>
                   ) : (
                     <button
@@ -636,7 +632,7 @@ export default function TreinamentoDinamicoPublico() {
                       disabled={carregando}
                       className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white disabled:opacity-60"
                     >
-                      Validar avaliaÃ§Ã£o
+                      Validar avaliação
                     </button>
                   )}
                 </div>
@@ -647,11 +643,11 @@ export default function TreinamentoDinamicoPublico() {
               <section className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
                 <Award className="h-10 w-10 text-blue-600" />
                 <h2 className="mt-3 text-3xl font-black text-slate-950">
-                  Resultado da avaliaÃ§Ã£o
+                  Resultado da avaliação
                 </h2>
                 <p className="mt-4 rounded-2xl bg-blue-50 p-4 text-lg font-black text-blue-950">
-                  {resultado?.acertos || 0} acertos Â· nota{" "}
-                  {resultado?.nota || participante.nota || 0}% Â· mÃ­nimo{" "}
+                  {resultado?.acertos || 0} acertos · nota{" "}
+                  {resultado?.nota || participante.nota || 0}% · mínimo{" "}
                   {modelo.notaMinima}%
                 </p>
                 {resultado?.aprovado ? (
@@ -681,17 +677,17 @@ export default function TreinamentoDinamicoPublico() {
             {indice === indiceAvaliacaoTreinamento && (
               <section className="rounded-2xl border border-blue-200 bg-white/96 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-6">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
-                  AvaliaÃ§Ã£o do treinamento
+                  Avaliação do treinamento
                 </p>
                 <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
                     <h2 className="text-3xl font-black text-slate-950">
-                      Conte como foi sua experiÃªncia
+                      Conte como foi sua experiência
                     </h2>
                     <p className="mt-2 max-w-3xl text-sm font-bold leading-6 text-slate-700">
-                      Sua opiniÃ£o ajuda a melhorar os prÃ³ximos treinamentos.
+                      Sua opinião ajuda a melhorar os próximos treinamentos.
                       Responda os itens abaixo para liberar a assinatura e
-                      emissÃ£o do certificado.
+                      emissão do certificado.
                     </p>
                   </div>
                   <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
@@ -785,14 +781,14 @@ export default function TreinamentoDinamicoPublico() {
                 ) : (
                   <article className="mt-6 rounded-3xl border border-blue-100 bg-white p-5 shadow-lg shadow-blue-100/50 sm:p-6">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
-                      Etapa final da opiniÃ£o
+                      Etapa final da opinião
                     </p>
                     <h3 className="mt-2 text-2xl font-black text-slate-950">
-                      ComentÃ¡rios ou sugestÃµes
+                      Comentários ou sugestões
                     </h3>
                     <p className="mt-2 text-sm font-bold leading-6 text-slate-700">
-                      Este campo Ã© opcional. Use se quiser registrar alguma
-                      ideia para melhorar os prÃ³ximos treinamentos.
+                      Este campo é opcional. Use se quiser registrar alguma
+                      ideia para melhorar os próximos treinamentos.
                     </p>
                     <textarea
                       value={comentarioAvaliacao}
@@ -800,7 +796,7 @@ export default function TreinamentoDinamicoPublico() {
                         setComentarioAvaliacao(event.target.value)
                       }
                       rows={5}
-                      placeholder="Escreva aqui sua sugestÃ£o."
+                      placeholder="Escreva aqui sua sugestão."
                       className="mt-5 w-full resize-none rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
                     />
                     <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-black text-slate-700">
@@ -831,7 +827,7 @@ export default function TreinamentoDinamicoPublico() {
                       onClick={avancarAvaliacaoTreinamento}
                       className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700"
                     >
-                      PrÃ³xima etapa
+                      Próxima etapa
                     </button>
                   ) : (
                     <button
@@ -840,7 +836,7 @@ export default function TreinamentoDinamicoPublico() {
                       onClick={salvarAvaliacaoTreinamento}
                       className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-emerald-700 disabled:opacity-60"
                     >
-                      Salvar avaliaÃ§Ã£o e assinar
+                      Salvar avaliação e assinar
                     </button>
                   )}
                 </div>
@@ -851,12 +847,11 @@ export default function TreinamentoDinamicoPublico() {
               <section className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
                 <FileSignature className="h-10 w-10 text-blue-600" />
                 <h2 className="mt-3 text-3xl font-black text-slate-950">
-                  DeclaraÃ§Ã£o e assinatura
+                  Declaração e assinatura
                 </h2>
                 <p className="mt-4 rounded-2xl border border-blue-200 bg-white p-4 text-sm font-black leading-6 text-slate-950">
-                  Declaro que li integralmente o conteÃºdo, respondi Ã 
-                  avaliaÃ§Ã£o e estou ciente das orientaÃ§Ãµes apresentadas
-                  neste treinamento.
+                  Declaro que li integralmente o conteúdo, respondi à avaliação
+                  e estou ciente das orientações apresentadas neste treinamento.
                 </p>
                 {!participante.certificadoUrl && (
                   <div className="mt-5 rounded-2xl border border-blue-200 bg-white p-4">

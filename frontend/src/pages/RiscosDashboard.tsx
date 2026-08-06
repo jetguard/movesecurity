@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -55,8 +55,10 @@ function corClassificacao(valor?: string | null) {
   const texto = normalizar(valor);
   if (texto === "EXTREMO") return "bg-red-500 text-white border-red-300/40";
   if (texto === "ALTO") return "bg-orange-500 text-white border-orange-300/40";
-  if (texto === "MENOR") return "bg-yellow-300 text-slate-950 border-yellow-100/60";
-  if (texto === "BAIXO") return "bg-emerald-400 text-slate-950 border-emerald-100/60";
+  if (texto === "MENOR")
+    return "bg-yellow-300 text-slate-950 border-yellow-100/60";
+  if (texto === "BAIXO")
+    return "bg-emerald-400 text-slate-950 border-emerald-100/60";
   return "bg-slate-700 text-slate-100 border-slate-600";
 }
 
@@ -65,7 +67,8 @@ function corCalor(valor: number, maximo: number) {
   const intensidade = maximo ? valor / maximo : 0;
   if (intensidade >= 0.78) return "bg-red-600 text-white border-red-300";
   if (intensidade >= 0.55) return "bg-orange-500 text-white border-orange-300";
-  if (intensidade >= 0.32) return "bg-yellow-300 text-slate-950 border-yellow-100";
+  if (intensidade >= 0.32)
+    return "bg-yellow-300 text-slate-950 border-yellow-100";
   return "bg-emerald-600 text-white border-emerald-300";
 }
 
@@ -118,7 +121,9 @@ function CardIndicador({
           </p>
           <p className={`mt-3 text-4xl font-black ${tom}`}>{valor}</p>
         </div>
-        <span className={`rounded-full border p-4 ${tom} border-current/30 bg-current/10`}>
+        <span
+          className={`rounded-full border p-4 ${tom} border-current/30 bg-current/10`}
+        >
           <Icon size={24} />
         </span>
       </div>
@@ -129,7 +134,15 @@ function CardIndicador({
   );
 }
 
-function Barra({ nome, valor, total }: { nome: string; valor: number; total: number }) {
+function Barra({
+  nome,
+  valor,
+  total,
+}: {
+  nome: string;
+  valor: number;
+  total: number;
+}) {
   const percentual = total ? Math.round((valor / total) * 100) : 0;
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
@@ -170,32 +183,54 @@ export default function RiscosDashboard() {
 
   const dados = useMemo(() => {
     const total = analises.length;
-    const baixo = analises.filter((item) => normalizar(item.classificacaoRisco) === "BAIXO").length;
-    const menor = analises.filter((item) => normalizar(item.classificacaoRisco) === "MENOR").length;
-    const alto = analises.filter((item) => normalizar(item.classificacaoRisco) === "ALTO").length;
-    const extremo = analises.filter((item) => normalizar(item.classificacaoRisco) === "EXTREMO").length;
+    const baixo = analises.filter(
+      (item) => normalizar(item.classificacaoRisco) === "BAIXO",
+    ).length;
+    const menor = analises.filter(
+      (item) => normalizar(item.classificacaoRisco) === "MENOR",
+    ).length;
+    const alto = analises.filter(
+      (item) => normalizar(item.classificacaoRisco) === "ALTO",
+    ).length;
+    const extremo = analises.filter(
+      (item) => normalizar(item.classificacaoRisco) === "EXTREMO",
+    ).length;
     const comResidual = analises.filter(
-      (item) => item.resultadoResidual !== null && item.resultadoResidual !== undefined,
+      (item) =>
+        item.resultadoResidual !== null && item.resultadoResidual !== undefined,
     );
     const comControles = analises.filter(
       (item) =>
-        item.preventivos.length || item.detectivos.length || item.corretivos.length,
+        item.preventivos.length ||
+        item.detectivos.length ||
+        item.corretivos.length,
     ).length;
-    const mediaInerente = media(analises.map((item) => Number(item.resultadoInerente || 0)));
-    const mediaResidual = media(comResidual.map((item) => Number(item.resultadoResidual || 0)));
+    const mediaInerente = media(
+      analises.map((item) => Number(item.resultadoInerente || 0)),
+    );
+    const mediaResidual = media(
+      comResidual.map((item) => Number(item.resultadoResidual || 0)),
+    );
     const reducaoMedia =
       mediaInerente && mediaResidual
         ? Math.round(((mediaResidual - mediaInerente) / mediaInerente) * 100)
         : 0;
-    const porClassificacao = contarPor(analises, (item) => normalizar(item.classificacaoRisco));
-    const porResidual = contarPor(comResidual, (item) => normalizar(item.classificacaoResidual));
+    const porClassificacao = contarPor(analises, (item) =>
+      normalizar(item.classificacaoRisco),
+    );
+    const porResidual = contarPor(comResidual, (item) =>
+      normalizar(item.classificacaoResidual),
+    );
     const porMacro = Object.entries(
       contarPor(analises, (item) => item.macroProcessoNome),
     )
       .sort((a, b) => b[1] - a[1])
       .slice(0, 7);
     const criticos = [...analises]
-      .sort((a, b) => Number(b.resultadoInerente || 0) - Number(a.resultadoInerente || 0))
+      .sort(
+        (a, b) =>
+          Number(b.resultadoInerente || 0) - Number(a.resultadoInerente || 0),
+      )
       .slice(0, 7);
 
     return {
@@ -223,7 +258,8 @@ export default function RiscosDashboard() {
         const probabilidade = probIndex + 1;
         const total = analises.filter(
           (item) =>
-            Math.round(Number(item.mediaProbabilidade || 0)) === probabilidade &&
+            Math.round(Number(item.mediaProbabilidade || 0)) ===
+              probabilidade &&
             Math.round(Number(item.mediaConsequencia || 0)) === impacto,
         ).length;
         return { impacto, probabilidade, total };
@@ -250,8 +286,12 @@ export default function RiscosDashboard() {
       });
     });
 
-    const linhas = [...riscos.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
-    const colunas = [...fatores.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const linhas = [...riscos.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
+    const colunas = [...fatores.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10);
     const maximo = Math.max(
       1,
       ...linhas.flatMap(([risco]) =>
@@ -270,13 +310,20 @@ export default function RiscosDashboard() {
       const prioridade = prioridadePorClassificacao(analise.classificacaoRisco);
       const valor = Number(analise.resultadoInerente || 0);
       macros.set(macro, (macros.get(macro) || 0) + valor);
-      matriz.set(`${macro}__${prioridade}`, (matriz.get(`${macro}__${prioridade}`) || 0) + valor);
+      matriz.set(
+        `${macro}__${prioridade}`,
+        (matriz.get(`${macro}__${prioridade}`) || 0) + valor,
+      );
     });
-    const linhas = [...macros.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const linhas = [...macros.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 8);
     const maximo = Math.max(
       1,
       ...linhas.flatMap(([macro]) =>
-        prioridades.map((prioridade) => matriz.get(`${macro}__${prioridade}`) || 0),
+        prioridades.map(
+          (prioridade) => matriz.get(`${macro}__${prioridade}`) || 0,
+        ),
       ),
     );
     return { linhas, matriz, maximo };
@@ -300,7 +347,8 @@ export default function RiscosDashboard() {
                   Dashboard
                 </h1>
                 <p className="mt-2 text-sm font-semibold text-slate-300">
-                  Visão geral da análise de riscos, controles, residual e mapas de calor.
+                  Visão geral da análise de riscos, controles, residual e mapas
+                  de calor.
                 </p>
               </div>
             </div>
@@ -386,7 +434,10 @@ export default function RiscosDashboard() {
               <div className="grid min-w-[620px] grid-cols-[78px_repeat(5,1fr)] gap-2">
                 <div />
                 {[1, 2, 3, 4, 5].map((prob) => (
-                  <div key={prob} className="text-center text-xs font-black text-slate-300">
+                  <div
+                    key={prob}
+                    className="text-center text-xs font-black text-slate-300"
+                  >
                     Prob. {prob}
                   </div>
                 ))}
@@ -401,7 +452,9 @@ export default function RiscosDashboard() {
                         className={`flex h-20 flex-col items-center justify-center rounded-xl border text-center font-black ${corCalor(celula.total, Math.max(1, dados.total / 5))}`}
                       >
                         <span className="text-2xl">{celula.total}</span>
-                        <span className="mt-1 text-[10px] uppercase opacity-80">registros</span>
+                        <span className="mt-1 text-[10px] uppercase opacity-80">
+                          registros
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -437,10 +490,17 @@ export default function RiscosDashboard() {
                 </thead>
                 <tbody>
                   {dados.criticos.map((item) => (
-                    <tr key={item.id} className="border-t border-slate-800 text-sm font-semibold text-slate-200">
+                    <tr
+                      key={item.id}
+                      className="border-t border-slate-800 text-sm font-semibold text-slate-200"
+                    >
                       <td className="px-3 py-4">
-                        <p className="font-black text-white">{item.riscoCodigo} - {item.riscoNome}</p>
-                        <p className="text-xs text-slate-400">{item.macroProcessoCodigo} - {item.macroProcessoNome}</p>
+                        <p className="font-black text-white">
+                          {item.riscoCodigo} - {item.riscoNome}
+                        </p>
+                        <p className="text-xs text-slate-400">
+                          {item.macroProcessoCodigo} - {item.macroProcessoNome}
+                        </p>
                       </td>
                       <td className="px-3 py-4">{item.setorNome}</td>
                       <td className="px-3 py-4 text-center">
@@ -457,13 +517,17 @@ export default function RiscosDashboard() {
                         {formatarNumero(item.resultadoInerente)}
                       </td>
                       <td className="px-3 py-4">
-                        <span className={`rounded-full border px-3 py-1 text-xs font-black ${corClassificacao(item.classificacaoRisco)}`}>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-black ${corClassificacao(item.classificacaoRisco)}`}
+                        >
                           {item.classificacaoRisco}
                         </span>
                       </td>
                       <td className="px-3 py-4">
                         {item.classificacaoResidual ? (
-                          <span className={`rounded-full border px-3 py-1 text-xs font-black ${corClassificacao(item.classificacaoResidual)}`}>
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-black ${corClassificacao(item.classificacaoResidual)}`}
+                          >
                             {item.classificacaoResidual}
                           </span>
                         ) : (
@@ -474,7 +538,10 @@ export default function RiscosDashboard() {
                   ))}
                   {!dados.criticos.length && (
                     <tr>
-                      <td colSpan={7} className="px-3 py-8 text-center text-sm font-bold text-slate-400">
+                      <td
+                        colSpan={7}
+                        className="px-3 py-8 text-center text-sm font-bold text-slate-400"
+                      >
                         Nenhuma análise cadastrada para montar o ranking.
                       </td>
                     </tr>
@@ -492,12 +559,19 @@ export default function RiscosDashboard() {
             </p>
             <div className="mt-5 grid gap-3">
               {ordemClassificacao.map((nome) => (
-                <div key={nome} className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+                <div
+                  key={nome}
+                  className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
+                >
                   <div className="flex items-center justify-between">
-                    <span className={`rounded-full border px-3 py-1 text-xs font-black ${corClassificacao(nome)}`}>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-black ${corClassificacao(nome)}`}
+                    >
                       {nome}
                     </span>
-                    <span className="text-xl font-black text-white">{dados.porClassificacao[nome] || 0}</span>
+                    <span className="text-xl font-black text-white">
+                      {dados.porClassificacao[nome] || 0}
+                    </span>
                   </div>
                   <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
                     <div
@@ -518,7 +592,12 @@ export default function RiscosDashboard() {
             </p>
             <div className="mt-5 grid gap-3">
               {dados.porMacro.map(([nome, valor]) => (
-                <Barra key={nome} nome={nome} valor={valor} total={dados.total} />
+                <Barra
+                  key={nome}
+                  nome={nome}
+                  valor={valor}
+                  total={dados.total}
+                />
               ))}
               {!dados.porMacro.length && (
                 <p className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm font-bold text-slate-400">
@@ -534,22 +613,38 @@ export default function RiscosDashboard() {
             </p>
             <div className="mt-5 grid gap-3">
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-                <p className="text-xs font-black uppercase text-slate-400">Média inerente</p>
-                <p className="mt-2 text-3xl font-black text-white">{formatarNumero(dados.mediaInerente)}</p>
+                <p className="text-xs font-black uppercase text-slate-400">
+                  Média inerente
+                </p>
+                <p className="mt-2 text-3xl font-black text-white">
+                  {formatarNumero(dados.mediaInerente)}
+                </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-                <p className="text-xs font-black uppercase text-slate-400">Média residual</p>
-                <p className="mt-2 text-3xl font-black text-white">{formatarNumero(dados.mediaResidual)}</p>
+                <p className="text-xs font-black uppercase text-slate-400">
+                  Média residual
+                </p>
+                <p className="mt-2 text-3xl font-black text-white">
+                  {formatarNumero(dados.mediaResidual)}
+                </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-                <p className="text-xs font-black uppercase text-slate-400">Variação média</p>
-                <p className={`mt-2 text-3xl font-black ${dados.reducaoMedia <= 0 ? "text-emerald-300" : "text-red-300"}`}>
+                <p className="text-xs font-black uppercase text-slate-400">
+                  Variação média
+                </p>
+                <p
+                  className={`mt-2 text-3xl font-black ${dados.reducaoMedia <= 0 ? "text-emerald-300" : "text-red-300"}`}
+                >
                   {dados.reducaoMedia}%
                 </p>
               </div>
               <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-                <p className="text-xs font-black uppercase text-slate-400">Com controles</p>
-                <p className="mt-2 text-3xl font-black text-sky-300">{dados.comControles}</p>
+                <p className="text-xs font-black uppercase text-slate-400">
+                  Com controles
+                </p>
+                <p className="mt-2 text-3xl font-black text-sky-300">
+                  {dados.comControles}
+                </p>
               </div>
             </div>
           </div>
@@ -574,9 +669,14 @@ export default function RiscosDashboard() {
               <table className="w-full min-w-[980px] border-separate border-spacing-1">
                 <thead>
                   <tr className="text-left text-xs font-black text-slate-300">
-                    <th className="sticky left-0 z-10 rounded-lg bg-slate-950 px-3 py-2">Risco x fator</th>
+                    <th className="sticky left-0 z-10 rounded-lg bg-slate-950 px-3 py-2">
+                      Risco x fator
+                    </th>
                     {mapaRiscoFator.colunas.map(([fator]) => (
-                      <th key={fator} className="rounded-lg bg-slate-950 px-3 py-2 text-center">
+                      <th
+                        key={fator}
+                        className="rounded-lg bg-slate-950 px-3 py-2 text-center"
+                      >
                         {fator}
                       </th>
                     ))}
@@ -589,7 +689,8 @@ export default function RiscosDashboard() {
                         {risco}
                       </td>
                       {mapaRiscoFator.colunas.map(([fator]) => {
-                        const valor = mapaRiscoFator.matriz.get(`${risco}__${fator}`) || 0;
+                        const valor =
+                          mapaRiscoFator.matriz.get(`${risco}__${fator}`) || 0;
                         return (
                           <td
                             key={`${risco}-${fator}`}
@@ -603,7 +704,10 @@ export default function RiscosDashboard() {
                   ))}
                   {!mapaRiscoFator.linhas.length && (
                     <tr>
-                      <td className="rounded-lg bg-slate-950 px-3 py-8 text-center text-sm font-bold text-slate-400" colSpan={11}>
+                      <td
+                        className="rounded-lg bg-slate-950 px-3 py-8 text-center text-sm font-bold text-slate-400"
+                        colSpan={11}
+                      >
                         Sem dados para o mapa de riscos x fatores.
                       </td>
                     </tr>
@@ -631,9 +735,14 @@ export default function RiscosDashboard() {
               <table className="w-full min-w-[720px] border-separate border-spacing-1">
                 <thead>
                   <tr className="text-left text-xs font-black text-slate-300">
-                    <th className="rounded-lg bg-slate-950 px-3 py-2">Macroprocesso</th>
+                    <th className="rounded-lg bg-slate-950 px-3 py-2">
+                      Macroprocesso
+                    </th>
                     {prioridades.map((prioridade) => (
-                      <th key={prioridade} className="rounded-lg bg-slate-950 px-3 py-2 text-center">
+                      <th
+                        key={prioridade}
+                        className="rounded-lg bg-slate-950 px-3 py-2 text-center"
+                      >
                         {prioridade}
                       </th>
                     ))}
@@ -646,7 +755,10 @@ export default function RiscosDashboard() {
                         {macro}
                       </td>
                       {prioridades.map((prioridade) => {
-                        const valor = mapaMacroPrioridade.matriz.get(`${macro}__${prioridade}`) || 0;
+                        const valor =
+                          mapaMacroPrioridade.matriz.get(
+                            `${macro}__${prioridade}`,
+                          ) || 0;
                         return (
                           <td
                             key={`${macro}-${prioridade}`}
@@ -660,7 +772,10 @@ export default function RiscosDashboard() {
                   ))}
                   {!mapaMacroPrioridade.linhas.length && (
                     <tr>
-                      <td className="rounded-lg bg-slate-950 px-3 py-8 text-center text-sm font-bold text-slate-400" colSpan={4}>
+                      <td
+                        className="rounded-lg bg-slate-950 px-3 py-8 text-center text-sm font-bold text-slate-400"
+                        colSpan={4}
+                      >
                         Sem dados para o mapa de macroprocesso x prioridade.
                       </td>
                     </tr>

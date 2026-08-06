@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
@@ -9,7 +9,9 @@ function texto(valor: unknown) {
 
 function listaIds(valor: unknown) {
   if (Array.isArray(valor)) {
-    return valor.map((item) => Number(item)).filter((item) => Number.isFinite(item) && item > 0);
+    return valor
+      .map((item) => Number(item))
+      .filter((item) => Number.isFinite(item) && item > 0);
   }
 
   return String(valor || "")
@@ -31,14 +33,23 @@ async function enriquecerAprs(aprs: Array<any>) {
   const riscos = ids.length
     ? await prisma.riscoCatalogo.findMany({
         where: { id: { in: ids } },
-        select: { id: true, codigo: true, nome: true, grauRisco: true, tipoRisco: true, local: true },
+        select: {
+          id: true,
+          codigo: true,
+          nome: true,
+          grauRisco: true,
+          tipoRisco: true,
+          local: true,
+        },
       })
     : [];
 
   const mapa = new Map(riscos.map((risco) => [risco.id, risco]));
   return aprs.map((apr) => ({
     ...apr,
-    riscos: idsDaApr(apr).map((id) => mapa.get(id)).filter(Boolean),
+    riscos: idsDaApr(apr)
+      .map((id) => mapa.get(id))
+      .filter(Boolean),
   }));
 }
 
@@ -62,10 +73,21 @@ export async function criarApr(req: AuthRequest, res: Response) {
     const numero = ultimo ? ultimo.numero + 1 : 1;
     const codigo = `APR-${String(numero).padStart(4, "0")}/${ano}`;
     const riscosIds = listaIds(req.body.riscosIds);
-    const aprovadores = Array.isArray(req.body.aprovadores) ? req.body.aprovadores : [];
+    const aprovadores = Array.isArray(req.body.aprovadores)
+      ? req.body.aprovadores
+      : [];
 
-    if (!texto(req.body.atividade) || !texto(req.body.local) || !texto(req.body.perigos) || !texto(req.body.controlesObrigatorios)) {
-      return res.status(400).json({ error: "Informe atividade, local, perigos e controles obrigatórios." });
+    if (
+      !texto(req.body.atividade) ||
+      !texto(req.body.local) ||
+      !texto(req.body.perigos) ||
+      !texto(req.body.controlesObrigatorios)
+    ) {
+      return res
+        .status(400)
+        .json({
+          error: "Informe atividade, local, perigos e controles obrigatórios.",
+        });
     }
 
     const apr = await prisma.aprOperacional.create({
@@ -78,7 +100,9 @@ export async function criarApr(req: AuthRequest, res: Response) {
         area: texto(req.body.area) || null,
         atividade: texto(req.body.atividade),
         descricaoAtividade: texto(req.body.descricaoAtividade),
-        dataPrevista: req.body.dataPrevista ? new Date(req.body.dataPrevista) : null,
+        dataPrevista: req.body.dataPrevista
+          ? new Date(req.body.dataPrevista)
+          : null,
         responsavelAtividade: texto(req.body.responsavelAtividade),
         equipeEnvolvida: texto(req.body.equipeEnvolvida) || null,
         empresaTerceira: texto(req.body.empresaTerceira) || null,
@@ -95,13 +119,22 @@ export async function criarApr(req: AuthRequest, res: Response) {
           create: aprovadores
             .map((nome: unknown) => texto(nome))
             .filter(Boolean)
-            .map((usuarioNome: string) => ({ usuarioNome, decisao: "Pendente" })),
+            .map((usuarioNome: string) => ({
+              usuarioNome,
+              decisao: "Pendente",
+            })),
         },
       },
       include: { aprovacoes: true },
     });
 
-    await registrarLog({ req, acao: "Criação de APR", tipoRegistro: "APR", registroId: apr.id, dadosNovos: apr });
+    await registrarLog({
+      req,
+      acao: "Criação de APR",
+      tipoRegistro: "APR",
+      registroId: apr.id,
+      dadosNovos: apr,
+    });
     return res.status(201).json((await enriquecerAprs([apr]))[0]);
   } catch (error) {
     console.error(error);
@@ -125,14 +158,20 @@ export async function atualizarApr(req: AuthRequest, res: Response) {
         local: texto(req.body.local) || anterior.local,
         area: texto(req.body.area) || null,
         atividade: texto(req.body.atividade) || anterior.atividade,
-        descricaoAtividade: texto(req.body.descricaoAtividade) || anterior.descricaoAtividade,
-        dataPrevista: req.body.dataPrevista ? new Date(req.body.dataPrevista) : null,
-        responsavelAtividade: texto(req.body.responsavelAtividade) || anterior.responsavelAtividade,
+        descricaoAtividade:
+          texto(req.body.descricaoAtividade) || anterior.descricaoAtividade,
+        dataPrevista: req.body.dataPrevista
+          ? new Date(req.body.dataPrevista)
+          : null,
+        responsavelAtividade:
+          texto(req.body.responsavelAtividade) || anterior.responsavelAtividade,
         equipeEnvolvida: texto(req.body.equipeEnvolvida) || null,
         empresaTerceira: texto(req.body.empresaTerceira) || null,
         riscosIds: serializarIds(listaIds(req.body.riscosIds)),
         perigos: texto(req.body.perigos) || anterior.perigos,
-        controlesObrigatorios: texto(req.body.controlesObrigatorios) || anterior.controlesObrigatorios,
+        controlesObrigatorios:
+          texto(req.body.controlesObrigatorios) ||
+          anterior.controlesObrigatorios,
         episNecessarios: texto(req.body.episNecessarios) || null,
         permissoesNecessarias: texto(req.body.permissoesNecessarias) || null,
         nivelRisco: texto(req.body.nivelRisco) || anterior.nivelRisco,
@@ -141,7 +180,14 @@ export async function atualizarApr(req: AuthRequest, res: Response) {
       include: { aprovacoes: { orderBy: { createdAt: "asc" } } },
     });
 
-    await registrarLog({ req, acao: "Atualização de APR", tipoRegistro: "APR", registroId: apr.id, dadosAnteriores: anterior, dadosNovos: apr });
+    await registrarLog({
+      req,
+      acao: "Atualização de APR",
+      tipoRegistro: "APR",
+      registroId: apr.id,
+      dadosAnteriores: anterior,
+      dadosNovos: apr,
+    });
     return res.json((await enriquecerAprs([apr]))[0]);
   } catch (error) {
     console.error(error);
@@ -169,14 +215,20 @@ export async function decidirApr(req: AuthRequest, res: Response) {
       select: { nome: true, perfilAcesso: true },
     });
 
-    const aprovacaoExistente = apr.aprovacoes.find((item) => item.usuarioId === req.usuarioId || item.usuarioNome === usuario?.nome);
+    const aprovacaoExistente = apr.aprovacoes.find(
+      (item) =>
+        item.usuarioId === req.usuarioId || item.usuarioNome === usuario?.nome,
+    );
     if (aprovacaoExistente) {
       await prisma.aprAprovacao.update({
         where: { id: aprovacaoExistente.id },
         data: {
           usuarioId: req.usuarioId,
           usuarioNome: usuario?.nome || aprovacaoExistente.usuarioNome,
-          perfilAcesso: usuario?.perfilAcesso || req.usuarioPerfil || aprovacaoExistente.perfilAcesso,
+          perfilAcesso:
+            usuario?.perfilAcesso ||
+            req.usuarioPerfil ||
+            aprovacaoExistente.perfilAcesso,
           decisao,
           observacao: texto(req.body.observacao) || null,
           decididoEm: new Date(),
@@ -204,7 +256,8 @@ export async function decidirApr(req: AuthRequest, res: Response) {
     const aprovacoes = atualizada?.aprovacoes || [];
     const novoStatus = aprovacoes.some((item) => item.decisao === "Reprovado")
       ? "Reprovada"
-      : aprovacoes.length && aprovacoes.every((item) => item.decisao === "Aprovado")
+      : aprovacoes.length &&
+          aprovacoes.every((item) => item.decisao === "Aprovado")
         ? "Aprovada"
         : "Aguardando aprovação";
 
@@ -214,10 +267,18 @@ export async function decidirApr(req: AuthRequest, res: Response) {
       include: { aprovacoes: { orderBy: { createdAt: "asc" } } },
     });
 
-    await registrarLog({ req, acao: `${decisao} APR`, tipoRegistro: "APR", registroId: apr.id, dadosNovos: aprFinal });
+    await registrarLog({
+      req,
+      acao: `${decisao} APR`,
+      tipoRegistro: "APR",
+      registroId: apr.id,
+      dadosNovos: aprFinal,
+    });
     return res.json((await enriquecerAprs([aprFinal]))[0]);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao registrar aprovação da APR" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao registrar aprovação da APR" });
   }
 }

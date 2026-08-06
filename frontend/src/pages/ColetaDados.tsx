@@ -1,8 +1,17 @@
-import axios from "axios";
+﻿import axios from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useParams } from "react-router-dom";
-import { AlertTriangle, CheckCircle2, FileUp, Loader2, Mic, Plus, Square, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  FileUp,
+  Loader2,
+  Mic,
+  Plus,
+  Square,
+  Trash2,
+} from "lucide-react";
 
 type EnvolvidoColeta = {
   tipoEnvolvimento: string;
@@ -65,7 +74,9 @@ const envolvidoVazio: EnvolvidoColeta = {
 
 export default function ColetaDados() {
   const { token } = useParams();
-  const [status, setStatus] = useState<"carregando" | "valido" | "erro" | "enviado">("carregando");
+  const [status, setStatus] = useState<
+    "carregando" | "valido" | "erro" | "enviado"
+  >("carregando");
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [online, setOnline] = useState(navigator.onLine);
@@ -76,7 +87,9 @@ export default function ColetaDados() {
   const [locais, setLocais] = useState<LocalColeta[]>([]);
   const [evidencias, setEvidencias] = useState<File[]>([]);
   const [gravandoIndex, setGravandoIndex] = useState<number | null>(null);
-  const [transcrevendoIndex, setTranscrevendoIndex] = useState<number | null>(null);
+  const [transcrevendoIndex, setTranscrevendoIndex] = useState<number | null>(
+    null,
+  );
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const audioStreamRef = useRef<MediaStream | null>(null);
@@ -88,19 +101,30 @@ export default function ColetaDados() {
     dataOcorrido: "",
     observacoes: "",
   });
-  const [checklistColeta, setChecklistColeta] = useState<ChecklistColeta>(checklistInicial);
-  const [envolvidos, setEnvolvidos] = useState<EnvolvidoColeta[]>([{ ...envolvidoVazio }]);
-  const draftKey = useMemo(() => `jetguard-coleta-dados-${token || "sem-token"}`, [token]);
+  const [checklistColeta, setChecklistColeta] =
+    useState<ChecklistColeta>(checklistInicial);
+  const [envolvidos, setEnvolvidos] = useState<EnvolvidoColeta[]>([
+    { ...envolvidoVazio },
+  ]);
+  const draftKey = useMemo(
+    () => `jetguard-coleta-dados-${token || "sem-token"}`,
+    [token],
+  );
 
   useEffect(() => {
-    axios.get(`/api/public/relatos-campo/coleta/${token}`)
+    axios
+      .get(`/api/public/relatos-campo/coleta/${token}`)
       .then((response) => {
         setUnidade(response.data.unidade || "");
-        setLocais(Array.isArray(response.data.locais) ? response.data.locais : []);
+        setLocais(
+          Array.isArray(response.data.locais) ? response.data.locais : [],
+        );
         setStatus("valido");
       })
       .catch((error) => {
-        setErro(error.response?.data?.error || "Link de coleta inválido ou expirado.");
+        setErro(
+          error.response?.data?.error || "Link de coleta inválido ou expirado.",
+        );
         setStatus("erro");
       });
   }, [token]);
@@ -129,9 +153,18 @@ export default function ColetaDados() {
           salvoEm?: string;
         };
         if (dados.form) setForm((atual) => ({ ...atual, ...dados.form }));
-        if (dados.checklistColeta) setChecklistColeta((atual) => ({ ...atual, ...dados.checklistColeta }));
+        if (dados.checklistColeta)
+          setChecklistColeta((atual) => ({
+            ...atual,
+            ...dados.checklistColeta,
+          }));
         if (Array.isArray(dados.envolvidos) && dados.envolvidos.length > 0) {
-          setEnvolvidos(dados.envolvidos.map((envolvido) => ({ ...envolvido, audio: null })));
+          setEnvolvidos(
+            dados.envolvidos.map((envolvido) => ({
+              ...envolvido,
+              audio: null,
+            })),
+          );
         }
         setRascunhoSalvoEm(dados.salvoEm || null);
       } catch {
@@ -153,7 +186,7 @@ export default function ColetaDados() {
           checklistColeta,
           envolvidos: envolvidos.map(({ audio, ...envolvido }) => envolvido),
           salvoEm,
-        })
+        }),
       );
       setRascunhoSalvoEm(salvoEm);
     }, 350);
@@ -167,8 +200,16 @@ export default function ColetaDados() {
     };
   }, []);
 
-  function atualizarEnvolvido(index: number, campo: keyof EnvolvidoColeta, valor: string | boolean | File | null) {
-    setEnvolvidos((atuais) => atuais.map((item, i) => i === index ? { ...item, [campo]: valor } : item));
+  function atualizarEnvolvido(
+    index: number,
+    campo: keyof EnvolvidoColeta,
+    valor: string | boolean | File | null,
+  ) {
+    setEnvolvidos((atuais) =>
+      atuais.map((item, i) =>
+        i === index ? { ...item, [campo]: valor } : item,
+      ),
+    );
   }
 
   function mascararPlaca(valor: string) {
@@ -183,14 +224,25 @@ export default function ColetaDados() {
   }
 
   function avancarParaChecklist() {
-    if (!form.titulo.trim() || !form.responsavelColeta.trim() || !form.local.trim() || !form.dataOcorrido.trim()) {
-      setErro("Preencha os dados principais do acontecimento antes de avançar para o checklist.");
+    if (
+      !form.titulo.trim() ||
+      !form.responsavelColeta.trim() ||
+      !form.local.trim() ||
+      !form.dataOcorrido.trim()
+    ) {
+      setErro(
+        "Preencha os dados principais do acontecimento antes de avançar para o checklist.",
+      );
       return;
     }
 
-    const envolvidoIncompleto = envolvidos.some((envolvido) => !envolvido.nome.trim() || !envolvido.relato.trim());
+    const envolvidoIncompleto = envolvidos.some(
+      (envolvido) => !envolvido.nome.trim() || !envolvido.relato.trim(),
+    );
     if (envolvidoIncompleto) {
-      setErro("Informe o nome e o relato de todos os envolvidos antes de avançar para o checklist.");
+      setErro(
+        "Informe o nome e o relato de todos os envolvidos antes de avançar para o checklist.",
+      );
       return;
     }
 
@@ -210,7 +262,9 @@ export default function ColetaDados() {
   }
 
   function removerEnvolvido(index: number) {
-    setEnvolvidos((atuais) => atuais.length === 1 ? atuais : atuais.filter((_, i) => i !== index));
+    setEnvolvidos((atuais) =>
+      atuais.length === 1 ? atuais : atuais.filter((_, i) => i !== index),
+    );
   }
 
   async function iniciarGravacao(index: number) {
@@ -227,8 +281,16 @@ export default function ColetaDados() {
       recorder.onstop = () => {
         const mime = recorder.mimeType || "audio/webm";
         const blob = new Blob(audioChunksRef.current, { type: mime });
-        const extensao = mime.includes("ogg") ? "ogg" : mime.includes("wav") ? "wav" : "webm";
-        const arquivo = new File([blob], `relato-campo-envolvido-${index + 1}.${extensao}`, { type: mime });
+        const extensao = mime.includes("ogg")
+          ? "ogg"
+          : mime.includes("wav")
+            ? "wav"
+            : "webm";
+        const arquivo = new File(
+          [blob],
+          `relato-campo-envolvido-${index + 1}.${extensao}`,
+          { type: mime },
+        );
         atualizarEnvolvido(index, "audio", arquivo);
         transcreverAudio(index, arquivo);
         audioChunksRef.current = [];
@@ -241,19 +303,26 @@ export default function ColetaDados() {
       recorder.start();
       setGravandoIndex(index);
     } catch {
-      setErro("Não foi possível acessar o microfone. Verifique a permissão do navegador e tente novamente.");
+      setErro(
+        "Não foi possível acessar o microfone. Verifique a permissão do navegador e tente novamente.",
+      );
     }
   }
 
   function pararGravacao() {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state !== "inactive"
+    ) {
       mediaRecorderRef.current.stop();
     }
   }
 
   async function transcreverAudio(index: number, arquivo: File) {
     if (!online) {
-      setErro("Áudio gravado e anexado. Conecte-se à internet para transcrever automaticamente.");
+      setErro(
+        "Áudio gravado e anexado. Conecte-se à internet para transcrever automaticamente.",
+      );
       return;
     }
 
@@ -262,23 +331,36 @@ export default function ColetaDados() {
     try {
       const formData = new FormData();
       formData.append("audio", arquivo);
-      const response = await axios.post(`/api/public/relatos-campo/coleta/${token}/audio`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(
+        `/api/public/relatos-campo/coleta/${token}/audio`,
+        formData,
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        },
+      );
       const transcricao = String(response.data?.transcricao || "").trim();
       if (transcricao) {
-        setEnvolvidos((atuais) => atuais.map((envolvido, envolvidoIndex) => {
-          if (envolvidoIndex !== index) return envolvido;
-          const relatoAtual = envolvido.relato.trim();
-          return {
-            ...envolvido,
-            relato: relatoAtual ? `${relatoAtual}\n\n${transcricao}` : transcricao,
-          };
-        }));
+        setEnvolvidos((atuais) =>
+          atuais.map((envolvido, envolvidoIndex) => {
+            if (envolvidoIndex !== index) return envolvido;
+            const relatoAtual = envolvido.relato.trim();
+            return {
+              ...envolvido,
+              relato: relatoAtual
+                ? `${relatoAtual}\n\n${transcricao}`
+                : transcricao,
+            };
+          }),
+        );
       }
     } catch (error: unknown) {
-      const apiError = error as { response?: { data?: { error?: string; detalhe?: string } } };
-      setErro(apiError.response?.data?.error || "Áudio anexado, mas não foi possível transcrever automaticamente.");
+      const apiError = error as {
+        response?: { data?: { error?: string; detalhe?: string } };
+      };
+      setErro(
+        apiError.response?.data?.error ||
+          "Áudio anexado, mas não foi possível transcrever automaticamente.",
+      );
     } finally {
       setTranscrevendoIndex(null);
     }
@@ -287,12 +369,14 @@ export default function ColetaDados() {
   async function enviar(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!online) {
-      setErro("Você está offline. Os dados foram preservados neste aparelho. Conecte-se à internet para enviar.");
+      setErro(
+        "Você está offline. Os dados foram preservados neste aparelho. Conecte-se à internet para enviar.",
+      );
       return;
     }
 
     const confirmar = window.confirm(
-      "Deseja realmente enviar os dados coletados?\n\nApós o envio, esta ação não poderá ser refeita por este link. Caso falte alguma informação, entre em contato imediatamente com Centro de Controle Operacional de Segurança - CCOS."
+      "Deseja realmente enviar os dados coletados?\n\nApós o envio, esta ação não poderá ser refeita por este link. Caso falte alguma informação, entre em contato imediatamente com Centro de Controle Operacional de Segurança - CCOS.",
     );
     if (!confirmar) return;
 
@@ -301,9 +385,14 @@ export default function ColetaDados() {
 
     try {
       const formData = new FormData();
-      Object.entries(form).forEach(([chave, valor]) => formData.append(chave, valor));
+      Object.entries(form).forEach(([chave, valor]) =>
+        formData.append(chave, valor),
+      );
       formData.append("checklistColeta", JSON.stringify(checklistColeta));
-      formData.append("envolvidos", JSON.stringify(envolvidos.map(({ audio, ...envolvido }) => envolvido)));
+      formData.append(
+        "envolvidos",
+        JSON.stringify(envolvidos.map(({ audio, ...envolvido }) => envolvido)),
+      );
       evidencias.forEach((arquivo) => formData.append("anexos", arquivo));
       envolvidos.forEach((envolvido, index) => {
         if (envolvido.audio) formData.append(`audio_${index}`, envolvido.audio);
@@ -316,7 +405,9 @@ export default function ColetaDados() {
       setStatus("enviado");
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { error?: string } } };
-      setErro(apiError.response?.data?.error || "Não foi possível enviar a coleta.");
+      setErro(
+        apiError.response?.data?.error || "Não foi possível enviar a coleta.",
+      );
     } finally {
       setEnviando(false);
     }
@@ -350,8 +441,13 @@ export default function ColetaDados() {
       <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4 text-white">
         <div className="max-w-lg rounded-3xl border border-emerald-400/30 bg-emerald-500/10 p-8 text-center">
           <CheckCircle2 className="mx-auto text-emerald-200" size={46} />
-          <h1 className="mt-4 text-2xl font-black">Coleta enviada com sucesso</h1>
-          <p className="mt-2 text-sm text-emerald-100">Obrigado. O link foi finalizado e os dados já estão disponíveis para análise no JetGuard.</p>
+          <h1 className="mt-4 text-2xl font-black">
+            Coleta enviada com sucesso
+          </h1>
+          <p className="mt-2 text-sm text-emerald-100">
+            Obrigado. O link foi finalizado e os dados já estão disponíveis para
+            análise no JetGuard.
+          </p>
         </div>
       </div>
     );
@@ -363,212 +459,438 @@ export default function ColetaDados() {
     <div className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6">
       <div className="mx-auto max-w-5xl">
         <header className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl">
-          <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-300">JetGuard</p>
-          <h1 className="mt-2 text-3xl font-black">Coleta de Dados para Relatório Patrimonial</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-300">
-            Preencha as informações coletadas em campo. Este link é temporário e será encerrado automaticamente após o envio.
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-300">
+            JetGuard
           </p>
-          <span className="mt-4 inline-flex rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black text-blue-100">Unidade: {unidade}</span>
+          <h1 className="mt-2 text-3xl font-black">
+            Coleta de Dados para Relatório Patrimonial
+          </h1>
+          <p className="mt-2 max-w-3xl text-sm text-slate-300">
+            Preencha as informações coletadas em campo. Este link é temporário e
+            será encerrado automaticamente após o envio.
+          </p>
+          <span className="mt-4 inline-flex rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black text-blue-100">
+            Unidade: {unidade}
+          </span>
           <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
-            <span className={`rounded-full px-3 py-1 ${online ? "bg-emerald-500/15 text-emerald-100" : "bg-red-500/15 text-red-100"}`}>
+            <span
+              className={`rounded-full px-3 py-1 ${online ? "bg-emerald-500/15 text-emerald-100" : "bg-red-500/15 text-red-100"}`}
+            >
               {online ? "Online" : "Offline - rascunho preservado"}
             </span>
             <span className="rounded-full bg-white/10 px-3 py-1 text-slate-200">
-              {rascunhoSalvoEm ? `Salvo automaticamente em ${new Date(rascunhoSalvoEm).toLocaleString("pt-BR")}` : "Salvamento automático ativo"}
+              {rascunhoSalvoEm
+                ? `Salvo automaticamente em ${new Date(rascunhoSalvoEm).toLocaleString("pt-BR")}`
+                : "Salvamento automático ativo"}
             </span>
           </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className={`rounded-2xl border px-4 py-3 ${etapa === 1 ? "border-blue-300 bg-blue-500/15" : "border-white/10 bg-white/5"}`}>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Etapa 1</p>
-              <p className="mt-1 text-sm font-black">Dados, envolvidos e evidencias</p>
+            <div
+              className={`rounded-2xl border px-4 py-3 ${etapa === 1 ? "border-blue-300 bg-blue-500/15" : "border-white/10 bg-white/5"}`}
+            >
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">
+                Etapa 1
+              </p>
+              <p className="mt-1 text-sm font-black">
+                Dados, envolvidos e evidencias
+              </p>
             </div>
-            <div className={`rounded-2xl border px-4 py-3 ${etapa === 2 ? "border-blue-300 bg-blue-500/15" : "border-white/10 bg-white/5"}`}>
-              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">Etapa 2</p>
-              <p className="mt-1 text-sm font-black">Checklist inteligente e envio</p>
+            <div
+              className={`rounded-2xl border px-4 py-3 ${etapa === 2 ? "border-blue-300 bg-blue-500/15" : "border-white/10 bg-white/5"}`}
+            >
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">
+                Etapa 2
+              </p>
+              <p className="mt-1 text-sm font-black">
+                Checklist inteligente e envio
+              </p>
             </div>
           </div>
         </header>
 
         <div className="mb-5 rounded-3xl border border-amber-400/25 bg-amber-500/10 p-4 text-sm font-semibold text-amber-50">
-          Os campos digitados são salvos automaticamente neste aparelho, inclusive se a conexão cair ou a bateria acabar. Se a página for reaberta, confira os dados e reanexe arquivos/áudios se necessário antes de enviar.
+          Os campos digitados são salvos automaticamente neste aparelho,
+          inclusive se a conexão cair ou a bateria acabar. Se a página for
+          reaberta, confira os dados e reanexe arquivos/áudios se necessário
+          antes de enviar.
         </div>
 
         <form onSubmit={enviar} className="space-y-5">
           {etapa === 1 && (
-          <>
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <h2 className="mb-4 text-lg font-black">Dados do acontecimento</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <input required value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Título do acontecimento" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
-              <input required value={form.responsavelColeta} onChange={(e) => setForm({ ...form, responsavelColeta: e.target.value })} placeholder="Nome do responsável pela coleta" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
-              <input value={form.setor} onChange={(e) => setForm({ ...form, setor: e.target.value })} placeholder="Setor" className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
-              <label className="space-y-2">
-                <select
-                  required
-                  value={form.local}
-                  onChange={(e) => setForm({ ...form, local: e.target.value })}
-                  className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
-                >
-                  <option value="">Selecione o local do ocorrido</option>
-                  {locais.map((local) => (
-                    <option key={local.id} value={local.nome}>
-                      {local.nome} - {local.tipo}{local.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
-                    </option>
-                  ))}
-                </select>
-                {locais.length === 0 && (
-                  <span className="block text-xs font-semibold text-amber-200">
-                    Nenhum local ativo cadastrado para esta unidade. Acione o CCOS para regularizar o cadastro.
-                  </span>
-                )}
-                {localSelecionado?.areaSensivel && (
-                  <span className="inline-flex rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-100">
-                    Área sensível
-                  </span>
-                )}
-              </label>
-              <label className="md:col-span-2">
-                <span className="mb-2 block text-sm font-bold text-slate-300">Data e hora do ocorrido</span>
-                <input required type="datetime-local" value={form.dataOcorrido} onChange={(e) => setForm({ ...form, dataOcorrido: e.target.value })} className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
-              </label>
-            </div>
-            <textarea value={form.observacoes} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} placeholder="Observações gerais da coleta" className="mt-4 min-h-24 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400" />
-          </section>
-
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-lg font-black">Partes envolvidas</h2>
-              <button type="button" onClick={adicionarEnvolvido} className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-black transition hover:bg-blue-500">
-                <Plus size={16} />
-                Adicionar envolvido
-              </button>
-            </div>
-            <div className="space-y-4">
-              {envolvidos.map((envolvido, index) => (
-                <div key={index} className="rounded-2xl border border-white/10 bg-slate-900/80 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <p className="font-black">Envolvido {index + 1}</p>
-                    {envolvidos.length > 1 && (
-                      <button type="button" onClick={() => removerEnvolvido(index)} className="rounded-xl bg-red-500/15 p-2 text-red-100 transition hover:bg-red-500/25">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <select value={envolvido.tipoEnvolvimento} onChange={(e) => atualizarEnvolvido(index, "tipoEnvolvimento", e.target.value)} className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-                      <option>Envolvido</option>
-                      <option>Condutor</option>
-                      <option>Testemunha</option>
-                      <option>Vítima</option>
-                      <option>Funcionário</option>
-                      <option>Terceiro</option>
+            <>
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                <h2 className="mb-4 text-lg font-black">
+                  Dados do acontecimento
+                </h2>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <input
+                    required
+                    value={form.titulo}
+                    onChange={(e) =>
+                      setForm({ ...form, titulo: e.target.value })
+                    }
+                    placeholder="Título do acontecimento"
+                    className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+                  />
+                  <input
+                    required
+                    value={form.responsavelColeta}
+                    onChange={(e) =>
+                      setForm({ ...form, responsavelColeta: e.target.value })
+                    }
+                    placeholder="Nome do responsável pela coleta"
+                    className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+                  />
+                  <input
+                    value={form.setor}
+                    onChange={(e) =>
+                      setForm({ ...form, setor: e.target.value })
+                    }
+                    placeholder="Setor"
+                    className="rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+                  />
+                  <label className="space-y-2">
+                    <select
+                      required
+                      value={form.local}
+                      onChange={(e) =>
+                        setForm({ ...form, local: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+                    >
+                      <option value="">Selecione o local do ocorrido</option>
+                      {locais.map((local) => (
+                        <option key={local.id} value={local.nome}>
+                          {local.nome} - {local.tipo}
+                          {local.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                        </option>
+                      ))}
                     </select>
-                    <input required value={envolvido.nome} onChange={(e) => atualizarEnvolvido(index, "nome", e.target.value)} placeholder="Nome do envolvido" className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3" />
-                    <select value={envolvido.tipoDocumento} onChange={(e) => atualizarEnvolvido(index, "tipoDocumento", e.target.value)} className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3">
-                      <option>CPF</option>
-                      <option>RG</option>
-                      <option>CNH</option>
-                      <option>Passaporte</option>
-                      <option>Outro</option>
-                    </select>
-                    <input value={envolvido.documento} onChange={(e) => atualizarEnvolvido(index, "documento", e.target.value)} placeholder="Documento" className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3" />
-                    <input value={envolvido.empresa} onChange={(e) => atualizarEnvolvido(index, "empresa", e.target.value)} placeholder="Empresa" className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3" />
-                    <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold">
-                      <input type="checkbox" checked={envolvido.possuiVeiculo} onChange={(e) => atualizarEnvolvido(index, "possuiVeiculo", e.target.checked)} />
-                      Possui veículo
-                    </label>
-                    {envolvido.possuiVeiculo && (
-                      <>
-                        <input value={envolvido.placa} onChange={(e) => atualizarEnvolvido(index, "placa", mascararPlaca(e.target.value))} placeholder="Placa AAA1234 ou AAA1B34" maxLength={7} className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase" />
-                        <input value={envolvido.reboque} onChange={(e) => atualizarEnvolvido(index, "reboque", e.target.value.toUpperCase())} placeholder="Reboque" className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase" />
-                      </>
-                    )}
-                  </div>
-                  <textarea required value={envolvido.relato} onChange={(e) => atualizarEnvolvido(index, "relato", e.target.value)} placeholder="Relato do envolvido" className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3" />
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    {gravandoIndex === index ? (
-                      <button type="button" onClick={pararGravacao} className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-500/15 px-4 py-3 text-sm font-black text-red-100 transition hover:bg-red-500/25">
-                        <Square size={16} />
-                        Parar gravação
-                      </button>
-                    ) : (
-                      <button type="button" disabled={gravandoIndex !== null} onClick={() => iniciarGravacao(index)} className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-500/15 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-60">
-                        <Mic size={16} />
-                        Gravar áudio
-                      </button>
-                    )}
-                    {gravandoIndex === index && (
-                      <span className="inline-flex items-center gap-1 rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-3 py-3 text-xs font-black text-emerald-100">
-                        {[10, 16, 22, 14, 19].map((altura, ondaIndex) => (
-                          <span
-                            key={ondaIndex}
-                            className="w-1 rounded-full bg-emerald-300 motion-safe:animate-pulse"
-                            style={{ height: `${altura}px`, animationDelay: `${ondaIndex * 120}ms`, animationDuration: "720ms" }}
-                          />
-                        ))}
-                        <span className="ml-1 hidden sm:inline">captando</span>
+                    {locais.length === 0 && (
+                      <span className="block text-xs font-semibold text-amber-200">
+                        Nenhum local ativo cadastrado para esta unidade. Acione
+                        o CCOS para regularizar o cadastro.
                       </span>
                     )}
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-100 transition hover:bg-blue-500/15">
-                      <FileUp size={18} />
-                      Anexar áudio
-                      <input type="file" accept="audio/*" className="hidden" onChange={(e) => atualizarEnvolvido(index, "audio", e.target.files?.[0] || null)} />
-                    </label>
-                    {envolvido.audio && (
-                      <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-slate-200">
-                        {envolvido.audio.name}
+                    {localSelecionado?.areaSensivel && (
+                      <span className="inline-flex rounded-full border border-amber-300/40 bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-100">
+                        Área sensível
                       </span>
                     )}
-                    {transcrevendoIndex === index && (
-                      <span className="inline-flex items-center gap-2 rounded-full bg-blue-500/15 px-3 py-2 text-xs font-black text-blue-100">
-                        <Loader2 size={13} className="animate-spin" />
-                        Transcrevendo áudio...
-                      </span>
-                    )}
-                  </div>
+                  </label>
+                  <label className="md:col-span-2">
+                    <span className="mb-2 block text-sm font-bold text-slate-300">
+                      Data e hora do ocorrido
+                    </span>
+                    <input
+                      required
+                      type="datetime-local"
+                      value={form.dataOcorrido}
+                      onChange={(e) =>
+                        setForm({ ...form, dataOcorrido: e.target.value })
+                      }
+                      className="w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+                    />
+                  </label>
                 </div>
-              ))}
-            </div>
-          </section>
+                <textarea
+                  value={form.observacoes}
+                  onChange={(e) =>
+                    setForm({ ...form, observacoes: e.target.value })
+                  }
+                  placeholder="Observações gerais da coleta"
+                  className="mt-4 min-h-24 w-full rounded-xl border border-white/10 bg-slate-900 px-4 py-3 outline-none focus:border-blue-400"
+                />
+              </section>
 
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-            <h2 className="mb-4 text-lg font-black">Evidências do local</h2>
-            <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-blue-400/40 bg-slate-900 px-4 py-8 text-center text-sm font-bold text-blue-100 transition hover:bg-blue-500/10">
-              <FileUp size={24} />
-              Anexar fotos, PDFs ou documentos
-              <input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" className="hidden" onChange={(e) => setEvidencias(Array.from(e.target.files || []))} />
-            </label>
-            {evidencias.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {evidencias.map((arquivo, index) => <span key={`${arquivo.name}-${index}`} className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold">{arquivo.name}</span>)}
-              </div>
-            )}
-          </section>
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-lg font-black">Partes envolvidas</h2>
+                  <button
+                    type="button"
+                    onClick={adicionarEnvolvido}
+                    className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2 text-sm font-black transition hover:bg-blue-500"
+                  >
+                    <Plus size={16} />
+                    Adicionar envolvido
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {envolvidos.map((envolvido, index) => (
+                    <div
+                      key={index}
+                      className="rounded-2xl border border-white/10 bg-slate-900/80 p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <p className="font-black">Envolvido {index + 1}</p>
+                        {envolvidos.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removerEnvolvido(index)}
+                            className="rounded-xl bg-red-500/15 p-2 text-red-100 transition hover:bg-red-500/25"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <select
+                          value={envolvido.tipoEnvolvimento}
+                          onChange={(e) =>
+                            atualizarEnvolvido(
+                              index,
+                              "tipoEnvolvimento",
+                              e.target.value,
+                            )
+                          }
+                          className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3"
+                        >
+                          <option>Envolvido</option>
+                          <option>Condutor</option>
+                          <option>Testemunha</option>
+                          <option>Vítima</option>
+                          <option>Funcionário</option>
+                          <option>Terceiro</option>
+                        </select>
+                        <input
+                          required
+                          value={envolvido.nome}
+                          onChange={(e) =>
+                            atualizarEnvolvido(index, "nome", e.target.value)
+                          }
+                          placeholder="Nome do envolvido"
+                          className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3"
+                        />
+                        <select
+                          value={envolvido.tipoDocumento}
+                          onChange={(e) =>
+                            atualizarEnvolvido(
+                              index,
+                              "tipoDocumento",
+                              e.target.value,
+                            )
+                          }
+                          className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3"
+                        >
+                          <option>CPF</option>
+                          <option>RG</option>
+                          <option>CNH</option>
+                          <option>Passaporte</option>
+                          <option>Outro</option>
+                        </select>
+                        <input
+                          value={envolvido.documento}
+                          onChange={(e) =>
+                            atualizarEnvolvido(
+                              index,
+                              "documento",
+                              e.target.value,
+                            )
+                          }
+                          placeholder="Documento"
+                          className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3"
+                        />
+                        <input
+                          value={envolvido.empresa}
+                          onChange={(e) =>
+                            atualizarEnvolvido(index, "empresa", e.target.value)
+                          }
+                          placeholder="Empresa"
+                          className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3"
+                        />
+                        <label className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-bold">
+                          <input
+                            type="checkbox"
+                            checked={envolvido.possuiVeiculo}
+                            onChange={(e) =>
+                              atualizarEnvolvido(
+                                index,
+                                "possuiVeiculo",
+                                e.target.checked,
+                              )
+                            }
+                          />
+                          Possui veículo
+                        </label>
+                        {envolvido.possuiVeiculo && (
+                          <>
+                            <input
+                              value={envolvido.placa}
+                              onChange={(e) =>
+                                atualizarEnvolvido(
+                                  index,
+                                  "placa",
+                                  mascararPlaca(e.target.value),
+                                )
+                              }
+                              placeholder="Placa AAA1234 ou AAA1B34"
+                              maxLength={7}
+                              className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase"
+                            />
+                            <input
+                              value={envolvido.reboque}
+                              onChange={(e) =>
+                                atualizarEnvolvido(
+                                  index,
+                                  "reboque",
+                                  e.target.value.toUpperCase(),
+                                )
+                              }
+                              placeholder="Reboque"
+                              className="rounded-xl border border-white/10 bg-slate-950 px-4 py-3 uppercase"
+                            />
+                          </>
+                        )}
+                      </div>
+                      <textarea
+                        required
+                        value={envolvido.relato}
+                        onChange={(e) =>
+                          atualizarEnvolvido(index, "relato", e.target.value)
+                        }
+                        placeholder="Relato do envolvido"
+                        className="mt-3 min-h-28 w-full rounded-xl border border-white/10 bg-slate-950 px-4 py-3"
+                      />
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        {gravandoIndex === index ? (
+                          <button
+                            type="button"
+                            onClick={pararGravacao}
+                            className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-red-500/15 px-4 py-3 text-sm font-black text-red-100 transition hover:bg-red-500/25"
+                          >
+                            <Square size={16} />
+                            Parar gravação
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={gravandoIndex !== null}
+                            onClick={() => iniciarGravacao(index)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-emerald-300/40 bg-emerald-500/15 px-4 py-3 text-sm font-black text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Mic size={16} />
+                            Gravar áudio
+                          </button>
+                        )}
+                        {gravandoIndex === index && (
+                          <span className="inline-flex items-center gap-1 rounded-xl border border-emerald-300/40 bg-emerald-500/10 px-3 py-3 text-xs font-black text-emerald-100">
+                            {[10, 16, 22, 14, 19].map((altura, ondaIndex) => (
+                              <span
+                                key={ondaIndex}
+                                className="w-1 rounded-full bg-emerald-300 motion-safe:animate-pulse"
+                                style={{
+                                  height: `${altura}px`,
+                                  animationDelay: `${ondaIndex * 120}ms`,
+                                  animationDuration: "720ms",
+                                }}
+                              />
+                            ))}
+                            <span className="ml-1 hidden sm:inline">
+                              captando
+                            </span>
+                          </span>
+                        )}
+                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-dashed border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-100 transition hover:bg-blue-500/15">
+                          <FileUp size={18} />
+                          Anexar áudio
+                          <input
+                            type="file"
+                            accept="audio/*"
+                            className="hidden"
+                            onChange={(e) =>
+                              atualizarEnvolvido(
+                                index,
+                                "audio",
+                                e.target.files?.[0] || null,
+                              )
+                            }
+                          />
+                        </label>
+                        {envolvido.audio && (
+                          <span className="rounded-full bg-white/10 px-3 py-2 text-xs font-bold text-slate-200">
+                            {envolvido.audio.name}
+                          </span>
+                        )}
+                        {transcrevendoIndex === index && (
+                          <span className="inline-flex items-center gap-2 rounded-full bg-blue-500/15 px-3 py-2 text-xs font-black text-blue-100">
+                            <Loader2 size={13} className="animate-spin" />
+                            Transcrevendo áudio...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-          </>
+              <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                <h2 className="mb-4 text-lg font-black">Evidências do local</h2>
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-blue-400/40 bg-slate-900 px-4 py-8 text-center text-sm font-bold text-blue-100 transition hover:bg-blue-500/10">
+                  <FileUp size={24} />
+                  Anexar fotos, PDFs ou documentos
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
+                    className="hidden"
+                    onChange={(e) =>
+                      setEvidencias(Array.from(e.target.files || []))
+                    }
+                  />
+                </label>
+                {evidencias.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {evidencias.map((arquivo, index) => (
+                      <span
+                        key={`${arquivo.name}-${index}`}
+                        className="rounded-full bg-white/10 px-3 py-1 text-xs font-bold"
+                      >
+                        {arquivo.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </section>
+            </>
           )}
 
           {etapa === 2 && (
             <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
               <div className="mb-4">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">Etapa final</p>
-                <h2 className="mt-1 text-xl font-black">Checklist inteligente de coleta</h2>
+                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
+                  Etapa final
+                </p>
+                <h2 className="mt-1 text-xl font-black">
+                  Checklist inteligente de coleta
+                </h2>
                 <p className="mt-1 text-sm text-slate-300">
-                  Revise os pontos essenciais antes do envio. Depois que a coleta for enviada, o link sera finalizado e nao podera ser reutilizado.
+                  Revise os pontos essenciais antes do envio. Depois que a
+                  coleta for enviada, o link sera finalizado e nao podera ser
+                  reutilizado.
                 </p>
               </div>
 
               <div className="mb-5 grid gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm md:grid-cols-3">
                 <div>
-                  <p className="text-xs font-black uppercase text-slate-400">Titulo</p>
-                  <p className="mt-1 font-bold">{form.titulo || "Nao informado"}</p>
+                  <p className="text-xs font-black uppercase text-slate-400">
+                    Titulo
+                  </p>
+                  <p className="mt-1 font-bold">
+                    {form.titulo || "Nao informado"}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase text-slate-400">Local</p>
-                  <p className="mt-1 font-bold">{form.local || "Nao informado"}</p>
+                  <p className="text-xs font-black uppercase text-slate-400">
+                    Local
+                  </p>
+                  <p className="mt-1 font-bold">
+                    {form.local || "Nao informado"}
+                  </p>
                 </div>
                 <div>
-                  <p className="text-xs font-black uppercase text-slate-400">Envolvidos</p>
+                  <p className="text-xs font-black uppercase text-slate-400">
+                    Envolvidos
+                  </p>
                   <p className="mt-1 font-bold">{envolvidos.length}</p>
                 </div>
               </div>
@@ -576,7 +898,10 @@ export default function ColetaDados() {
               <div className="grid gap-3 md:grid-cols-2">
                 {[
                   ["fotosLocal", "Fotos do local foram anexadas?"],
-                  ["relatoPrincipal", "Relato do envolvido principal foi coletado?"],
+                  [
+                    "relatoPrincipal",
+                    "Relato do envolvido principal foi coletado?",
+                  ],
                   ["testemunha", "Existe testemunha?"],
                   ["veiculoEnvolvido", "Existe veiculo envolvido?"],
                   ["danoMaterial", "Existe dano material visivel?"],
@@ -586,11 +911,19 @@ export default function ColetaDados() {
                   ["acionouCcos", "Foi necessario acionar CCOS?"],
                   ["cameraCftv", "Ha camera CFTV proxima?"],
                 ].map(([campo, rotulo]) => (
-                  <label key={campo} className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-100 transition hover:border-blue-400/50 hover:bg-slate-900">
+                  <label
+                    key={campo}
+                    className="flex cursor-pointer items-center gap-3 rounded-2xl border border-white/10 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-100 transition hover:border-blue-400/50 hover:bg-slate-900"
+                  >
                     <input
                       type="checkbox"
                       checked={checklistColeta[campo as keyof ChecklistColeta]}
-                      onChange={(e) => atualizarChecklist(campo as keyof ChecklistColeta, e.target.checked)}
+                      onChange={(e) =>
+                        atualizarChecklist(
+                          campo as keyof ChecklistColeta,
+                          e.target.checked,
+                        )
+                      }
                       className="h-4 w-4 accent-blue-500"
                     />
                     {rotulo}
@@ -600,19 +933,38 @@ export default function ColetaDados() {
             </section>
           )}
 
-          {erro && <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">{erro}</p>}
+          {erro && (
+            <p className="rounded-2xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
+              {erro}
+            </p>
+          )}
 
           {etapa === 1 ? (
-            <button type="button" onClick={avancarParaChecklist} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-2xl shadow-blue-950/30 transition hover:bg-blue-500">
+            <button
+              type="button"
+              onClick={avancarParaChecklist}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-2xl shadow-blue-950/30 transition hover:bg-blue-500"
+            >
               Continuar para checklist inteligente
             </button>
           ) : (
             <div className="grid gap-3 sm:grid-cols-[0.8fr_1.2fr]">
-              <button type="button" onClick={voltarParaDados} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base font-black text-white transition hover:bg-white/10">
+              <button
+                type="button"
+                onClick={voltarParaDados}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base font-black text-white transition hover:bg-white/10"
+              >
                 Voltar e revisar dados
               </button>
-              <button disabled={enviando} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-2xl shadow-blue-950/30 transition hover:bg-blue-500 disabled:bg-slate-600">
-                {enviando ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
+              <button
+                disabled={enviando}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-5 py-4 text-base font-black text-white shadow-2xl shadow-blue-950/30 transition hover:bg-blue-500 disabled:bg-slate-600"
+              >
+                {enviando ? (
+                  <Loader2 className="animate-spin" />
+                ) : (
+                  <CheckCircle2 />
+                )}
                 Enviar coleta de dados
               </button>
             </div>

@@ -344,8 +344,7 @@ export default function RiscosAnaliseCompleta() {
   const [buscaPreventivo, setBuscaPreventivo] = useState("");
   const [buscaDetectivo, setBuscaDetectivo] = useState("");
   const [buscaCorretivo, setBuscaCorretivo] = useState("");
-  const [residual, setResidual] =
-    useState<ResidualFormulario>(residualInicial);
+  const [residual, setResidual] = useState<ResidualFormulario>(residualInicial);
   const [mensagemControles, setMensagemControles] = useState("");
   const [erroControles, setErroControles] = useState("");
   const [filtroFatores, setFiltroFatores] = useState("");
@@ -468,15 +467,18 @@ export default function RiscosAnaliseCompleta() {
     const extremos = analises.filter(
       (item) => item.classificacaoRisco === "EXTREMO",
     ).length;
-    const altos = analises.filter((item) => item.classificacaoRisco === "ALTO")
-      .length;
+    const altos = analises.filter(
+      (item) => item.classificacaoRisco === "ALTO",
+    ).length;
     const residuais = analises.filter(
       (item) =>
         item.resultadoResidual !== null && item.resultadoResidual !== undefined,
     ).length;
     const comControles = analises.filter(
       (item) =>
-        item.preventivos.length || item.detectivos.length || item.corretivos.length,
+        item.preventivos.length ||
+        item.detectivos.length ||
+        item.corretivos.length,
     ).length;
     return {
       total: analises.length,
@@ -572,7 +574,10 @@ export default function RiscosAnaliseCompleta() {
     };
     try {
       if (analiseEditando) {
-        await api.put(`/riscos/analise-completa/${analiseEditando.id}`, payload);
+        await api.put(
+          `/riscos/analise-completa/${analiseEditando.id}`,
+          payload,
+        );
       } else {
         await api.post("/riscos/analise-completa", payload);
       }
@@ -623,11 +628,18 @@ export default function RiscosAnaliseCompleta() {
   async function abrirPdfAnalise(analise: AnaliseCompleta) {
     setErro("");
     try {
-      const response = await api.get(`/riscos/analise-completa/${analise.id}/pdf`, {
-        responseType: "blob",
-      });
+      const response = await api.get(
+        `/riscos/analise-completa/${analise.id}/pdf`,
+        {
+          responseType: "blob",
+        },
+      );
       if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-      setPdfUrl(URL.createObjectURL(new Blob([response.data], { type: "application/pdf" })));
+      setPdfUrl(
+        URL.createObjectURL(
+          new Blob([response.data], { type: "application/pdf" }),
+        ),
+      );
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Não foi possível gerar o PDF.");
     }
@@ -863,7 +875,12 @@ export default function RiscosAnaliseCompleta() {
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
-                adicionarControle(busca, setBusca, selecionados, setSelecionados);
+                adicionarControle(
+                  busca,
+                  setBusca,
+                  selecionados,
+                  setSelecionados,
+                );
               }
             }}
             placeholder="Digite CP001 ou o nome"
@@ -966,7 +983,11 @@ export default function RiscosAnaliseCompleta() {
               ["Total", resumoAnalises.total, "Registros cadastrados"],
               ["Extremos", resumoAnalises.extremos, "Prioridade máxima"],
               ["Altos", resumoAnalises.altos, "Acompanhamento crítico"],
-              ["Com residual", resumoAnalises.residuais, "Avaliação preenchida"],
+              [
+                "Com residual",
+                resumoAnalises.residuais,
+                "Avaliação preenchida",
+              ],
               ["Com controles", resumoAnalises.comControles, "CPs vinculados"],
             ].map(([titulo, valor, detalhe]) => (
               <div
@@ -1150,10 +1171,13 @@ export default function RiscosAnaliseCompleta() {
                   Análise e Avaliação Inerente
                 </h3>
                 <p className="mt-1 text-xs font-semibold text-slate-400">
-                  Preencha os critérios de probabilidade e consequência para o cálculo automático do risco.
+                  Preencha os critérios de probabilidade e consequência para o
+                  cálculo automático do risco.
                 </p>
               </div>
-              <span className={`rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
+              >
                 {previa.nivel}
               </span>
             </div>
@@ -1611,7 +1635,8 @@ export default function RiscosAnaliseCompleta() {
                       Avaliação Residual
                     </h3>
                     <p className="mt-1 text-xs font-semibold text-slate-400">
-                      Informe os critérios após os controles para calcular o risco residual e o desempenho.
+                      Informe os critérios após os controles para calcular o
+                      risco residual e o desempenho.
                     </p>
                   </div>
                   <BadgeNivel>{previaResidual.classificacao}</BadgeNivel>

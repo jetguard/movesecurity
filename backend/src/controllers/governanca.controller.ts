@@ -1,4 +1,4 @@
-import fs from "fs";
+﻿import fs from "fs";
 import path from "path";
 import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
@@ -47,11 +47,11 @@ async function coletarIndicadores(unidade?: string) {
     prisma.cameraMonitoramento.count({
       where: { ...porUnidade, status: "Desconectada", statusCadastro: "Ativa" },
     }),
-      prisma.logAuditoria.count({
-        where: {
-          createdAt: { gte: inicioHoje },
-        },
-      }),
+    prisma.logAuditoria.count({
+      where: {
+        createdAt: { gte: inicioHoje },
+      },
+    }),
   ]);
 
   return {

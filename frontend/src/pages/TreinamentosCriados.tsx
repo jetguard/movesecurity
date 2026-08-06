@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   Award,
   CheckCircle2,
@@ -48,7 +48,9 @@ function data(valor?: string | null) {
 }
 
 function concluido(status?: string | null) {
-  return String(status || "").toLowerCase().startsWith("conclu");
+  return String(status || "")
+    .toLowerCase()
+    .startsWith("conclu");
 }
 
 function copiarLink(link: string) {
@@ -61,7 +63,8 @@ function indicadores(lista: Participante[]) {
     total: lista.length,
     andamento: lista.filter((item) => item.status === "Em andamento").length,
     concluidos: lista.filter((item) => concluido(item.status)).length,
-    certificados: lista.filter((item) => !!item.certificadoUrl || !!item.codigo).length,
+    certificados: lista.filter((item) => !!item.certificadoUrl || !!item.codigo)
+      .length,
   };
 }
 
@@ -137,7 +140,9 @@ export default function TreinamentosCriados() {
       setMensagem(response.data?.mensagem || "E-mail enviado com sucesso.");
       await carregar();
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível reenviar o e-mail.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível reenviar o e-mail.",
+      );
     } finally {
       setEnviandoId(null);
     }
@@ -145,7 +150,12 @@ export default function TreinamentosCriados() {
 
   async function excluirModelo(modelo: Modelo) {
     if (!podeEditar) return;
-    if (!confirm(`Deseja excluir o treinamento ${modelo.codigo}? Essa ação remove o modelo e seus participantes.`)) return;
+    if (
+      !confirm(
+        `Deseja excluir o treinamento ${modelo.codigo}? Essa ação remove o modelo e seus participantes.`,
+      )
+    )
+      return;
     setMensagem("");
     try {
       await api.delete(`/treinamentos-dinamicos/${modelo.id}`);
@@ -153,7 +163,10 @@ export default function TreinamentosCriados() {
       setSelecionadoId("");
       await carregar();
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível excluir o treinamento.");
+      setMensagem(
+        error.response?.data?.error ||
+          "Não foi possível excluir o treinamento.",
+      );
     }
   }
 
@@ -167,7 +180,9 @@ export default function TreinamentosCriados() {
       setMensagem("Registro excluído com sucesso.");
       await carregar();
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível excluir o registro.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível excluir o registro.",
+      );
     } finally {
       setExcluindoId(null);
     }
@@ -184,7 +199,8 @@ export default function TreinamentosCriados() {
             Treinamentos criados
           </h1>
           <p className="mt-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            Acompanhe participantes, progresso, avaliação, certificados e envio por e-mail.
+            Acompanhe participantes, progresso, avaliação, certificados e envio
+            por e-mail.
           </p>
         </div>
         {modeloSelecionado && (
@@ -193,7 +209,11 @@ export default function TreinamentosCriados() {
               <>
                 <button
                   type="button"
-                  onClick={() => navigate(`/treinamentos-dinamicos?editar=${modeloSelecionado.id}`)}
+                  onClick={() =>
+                    navigate(
+                      `/treinamentos-dinamicos?editar=${modeloSelecionado.id}`,
+                    )
+                  }
                   className="inline-flex items-center gap-2 rounded-xl border border-blue-200 px-4 py-3 text-sm font-black text-blue-700 hover:bg-blue-50 dark:border-blue-500/30 dark:text-blue-200 dark:hover:bg-blue-500/10"
                 >
                   <Edit size={18} /> Editar treinamento
@@ -302,14 +322,17 @@ export default function TreinamentosCriados() {
                 <th className="px-4 py-3">Progresso</th>
                 <th className="px-4 py-3">Avaliação</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Último acesso</th>
+                <th className="px-4 py-3">Ãšltimo acesso</th>
                 <th className="px-4 py-3">Certificado</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtrados.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                <tr
+                  key={item.id}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                >
                   <td className="px-4 py-3">
                     <p className="font-black text-slate-900 dark:text-white">
                       {item.nomeCompleto}
@@ -323,7 +346,10 @@ export default function TreinamentosCriados() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                      <div className="h-full bg-blue-500" style={{ width: `${item.porcentagem}%` }} />
+                      <div
+                        className="h-full bg-blue-500"
+                        style={{ width: `${item.porcentagem}%` }}
+                      />
                     </div>
                     <p className="mt-1 text-xs font-bold text-slate-500 dark:text-slate-400">
                       {item.porcentagem}%
@@ -374,7 +400,8 @@ export default function TreinamentosCriados() {
                           disabled={enviandoId === item.id}
                           className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-200"
                         >
-                          <Mail size={14} /> {enviandoId === item.id ? "Enviando..." : "Enviar"}
+                          <Mail size={14} />{" "}
+                          {enviandoId === item.id ? "Enviando..." : "Enviar"}
                         </button>
                       )}
                       {podeEditar && (
@@ -384,7 +411,8 @@ export default function TreinamentosCriados() {
                           disabled={excluindoId === item.id}
                           className="inline-flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-500/10 px-3 py-2 text-xs font-black text-red-700 transition hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-200"
                         >
-                          <Trash2 size={14} /> {excluindoId === item.id ? "Excluindo..." : "Excluir"}
+                          <Trash2 size={14} />{" "}
+                          {excluindoId === item.id ? "Excluindo..." : "Excluir"}
                         </button>
                       )}
                     </div>
@@ -393,7 +421,10 @@ export default function TreinamentosCriados() {
               ))}
               {!filtrados.length && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm font-semibold text-slate-500">
+                  <td
+                    colSpan={8}
+                    className="px-4 py-10 text-center text-sm font-semibold text-slate-500"
+                  >
                     Nenhum treinamento encontrado.
                   </td>
                 </tr>

@@ -1,13 +1,22 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 
-const TIPOS_LOCAL = ["Operacional", "Administrativo", "Acesso", "Armazenagem", "Segurança", "Outro"];
+const TIPOS_LOCAL = [
+  "Operacional",
+  "Administrativo",
+  "Acesso",
+  "Armazenagem",
+  "Segurança",
+  "Outro",
+];
 const STATUS_LOCAL = ["Ativo", "Inativo"];
 
 function nomeMaiusculo(nome: unknown) {
-  return String(nome || "").trim().toLocaleUpperCase("pt-BR");
+  return String(nome || "")
+    .trim()
+    .toLocaleUpperCase("pt-BR");
 }
 
 function validarTipo(tipo: unknown) {
@@ -68,7 +77,11 @@ export async function criarLocal(req: AuthRequest, res: Response) {
     return res.status(201).json(local);
   } catch (error: any) {
     if (error?.code === "P2002") {
-      return res.status(400).json({ error: "Já existe um local cadastrado com este nome nesta unidade." });
+      return res
+        .status(400)
+        .json({
+          error: "Já existe um local cadastrado com este nome nesta unidade.",
+        });
     }
 
     console.error(error);
@@ -117,7 +130,11 @@ export async function atualizarLocal(req: AuthRequest, res: Response) {
     return res.json(local);
   } catch (error: any) {
     if (error?.code === "P2002") {
-      return res.status(400).json({ error: "Já existe um local cadastrado com este nome nesta unidade." });
+      return res
+        .status(400)
+        .json({
+          error: "Já existe um local cadastrado com este nome nesta unidade.",
+        });
     }
 
     console.error(error);

@@ -481,10 +481,15 @@ export default function TreinamentoPocSep002Publico() {
   function alterar(nome: keyof typeof formInicial, valor: string | boolean) {
     if (nome === "nomeCompleto" && typeof valor === "string") {
       if (valor.includes("@")) {
-        setMensagem("Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.");
+        setMensagem(
+          "Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.",
+        );
         return;
       }
-      setForm((atual) => ({ ...atual, nomeCompleto: formatarNomePessoa(String(valor)) }));
+      setForm((atual) => ({
+        ...atual,
+        nomeCompleto: formatarNomePessoa(String(valor)),
+      }));
       return;
     }
     if (nome === "cpf") valor = mascararCpf(String(valor));
@@ -511,7 +516,9 @@ export default function TreinamentoPocSep002Publico() {
 
       setForm((atual) => ({
         ...atual,
-        nomeCompleto: formatarNomePessoa(participante.nomeCompleto || atual.nomeCompleto),
+        nomeCompleto: formatarNomePessoa(
+          participante.nomeCompleto || atual.nomeCompleto,
+        ),
         cpf: mascararCpf(participante.cpf || atual.cpf),
         email: participante.email || atual.email,
         unidade: participante.unidade || atual.unidade,
@@ -529,7 +536,9 @@ export default function TreinamentoPocSep002Publico() {
   async function iniciar(event: FormEvent) {
     event.preventDefault();
     if (!nomePessoaValido(form.nomeCompleto)) {
-      setMensagem("Informe nome completo válido, sem e-mail, com nome e sobrenome.");
+      setMensagem(
+        "Informe nome completo válido, sem e-mail, com nome e sobrenome.",
+      );
       return;
     }
     if (!cpfValido(form.cpf)) {

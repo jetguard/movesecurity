@@ -1,6 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Award, CheckCircle2, Clock3, Download, Mail, PlayCircle, Search, Trash2 } from "lucide-react";
+import {
+  Award,
+  CheckCircle2,
+  Clock3,
+  Download,
+  Mail,
+  PlayCircle,
+  Search,
+  Trash2,
+} from "lucide-react";
 import { api } from "../services/api";
 import { PERFIS, perfilAtual } from "../utils/permissoes";
 
@@ -31,17 +40,23 @@ function data(valor?: string | null) {
 }
 
 function estaConcluido(status?: string | null) {
-  return String(status || "").toLowerCase().startsWith("conclu");
+  return String(status || "")
+    .toLowerCase()
+    .startsWith("conclu");
 }
 
 function progresso(item: Treinamento) {
   if (estaConcluido(item.status)) return 100;
   if (!item.duracaoSegundos) return 0;
-  return Math.min(99, Math.round((item.progressoSegundos / item.duracaoSegundos) * 100));
+  return Math.min(
+    99,
+    Math.round((item.progressoSegundos / item.duracaoSegundos) * 100),
+  );
 }
 
 function classeStatus(status: string) {
-  if (estaConcluido(status)) return "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
+  if (estaConcluido(status))
+    return "border-emerald-400/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-200";
   return "border-blue-400/40 bg-blue-500/10 text-blue-700 dark:text-blue-200";
 }
 
@@ -57,7 +72,9 @@ function mascararCpf(valor: string) {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
-const cardsIndicadores: Array<[string, keyof ReturnType<typeof criarIndicadores>, LucideIcon]> = [
+const cardsIndicadores: Array<
+  [string, keyof ReturnType<typeof criarIndicadores>, LucideIcon]
+> = [
   ["Total", "total", Award],
   ["Em andamento", "andamento", Clock3],
   ["Concluidos", "concluidos", CheckCircle2],
@@ -80,7 +97,9 @@ export default function TreinamentosTerminal() {
   const [status, setStatus] = useState("Todos");
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
-  const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(perfilAtual());
+  const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
+    perfilAtual(),
+  );
 
   async function carregar() {
     const response = await api.get("/treinamentos-terminal");
@@ -88,20 +107,31 @@ export default function TreinamentosTerminal() {
   }
 
   async function excluirTreinamento(item: Treinamento) {
-    if (!confirm(`Deseja excluir o treinamento de ${item.nomeCompleto}?`)) return;
+    if (!confirm(`Deseja excluir o treinamento de ${item.nomeCompleto}?`))
+      return;
     await api.delete(`/treinamentos-terminal/${item.id}`);
-    setLista((atual) => atual.filter((treinamento) => treinamento.id !== item.id));
+    setLista((atual) =>
+      atual.filter((treinamento) => treinamento.id !== item.id),
+    );
   }
 
   async function reenviarCertificado(item: Treinamento) {
     setEnviandoId(item.id);
     setMensagem("");
     try {
-      const response = await api.post(`/treinamentos-terminal/${item.id}/reenviar-certificado`);
-      setLista((atual) => atual.map((treinamento) => (treinamento.id === item.id ? response.data.treinamento : treinamento)));
+      const response = await api.post(
+        `/treinamentos-terminal/${item.id}/reenviar-certificado`,
+      );
+      setLista((atual) =>
+        atual.map((treinamento) =>
+          treinamento.id === item.id ? response.data.treinamento : treinamento,
+        ),
+      );
       setMensagem(response.data.mensagem || "Certificado enviado com sucesso.");
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível enviar o certificado.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível enviar o certificado.",
+      );
     } finally {
       setEnviandoId(null);
     }
@@ -115,8 +145,16 @@ export default function TreinamentosTerminal() {
     const termo = busca.trim().toLowerCase();
     const cpfTermo = apenasDigitos(cpfFiltro);
     return lista.filter((item) => {
-      const okStatus = status === "Todos" || item.status === status || (status === "Concluido" && estaConcluido(item.status));
-      const okBusca = !termo || [item.nomeCompleto, item.cpf, item.email, item.empresa, item.codigo].join(" ").toLowerCase().includes(termo);
+      const okStatus =
+        status === "Todos" ||
+        item.status === status ||
+        (status === "Concluido" && estaConcluido(item.status));
+      const okBusca =
+        !termo ||
+        [item.nomeCompleto, item.cpf, item.email, item.empresa, item.codigo]
+          .join(" ")
+          .toLowerCase()
+          .includes(termo);
       const okCpf = !cpfTermo || apenasDigitos(item.cpf).includes(cpfTermo);
       return okStatus && okBusca && okCpf;
     });
@@ -128,23 +166,42 @@ export default function TreinamentosTerminal() {
     <div className="space-y-6">
       <section className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-600 dark:text-blue-300">Acesso ao terminal</p>
-          <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">Treinamentos publicos</h1>
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Acompanhe participantes, progresso do video, certificados e envio por e-mail.</p>
+          <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-600 dark:text-blue-300">
+            Acesso ao terminal
+          </p>
+          <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">
+            Treinamentos publicos
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+            Acompanhe participantes, progresso do video, certificados e envio
+            por e-mail.
+          </p>
         </div>
-        <a href="/treinamento-terminal" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700">
+        <a
+          href="/treinamento-terminal"
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700"
+        >
           <PlayCircle size={18} /> Abrir pagina publica
         </a>
       </section>
 
       <section className="grid gap-4 md:grid-cols-4">
         {cardsIndicadores.map(([label, chave, Icon]) => (
-          <div key={label} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+          <div
+            key={label}
+            className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+          >
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">
+                {label}
+              </p>
               <Icon className="h-5 w-5 text-blue-500" />
             </div>
-            <p className="mt-3 text-2xl font-black text-slate-900 dark:text-white">{indicadores[chave]}</p>
+            <p className="mt-3 text-2xl font-black text-slate-900 dark:text-white">
+              {indicadores[chave]}
+            </p>
           </div>
         ))}
       </section>
@@ -159,7 +216,12 @@ export default function TreinamentosTerminal() {
         <div className="mb-4 flex flex-wrap gap-3">
           <div className="relative min-w-72 flex-1">
             <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-            <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar por nome, CPF, e-mail, empresa ou certificado" className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            <input
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              placeholder="Buscar por nome, CPF, e-mail, empresa ou certificado"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            />
           </div>
           <input
             value={cpfFiltro}
@@ -169,7 +231,11 @@ export default function TreinamentosTerminal() {
             maxLength={14}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-white sm:w-48"
           />
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+          >
             <option>Todos</option>
             <option>Em andamento</option>
             <option value="Concluido">Concluido</option>
@@ -192,50 +258,83 @@ export default function TreinamentosTerminal() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {filtrados.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/60">
+                <tr
+                  key={item.id}
+                  className="hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                >
                   <td className="px-4 py-3">
-                    <p className="font-black text-slate-900 dark:text-white">{item.nomeCompleto}</p>
-                    <p className="text-xs text-slate-500">{item.cpf} - {item.email}</p>
+                    <p className="font-black text-slate-900 dark:text-white">
+                      {item.nomeCompleto}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {item.cpf} - {item.email}
+                    </p>
                     <p className="text-xs text-slate-500">{item.telefone}</p>
                   </td>
                   <td className="px-4 py-3">
-                    <p className="font-bold text-slate-700 dark:text-slate-200">{item.empresa}</p>
+                    <p className="font-bold text-slate-700 dark:text-slate-200">
+                      {item.empresa}
+                    </p>
                     <p className="text-xs text-slate-500">{item.cargo}</p>
                   </td>
-                  <td className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">{item.etapa}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">
+                    {item.etapa}
+                  </td>
                   <td className="px-4 py-3">
                     <div className="h-2 w-32 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
-                      <div className="h-full bg-blue-500" style={{ width: `${progresso(item)}%` }} />
+                      <div
+                        className="h-full bg-blue-500"
+                        style={{ width: `${progresso(item)}%` }}
+                      />
                     </div>
-                    <p className="mt-1 text-xs font-bold text-slate-500">{progresso(item)}%</p>
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      {progresso(item)}%
+                    </p>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full border px-3 py-1 text-xs font-black ${classeStatus(item.status)}`}>{item.status}</span>
-                    <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-500"><Mail size={12} /> {item.emailStatus || "E-mail pendente"}</p>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-black ${classeStatus(item.status)}`}
+                    >
+                      {item.status}
+                    </span>
+                    <p className="mt-2 inline-flex items-center gap-1 text-xs text-slate-500">
+                      <Mail size={12} /> {item.emailStatus || "E-mail pendente"}
+                    </p>
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-500">{data(item.ultimoAcessoEm)}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">
+                    {data(item.ultimoAcessoEm)}
+                  </td>
                   <td className="px-4 py-3">
                     {item.certificadoUrl ? (
-                      <a href={item.certificadoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white hover:bg-blue-700">
+                      <a
+                        href={item.certificadoUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white hover:bg-blue-700"
+                      >
                         <Download size={14} /> PDF
                       </a>
                     ) : (
-                      <span className="text-xs text-slate-500">Nao emitido</span>
+                      <span className="text-xs text-slate-500">
+                        Nao emitido
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex flex-wrap justify-end gap-2">
-                      {progresso(item) === 100 && estaConcluido(item.status) && (
-                        <button
-                          type="button"
-                          onClick={() => reenviarCertificado(item)}
-                          disabled={enviandoId === item.id}
-                          className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-200"
-                          title="Enviar certificado por e-mail"
-                        >
-                          <Mail size={14} /> {enviandoId === item.id ? "Enviando..." : "Enviar"}
-                        </button>
-                      )}
+                      {progresso(item) === 100 &&
+                        estaConcluido(item.status) && (
+                          <button
+                            type="button"
+                            onClick={() => reenviarCertificado(item)}
+                            disabled={enviandoId === item.id}
+                            className="inline-flex items-center gap-2 rounded-lg border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-xs font-black text-emerald-700 transition hover:bg-emerald-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-60 dark:text-emerald-200"
+                            title="Enviar certificado por e-mail"
+                          >
+                            <Mail size={14} />{" "}
+                            {enviandoId === item.id ? "Enviando..." : "Enviar"}
+                          </button>
+                        )}
                       {podeExcluir && (
                         <button
                           type="button"
@@ -252,7 +351,12 @@ export default function TreinamentosTerminal() {
               ))}
               {!filtrados.length && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm font-semibold text-slate-500">Nenhum treinamento encontrado.</td>
+                  <td
+                    colSpan={8}
+                    className="px-4 py-10 text-center text-sm font-semibold text-slate-500"
+                  >
+                    Nenhum treinamento encontrado.
+                  </td>
                 </tr>
               )}
             </tbody>

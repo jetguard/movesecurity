@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import {
@@ -113,7 +113,8 @@ export default function Governanca() {
       setDados(null);
       setErro(
         axios.isAxiosError(error)
-          ? error.response?.data?.error || "Não foi possível consultar a governança do sistema."
+          ? error.response?.data?.error ||
+              "Não foi possível consultar a governança do sistema."
           : "Não foi possível consultar a governança do sistema.",
       );
     } finally {
@@ -204,7 +205,7 @@ export default function Governanca() {
       cor: "text-amber-300 bg-amber-950/70",
     },
     {
-      label: "Câmeras offline",
+      label: "CÃ¢meras offline",
       valor: dados.indicadores.camerasOffline,
       icon: Video,
       cor: "text-red-300 bg-red-950/70",
@@ -479,7 +480,7 @@ export default function Governanca() {
                       </small>
                     </span>
                   </span>
-                  <span className="text-blue-300">→</span>
+                  <span className="text-blue-300">â†’</span>
                 </Link>
                 <Link
                   to="/logs"
@@ -496,7 +497,7 @@ export default function Governanca() {
                       </small>
                     </span>
                   </span>
-                  <span className="text-blue-300">→</span>
+                  <span className="text-blue-300">â†’</span>
                 </Link>
               </div>
             </div>

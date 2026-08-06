@@ -59,7 +59,8 @@ const secoesBase: SecaoTreinamento[] = [
   {
     numero: "1",
     titulo: "Atuação do CCOS",
-    objetivo: "Apresentar a atuação do Centro de Controle Operacional de Segurança.",
+    objetivo:
+      "Apresentar a atuação do Centro de Controle Operacional de Segurança.",
     resumo:
       "O CCOS acompanha as instalações por meio do CFTV, alarmes, sensores e demais recursos eletrônicos, funcionando continuamente 24 horas por dia e 7 dias por semana.",
     responsabilidades: [
@@ -72,7 +73,8 @@ const secoesBase: SecaoTreinamento[] = [
       "As ações executadas precisam ter resposta rápida e rastreabilidade.",
       "O CCOS também presta suporte às investigações.",
     ],
-    atencao: "O CCOS é uma área crítica de monitoramento e suporte às operações de segurança.",
+    atencao:
+      "O CCOS é uma área crítica de monitoramento e suporte às operações de segurança.",
   },
   {
     numero: "2",
@@ -90,7 +92,8 @@ const secoesBase: SecaoTreinamento[] = [
       "A troca de turno deve ser formal e rastreável.",
       "Pendências precisam ser conhecidas antes do início das atividades.",
     ],
-    atencao: "Falhas na passagem de posto podem comprometer a continuidade da segurança.",
+    atencao:
+      "Falhas na passagem de posto podem comprometer a continuidade da segurança.",
   },
   {
     numero: "3",
@@ -108,7 +111,8 @@ const secoesBase: SecaoTreinamento[] = [
       "O desenvolvimento da situação deve ser acompanhado.",
       "Eventos relevantes exigem comunicação imediata.",
     ],
-    atencao: "Ao identificar um evento relevante, a primeira ação é manter a câmera focada.",
+    atencao:
+      "Ao identificar um evento relevante, a primeira ação é manter a câmera focada.",
   },
   {
     numero: "4",
@@ -126,7 +130,8 @@ const secoesBase: SecaoTreinamento[] = [
       "O acompanhamento aumenta a capacidade de prevenção.",
       "Irregularidades identificadas devem ser registradas.",
     ],
-    atencao: "Ronda eletrônica não substitui integralmente a ronda física; ela complementa a prevenção.",
+    atencao:
+      "Ronda eletrônica não substitui integralmente a ronda física; ela complementa a prevenção.",
   },
   {
     numero: "5",
@@ -144,7 +149,8 @@ const secoesBase: SecaoTreinamento[] = [
       "O acionamento deve seguir a gravidade da ocorrência.",
       "A comunicação à liderança deve ser imediata.",
     ],
-    atencao: "Ocorrências exigem registro, comunicação, acompanhamento e preservação de evidências.",
+    atencao:
+      "Ocorrências exigem registro, comunicação, acompanhamento e preservação de evidências.",
   },
   {
     numero: "6",
@@ -162,7 +168,8 @@ const secoesBase: SecaoTreinamento[] = [
       "Registros completos apoiam investigações e auditorias.",
       "Registros incompletos prejudicam análises posteriores.",
     ],
-    atencao: "Um registro incompleto pode comprometer investigações, auditorias e análises.",
+    atencao:
+      "Um registro incompleto pode comprometer investigações, auditorias e análises.",
   },
   {
     numero: "7",
@@ -180,7 +187,8 @@ const secoesBase: SecaoTreinamento[] = [
       "O conteúdo faz parte do procedimento corporativo.",
       "O tema deve ser conhecido por todos os participantes do treinamento.",
     ],
-    atencao: "A Quadra de Segurança exige controle, monitoramento e rastreabilidade.",
+    atencao:
+      "A Quadra de Segurança exige controle, monitoramento e rastreabilidade.",
   },
   {
     numero: "8",
@@ -198,7 +206,8 @@ const secoesBase: SecaoTreinamento[] = [
       "O controle deve permitir rastreabilidade.",
       "A vistoria e a lacração são etapas de segurança operacional.",
     ],
-    atencao: "A finalidade da lacração é garantir segurança, integridade e rastreabilidade.",
+    atencao:
+      "A finalidade da lacração é garantir segurança, integridade e rastreabilidade.",
   },
   {
     numero: "9",
@@ -216,7 +225,8 @@ const secoesBase: SecaoTreinamento[] = [
       "O controle garante organização e rastreabilidade.",
       "A retirada de lacres não deve ocorrer apenas por comunicação verbal.",
     ],
-    atencao: "Antes da retirada de lacres deve existir solicitação formal da área operacional.",
+    atencao:
+      "Antes da retirada de lacres deve existir solicitação formal da área operacional.",
   },
   {
     numero: "10",
@@ -252,7 +262,8 @@ const secoesBase: SecaoTreinamento[] = [
       "Nenhuma pessoa deve entrar no CCOS sem autorização.",
       "O controle de acesso protege a operação e as informações monitoradas.",
     ],
-    atencao: "Somente pessoas autorizadas e com acesso registrado podem entrar no CCOS.",
+    atencao:
+      "Somente pessoas autorizadas e com acesso registrado podem entrar no CCOS.",
   },
   {
     numero: "12",
@@ -270,7 +281,8 @@ const secoesBase: SecaoTreinamento[] = [
       "No Sudeste, devem ser observadas as instruções locais do CCOS.",
       "No Nordeste, podem existir adaptações relacionadas à infraestrutura.",
     ],
-    atencao: "Imagens de CFTV não devem ser disponibilizadas livremente por solicitação verbal.",
+    atencao:
+      "Imagens de CFTV não devem ser disponibilizadas livremente por solicitação verbal.",
   },
 ];
 
@@ -300,7 +312,8 @@ const quizBase: PerguntaQuiz[] = [
     correta: 0,
   },
   {
-    pergunta: "Ao identificar um evento relevante, qual deve ser a primeira ação do operador?",
+    pergunta:
+      "Ao identificar um evento relevante, qual deve ser a primeira ação do operador?",
     opcoes: [
       "Manter a câmera focada no evento.",
       "Desligar a câmera.",
@@ -330,7 +343,8 @@ const quizBase: PerguntaQuiz[] = [
     correta: 0,
   },
   {
-    pergunta: "Qual conjunto de informações deve constar no registro de uma ocorrência?",
+    pergunta:
+      "Qual conjunto de informações deve constar no registro de uma ocorrência?",
     opcoes: [
       "Data, horário, local, descrição, evidências, câmeras e ações adotadas.",
       "Apenas nome do operador e horário.",
@@ -340,7 +354,8 @@ const quizBase: PerguntaQuiz[] = [
     correta: 0,
   },
   {
-    pergunta: "Qual atividade está relacionada ao controle da Quadra de Segurança?",
+    pergunta:
+      "Qual atividade está relacionada ao controle da Quadra de Segurança?",
     opcoes: [
       "Relatórios semanais, acompanhamento dos contêineres e rondas no local.",
       "Controle de folha de pagamento.",
@@ -370,7 +385,8 @@ const quizBase: PerguntaQuiz[] = [
     correta: 0,
   },
   {
-    pergunta: "O que deve acontecer quando houver divergência na numeração do lacre?",
+    pergunta:
+      "O que deve acontecer quando houver divergência na numeração do lacre?",
     opcoes: [
       "O motorista deve retornar à balança para correção.",
       "O veículo deve ser liberado normalmente.",
@@ -545,10 +561,15 @@ export default function TreinamentoPocSep006Publico() {
   function alterar(nome: keyof typeof formInicial, valor: string | boolean) {
     if (nome === "nomeCompleto" && typeof valor === "string") {
       if (valor.includes("@")) {
-        setMensagem("Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.");
+        setMensagem(
+          "Digite apenas o nome completo. O e-mail deve ser informado somente no campo de e-mail.",
+        );
         return;
       }
-      setForm((atual) => ({ ...atual, nomeCompleto: formatarNomePessoa(String(valor)) }));
+      setForm((atual) => ({
+        ...atual,
+        nomeCompleto: formatarNomePessoa(String(valor)),
+      }));
       return;
     }
     if (nome === "cpf") valor = mascararCpf(String(valor));
@@ -575,7 +596,9 @@ export default function TreinamentoPocSep006Publico() {
 
       setForm((atual) => ({
         ...atual,
-        nomeCompleto: formatarNomePessoa(participante.nomeCompleto || atual.nomeCompleto),
+        nomeCompleto: formatarNomePessoa(
+          participante.nomeCompleto || atual.nomeCompleto,
+        ),
         cpf: mascararCpf(participante.cpf || atual.cpf),
         email: participante.email || atual.email,
         unidade: participante.unidade || atual.unidade,
@@ -593,7 +616,9 @@ export default function TreinamentoPocSep006Publico() {
   async function iniciar(event: FormEvent) {
     event.preventDefault();
     if (!nomePessoaValido(form.nomeCompleto)) {
-      setMensagem("Informe nome completo válido, sem e-mail, com nome e sobrenome.");
+      setMensagem(
+        "Informe nome completo válido, sem e-mail, com nome e sobrenome.",
+      );
       return;
     }
     if (!cpfValido(form.cpf)) {
@@ -1126,7 +1151,8 @@ export default function TreinamentoPocSep006Publico() {
                 </p>
                 <h2 className="mt-2 text-2xl font-black">Quiz POC-SEP-006</h2>
                 <p className="mt-2 text-sm font-bold text-slate-700">
-                  Responda as {quiz.length} questões com base no procedimento estudado.
+                  Responda as {quiz.length} questões com base no procedimento
+                  estudado.
                 </p>
               </div>
               <FileText className="h-10 w-10 text-blue-700" />

@@ -1,11 +1,14 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import {
   gerarPdfPassagemTurno,
   criarUrlPublicaCcos,
   validarTokenAcessoCcos,
 } from "./operacao.controller";
-import { criarUrlPublicaChecklist, gerarPdfPublicoChecklist } from "./checklist.controller";
+import {
+  criarUrlPublicaChecklist,
+  gerarPdfPublicoChecklist,
+} from "./checklist.controller";
 import {
   criarUrlPublicaPdf,
   gerarRelatorioPdf,
@@ -49,7 +52,8 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         },
       });
 
-      if (!ocorrencia) return res.status(404).json({ error: "Relatório não encontrado" });
+      if (!ocorrencia)
+        return res.status(404).json({ error: "Relatório não encontrado" });
 
       const valido = validarTokenAcessoPdf({
         tipo,
@@ -59,7 +63,8 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         token,
       });
 
-      if (!valido) return res.status(403).json({ error: "Token de acesso inválido" });
+      if (!valido)
+        return res.status(403).json({ error: "Token de acesso inválido" });
 
       const pdfUrl = criarUrlPublicaPdf(req, {
         tipo,
@@ -67,12 +72,39 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         codigo: ocorrencia.codigo,
         unidade: ocorrencia.unidade,
       });
-      const assinaturaAprovacao = await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Ocorrencia", registroId: ocorrencia.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } });
+      const assinaturaAprovacao = await prisma.assinaturaDocumento.findFirst({
+        where: {
+          modulo: "Ocorrencia",
+          registroId: ocorrencia.id,
+          status: "VALIDA",
+        },
+        orderBy: { createdAt: "desc" },
+      });
       const assinatura =
         assinaturaAprovacao ||
-        (ocorrencia.analise ? await prisma.assinaturaDocumento.findFirst({ where: { modulo: "AnaliseOcorrencia", registroId: ocorrencia.analise.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } }) : null) ||
-        (ocorrencia.investigacao ? await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Investigacao", registroId: ocorrencia.investigacao.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } }) : null);
-      const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
+        (ocorrencia.analise
+          ? await prisma.assinaturaDocumento.findFirst({
+              where: {
+                modulo: "AnaliseOcorrencia",
+                registroId: ocorrencia.analise.id,
+                status: "VALIDA",
+              },
+              orderBy: { createdAt: "desc" },
+            })
+          : null) ||
+        (ocorrencia.investigacao
+          ? await prisma.assinaturaDocumento.findFirst({
+              where: {
+                modulo: "Investigacao",
+                registroId: ocorrencia.investigacao.id,
+                status: "VALIDA",
+              },
+              orderBy: { createdAt: "desc" },
+            })
+          : null);
+      const validacaoUrl = assinatura
+        ? criarUrlValidacaoAssinatura(req, assinatura.token)
+        : pdfUrl;
 
       return gerarRelatorioPdf(
         res,
@@ -95,7 +127,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
         },
         usuarioConsultaPublica,
         validacaoUrl,
-        assinatura?.token
+        assinatura?.token,
       );
     }
 
@@ -113,7 +145,8 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
       },
     });
 
-    if (!evento) return res.status(404).json({ error: "Relatório não encontrado" });
+    if (!evento)
+      return res.status(404).json({ error: "Relatório não encontrado" });
 
     const valido = validarTokenAcessoPdf({
       tipo,
@@ -123,7 +156,8 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
       token,
     });
 
-    if (!valido) return res.status(403).json({ error: "Token de acesso inválido" });
+    if (!valido)
+      return res.status(403).json({ error: "Token de acesso inválido" });
 
     const pdfUrl = criarUrlPublicaPdf(req, {
       tipo,
@@ -131,11 +165,25 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
       codigo: evento.codigo,
       unidade: evento.unidade,
     });
-    const assinaturaAprovacao = await prisma.assinaturaDocumento.findFirst({ where: { modulo: "Evento", registroId: evento.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } });
+    const assinaturaAprovacao = await prisma.assinaturaDocumento.findFirst({
+      where: { modulo: "Evento", registroId: evento.id, status: "VALIDA" },
+      orderBy: { createdAt: "desc" },
+    });
     const assinatura =
       assinaturaAprovacao ||
-      (evento.analise ? await prisma.assinaturaDocumento.findFirst({ where: { modulo: "AnaliseEvento", registroId: evento.analise.id, status: "VALIDA" }, orderBy: { createdAt: "desc" } }) : null);
-    const validacaoUrl = assinatura ? criarUrlValidacaoAssinatura(req, assinatura.token) : pdfUrl;
+      (evento.analise
+        ? await prisma.assinaturaDocumento.findFirst({
+            where: {
+              modulo: "AnaliseEvento",
+              registroId: evento.analise.id,
+              status: "VALIDA",
+            },
+            orderBy: { createdAt: "desc" },
+          })
+        : null);
+    const validacaoUrl = assinatura
+      ? criarUrlValidacaoAssinatura(req, assinatura.token)
+      : pdfUrl;
 
     return gerarRelatorioPdf(
       res,
@@ -157,7 +205,7 @@ export async function gerarPdfPublicoRelatorio(req: Request, res: Response) {
       },
       usuarioConsultaPublica,
       validacaoUrl,
-      assinatura?.token
+      assinatura?.token,
     );
   } catch (error) {
     console.error(error);
@@ -183,7 +231,8 @@ export async function gerarPdfPublicoCcos(req: Request, res: Response) {
       },
     });
 
-    if (!passagem) return res.status(404).json({ error: "Relatório CCOS não encontrado" });
+    if (!passagem)
+      return res.status(404).json({ error: "Relatório CCOS não encontrado" });
 
     const valido = validarTokenAcessoCcos({
       id: passagem.id,
@@ -192,7 +241,8 @@ export async function gerarPdfPublicoCcos(req: Request, res: Response) {
       token,
     });
 
-    if (!valido) return res.status(403).json({ error: "Token de acesso inválido" });
+    if (!valido)
+      return res.status(403).json({ error: "Token de acesso inválido" });
 
     return gerarPdfPassagemTurno(
       {
@@ -200,7 +250,7 @@ export async function gerarPdfPublicoCcos(req: Request, res: Response) {
         params: { ...req.params, id: String(passagem.id) },
         unidadeAtiva: passagem.unidade,
       } as unknown as Parameters<typeof gerarPdfPassagemTurno>[0],
-      res
+      res,
     );
   } catch (error) {
     console.error(error);
@@ -216,44 +266,121 @@ function escaparHtml(valor: unknown) {
     .replace(/"/g, "&quot;");
 }
 
-async function linkPdfAssinatura(req: Request, assinatura: {
-  modulo: string;
-  registroId: number;
-  token: string;
-}) {
+async function linkPdfAssinatura(
+  req: Request,
+  assinatura: {
+    modulo: string;
+    registroId: number;
+    token: string;
+  },
+) {
   if (assinatura.modulo === "Ocorrencia") {
-    const ocorrencia = await prisma.ocorrencia.findUnique({ where: { id: assinatura.registroId }, select: { id: true, codigo: true, unidade: true } });
-    return ocorrencia ? criarUrlPublicaPdf(req, { tipo: "ocorrencias", id: ocorrencia.id, codigo: ocorrencia.codigo, unidade: ocorrencia.unidade }) : "";
+    const ocorrencia = await prisma.ocorrencia.findUnique({
+      where: { id: assinatura.registroId },
+      select: { id: true, codigo: true, unidade: true },
+    });
+    return ocorrencia
+      ? criarUrlPublicaPdf(req, {
+          tipo: "ocorrencias",
+          id: ocorrencia.id,
+          codigo: ocorrencia.codigo,
+          unidade: ocorrencia.unidade,
+        })
+      : "";
   }
 
   if (assinatura.modulo === "Evento") {
-    const evento = await prisma.evento.findUnique({ where: { id: assinatura.registroId }, select: { id: true, codigo: true, unidade: true } });
-    return evento ? criarUrlPublicaPdf(req, { tipo: "eventos", id: evento.id, codigo: evento.codigo, unidade: evento.unidade }) : "";
+    const evento = await prisma.evento.findUnique({
+      where: { id: assinatura.registroId },
+      select: { id: true, codigo: true, unidade: true },
+    });
+    return evento
+      ? criarUrlPublicaPdf(req, {
+          tipo: "eventos",
+          id: evento.id,
+          codigo: evento.codigo,
+          unidade: evento.unidade,
+        })
+      : "";
   }
 
   if (assinatura.modulo === "Investigacao") {
-    const investigacao = await prisma.investigacao.findUnique({ where: { id: assinatura.registroId }, include: { ocorrencia: { select: { id: true, codigo: true, unidade: true } } } });
-    return investigacao?.ocorrencia ? criarUrlPublicaPdf(req, { tipo: "ocorrencias", id: investigacao.ocorrencia.id, codigo: investigacao.ocorrencia.codigo, unidade: investigacao.ocorrencia.unidade }) : "";
+    const investigacao = await prisma.investigacao.findUnique({
+      where: { id: assinatura.registroId },
+      include: {
+        ocorrencia: { select: { id: true, codigo: true, unidade: true } },
+      },
+    });
+    return investigacao?.ocorrencia
+      ? criarUrlPublicaPdf(req, {
+          tipo: "ocorrencias",
+          id: investigacao.ocorrencia.id,
+          codigo: investigacao.ocorrencia.codigo,
+          unidade: investigacao.ocorrencia.unidade,
+        })
+      : "";
   }
 
   if (assinatura.modulo === "AnaliseOcorrencia") {
-    const analise = await prisma.analiseOcorrencia.findUnique({ where: { id: assinatura.registroId }, include: { ocorrencia: { select: { id: true, codigo: true, unidade: true } } } });
-    return analise?.ocorrencia ? criarUrlPublicaPdf(req, { tipo: "ocorrencias", id: analise.ocorrencia.id, codigo: analise.ocorrencia.codigo, unidade: analise.ocorrencia.unidade }) : "";
+    const analise = await prisma.analiseOcorrencia.findUnique({
+      where: { id: assinatura.registroId },
+      include: {
+        ocorrencia: { select: { id: true, codigo: true, unidade: true } },
+      },
+    });
+    return analise?.ocorrencia
+      ? criarUrlPublicaPdf(req, {
+          tipo: "ocorrencias",
+          id: analise.ocorrencia.id,
+          codigo: analise.ocorrencia.codigo,
+          unidade: analise.ocorrencia.unidade,
+        })
+      : "";
   }
 
   if (assinatura.modulo === "AnaliseEvento") {
-    const analise = await prisma.analiseEvento.findUnique({ where: { id: assinatura.registroId }, include: { evento: { select: { id: true, codigo: true, unidade: true } } } });
-    return analise?.evento ? criarUrlPublicaPdf(req, { tipo: "eventos", id: analise.evento.id, codigo: analise.evento.codigo, unidade: analise.evento.unidade }) : "";
+    const analise = await prisma.analiseEvento.findUnique({
+      where: { id: assinatura.registroId },
+      include: {
+        evento: { select: { id: true, codigo: true, unidade: true } },
+      },
+    });
+    return analise?.evento
+      ? criarUrlPublicaPdf(req, {
+          tipo: "eventos",
+          id: analise.evento.id,
+          codigo: analise.evento.codigo,
+          unidade: analise.evento.unidade,
+        })
+      : "";
   }
 
   if (assinatura.modulo === "PassagemTurno") {
-    const passagem = await prisma.passagemTurno.findUnique({ where: { id: assinatura.registroId }, select: { id: true, codigo: true, unidade: true } });
-    return passagem ? criarUrlPublicaCcos(req, { id: passagem.id, codigo: passagem.codigo, unidade: passagem.unidade }) : "";
+    const passagem = await prisma.passagemTurno.findUnique({
+      where: { id: assinatura.registroId },
+      select: { id: true, codigo: true, unidade: true },
+    });
+    return passagem
+      ? criarUrlPublicaCcos(req, {
+          id: passagem.id,
+          codigo: passagem.codigo,
+          unidade: passagem.unidade,
+        })
+      : "";
   }
 
   if (assinatura.modulo === "ChecklistInspecao") {
-    const checklist = await prisma.checklistInspecao.findUnique({ where: { id: assinatura.registroId }, select: { id: true, codigo: true, unidade: true } });
-    return checklist ? criarUrlPublicaChecklist(req, { id: checklist.id, codigo: checklist.codigo, unidade: checklist.unidade }) : "";
+    const checklist = await prisma.checklistInspecao.findUnique({
+      where: { id: assinatura.registroId },
+      select: { id: true, codigo: true, unidade: true },
+    });
+    return checklist
+      ? criarUrlPublicaChecklist(req, {
+          id: checklist.id,
+          codigo: checklist.codigo,
+          unidade: checklist.unidade,
+        })
+      : "";
   }
 
   if (assinatura.modulo === "RelatorioDiario") {
@@ -276,10 +403,20 @@ export async function validarAssinaturaPublica(req: Request, res: Response) {
     const token = String(req.params.token || "");
     const assinatura = await prisma.assinaturaDocumento.findUnique({
       where: { token },
-      include: { usuario: { select: { nome: true, apelido: true, email: true, perfilAcesso: true } } },
+      include: {
+        usuario: {
+          select: {
+            nome: true,
+            apelido: true,
+            email: true,
+            perfilAcesso: true,
+          },
+        },
+      },
     });
 
-    if (!assinatura) return res.status(404).send("<h1>Assinatura não encontrada</h1>");
+    if (!assinatura)
+      return res.status(404).send("<h1>Assinatura não encontrada</h1>");
 
     const pdfUrl = await linkPdfAssinatura(req, assinatura);
     const valido = assinatura.status === "VALIDA";

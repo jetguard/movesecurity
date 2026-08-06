@@ -19,7 +19,9 @@ function normalizarId(valor: unknown) {
 }
 
 function normalizarCodigo(valor: unknown) {
-  const codigo = String(valor || "").trim().toUpperCase();
+  const codigo = String(valor || "")
+    .trim()
+    .toUpperCase();
   return codigo || null;
 }
 
@@ -70,7 +72,10 @@ async function resolverVinculosPorCodigo(body: any, unidade: string) {
   };
 }
 
-export async function listarAnalisesEstrategicas(req: AuthRequest, res: Response) {
+export async function listarAnalisesEstrategicas(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const analises = await prisma.analiseEstrategica.findMany({
       where: {
@@ -93,21 +98,43 @@ export async function listarAnalisesEstrategicas(req: AuthRequest, res: Response
     return res.json(analises);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar análises estratégicas" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao listar análises estratégicas" });
   }
 }
 
-export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Response) {
+export async function buscarVinculoAnaliseEstrategica(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
-    const ocorrenciaCodigo = normalizarCodigo(req.query.ocorrenciaCodigo || req.query.ocorrencia);
-    const eventoCodigo = normalizarCodigo(req.query.eventoCodigo || req.query.evento);
-    const investigacaoCodigo = normalizarCodigo(req.query.investigacaoCodigo || req.query.investigacao);
+    const ocorrenciaCodigo = normalizarCodigo(
+      req.query.ocorrenciaCodigo || req.query.ocorrencia,
+    );
+    const eventoCodigo = normalizarCodigo(
+      req.query.eventoCodigo || req.query.evento,
+    );
+    const investigacaoCodigo = normalizarCodigo(
+      req.query.investigacaoCodigo || req.query.investigacao,
+    );
     const ocorrenciaId = normalizarId(req.query.ocorrenciaId);
     const eventoId = normalizarId(req.query.eventoId);
     const investigacaoId = normalizarId(req.query.investigacaoId);
 
-    if (!ocorrenciaId && !eventoId && !investigacaoId && !ocorrenciaCodigo && !eventoCodigo && !investigacaoCodigo) {
-      return res.status(400).json({ error: "Informe o número da ocorrência, evento ou investigação." });
+    if (
+      !ocorrenciaId &&
+      !eventoId &&
+      !investigacaoId &&
+      !ocorrenciaCodigo &&
+      !eventoCodigo &&
+      !investigacaoCodigo
+    ) {
+      return res
+        .status(400)
+        .json({
+          error: "Informe o número da ocorrência, evento ou investigação.",
+        });
     }
 
     if (investigacaoId || investigacaoCodigo) {
@@ -140,7 +167,9 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
       });
 
       if (!investigacao) {
-        return res.status(404).json({ error: "Investigação não encontrada para esta unidade." });
+        return res
+          .status(404)
+          .json({ error: "Investigação não encontrada para esta unidade." });
       }
 
       return res.json({
@@ -153,7 +182,8 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
         ocorrenciaId: investigacao.ocorrenciaId,
         investigacaoId: investigacao.id,
         ocorrenciaCodigo: investigacao.numeroOcorrencia,
-        investigacaoCodigo: investigacao.codigo || investigacao.numeroOcorrencia,
+        investigacaoCodigo:
+          investigacao.codigo || investigacao.numeroOcorrencia,
         contexto: {
           codigo: investigacao.codigo,
           assunto: investigacao.assunto,
@@ -170,7 +200,9 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
           unidade: req.unidadeAtiva,
           OR: [
             ...(ocorrenciaId ? [{ id: ocorrenciaId }] : []),
-            ...(ocorrenciaCodigo ? [{ codigo: { equals: ocorrenciaCodigo } }] : []),
+            ...(ocorrenciaCodigo
+              ? [{ codigo: { equals: ocorrenciaCodigo } }]
+              : []),
           ],
         },
         include: {
@@ -187,7 +219,9 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
       });
 
       if (!ocorrencia) {
-        return res.status(404).json({ error: "Ocorrência não encontrada para esta unidade." });
+        return res
+          .status(404)
+          .json({ error: "Ocorrência não encontrada para esta unidade." });
       }
 
       return res.json({
@@ -222,7 +256,9 @@ export async function buscarVinculoAnaliseEstrategica(req: AuthRequest, res: Res
       });
 
       if (!evento) {
-        return res.status(404).json({ error: "Evento não encontrado para esta unidade." });
+        return res
+          .status(404)
+          .json({ error: "Evento não encontrado para esta unidade." });
       }
 
       return res.json({
@@ -254,7 +290,9 @@ export async function criarAnaliseEstrategica(req: AuthRequest, res: Response) {
     const { tipo, titulo, descricao } = req.body;
 
     if (!tipo || !titulo || !descricao) {
-      return res.status(400).json({ error: "Informe tipo, título e descrição da análise." });
+      return res
+        .status(400)
+        .json({ error: "Informe tipo, título e descrição da análise." });
     }
 
     const ano = new Date().getFullYear();
@@ -271,7 +309,10 @@ export async function criarAnaliseEstrategica(req: AuthRequest, res: Response) {
     const numero = ultima ? ultima.numero + 1 : 1;
     const prefixo = prefixos[tipo] || "AES";
     const codigo = `${prefixo}${String(numero).padStart(3, "0")}/${ano}`;
-    const vinculos = await resolverVinculosPorCodigo(req.body, req.unidadeAtiva || "GJA-T1");
+    const vinculos = await resolverVinculosPorCodigo(
+      req.body,
+      req.unidadeAtiva || "GJA-T1",
+    );
 
     const analise = await prisma.analiseEstrategica.create({
       data: {
@@ -324,7 +365,10 @@ export async function criarAnaliseEstrategica(req: AuthRequest, res: Response) {
   }
 }
 
-export async function atualizarAnaliseEstrategica(req: AuthRequest, res: Response) {
+export async function atualizarAnaliseEstrategica(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { id } = req.params;
     const anterior = await prisma.analiseEstrategica.findFirst({
@@ -335,10 +379,15 @@ export async function atualizarAnaliseEstrategica(req: AuthRequest, res: Respons
     });
 
     if (!anterior) {
-      return res.status(404).json({ error: "Análise estratégica não encontrada" });
+      return res
+        .status(404)
+        .json({ error: "Análise estratégica não encontrada" });
     }
 
-    const vinculos = await resolverVinculosPorCodigo(req.body, req.unidadeAtiva || "GJA-T1");
+    const vinculos = await resolverVinculosPorCodigo(
+      req.body,
+      req.unidadeAtiva || "GJA-T1",
+    );
 
     const analise = await prisma.analiseEstrategica.update({
       where: {
@@ -349,7 +398,9 @@ export async function atualizarAnaliseEstrategica(req: AuthRequest, res: Respons
         titulo: req.body.titulo,
         setor: req.body.setor,
         local: req.body.local,
-        dataHora: req.body.dataHora ? new Date(req.body.dataHora) : anterior.dataHora,
+        dataHora: req.body.dataHora
+          ? new Date(req.body.dataHora)
+          : anterior.dataHora,
         status: req.body.status || anterior.status,
         descricao: req.body.descricao,
         diagnostico: req.body.diagnostico,
@@ -386,7 +437,8 @@ export async function atualizarAnaliseEstrategica(req: AuthRequest, res: Respons
     return res.json(analise);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao atualizar análise estratégica" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar análise estratégica" });
   }
 }
-

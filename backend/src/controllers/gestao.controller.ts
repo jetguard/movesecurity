@@ -54,7 +54,7 @@ export async function listarEvidencias(req: AuthRequest, res: Response) {
           url: `/${anexo.caminho.replace(/\\/g, "/")}`,
           hashSha256: hashArquivo(anexo.caminho),
           createdAt: anexo.createdAt,
-        }))
+        })),
       ),
       ...eventos.flatMap((registro) =>
         registro.anexos.map((anexo) => ({
@@ -69,7 +69,7 @@ export async function listarEvidencias(req: AuthRequest, res: Response) {
           url: `/${anexo.caminho.replace(/\\/g, "/")}`,
           hashSha256: hashArquivo(anexo.caminho),
           createdAt: anexo.createdAt,
-        }))
+        })),
       ),
       ...riscos.flatMap((registro) =>
         registro.fotos.map((foto) => ({
@@ -84,9 +84,12 @@ export async function listarEvidencias(req: AuthRequest, res: Response) {
           url: `/${foto.caminho.replace(/\\/g, "/")}`,
           hashSha256: hashArquivo(foto.caminho),
           createdAt: foto.createdAt,
-        }))
+        })),
       ),
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
     return res.json(evidencias);
   } catch (error) {
@@ -97,10 +100,25 @@ export async function listarEvidencias(req: AuthRequest, res: Response) {
 
 export async function listarPendencias(req: AuthRequest, res: Response) {
   try {
-    const [investigacoes, riscos, analisesEstrategicas, analisesOcorrencia, analisesEvento] = await Promise.all([
-      prisma.investigacao.findMany({ where: { unidade: req.unidadeAtiva }, include: { responsavel: true } }),
-      prisma.analiseRisco.findMany({ where: { unidade: req.unidadeAtiva }, include: { responsavel: true } }),
-      prisma.analiseEstrategica.findMany({ where: { unidade: req.unidadeAtiva }, include: { responsavel: true } }),
+    const [
+      investigacoes,
+      riscos,
+      analisesEstrategicas,
+      analisesOcorrencia,
+      analisesEvento,
+    ] = await Promise.all([
+      prisma.investigacao.findMany({
+        where: { unidade: req.unidadeAtiva },
+        include: { responsavel: true },
+      }),
+      prisma.analiseRisco.findMany({
+        where: { unidade: req.unidadeAtiva },
+        include: { responsavel: true },
+      }),
+      prisma.analiseEstrategica.findMany({
+        where: { unidade: req.unidadeAtiva },
+        include: { responsavel: true },
+      }),
       prisma.analiseOcorrencia.findMany({
         where: { ocorrencia: { unidade: req.unidadeAtiva } },
         include: { ocorrencia: true, responsavel: true },
@@ -113,27 +131,37 @@ export async function listarPendencias(req: AuthRequest, res: Response) {
 
     const pendencias = [
       ...investigacoes
-        .filter((item) => item.status !== "Concluido" && item.status !== "Concluído")
+        .filter(
+          (item) => item.status !== "Concluido" && item.status !== "Concluído",
+        )
         .map((item) => ({
           id: `investigacao-${item.id}`,
           modulo: "Investigacao",
           codigo: item.numeroOcorrencia,
           titulo: item.titulo,
           status: item.status,
-          responsavel: item.responsavel?.apelido || item.responsavel?.nome || "Nao informado",
+          responsavel:
+            item.responsavel?.apelido ||
+            item.responsavel?.nome ||
+            "Nao informado",
           prazo: null,
           dias: null,
           prioridade: "Media",
         })),
       ...riscos
-        .filter((item) => item.status !== "Concluido" && item.status !== "Concluído")
+        .filter(
+          (item) => item.status !== "Concluido" && item.status !== "Concluído",
+        )
         .map((item) => ({
           id: `risco-${item.id}`,
           modulo: "Analise de Risco",
           codigo: item.codigo,
           titulo: item.naturezaRisco,
           status: item.status,
-          responsavel: item.responsavel?.apelido || item.responsavel?.nome || "Nao informado",
+          responsavel:
+            item.responsavel?.apelido ||
+            item.responsavel?.nome ||
+            "Nao informado",
           prazo: item.prazo,
           dias: diasAte(item.prazo),
           prioridade: item.nivelRisco,
@@ -146,13 +174,18 @@ export async function listarPendencias(req: AuthRequest, res: Response) {
           codigo: item.codigo,
           titulo: item.titulo,
           status: item.status,
-          responsavel: item.responsavel?.apelido || item.responsavel?.nome || "Nao informado",
+          responsavel:
+            item.responsavel?.apelido ||
+            item.responsavel?.nome ||
+            "Nao informado",
           prazo: item.prazo,
           dias: diasAte(item.prazo),
           prioridade: item.tipo,
         })),
       ...analisesOcorrencia
-        .filter((item) => item.status !== "Concluido" && item.status !== "Concluído")
+        .filter(
+          (item) => item.status !== "Concluido" && item.status !== "Concluído",
+        )
         .map((item) => ({
           id: `analise-ocorrencia-${item.id}`,
           modulo: "Analise de Ocorrencia",
@@ -165,7 +198,9 @@ export async function listarPendencias(req: AuthRequest, res: Response) {
           prioridade: "Em Analise",
         })),
       ...analisesEvento
-        .filter((item) => item.status !== "Concluido" && item.status !== "Concluído")
+        .filter(
+          (item) => item.status !== "Concluido" && item.status !== "Concluído",
+        )
         .map((item) => ({
           id: `analise-evento-${item.id}`,
           modulo: "Analise de Evento",
@@ -201,7 +236,11 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
 
     const [camerasOffline, planos] = await Promise.all([
       prisma.cameraMonitoramento.findMany({
-        where: { unidade: req.unidadeAtiva, status: "Desconectada", statusCadastro: "Ativa" },
+        where: {
+          unidade: req.unidadeAtiva,
+          status: "Desconectada",
+          statusCadastro: "Ativa",
+        },
         orderBy: { desconectadaDesde: "asc" },
       }),
       prisma.planoAcaoCorporativo.findMany({
@@ -212,15 +251,30 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
     ]);
 
     await listarPendencias(pendenciasReq, fakeRes);
-    const pendencias = buffer as Array<{ id: string; modulo: string; codigo: string; titulo: string; dias: number | null; prioridade: string }>;
+    const pendencias = buffer as Array<{
+      id: string;
+      modulo: string;
+      codigo: string;
+      titulo: string;
+      dias: number | null;
+      prioridade: string;
+    }>;
 
     const notificacoesPendencias = pendencias
-      .filter((item) => item.dias === null || item.dias <= 7 || ["Critico", "Crítico", "Alto"].includes(item.prioridade))
+      .filter(
+        (item) =>
+          item.dias === null ||
+          item.dias <= 7 ||
+          ["Critico", "Crítico", "Alto"].includes(item.prioridade),
+      )
       .slice(0, 12)
       .map((item) => ({
         id: item.id,
         tipo: "Pendência",
-        titulo: item.dias !== null && item.dias < 0 ? "Prazo vencido" : "Pendência em aberto",
+        titulo:
+          item.dias !== null && item.dias < 0
+            ? "Prazo vencido"
+            : "Pendência em aberto",
         mensagem: `${item.modulo} ${item.codigo} - ${item.titulo}`,
         severidade: item.dias !== null && item.dias < 0 ? "alta" : "media",
         link: "/pendencias",
@@ -238,11 +292,18 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
     }));
 
     const notificacoesPlanos = planos
-      .filter((plano) => diasAte(plano.prazo) !== null && (diasAte(plano.prazo) as number) <= 7)
+      .filter(
+        (plano) =>
+          diasAte(plano.prazo) !== null &&
+          (diasAte(plano.prazo) as number) <= 7,
+      )
       .map((plano) => ({
         id: `plano-${plano.id}`,
         tipo: "Plano de Ação",
-        titulo: diasAte(plano.prazo)! < 0 ? "Plano de ação vencido" : "Plano de ação próximo do prazo",
+        titulo:
+          diasAte(plano.prazo)! < 0
+            ? "Plano de ação vencido"
+            : "Plano de ação próximo do prazo",
         mensagem: `${plano.codigo} - ${plano.titulo}`,
         severidade: diasAte(plano.prazo)! < 0 ? "alta" : "media",
         link: "/planos-acao",
@@ -253,13 +314,18 @@ export async function listarNotificacoes(req: AuthRequest, res: Response) {
       ...notificacoesCameras,
       ...notificacoesPlanos,
       ...notificacoesPendencias,
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
     const lidas = await prisma.notificacaoLida.findMany({
       where: { usuarioId: req.usuarioId },
       select: { notificacaoId: true, lidaEm: true },
     });
-    const mapaLidas = new Map(lidas.map((item) => [item.notificacaoId, item.lidaEm]));
+    const mapaLidas = new Map(
+      lidas.map((item) => [item.notificacaoId, item.lidaEm]),
+    );
 
     const resultado = notificacoes
       .map((item) => ({
@@ -299,13 +365,21 @@ export async function marcarNotificacaoLida(req: AuthRequest, res: Response) {
     return res.status(204).send();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao marcar notificação como lida" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao marcar notificação como lida" });
   }
 }
 
-export async function marcarTodasNotificacoesLidas(req: AuthRequest, res: Response) {
+export async function marcarTodasNotificacoesLidas(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
-    const notificacoesReq = { ...req, query: { ...req.query, incluirLidas: "false" } } as unknown as AuthRequest;
+    const notificacoesReq = {
+      ...req,
+      query: { ...req.query, incluirLidas: "false" },
+    } as unknown as AuthRequest;
     const buffer: unknown[] = [];
     const fakeRes = {
       json: (payload: unknown) => {
@@ -329,14 +403,16 @@ export async function marcarTodasNotificacoesLidas(req: AuthRequest, res: Respon
           },
           update: { lidaEm: new Date() },
           create: { usuarioId: req.usuarioId!, notificacaoId: item.id },
-        })
-      )
+        }),
+      ),
     );
 
     return res.status(204).send();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao marcar notificações como lidas" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao marcar notificações como lidas" });
   }
 }
 
@@ -356,7 +432,11 @@ export async function timelineRegistro(req: AuthRequest, res: Response) {
     });
 
     const eventos = logs
-      .filter((log) => log.tipoRegistro.toLowerCase().includes(tipoNormalizado) || tipoNormalizado.includes(log.tipoRegistro.toLowerCase()))
+      .filter(
+        (log) =>
+          log.tipoRegistro.toLowerCase().includes(tipoNormalizado) ||
+          tipoNormalizado.includes(log.tipoRegistro.toLowerCase()),
+      )
       .map((log) => ({
         id: log.id,
         data: log.createdAt,
@@ -374,40 +454,63 @@ export async function timelineRegistro(req: AuthRequest, res: Response) {
 
 export async function centralTarefas(req: AuthRequest, res: Response) {
   try {
-    const [mencoes, planos, workflow, pendencias, anulacoes] = await Promise.all([
-      prisma.mencao.findMany({
-        where: { usuarioMencionadoId: req.usuarioId },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-      }),
-      prisma.planoAcaoCorporativo.findMany({
-        where: { unidade: req.unidadeAtiva },
-        orderBy: { prazo: "asc" },
-        take: 50,
-      }),
-      Promise.all([
-        prisma.ocorrencia.findMany({ where: { unidade: req.unidadeAtiva, fluxoStatus: { not: "Aprovado" } }, take: 50 }),
-        prisma.evento.findMany({ where: { unidade: req.unidadeAtiva, fluxoStatus: { not: "Aprovado" } }, take: 50 }),
-        prisma.investigacao.findMany({ where: { unidade: req.unidadeAtiva, fluxoStatus: { not: "Aprovado" } }, take: 50 }),
-      ]),
-      prisma.analiseRisco.findMany({
-        where: { unidade: req.unidadeAtiva, status: { not: "Concluido" } },
-        orderBy: { prazo: "asc" },
-        take: 50,
-      }),
-      prisma.solicitacaoAnulacaoRelatorio.findMany({
-        where: {
-          unidade: req.unidadeAtiva,
-          status: "Pendente",
-          OR: [
-            { solicitanteId: req.usuarioId },
-            { acordos: { some: { analistaId: req.usuarioId, status: "Pendente" } } },
-          ],
-        },
-        orderBy: { createdAt: "desc" },
-        take: 50,
-      }),
-    ]);
+    const [mencoes, planos, workflow, pendencias, anulacoes] =
+      await Promise.all([
+        prisma.mencao.findMany({
+          where: { usuarioMencionadoId: req.usuarioId },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+        prisma.planoAcaoCorporativo.findMany({
+          where: { unidade: req.unidadeAtiva },
+          orderBy: { prazo: "asc" },
+          take: 50,
+        }),
+        Promise.all([
+          prisma.ocorrencia.findMany({
+            where: {
+              unidade: req.unidadeAtiva,
+              fluxoStatus: { not: "Aprovado" },
+            },
+            take: 50,
+          }),
+          prisma.evento.findMany({
+            where: {
+              unidade: req.unidadeAtiva,
+              fluxoStatus: { not: "Aprovado" },
+            },
+            take: 50,
+          }),
+          prisma.investigacao.findMany({
+            where: {
+              unidade: req.unidadeAtiva,
+              fluxoStatus: { not: "Aprovado" },
+            },
+            take: 50,
+          }),
+        ]),
+        prisma.analiseRisco.findMany({
+          where: { unidade: req.unidadeAtiva, status: { not: "Concluido" } },
+          orderBy: { prazo: "asc" },
+          take: 50,
+        }),
+        prisma.solicitacaoAnulacaoRelatorio.findMany({
+          where: {
+            unidade: req.unidadeAtiva,
+            status: "Pendente",
+            OR: [
+              { solicitanteId: req.usuarioId },
+              {
+                acordos: {
+                  some: { analistaId: req.usuarioId, status: "Pendente" },
+                },
+              },
+            ],
+          },
+          orderBy: { createdAt: "desc" },
+          take: 50,
+        }),
+      ]);
 
     const [ocorrencias, eventos, investigacoes] = workflow;
     const tarefas = [
@@ -422,17 +525,19 @@ export async function centralTarefas(req: AuthRequest, res: Response) {
         prioridade: item.tipoMencao,
         link: "/mencoes",
       })),
-      ...planos.filter((item) => item.status !== "Concluido").map((item) => ({
-        id: `plano-${item.id}`,
-        origem: "Plano de Acao",
-        modulo: item.origemModulo || "Plano",
-        codigo: item.codigo,
-        titulo: item.titulo,
-        status: item.status,
-        prazo: item.prazo,
-        prioridade: item.prioridade,
-        link: "/planos-acao",
-      })),
+      ...planos
+        .filter((item) => item.status !== "Concluido")
+        .map((item) => ({
+          id: `plano-${item.id}`,
+          origem: "Plano de Acao",
+          modulo: item.origemModulo || "Plano",
+          codigo: item.codigo,
+          titulo: item.titulo,
+          status: item.status,
+          prazo: item.prazo,
+          prioridade: item.prioridade,
+          link: "/planos-acao",
+        })),
       ...pendencias.map((item) => ({
         id: `risco-${item.id}`,
         origem: "Risco",
@@ -524,21 +629,30 @@ export async function historicoLegivel(req: AuthRequest, res: Response) {
     });
 
     const historico = logs
-      .filter((log) => log.tipoRegistro.toLowerCase().includes(tipoNormalizado) || tipoNormalizado.includes(log.tipoRegistro.toLowerCase()))
+      .filter(
+        (log) =>
+          log.tipoRegistro.toLowerCase().includes(tipoNormalizado) ||
+          tipoNormalizado.includes(log.tipoRegistro.toLowerCase()),
+      )
       .map((log) => {
         const anterior = parseJson(log.dadosAnteriores);
         const novo = parseJson(log.dadosNovos);
-        const campos = anterior && novo
-          ? Object.keys({ ...anterior, ...novo })
-              .filter((campo) => !["updatedAt", "createdAt"].includes(campo))
-              .filter((campo) => JSON.stringify(anterior[campo]) !== JSON.stringify(novo[campo]))
-              .slice(0, 30)
-              .map((campo) => ({
-                campo,
-                anterior: resumirValor(anterior[campo]),
-                novo: resumirValor(novo[campo]),
-              }))
-          : [];
+        const campos =
+          anterior && novo
+            ? Object.keys({ ...anterior, ...novo })
+                .filter((campo) => !["updatedAt", "createdAt"].includes(campo))
+                .filter(
+                  (campo) =>
+                    JSON.stringify(anterior[campo]) !==
+                    JSON.stringify(novo[campo]),
+                )
+                .slice(0, 30)
+                .map((campo) => ({
+                  campo,
+                  anterior: resumirValor(anterior[campo]),
+                  novo: resumirValor(novo[campo]),
+                }))
+            : [];
 
         return {
           id: log.id,
@@ -555,4 +669,3 @@ export async function historicoLegivel(req: AuthRequest, res: Response) {
     return res.status(500).json({ error: "Erro ao listar historico legivel" });
   }
 }
-

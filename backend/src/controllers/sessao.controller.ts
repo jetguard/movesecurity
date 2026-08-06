@@ -1,11 +1,13 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { prisma } from "../lib/prisma";
 import { registrarLog } from "../services/auditoria.service";
 
 function normalizarStatus(status?: unknown) {
   const valor = String(status || "ATIVA").toUpperCase();
-  return ["ATIVA", "ENCERRADA", "EXPIRADA", "DESCONECTADA"].includes(valor) ? valor : "ATIVA";
+  return ["ATIVA", "ENCERRADA", "EXPIRADA", "DESCONECTADA"].includes(valor)
+    ? valor
+    : "ATIVA";
 }
 
 async function normalizarSessoesAdministrativasAtivas() {
@@ -53,7 +55,8 @@ async function normalizarSessoesAdministrativasAtivas() {
       status: "DESCONECTADA",
       encerradaEm: new Date(),
       encerradaPor: "Sistema",
-      motivoEncerramento: "Sessão administrativa duplicada encerrada automaticamente.",
+      motivoEncerramento:
+        "Sessão administrativa duplicada encerrada automaticamente.",
     },
   });
 }
@@ -80,7 +83,10 @@ export async function listarSessoes(req: AuthRequest, res: Response) {
           ? {}
           : { usuario: { perfilAcesso: { not: PERFIS.SUPER_ADMIN } } }),
       },
-      orderBy: status === "ATIVA" ? { ultimaAtividadeEm: "desc" } : { encerradaEm: "desc" },
+      orderBy:
+        status === "ATIVA"
+          ? { ultimaAtividadeEm: "desc" }
+          : { encerradaEm: "desc" },
       take: 150,
       include: {
         usuario: {
@@ -121,7 +127,9 @@ export async function desconectarSessao(req: AuthRequest, res: Response) {
     }
 
     if (sessao.id === req.sessaoId) {
-      return res.status(400).json({ error: "Use o botão Sair para encerrar sua própria sessão." });
+      return res
+        .status(400)
+        .json({ error: "Use o botão Sair para encerrar sua própria sessão." });
     }
 
     const atualizada = await prisma.sessaoUsuario.update({
@@ -131,7 +139,9 @@ export async function desconectarSessao(req: AuthRequest, res: Response) {
         encerradaEm: new Date(),
         encerradaPor: "Administrador",
         encerradaPorId: req.usuarioId,
-        motivoEncerramento: String(req.body?.motivo || "Desconectada pelo administrador"),
+        motivoEncerramento: String(
+          req.body?.motivo || "Desconectada pelo administrador",
+        ),
       },
       include: { usuario: { select: { id: true, nome: true, email: true } } },
     });

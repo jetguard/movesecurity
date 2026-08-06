@@ -6,7 +6,24 @@ import { AutoSaveStatus } from "../../components/ui/AutoSaveStatus";
 import { useAutoSaveDraft } from "../../hooks/useAutoSaveDraft";
 import { PdfLightbox } from "../../components/ui/PdfLightbox";
 import { solicitarPinOperacional } from "../../utils/pinPrompt";
-import { AtSign, Ban, ClipboardCheck, Edit3, FileSearch, FileText, FileUp, Loader2, MapPin, Mic, Sparkles, Square, Tags, Upload, Users, X } from "lucide-react";
+import {
+  AtSign,
+  Ban,
+  ClipboardCheck,
+  Edit3,
+  FileSearch,
+  FileText,
+  FileUp,
+  Loader2,
+  MapPin,
+  Mic,
+  Sparkles,
+  Square,
+  Tags,
+  Upload,
+  Users,
+  X,
+} from "lucide-react";
 
 type Envolvido = {
   tipoEnvolvimento: string;
@@ -152,7 +169,13 @@ type ImpactoOperacional = {
   tratativas: string[];
 };
 
-const operacoesImpactadas = ["Importação", "Exportação", "Scanner", "Gate", "Armazém"];
+const operacoesImpactadas = [
+  "Importação",
+  "Exportação",
+  "Scanner",
+  "Gate",
+  "Armazém",
+];
 const tratativasImpacto = [
   "Comunicação ao CCOS",
   "Comunicação à operação",
@@ -176,20 +199,32 @@ function impactoOperacionalVazio(): ImpactoOperacional {
 }
 
 function ehImpactoOperacionalExterno(natureza: string) {
-  return natureza.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase() === "impacto operacional externo";
+  return (
+    natureza
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim()
+      .toLowerCase() === "impacto operacional externo"
+  );
 }
 
 function lerImpactoOperacional(valor?: unknown): ImpactoOperacional {
   try {
     const dados = typeof valor === "string" ? JSON.parse(valor) : valor;
-    return { ...impactoOperacionalVazio(), ...(dados && typeof dados === "object" ? dados : {}) };
+    return {
+      ...impactoOperacionalVazio(),
+      ...(dados && typeof dados === "object" ? dados : {}),
+    };
   } catch {
     return impactoOperacionalVazio();
   }
 }
 
 function normalizarPlacaFila(valor: string) {
-  return valor.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);
+  return valor
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 7);
 }
 
 function mascararCpf(valor: string) {
@@ -202,17 +237,25 @@ function mascararCpf(valor: string) {
 }
 
 function mascararPlaca(valor: string) {
-  const limpa = valor.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 7);
+  const limpa = valor
+    .replace(/[^a-zA-Z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 7);
   if (limpa.length <= 3) return limpa;
   return `${limpa.slice(0, 3)}-${limpa.slice(3)}`;
 }
 
 function calcularTempoEsperaFila(impacto: ImpactoOperacional) {
-  if (!impacto.dataHoraIdentificacaoUltimoVeiculo || !impacto.dataHoraChegadaBalanca) return "Aguardando horários";
+  if (
+    !impacto.dataHoraIdentificacaoUltimoVeiculo ||
+    !impacto.dataHoraChegadaBalanca
+  )
+    return "Aguardando horários";
 
   const inicio = new Date(impacto.dataHoraIdentificacaoUltimoVeiculo).getTime();
   const fim = new Date(impacto.dataHoraChegadaBalanca).getTime();
-  if (!Number.isFinite(inicio) || !Number.isFinite(fim)) return "Horários inválidos";
+  if (!Number.isFinite(inicio) || !Number.isFinite(fim))
+    return "Horários inválidos";
   if (fim < inicio) return "Chegada não pode ser anterior à identificação";
 
   const totalMinutos = Math.round((fim - inicio) / 60000);
@@ -234,9 +277,13 @@ function formatarBrl(valor: string) {
 export default function Ocorrencias() {
   const [ocorrencias, setOcorrencias] = useState<Ocorrencia[]>([]);
   const [usuariosMencao, setUsuariosMencao] = useState<UsuarioMencao[]>([]);
-  const [ocorrenciaVisualizando, setOcorrenciaVisualizando] = useState<Ocorrencia | null>(null);
-  const [ocorrenciaMencao, setOcorrenciaMencao] = useState<Ocorrencia | null>(null);
-  const [ocorrenciaAnulacao, setOcorrenciaAnulacao] = useState<Ocorrencia | null>(null);
+  const [ocorrenciaVisualizando, setOcorrenciaVisualizando] =
+    useState<Ocorrencia | null>(null);
+  const [ocorrenciaMencao, setOcorrenciaMencao] = useState<Ocorrencia | null>(
+    null,
+  );
+  const [ocorrenciaAnulacao, setOcorrenciaAnulacao] =
+    useState<Ocorrencia | null>(null);
   const [usuarioMencionadoId, setUsuarioMencionadoId] = useState("");
   const [tipoMencao, setTipoMencao] = useState("Acompanhar");
   const [observacaoMencao, setObservacaoMencao] = useState("");
@@ -252,13 +299,14 @@ export default function Ocorrencias() {
     carregando: false,
     recorte: null,
   });
-  const [assistenteAudioRelato, setAssistenteAudioRelato] = useState<AssistenteAudioRelato>({
-    envolvidoIndex: null,
-    gravando: false,
-    transcrevendo: false,
-    erro: "",
-    aviso: "",
-  });
+  const [assistenteAudioRelato, setAssistenteAudioRelato] =
+    useState<AssistenteAudioRelato>({
+      envolvidoIndex: null,
+      gravando: false,
+      transcrevendo: false,
+      erro: "",
+      aviso: "",
+    });
   const imagemRelatoRef = useRef<HTMLImageElement | null>(null);
   const inicioRecorteRef = useRef<{ x: number; y: number } | null>(null);
   const mediaRecorderRelatoRef = useRef<MediaRecorder | null>(null);
@@ -267,9 +315,17 @@ export default function Ocorrencias() {
   const [pinAnulacao, setPinAnulacao] = useState("");
   const [comentarios, setComentarios] = useState<ComentarioInterno[]>([]);
   const [novoComentario, setNovoComentario] = useState("");
-  const [pdfLightbox, setPdfLightbox] = useState<{ url: string; titulo: string; nomeArquivo: string } | null>(null);
-  const [imagemAnexoPreview, setImagemAnexoPreview] = useState<{ imagens: Anexo[]; indice: number } | null>(null);
-  const [ocorrenciaAnaliseModal, setOcorrenciaAnaliseModal] = useState<Ocorrencia | null>(null);
+  const [pdfLightbox, setPdfLightbox] = useState<{
+    url: string;
+    titulo: string;
+    nomeArquivo: string;
+  } | null>(null);
+  const [imagemAnexoPreview, setImagemAnexoPreview] = useState<{
+    imagens: Anexo[];
+    indice: number;
+  } | null>(null);
+  const [ocorrenciaAnaliseModal, setOcorrenciaAnaliseModal] =
+    useState<Ocorrencia | null>(null);
   const [naturezas, setNaturezas] = useState<NaturezaCadastro[]>([]);
   const [locais, setLocais] = useState<LocalCadastro[]>([]);
   const [abrirFormulario, setAbrirFormulario] = useState(false);
@@ -279,7 +335,9 @@ export default function Ocorrencias() {
   const [anexosExistentes, setAnexosExistentes] = useState<Anexo[]>([]);
   const [anexosRemover, setAnexosRemover] = useState<number[]>([]);
   const [anexos, setAnexos] = useState<File[]>([]);
-  const [analiseAtual, setAnaliseAtual] = useState<AnaliseOcorrencia | null>(null);
+  const [analiseAtual, setAnaliseAtual] = useState<AnaliseOcorrencia | null>(
+    null,
+  );
   const [statusAnalise, setStatusAnalise] = useState("Em Análise");
   const [prejuizoFinanceiro, setPrejuizoFinanceiro] = useState("0,00");
   const [conclusaoAnalise, setConclusaoAnalise] = useState("");
@@ -292,7 +350,8 @@ export default function Ocorrencias() {
   const [etapaFormulario, setEtapaFormulario] = useState(1);
   const [relatoSeguranca, setRelatoSeguranca] = useState("");
   const [acoesTomadas, setAcoesTomadas] = useState("");
-  const [impactoOperacional, setImpactoOperacional] = useState<ImpactoOperacional>(impactoOperacionalVazio());
+  const [impactoOperacional, setImpactoOperacional] =
+    useState<ImpactoOperacional>(impactoOperacionalVazio());
   const [quantidadeEnvolvidos, setQuantidadeEnvolvidos] = useState(1);
   const [envolvidos, setEnvolvidos] = useState<Envolvido[]>([
     { ...envolvidoVazio },
@@ -330,7 +389,7 @@ export default function Ocorrencias() {
       statusAnalise,
       prejuizoFinanceiro,
       conclusaoAnalise,
-    ]
+    ],
   );
 
   const autoSaveOcorrencia = useAutoSaveDraft({
@@ -348,9 +407,13 @@ export default function Ocorrencias() {
       setRelatoSeguranca(dados.relatoSeguranca || "");
       setAcoesTomadas(dados.acoesTomadas || "");
       setImpactoOperacional(lerImpactoOperacional(dados.impactoOperacional));
-      const envolvidosRestaurados = dados.envolvidos?.length ? dados.envolvidos : [{ ...envolvidoVazio }];
+      const envolvidosRestaurados = dados.envolvidos?.length
+        ? dados.envolvidos
+        : [{ ...envolvidoVazio }];
       setEnvolvidos(envolvidosRestaurados);
-      setQuantidadeEnvolvidos(dados.quantidadeEnvolvidos || envolvidosRestaurados.length || 1);
+      setQuantidadeEnvolvidos(
+        dados.quantidadeEnvolvidos || envolvidosRestaurados.length || 1,
+      );
       setStatusAnalise(dados.statusAnalise || "Em Análise");
       setPrejuizoFinanceiro(dados.prejuizoFinanceiro || "0,00");
       setConclusaoAnalise(dados.conclusaoAnalise || "");
@@ -401,7 +464,9 @@ export default function Ocorrencias() {
     }
 
     if (!/^\d{4}$/.test(pinAnulacao)) {
-      alert("Informe seu PIN operacional de 4 dígitos para confirmar a anulação.");
+      alert(
+        "Informe seu PIN operacional de 4 dígitos para confirmar a anulação.",
+      );
       return;
     }
 
@@ -421,9 +486,12 @@ export default function Ocorrencias() {
 
   async function salvarComentario() {
     if (!ocorrenciaVisualizando || !novoComentario.trim()) return;
-    const response = await api.post(`/comentarios/Ocorrencia/${ocorrenciaVisualizando.id}`, {
-      comentario: novoComentario,
-    });
+    const response = await api.post(
+      `/comentarios/Ocorrencia/${ocorrenciaVisualizando.id}`,
+      {
+        comentario: novoComentario,
+      },
+    );
     setComentarios((atuais) => [response.data, ...atuais]);
     setNovoComentario("");
   }
@@ -435,13 +503,19 @@ export default function Ocorrencias() {
     });
 
     const url = URL.createObjectURL(
-      new Blob([response.data], { type: "application/pdf" })
+      new Blob([response.data], { type: "application/pdf" }),
     );
 
     setPdfLightbox({
       url,
-      titulo: ocorrencia ? `Relatório de Ocorrência ${ocorrencia.codigo}` : "Relatório de Ocorrência",
-      nomeArquivo: `relatorio-ocorrencia-${ocorrencia?.codigo || id}.pdf`.replace(/\//g, "-"),
+      titulo: ocorrencia
+        ? `Relatório de Ocorrência ${ocorrencia.codigo}`
+        : "Relatório de Ocorrência",
+      nomeArquivo:
+        `relatorio-ocorrencia-${ocorrencia?.codigo || id}.pdf`.replace(
+          /\//g,
+          "-",
+        ),
     });
   }
 
@@ -462,9 +536,12 @@ export default function Ocorrencias() {
     const imagens = (anexosOrigem || anexosExistentes).filter(anexoEhImagem);
     const indice = Math.max(
       0,
-      imagens.findIndex((item) => item.id === arquivo.id)
+      imagens.findIndex((item) => item.id === arquivo.id),
     );
-    setImagemAnexoPreview({ imagens: imagens.length ? imagens : [arquivo], indice });
+    setImagemAnexoPreview({
+      imagens: imagens.length ? imagens : [arquivo],
+      indice,
+    });
   }
 
   function navegarImagemAnexo(direcao: number) {
@@ -479,16 +556,22 @@ export default function Ocorrencias() {
   }
 
   function selecionarImagemAnexo(indice: number) {
-    setImagemAnexoPreview((galeria) => (galeria ? { ...galeria, indice } : galeria));
+    setImagemAnexoPreview((galeria) =>
+      galeria ? { ...galeria, indice } : galeria,
+    );
   }
 
   const subNaturezasDisponiveis =
     naturezas.find((item) => item.nome === natureza)?.subNaturezas || [];
   const localSelecionado = locais.find((item) => item.nome === local);
   const naturezaImpactoOperacional = ehImpactoOperacionalExterno(natureza);
-  const imagemAtualPreview = imagemAnexoPreview?.imagens[imagemAnexoPreview.indice] || null;
+  const imagemAtualPreview =
+    imagemAnexoPreview?.imagens[imagemAnexoPreview.indice] || null;
 
-  function alternarImpacto(campo: "operacoesImpactadas" | "tratativas", opcao: string) {
+  function alternarImpacto(
+    campo: "operacoesImpactadas" | "tratativas",
+    opcao: string,
+  ) {
     setImpactoOperacional((atual) => ({
       ...atual,
       [campo]: atual[campo].includes(opcao)
@@ -511,17 +594,24 @@ export default function Ocorrencias() {
   function atualizarEnvolvido(
     index: number,
     campo: keyof Envolvido,
-    valor: string | boolean
+    valor: string | boolean,
   ) {
     const lista = [...envolvidos];
     const atual = lista[index] || { ...envolvidoVazio };
     let valorTratado = valor;
 
-    if (campo === "documento" && typeof valor === "string" && atual.tipoDocumento === "CPF") {
+    if (
+      campo === "documento" &&
+      typeof valor === "string" &&
+      atual.tipoDocumento === "CPF"
+    ) {
       valorTratado = mascararCpf(valor);
     }
 
-    if ((campo === "placa" || campo === "reboque") && typeof valor === "string") {
+    if (
+      (campo === "placa" || campo === "reboque") &&
+      typeof valor === "string"
+    ) {
       valorTratado = mascararPlaca(valor);
     }
 
@@ -651,7 +741,11 @@ export default function Ocorrencias() {
     inicioRecorteRef.current = null;
 
     setAssistenteRelato((atual) => {
-      if (!atual.recorte || atual.recorte.width < 12 || atual.recorte.height < 12) {
+      if (
+        !atual.recorte ||
+        atual.recorte.width < 12 ||
+        atual.recorte.height < 12
+      ) {
         return { ...atual, recorte: null };
       }
       return atual;
@@ -672,11 +766,18 @@ export default function Ocorrencias() {
     }
 
     const escalaX = imagem.naturalWidth / imagem.getBoundingClientRect().width;
-    const escalaY = imagem.naturalHeight / imagem.getBoundingClientRect().height;
+    const escalaY =
+      imagem.naturalHeight / imagem.getBoundingClientRect().height;
     const origemX = Math.max(0, Math.round(recorte.x * escalaX));
     const origemY = Math.max(0, Math.round(recorte.y * escalaY));
-    const largura = Math.min(imagem.naturalWidth - origemX, Math.round(recorte.width * escalaX));
-    const altura = Math.min(imagem.naturalHeight - origemY, Math.round(recorte.height * escalaY));
+    const largura = Math.min(
+      imagem.naturalWidth - origemX,
+      Math.round(recorte.width * escalaX),
+    );
+    const altura = Math.min(
+      imagem.naturalHeight - origemY,
+      Math.round(recorte.height * escalaY),
+    );
 
     if (largura <= 0 || altura <= 0) {
       return arquivo;
@@ -688,7 +789,17 @@ export default function Ocorrencias() {
     const contexto = canvas.getContext("2d");
     if (!contexto) return arquivo;
 
-    contexto.drawImage(imagem, origemX, origemY, largura, altura, 0, 0, largura, altura);
+    contexto.drawImage(
+      imagem,
+      origemX,
+      origemY,
+      largura,
+      altura,
+      0,
+      0,
+      largura,
+      altura,
+    );
 
     return new Promise<File>((resolve) => {
       canvas.toBlob(
@@ -698,11 +809,20 @@ export default function Ocorrencias() {
             return;
           }
 
-          const extensao = arquivo.type === "image/png" ? "png" : arquivo.type === "image/webp" ? "webp" : "jpg";
-          resolve(new File([blob], `recorte-relato.${extensao}`, { type: arquivo.type }));
+          const extensao =
+            arquivo.type === "image/png"
+              ? "png"
+              : arquivo.type === "image/webp"
+                ? "webp"
+                : "jpg";
+          resolve(
+            new File([blob], `recorte-relato.${extensao}`, {
+              type: arquivo.type,
+            }),
+          );
         },
         arquivo.type,
-        0.95
+        0.95,
       );
     });
   }
@@ -756,17 +876,28 @@ export default function Ocorrencias() {
   }
 
   function aplicarRelatoAssistente() {
-    if (assistenteRelato.envolvidoIndex === null || !assistenteRelato.sugestao.trim()) {
+    if (
+      assistenteRelato.envolvidoIndex === null ||
+      !assistenteRelato.sugestao.trim()
+    ) {
       return;
     }
 
-    atualizarEnvolvido(assistenteRelato.envolvidoIndex, "relato", assistenteRelato.sugestao.trim());
+    atualizarEnvolvido(
+      assistenteRelato.envolvidoIndex,
+      "relato",
+      assistenteRelato.sugestao.trim(),
+    );
     limparAssistenteRelato();
   }
 
   async function transcreverAudioRelato(arquivo: Blob, envolvidoIndex: number) {
     const formData = new FormData();
-    formData.append("audio", arquivo, `relato-envolvido-${envolvidoIndex + 1}.webm`);
+    formData.append(
+      "audio",
+      arquivo,
+      `relato-envolvido-${envolvidoIndex + 1}.webm`,
+    );
 
     setAssistenteAudioRelato((atual) => ({
       ...atual,
@@ -788,14 +919,16 @@ export default function Ocorrencias() {
         atualizarEnvolvido(
           envolvidoIndex,
           "relato",
-          relatoAtual ? `${relatoAtual}\n\n${transcricao}` : transcricao
+          relatoAtual ? `${relatoAtual}\n\n${transcricao}` : transcricao,
         );
       }
 
       setAssistenteAudioRelato((atual) => ({
         ...atual,
         transcrevendo: false,
-        aviso: response.data?.aviso || "Transcrição aplicada ao relato. Revise o texto antes de salvar.",
+        aviso:
+          response.data?.aviso ||
+          "Transcrição aplicada ao relato. Revise o texto antes de salvar.",
       }));
     } catch (error) {
       const erro = error as ApiErro;
@@ -835,7 +968,9 @@ export default function Ocorrencias() {
         }
       };
       recorder.onstop = () => {
-        const blob = new Blob(audioChunksRelatoRef.current, { type: recorder.mimeType || "audio/webm" });
+        const blob = new Blob(audioChunksRelatoRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
         streamRelatoRef.current?.getTracks().forEach((track) => track.stop());
         streamRelatoRef.current = null;
         mediaRecorderRelatoRef.current = null;
@@ -870,7 +1005,10 @@ export default function Ocorrencias() {
     }
   }
 
-  function anexarAudioRelato(event: React.ChangeEvent<HTMLInputElement>, envolvidoIndex: number) {
+  function anexarAudioRelato(
+    event: React.ChangeEvent<HTMLInputElement>,
+    envolvidoIndex: number,
+  ) {
     const arquivo = event.target.files?.[0];
     event.target.value = "";
     if (!arquivo) return;
@@ -882,23 +1020,18 @@ export default function Ocorrencias() {
 
     const novosArquivos = Array.from(e.target.files);
 
-    setAnexos((arquivosAtuais) => [
-      ...arquivosAtuais,
-      ...novosArquivos,
-    ]);
+    setAnexos((arquivosAtuais) => [...arquivosAtuais, ...novosArquivos]);
 
     e.target.value = "";
   }
 
   function removerAnexo(index: number) {
-    setAnexos((arquivosAtuais) =>
-      arquivosAtuais.filter((_, i) => i !== index)
-    );
+    setAnexos((arquivosAtuais) => arquivosAtuais.filter((_, i) => i !== index));
   }
 
   function removerAnexoExistente(id: number) {
     setAnexosExistentes((arquivosAtuais) =>
-      arquivosAtuais.filter((arquivo) => arquivo.id !== id)
+      arquivosAtuais.filter((arquivo) => arquivo.id !== id),
     );
     setAnexosRemover((ids) => [...ids, id]);
   }
@@ -934,7 +1067,9 @@ export default function Ocorrencias() {
     return localDate.toISOString().slice(0, 16);
   }
 
-  function formatarNumeroInvestigacao(investigacao?: InvestigacaoVinculada | null) {
+  function formatarNumeroInvestigacao(
+    investigacao?: InvestigacaoVinculada | null,
+  ) {
     if (!investigacao) return "";
     if (investigacao.codigo) return investigacao.codigo;
 
@@ -949,8 +1084,10 @@ export default function Ocorrencias() {
     if (!ocorrencia) return false;
     return Boolean(
       ocorrencia.status === "Anulado" ||
-      ocorrencia.assinaturaAprovacaoValida &&
-      (ocorrencia.fluxoStatus === "Aprovado" || ocorrencia.status === "Concluido" || ocorrencia.status === "Concluído")
+        (ocorrencia.assinaturaAprovacaoValida &&
+          (ocorrencia.fluxoStatus === "Aprovado" ||
+            ocorrencia.status === "Concluido" ||
+            ocorrencia.status === "Concluído")),
     );
   }
 
@@ -959,7 +1096,9 @@ export default function Ocorrencias() {
       alert("Este relatório está anulado e não pode ser editado.");
       return;
     }
-    alert("Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.");
+    alert(
+      "Este documento está concluído e assinado eletronicamente. Não é permitido editar. Solicite a reabertura para realizar alterações.",
+    );
   }
 
   function desbloquearEdicaoOcorrencia() {
@@ -989,7 +1128,7 @@ export default function Ocorrencias() {
     setEnvolvidos(
       ocorrencia.envolvidos.length
         ? ocorrencia.envolvidos
-        : [{ ...envolvidoVazio }]
+        : [{ ...envolvidoVazio }],
     );
     setAnexos([]);
     setEtapaFormulario(1);
@@ -1005,7 +1144,7 @@ export default function Ocorrencias() {
 
   function cancelarFormulario() {
     const confirmar = window.confirm(
-      "As alterações não salvas poderão ser perdidas. Deseja continuar?"
+      "As alterações não salvas poderão ser perdidas. Deseja continuar?",
     );
 
     if (!confirmar) return;
@@ -1038,11 +1177,15 @@ export default function Ocorrencias() {
     setConclusaoAnalise(response.data.conclusaoAnalise || "");
     if (abrirModal) {
       setOcorrenciaAnaliseModal((atual) =>
-        atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+        atual
+          ? { ...atual, status: response.data.status, analise: response.data }
+          : atual,
       );
     }
     setOcorrenciaEditando((atual) =>
-      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+      atual
+        ? { ...atual, status: response.data.status, analise: response.data }
+        : atual,
     );
     carregarOcorrencias();
     alert("Análise iniciada com sucesso");
@@ -1050,9 +1193,12 @@ export default function Ocorrencias() {
 
   async function salvarAnaliseOcorrencia() {
     if (!analiseAtual) return;
-    const pinOperacional = statusAnalise === "Concluído"
-      ? await solicitarPinOperacional("Informe seu PIN para assinar eletronicamente a conclusão da análise.")
-      : "";
+    const pinOperacional =
+      statusAnalise === "Concluído"
+        ? await solicitarPinOperacional(
+            "Informe seu PIN para assinar eletronicamente a conclusão da análise.",
+          )
+        : "";
     if (statusAnalise === "Concluído" && !pinOperacional) return;
 
     const response = await api.put(`/analises/ocorrencias/${analiseAtual.id}`, {
@@ -1064,10 +1210,14 @@ export default function Ocorrencias() {
 
     setAnaliseAtual(response.data);
     setOcorrenciaAnaliseModal((atual) =>
-      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+      atual
+        ? { ...atual, status: response.data.status, analise: response.data }
+        : atual,
     );
     setOcorrenciaEditando((atual) =>
-      atual ? { ...atual, status: response.data.status, analise: response.data } : atual
+      atual
+        ? { ...atual, status: response.data.status, analise: response.data }
+        : atual,
     );
     carregarOcorrencias();
     alert("Análise salva com sucesso");
@@ -1077,46 +1227,70 @@ export default function Ocorrencias() {
     const confirmar = window.confirm(
       ocorrencia.investigacao?.status === "Anulada"
         ? `Deseja reabrir a R.I Nº ${formatarNumeroInvestigacao(ocorrencia.investigacao)} vinculada à Ocorrência Nº ${ocorrencia.codigo}?`
-        : `Deseja iniciar uma investigação para a Ocorrência Nº ${ocorrencia.codigo}?`
+        : `Deseja iniciar uma investigação para a Ocorrência Nº ${ocorrencia.codigo}?`,
     );
 
     if (!confirmar) return;
 
-    const pinOperacional = ocorrencia.investigacao?.status === "Anulada"
-      ? await solicitarPinOperacional("Informe seu PIN para reabrir a R.I anulada.")
-      : "";
-    if (ocorrencia.investigacao?.status === "Anulada" && !pinOperacional) return;
+    const pinOperacional =
+      ocorrencia.investigacao?.status === "Anulada"
+        ? await solicitarPinOperacional(
+            "Informe seu PIN para reabrir a R.I anulada.",
+          )
+        : "";
+    if (ocorrencia.investigacao?.status === "Anulada" && !pinOperacional)
+      return;
 
-    const response = await api.post(`/investigacoes/converter/ocorrencias/${ocorrencia.id}`, {
-      pinOperacional,
-    });
+    const response = await api.post(
+      `/investigacoes/converter/ocorrencias/${ocorrencia.id}`,
+      {
+        pinOperacional,
+      },
+    );
     setOcorrenciaEditando((atual) =>
-      atual ? { ...atual, investigacao: response.data } : atual
+      atual ? { ...atual, investigacao: response.data } : atual,
     );
     carregarOcorrencias();
-    alert(ocorrencia.investigacao?.status === "Anulada" ? "Investigação reaberta com sucesso" : "Investigação criada com sucesso");
+    alert(
+      ocorrencia.investigacao?.status === "Anulada"
+        ? "Investigação reaberta com sucesso"
+        : "Investigação criada com sucesso",
+    );
   }
 
   async function cancelarConversaoInvestigacao(ocorrencia: Ocorrencia) {
     if (!ocorrencia.investigacao) return;
 
     const confirmar = window.confirm(
-      `Deseja cancelar a conversão para R.I Nº ${formatarNumeroInvestigacao(ocorrencia.investigacao)}? A investigação ficará como anulada e poderá ser reaberta futuramente.`
+      `Deseja cancelar a conversão para R.I Nº ${formatarNumeroInvestigacao(ocorrencia.investigacao)}? A investigação ficará como anulada e poderá ser reaberta futuramente.`,
     );
 
     if (!confirmar) return;
 
-    const pinOperacional = await solicitarPinOperacional("Informe seu PIN para cancelar a conversão para R.I.");
+    const pinOperacional = await solicitarPinOperacional(
+      "Informe seu PIN para cancelar a conversão para R.I.",
+    );
     if (!pinOperacional) return;
 
-    const response = await api.post(`/investigacoes/converter/ocorrencias/${ocorrencia.id}/cancelar`, {
-      pinOperacional,
-    });
+    const response = await api.post(
+      `/investigacoes/converter/ocorrencias/${ocorrencia.id}/cancelar`,
+      {
+        pinOperacional,
+      },
+    );
     setOcorrenciaEditando((atual) =>
-      atual ? { ...atual, investigacao: response.data, status: response.data.ocorrencia?.status || atual.status } : atual
+      atual
+        ? {
+            ...atual,
+            investigacao: response.data,
+            status: response.data.ocorrencia?.status || atual.status,
+          }
+        : atual,
     );
     carregarOcorrencias();
-    alert("Conversão para R.I cancelada. A investigação foi marcada como anulada.");
+    alert(
+      "Conversão para R.I cancelada. A investigação foi marcada como anulada.",
+    );
   }
 
   async function salvarOcorrencia(e: React.FormEvent) {
@@ -1132,7 +1306,14 @@ export default function Ocorrencias() {
     formData.append("dataOcorrencia", dataOcorrencia);
     formData.append("relatoSeguranca", relatoSeguranca);
     formData.append("acoesTomadas", acoesTomadas);
-    formData.append("impactoOperacional", JSON.stringify(naturezaImpactoOperacional ? impactoOperacional : impactoOperacionalVazio()));
+    formData.append(
+      "impactoOperacional",
+      JSON.stringify(
+        naturezaImpactoOperacional
+          ? impactoOperacional
+          : impactoOperacionalVazio(),
+      ),
+    );
     formData.append("envolvidos", JSON.stringify(envolvidos));
     formData.append("anexosRemover", JSON.stringify(anexosRemover));
 
@@ -1205,7 +1386,10 @@ export default function Ocorrencias() {
               ? `Editar Ocorrência ${ocorrenciaEditando.codigo}`
               : "Nova Ocorrência"}
           </h2>
-          <AutoSaveStatus status={autoSaveOcorrencia.status} ultima={autoSaveOcorrencia.ultima} />
+          <AutoSaveStatus
+            status={autoSaveOcorrencia.status}
+            ultima={autoSaveOcorrencia.ultima}
+          />
 
           {ocorrenciaEditando && (
             <div className="space-y-3">
@@ -1222,20 +1406,30 @@ export default function Ocorrencias() {
               {analiseAtual && (
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800">
                   Este relatório possui uma análise{" "}
-                  {analiseAtual.status === "Concluído" ? "concluída" : "em andamento"}.
+                  {analiseAtual.status === "Concluído"
+                    ? "concluída"
+                    : "em andamento"}
+                  .
                 </div>
               )}
 
-              {ocorrenciaEditando.investigacao && ocorrenciaEditando.investigacao.status !== "Anulada" && (
-                <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-800">
-                  Este relatório foi convertido para R.I Nº{" "}
-                  {formatarNumeroInvestigacao(ocorrenciaEditando.investigacao)}.
-                </div>
-              )}
+              {ocorrenciaEditando.investigacao &&
+                ocorrenciaEditando.investigacao.status !== "Anulada" && (
+                  <div className="rounded-lg border border-purple-200 bg-purple-50 px-4 py-3 text-sm font-medium text-purple-800">
+                    Este relatório foi convertido para R.I Nº{" "}
+                    {formatarNumeroInvestigacao(
+                      ocorrenciaEditando.investigacao,
+                    )}
+                    .
+                  </div>
+                )}
 
               {ocorrenciaEditando.investigacao?.status === "Anulada" && (
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                  A R.I Nº {formatarNumeroInvestigacao(ocorrenciaEditando.investigacao)} está anulada. Ela será reaberta se a ocorrência for convertida novamente.
+                  A R.I Nº{" "}
+                  {formatarNumeroInvestigacao(ocorrenciaEditando.investigacao)}{" "}
+                  está anulada. Ela será reaberta se a ocorrência for convertida
+                  novamente.
                 </div>
               )}
             </div>
@@ -1244,9 +1438,7 @@ export default function Ocorrencias() {
           <div className="flex flex-wrap gap-2 mb-4">
             <span
               className={`px-3 py-1 rounded-full text-sm ${
-                etapaFormulario === 1
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200"
+                etapaFormulario === 1 ? "bg-blue-600 text-white" : "bg-gray-200"
               }`}
             >
               Etapa 1 - Dados e Envolvidos
@@ -1254,9 +1446,7 @@ export default function Ocorrencias() {
 
             <span
               className={`px-3 py-1 rounded-full text-sm ${
-                etapaFormulario === 2
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200"
+                etapaFormulario === 2 ? "bg-blue-600 text-white" : "bg-gray-200"
               }`}
             >
               Etapa 2 - Relato Segurança Patrimonial
@@ -1264,9 +1454,7 @@ export default function Ocorrencias() {
 
             <span
               className={`px-3 py-1 rounded-full text-sm ${
-                etapaFormulario === 3
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-200"
+                etapaFormulario === 3 ? "bg-blue-600 text-white" : "bg-gray-200"
               }`}
             >
               Etapa 3 - Anexos
@@ -1274,522 +1462,754 @@ export default function Ocorrencias() {
           </div>
 
           <fieldset disabled={!!ocorrenciaEditando && !permitirEdicao}>
-          {etapaFormulario === 1 && (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                  Assunto
-                  <input
-                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                    placeholder="Assunto"
-                    value={assunto}
-                    onChange={(e) => setAssunto(e.target.value)}
-                    required
-                  />
-                </label>
+            {etapaFormulario === 1 && (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    Assunto
+                    <input
+                      className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                      placeholder="Assunto"
+                      value={assunto}
+                      onChange={(e) => setAssunto(e.target.value)}
+                      required
+                    />
+                  </label>
 
-                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                  Local da ocorrência
-                  <select
-                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                    value={local}
-                    onChange={(e) => setLocal(e.target.value)}
-                    required
-                  >
-                    <option value="">Selecione o local da ocorrência</option>
-                    {locais.map((item) => (
-                      <option key={item.id} value={item.nome}>
-                        {item.nome}{item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                  <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    Local da ocorrência
+                    <select
+                      className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                      value={local}
+                      onChange={(e) => setLocal(e.target.value)}
+                      required
+                    >
+                      <option value="">Selecione o local da ocorrência</option>
+                      {locais.map((item) => (
+                        <option key={item.id} value={item.nome}>
+                          {item.nome}
+                          {item.areaSensivel ? " - ÁREA SENSÍVEL" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                {localSelecionado?.areaSensivel && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 md:col-span-2">
-                    Local classificado como área sensível. A ocorrência receberá atenção operacional especial.
-                  </div>
-                )}
-
-                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                  Natureza
-                  <select
-                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                    value={natureza}
-                    onChange={(e) => {
-                      setNatureza(e.target.value);
-                      setSubNatureza("");
-                      if (!ehImpactoOperacionalExterno(e.target.value)) setImpactoOperacional(impactoOperacionalVazio());
-                    }}
-                    required
-                  >
-                    <option value="">Selecione a natureza</option>
-                    {naturezas.map((item) => (
-                      <option key={item.id} value={item.nome}>
-                        {item.nome}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                  Subnatureza
-                  <select
-                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                    value={subNatureza}
-                    onChange={(e) => setSubNatureza(e.target.value)}
-                    required
-                    disabled={!natureza}
-                  >
-                    <option value="">Selecione a subnatureza</option>
-                    {subNaturezasDisponiveis.map((item) => (
-                      <option key={item.id} value={item.nome}>
-                        {item.nome}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                  {naturezaImpactoOperacional ? "Data e hora de início do impacto" : "Data e hora da ocorrência"}
-                  <input
-                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                    type="datetime-local"
-                    value={dataOcorrencia}
-                    onChange={(e) => setDataOcorrencia(e.target.value)}
-                    required
-                  />
-                </label>
-
-                <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                  Quantidade de envolvidos
-                  <input
-                    className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                    type="number"
-                    min={1}
-                    value={quantidadeEnvolvidos}
-                    onChange={(e) =>
-                      alterarQuantidadeEnvolvidos(Number(e.target.value))
-                    }
-                    placeholder="Quantidade de envolvidos"
-                    required
-                  />
-                </label>
-              </div>
-
-              {naturezaImpactoOperacional && (
-                <section className="mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4 dark:border-orange-900/70 dark:bg-orange-950/20">
-                  <div className="mb-4">
-                    <h3 className="font-bold text-orange-950 dark:text-orange-200">Impacto operacional externo</h3>
-                    <p className="text-sm text-orange-800 dark:text-orange-300">Registre o impacto, a fila estimada e as tratativas realizadas.</p>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                    <label className="space-y-1 text-sm font-medium">Data e hora de término
-                      <input className="w-full rounded-lg border p-3" type="datetime-local" min={dataOcorrencia} value={impactoOperacional.dataHoraTermino} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, dataHoraTermino: e.target.value })} />
-                    </label>
-                    <label className="space-y-1 text-sm font-medium">Caminhões estimados na fila
-                      <input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 30" value={impactoOperacional.quantidadeCaminhoesFila} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, quantidadeCaminhoesFila: e.target.value })} />
-                    </label>
-                    <label className="space-y-1 text-sm font-medium">Agendamentos afetados
-                      <input className="w-full rounded-lg border p-3" type="number" min="0" placeholder="Ex.: 12" value={impactoOperacional.quantidadeAgendamentosAfetados} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, quantidadeAgendamentosAfetados: e.target.value })} />
-                    </label>
-                    <label className="space-y-1 text-sm font-medium">Houve atraso operacional?
-                      <select className="w-full rounded-lg border p-3" value={impactoOperacional.houveAtrasoOperacional} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, houveAtrasoOperacional: e.target.value })}>
-                        <option value="">Selecione</option><option>Sim</option><option>Não</option>
-                      </select>
-                    </label>
-                  </div>
-                  <details className="mt-4 rounded-xl border border-orange-200 bg-white/70 p-4 dark:border-orange-900/70 dark:bg-slate-950/40">
-                    <summary className="cursor-pointer select-none font-semibold text-orange-950 dark:text-orange-200">
-                      Controle de espera da fila <span className="text-xs font-medium text-orange-700 dark:text-orange-300">(opcional)</span>
-                    </summary>
-                    <p className="mt-2 text-sm text-orange-800 dark:text-orange-300">Use a placa do último veículo observado na fila como referência até a chegada na balança.</p>
-                    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <label className="space-y-1 text-sm font-medium">Placa do último veículo da fila
-                        <input className="w-full rounded-lg border p-3 uppercase" placeholder="Ex.: ABC1D23" value={impactoOperacional.placaUltimoVeiculoFila} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, placaUltimoVeiculoFila: normalizarPlacaFila(e.target.value) })} />
-                      </label>
-                      <label className="space-y-1 text-sm font-medium">Identificação da placa no final da fila
-                        <input className="w-full rounded-lg border p-3" type="datetime-local" min={dataOcorrencia} value={impactoOperacional.dataHoraIdentificacaoUltimoVeiculo} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, dataHoraIdentificacaoUltimoVeiculo: e.target.value })} />
-                      </label>
-                      <label className="space-y-1 text-sm font-medium">Chegada do veículo na balança
-                        <input className="w-full rounded-lg border p-3" type="datetime-local" min={impactoOperacional.dataHoraIdentificacaoUltimoVeiculo || dataOcorrencia} value={impactoOperacional.dataHoraChegadaBalanca} onChange={(e) => setImpactoOperacional({ ...impactoOperacional, dataHoraChegadaBalanca: e.target.value })} />
-                      </label>
-                      <label className="space-y-1 text-sm font-medium">Tempo calculado de espera
-                        <input className="w-full rounded-lg border bg-slate-100 p-3 font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-100" value={calcularTempoEsperaFila(impactoOperacional)} readOnly />
-                      </label>
+                  {localSelecionado?.areaSensivel && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 md:col-span-2">
+                      Local classificado como área sensível. A ocorrência
+                      receberá atenção operacional especial.
                     </div>
-                  </details>
-                  <div className="mt-4 grid gap-4 md:grid-cols-2">
-                    <div><p className="mb-2 text-sm font-semibold">Operação impactada</p><div className="flex flex-wrap gap-2">{operacoesImpactadas.map((opcao) => <label key={opcao} className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-900"><input type="checkbox" checked={impactoOperacional.operacoesImpactadas.includes(opcao)} onChange={() => alternarImpacto("operacoesImpactadas", opcao)} />{opcao}</label>)}</div></div>
-                    <div><p className="mb-2 text-sm font-semibold">Tratativas</p><div className="space-y-2">{tratativasImpacto.map((opcao) => <label key={opcao} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={impactoOperacional.tratativas.includes(opcao)} onChange={() => alternarImpacto("tratativas", opcao)} />{opcao}</label>)}</div></div>
-                  </div>
-                </section>
-              )}
+                  )}
 
-              <div className="space-y-4 mt-4">
-                {envolvidos.map((envolvido, index) => (
-                  <div
-                    key={index}
-                    className="border rounded-xl p-4 space-y-4 bg-gray-50"
-                  >
-                    <h3 className="font-bold text-lg">
-                      Dados do {index + 1}º envolvido
-                    </h3>
+                  <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    Natureza
+                    <select
+                      className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                      value={natureza}
+                      onChange={(e) => {
+                        setNatureza(e.target.value);
+                        setSubNatureza("");
+                        if (!ehImpactoOperacionalExterno(e.target.value))
+                          setImpactoOperacional(impactoOperacionalVazio());
+                      }}
+                      required
+                    >
+                      <option value="">Selecione a natureza</option>
+                      {naturezas.map((item) => (
+                        <option key={item.id} value={item.nome}>
+                          {item.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                    <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                      Tipo de envolvimento
-                      <select
-                        className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                        value={envolvido.tipoEnvolvimento}
-                        onChange={(e) =>
-                          atualizarEnvolvido(
-                            index,
-                            "tipoEnvolvimento",
-                            e.target.value
-                          )
-                        }
-                      >
-                        <option value="Condutor">Condutor</option>
-                        <option value="Informante">Informante</option>
-                        <option value="Solicitante">Solicitante</option>
-                        <option value="Testemunha">Testemunha</option>
-                        <option value="Vítima">Vítima</option>
-                      </select>
-                    </label>
+                  <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    Subnatureza
+                    <select
+                      className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                      value={subNatureza}
+                      onChange={(e) => setSubNatureza(e.target.value)}
+                      required
+                      disabled={!natureza}
+                    >
+                      <option value="">Selecione a subnatureza</option>
+                      {subNaturezasDisponiveis.map((item) => (
+                        <option key={item.id} value={item.nome}>
+                          {item.nome}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                        Nome do envolvido
+                  <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    {naturezaImpactoOperacional
+                      ? "Data e hora de início do impacto"
+                      : "Data e hora da ocorrência"}
+                    <input
+                      className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                      type="datetime-local"
+                      value={dataOcorrencia}
+                      onChange={(e) => setDataOcorrencia(e.target.value)}
+                      required
+                    />
+                  </label>
+
+                  <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                    Quantidade de envolvidos
+                    <input
+                      className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                      type="number"
+                      min={1}
+                      value={quantidadeEnvolvidos}
+                      onChange={(e) =>
+                        alterarQuantidadeEnvolvidos(Number(e.target.value))
+                      }
+                      placeholder="Quantidade de envolvidos"
+                      required
+                    />
+                  </label>
+                </div>
+
+                {naturezaImpactoOperacional && (
+                  <section className="mt-4 rounded-xl border border-orange-200 bg-orange-50/70 p-4 dark:border-orange-900/70 dark:bg-orange-950/20">
+                    <div className="mb-4">
+                      <h3 className="font-bold text-orange-950 dark:text-orange-200">
+                        Impacto operacional externo
+                      </h3>
+                      <p className="text-sm text-orange-800 dark:text-orange-300">
+                        Registre o impacto, a fila estimada e as tratativas
+                        realizadas.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <label className="space-y-1 text-sm font-medium">
+                        Data e hora de término
                         <input
-                          className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                          placeholder="Nome do envolvido"
-                          value={envolvido.nome}
+                          className="w-full rounded-lg border p-3"
+                          type="datetime-local"
+                          min={dataOcorrencia}
+                          value={impactoOperacional.dataHoraTermino}
                           onChange={(e) =>
-                            atualizarEnvolvido(index, "nome", e.target.value)
+                            setImpactoOperacional({
+                              ...impactoOperacional,
+                              dataHoraTermino: e.target.value,
+                            })
                           }
-                          required
                         />
                       </label>
+                      <label className="space-y-1 text-sm font-medium">
+                        Caminhões estimados na fila
+                        <input
+                          className="w-full rounded-lg border p-3"
+                          type="number"
+                          min="0"
+                          placeholder="Ex.: 30"
+                          value={impactoOperacional.quantidadeCaminhoesFila}
+                          onChange={(e) =>
+                            setImpactoOperacional({
+                              ...impactoOperacional,
+                              quantidadeCaminhoesFila: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm font-medium">
+                        Agendamentos afetados
+                        <input
+                          className="w-full rounded-lg border p-3"
+                          type="number"
+                          min="0"
+                          placeholder="Ex.: 12"
+                          value={
+                            impactoOperacional.quantidadeAgendamentosAfetados
+                          }
+                          onChange={(e) =>
+                            setImpactoOperacional({
+                              ...impactoOperacional,
+                              quantidadeAgendamentosAfetados: e.target.value,
+                            })
+                          }
+                        />
+                      </label>
+                      <label className="space-y-1 text-sm font-medium">
+                        Houve atraso operacional?
+                        <select
+                          className="w-full rounded-lg border p-3"
+                          value={impactoOperacional.houveAtrasoOperacional}
+                          onChange={(e) =>
+                            setImpactoOperacional({
+                              ...impactoOperacional,
+                              houveAtrasoOperacional: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">Selecione</option>
+                          <option>Sim</option>
+                          <option>Não</option>
+                        </select>
+                      </label>
+                    </div>
+                    <details className="mt-4 rounded-xl border border-orange-200 bg-white/70 p-4 dark:border-orange-900/70 dark:bg-slate-950/40">
+                      <summary className="cursor-pointer select-none font-semibold text-orange-950 dark:text-orange-200">
+                        Controle de espera da fila{" "}
+                        <span className="text-xs font-medium text-orange-700 dark:text-orange-300">
+                          (opcional)
+                        </span>
+                      </summary>
+                      <p className="mt-2 text-sm text-orange-800 dark:text-orange-300">
+                        Use a placa do último veículo observado na fila como
+                        referência até a chegada na balança.
+                      </p>
+                      <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <label className="space-y-1 text-sm font-medium">
+                          Placa do último veículo da fila
+                          <input
+                            className="w-full rounded-lg border p-3 uppercase"
+                            placeholder="Ex.: ABC1D23"
+                            value={impactoOperacional.placaUltimoVeiculoFila}
+                            onChange={(e) =>
+                              setImpactoOperacional({
+                                ...impactoOperacional,
+                                placaUltimoVeiculoFila: normalizarPlacaFila(
+                                  e.target.value,
+                                ),
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="space-y-1 text-sm font-medium">
+                          Identificação da placa no final da fila
+                          <input
+                            className="w-full rounded-lg border p-3"
+                            type="datetime-local"
+                            min={dataOcorrencia}
+                            value={
+                              impactoOperacional.dataHoraIdentificacaoUltimoVeiculo
+                            }
+                            onChange={(e) =>
+                              setImpactoOperacional({
+                                ...impactoOperacional,
+                                dataHoraIdentificacaoUltimoVeiculo:
+                                  e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="space-y-1 text-sm font-medium">
+                          Chegada do veículo na balança
+                          <input
+                            className="w-full rounded-lg border p-3"
+                            type="datetime-local"
+                            min={
+                              impactoOperacional.dataHoraIdentificacaoUltimoVeiculo ||
+                              dataOcorrencia
+                            }
+                            value={impactoOperacional.dataHoraChegadaBalanca}
+                            onChange={(e) =>
+                              setImpactoOperacional({
+                                ...impactoOperacional,
+                                dataHoraChegadaBalanca: e.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                        <label className="space-y-1 text-sm font-medium">
+                          Tempo calculado de espera
+                          <input
+                            className="w-full rounded-lg border bg-slate-100 p-3 font-semibold text-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                            value={calcularTempoEsperaFila(impactoOperacional)}
+                            readOnly
+                          />
+                        </label>
+                      </div>
+                    </details>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <div>
+                        <p className="mb-2 text-sm font-semibold">
+                          Operação impactada
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {operacoesImpactadas.map((opcao) => (
+                            <label
+                              key={opcao}
+                              className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm dark:bg-slate-900"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={impactoOperacional.operacoesImpactadas.includes(
+                                  opcao,
+                                )}
+                                onChange={() =>
+                                  alternarImpacto("operacoesImpactadas", opcao)
+                                }
+                              />
+                              {opcao}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="mb-2 text-sm font-semibold">Tratativas</p>
+                        <div className="space-y-2">
+                          {tratativasImpacto.map((opcao) => (
+                            <label
+                              key={opcao}
+                              className="flex items-center gap-2 text-sm"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={impactoOperacional.tratativas.includes(
+                                  opcao,
+                                )}
+                                onChange={() =>
+                                  alternarImpacto("tratativas", opcao)
+                                }
+                              />
+                              {opcao}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                <div className="space-y-4 mt-4">
+                  {envolvidos.map((envolvido, index) => (
+                    <div
+                      key={index}
+                      className="border rounded-xl p-4 space-y-4 bg-gray-50"
+                    >
+                      <h3 className="font-bold text-lg">
+                        Dados do {index + 1}º envolvido
+                      </h3>
 
                       <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                        Tipo de documento
+                        Tipo de envolvimento
                         <select
                           className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                          value={envolvido.tipoDocumento}
+                          value={envolvido.tipoEnvolvimento}
                           onChange={(e) =>
                             atualizarEnvolvido(
                               index,
-                              "tipoDocumento",
-                              e.target.value
+                              "tipoEnvolvimento",
+                              e.target.value,
                             )
                           }
                         >
-                          <option value="CPF">CPF</option>
-                          <option value="RG">RG</option>
-                          <option value="RE">R.E</option>
-                          <option value="CNH">CNH</option>
-                          <option value="PASSAPORTE">Passaporte</option>
+                          <option value="Condutor">Condutor</option>
+                          <option value="Informante">Informante</option>
+                          <option value="Solicitante">Solicitante</option>
+                          <option value="Testemunha">Testemunha</option>
+                          <option value="Vítima">Vítima</option>
                         </select>
                       </label>
 
-                      <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                        Documento
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                          Nome do envolvido
+                          <input
+                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                            placeholder="Nome do envolvido"
+                            value={envolvido.nome}
+                            onChange={(e) =>
+                              atualizarEnvolvido(index, "nome", e.target.value)
+                            }
+                            required
+                          />
+                        </label>
+
+                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                          Tipo de documento
+                          <select
+                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                            value={envolvido.tipoDocumento}
+                            onChange={(e) =>
+                              atualizarEnvolvido(
+                                index,
+                                "tipoDocumento",
+                                e.target.value,
+                              )
+                            }
+                          >
+                            <option value="CPF">CPF</option>
+                            <option value="RG">RG</option>
+                            <option value="RE">R.E</option>
+                            <option value="CNH">CNH</option>
+                            <option value="PASSAPORTE">Passaporte</option>
+                          </select>
+                        </label>
+
+                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                          Documento
+                          <input
+                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                            placeholder={
+                              envolvido.tipoDocumento === "CPF"
+                                ? "000.000.000-00"
+                                : "Documento"
+                            }
+                            inputMode={
+                              envolvido.tipoDocumento === "CPF"
+                                ? "numeric"
+                                : "text"
+                            }
+                            value={envolvido.documento}
+                            onChange={(e) =>
+                              atualizarEnvolvido(
+                                index,
+                                "documento",
+                                e.target.value,
+                              )
+                            }
+                            required
+                          />
+                        </label>
+
+                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                          Empresa
+                          <input
+                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                            placeholder="Empresa"
+                            value={envolvido.empresa}
+                            onChange={(e) =>
+                              atualizarEnvolvido(
+                                index,
+                                "empresa",
+                                e.target.value,
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+
+                      <label className="flex items-center gap-2">
                         <input
-                          className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                          placeholder={envolvido.tipoDocumento === "CPF" ? "000.000.000-00" : "Documento"}
-                          inputMode={envolvido.tipoDocumento === "CPF" ? "numeric" : "text"}
-                          value={envolvido.documento}
+                          type="checkbox"
+                          checked={envolvido.possuiVeiculo}
                           onChange={(e) =>
-                            atualizarEnvolvido(index, "documento", e.target.value)
+                            atualizarEnvolvido(
+                              index,
+                              "possuiVeiculo",
+                              e.target.checked,
+                            )
+                          }
+                        />
+                        Possui veículo
+                      </label>
+
+                      {envolvido.possuiVeiculo && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                            Placa do veículo
+                            <input
+                              className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                              placeholder="AAA-1234 ou AAA-1A34"
+                              value={envolvido.placa}
+                              onChange={(e) =>
+                                atualizarEnvolvido(
+                                  index,
+                                  "placa",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </label>
+
+                          <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                            Placa do reboque
+                            <input
+                              className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
+                              placeholder="AAA-1234 ou AAA-1A34"
+                              value={envolvido.reboque}
+                              onChange={(e) =>
+                                atualizarEnvolvido(
+                                  index,
+                                  "reboque",
+                                  e.target.value,
+                                )
+                              }
+                            />
+                          </label>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                            Relato do envolvido
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => abrirAssistenteRelato(index)}
+                            className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
+                          >
+                            <Sparkles size={14} />
+                            Carregar prévia por OCR
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {assistenteAudioRelato.gravando &&
+                          assistenteAudioRelato.envolvidoIndex === index ? (
+                            <button
+                              type="button"
+                              onClick={pararGravacaoRelato}
+                              className="inline-flex items-center gap-2 rounded-full border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
+                            >
+                              <Square size={13} />
+                              Parar e transcrever
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={
+                                assistenteAudioRelato.gravando ||
+                                assistenteAudioRelato.transcrevendo
+                              }
+                              onClick={() => iniciarGravacaoRelato(index)}
+                              className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
+                            >
+                              <Mic size={13} />
+                              Gravar áudio
+                            </button>
+                          )}
+                          {assistenteAudioRelato.gravando &&
+                            assistenteAudioRelato.envolvidoIndex === index && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-50 px-3 py-2 text-[11px] font-black text-emerald-700 shadow-sm dark:border-emerald-400/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+                                <span className="sr-only">
+                                  Captação de áudio ativa
+                                </span>
+                                {[10, 16, 22, 14, 19].map(
+                                  (altura, ondaIndex) => (
+                                    <span
+                                      key={ondaIndex}
+                                      className="w-1 rounded-full bg-emerald-500 motion-safe:animate-pulse dark:bg-emerald-300"
+                                      style={{
+                                        height: `${altura}px`,
+                                        animationDelay: `${ondaIndex * 120}ms`,
+                                        animationDuration: "720ms",
+                                      }}
+                                    />
+                                  ),
+                                )}
+                                <span className="ml-1 hidden sm:inline">
+                                  captando
+                                </span>
+                              </span>
+                            )}
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
+                            <Upload size={13} />
+                            Anexar áudio
+                            <input
+                              type="file"
+                              accept="audio/webm,audio/ogg,audio/mpeg,audio/mp3,audio/mp4,audio/wav,audio/aac"
+                              className="hidden"
+                              disabled={
+                                assistenteAudioRelato.gravando ||
+                                assistenteAudioRelato.transcrevendo
+                              }
+                              onChange={(event) =>
+                                anexarAudioRelato(event, index)
+                              }
+                            />
+                          </label>
+                          {assistenteAudioRelato.transcrevendo &&
+                            assistenteAudioRelato.envolvidoIndex === index && (
+                              <span className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-300">
+                                <Loader2 size={13} className="animate-spin" />
+                                Transcrevendo áudio...
+                              </span>
+                            )}
+                        </div>
+                        {assistenteAudioRelato.envolvidoIndex === index &&
+                          assistenteAudioRelato.aviso && (
+                            <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200">
+                              {assistenteAudioRelato.aviso}
+                            </p>
+                          )}
+                        {assistenteAudioRelato.envolvidoIndex === index &&
+                          assistenteAudioRelato.erro && (
+                            <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">
+                              {assistenteAudioRelato.erro}
+                            </p>
+                          )}
+                        <textarea
+                          className="w-full border rounded-lg p-3 min-h-[120px]"
+                          placeholder="Relato deste envolvido"
+                          value={envolvido.relato}
+                          onChange={(e) =>
+                            atualizarEnvolvido(index, "relato", e.target.value)
                           }
                           required
                         />
-                      </label>
-
-                      <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                        Empresa
-                        <input
-                          className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                          placeholder="Empresa"
-                          value={envolvido.empresa}
-                          onChange={(e) =>
-                            atualizarEnvolvido(index, "empresa", e.target.value)
-                          }
-                        />
-                      </label>
+                      </div>
                     </div>
+                  ))}
+                </div>
+              </>
+            )}
 
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={envolvido.possuiVeiculo}
-                        onChange={(e) =>
-                          atualizarEnvolvido(
-                            index,
-                            "possuiVeiculo",
-                            e.target.checked
-                          )
-                        }
-                      />
-                      Possui veículo
-                    </label>
+            {etapaFormulario === 2 && (
+              <div className="space-y-4">
+                <LexicalEditor
+                  value={relatoSeguranca}
+                  onChange={setRelatoSeguranca}
+                  title="Relato Segurança Patrimonial"
+                  placeholder="Descreva o relato patrimonial da ocorrência..."
+                />
 
-                    {envolvido.possuiVeiculo && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                          Placa do veículo
-                          <input
-                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                            placeholder="AAA-1234 ou AAA-1A34"
-                            value={envolvido.placa}
-                            onChange={(e) =>
-                              atualizarEnvolvido(index, "placa", e.target.value)
-                            }
-                          />
-                        </label>
-
-                        <label className="space-y-1 text-xs font-normal text-slate-500 dark:text-slate-400">
-                          Placa do reboque
-                          <input
-                            className="w-full border rounded-lg p-3 text-sm text-slate-900 dark:text-slate-100"
-                            placeholder="AAA-1234 ou AAA-1A34"
-                            value={envolvido.reboque}
-                            onChange={(e) =>
-                              atualizarEnvolvido(index, "reboque", e.target.value)
-                            }
-                          />
-                        </label>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <label className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                          Relato do envolvido
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => abrirAssistenteRelato(index)}
-                          className="inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200 dark:hover:bg-blue-500/20"
-                        >
-                          <Sparkles size={14} />
-                          Carregar prévia por OCR
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {assistenteAudioRelato.gravando && assistenteAudioRelato.envolvidoIndex === index ? (
-                          <button
-                            type="button"
-                            onClick={pararGravacaoRelato}
-                            className="inline-flex items-center gap-2 rounded-full border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-red-700 transition hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200 dark:hover:bg-red-500/20"
-                          >
-                            <Square size={13} />
-                            Parar e transcrever
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            disabled={assistenteAudioRelato.gravando || assistenteAudioRelato.transcrevendo}
-                            onClick={() => iniciarGravacaoRelato(index)}
-                            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200 dark:hover:bg-emerald-500/20"
-                          >
-                            <Mic size={13} />
-                            Gravar áudio
-                          </button>
-                        )}
-                        {assistenteAudioRelato.gravando && assistenteAudioRelato.envolvidoIndex === index && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-50 px-3 py-2 text-[11px] font-black text-emerald-700 shadow-sm dark:border-emerald-400/25 dark:bg-emerald-500/10 dark:text-emerald-200">
-                            <span className="sr-only">Captação de áudio ativa</span>
-                            {[10, 16, 22, 14, 19].map((altura, ondaIndex) => (
-                              <span
-                                key={ondaIndex}
-                                className="w-1 rounded-full bg-emerald-500 motion-safe:animate-pulse dark:bg-emerald-300"
-                                style={{
-                                  height: `${altura}px`,
-                                  animationDelay: `${ondaIndex * 120}ms`,
-                                  animationDuration: "720ms",
-                                }}
-                              />
-                            ))}
-                            <span className="ml-1 hidden sm:inline">captando</span>
-                          </span>
-                        )}
-                        <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800">
-                          <Upload size={13} />
-                          Anexar áudio
-                          <input
-                            type="file"
-                            accept="audio/webm,audio/ogg,audio/mpeg,audio/mp3,audio/mp4,audio/wav,audio/aac"
-                            className="hidden"
-                            disabled={assistenteAudioRelato.gravando || assistenteAudioRelato.transcrevendo}
-                            onChange={(event) => anexarAudioRelato(event, index)}
-                          />
-                        </label>
-                        {assistenteAudioRelato.transcrevendo && assistenteAudioRelato.envolvidoIndex === index && (
-                          <span className="inline-flex items-center gap-2 text-xs font-bold text-blue-600 dark:text-blue-300">
-                            <Loader2 size={13} className="animate-spin" />
-                            Transcrevendo áudio...
-                          </span>
-                        )}
-                      </div>
-                      {assistenteAudioRelato.envolvidoIndex === index && assistenteAudioRelato.aviso && (
-                        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-200">
-                          {assistenteAudioRelato.aviso}
-                        </p>
-                      )}
-                      {assistenteAudioRelato.envolvidoIndex === index && assistenteAudioRelato.erro && (
-                        <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">
-                          {assistenteAudioRelato.erro}
-                        </p>
-                      )}
-                      <textarea
-                        className="w-full border rounded-lg p-3 min-h-[120px]"
-                        placeholder="Relato deste envolvido"
-                        value={envolvido.relato}
-                        onChange={(e) =>
-                          atualizarEnvolvido(index, "relato", e.target.value)
-                        }
-                        required
-                      />
-                    </div>
-                  </div>
-                ))}
+                <LexicalEditor
+                  value={acoesTomadas}
+                  onChange={setAcoesTomadas}
+                  title="Ações tomadas"
+                  placeholder="Descreva as ações tomadas, tratativas imediatas, orientações, acionamentos e providências executadas..."
+                />
               </div>
-            </>
-          )}
+            )}
 
-          {etapaFormulario === 2 && (
-            <div className="space-y-4">
-              <LexicalEditor
-                value={relatoSeguranca}
-                onChange={setRelatoSeguranca}
-                title="Relato Segurança Patrimonial"
-                placeholder="Descreva o relato patrimonial da ocorrência..."
-              />
+            {etapaFormulario === 3 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold">Anexos da Ocorrência</h3>
 
-              <LexicalEditor
-                value={acoesTomadas}
-                onChange={setAcoesTomadas}
-                title="Ações tomadas"
-                placeholder="Descreva as ações tomadas, tratativas imediatas, orientações, acionamentos e providências executadas..."
-              />
-            </div>
-          )}
+                <p className="text-sm text-gray-500">
+                  Anexe fotos ou arquivos PDF relacionados à ocorrência.
+                </p>
 
-          {etapaFormulario === 3 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-bold">Anexos da Ocorrência</h3>
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*,.pdf"
+                  onChange={selecionarAnexos}
+                  className="w-full border rounded-lg p-3"
+                />
 
-              <p className="text-sm text-gray-500">
-                Anexe fotos ou arquivos PDF relacionados à ocorrência.
-              </p>
+                {anexosExistentes.length > 0 && (
+                  <div className="bg-white border rounded-lg p-4">
+                    <p className="font-semibold mb-4">Anexos já enviados</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {anexosExistentes.map((arquivo) => {
+                        const url = urlAnexo(arquivo);
+                        const isImagem = anexoEhImagem(arquivo);
 
-              <input
-                type="file"
-                multiple
-                accept="image/*,.pdf"
-                onChange={selecionarAnexos}
-                className="w-full border rounded-lg p-3"
-              />
-
-              {anexosExistentes.length > 0 && (
-                <div className="bg-white border rounded-lg p-4">
-                  <p className="font-semibold mb-4">Anexos já enviados</p>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {anexosExistentes.map((arquivo) => {
-                      const url = urlAnexo(arquivo);
-                      const isImagem = anexoEhImagem(arquivo);
-
-                      return (
-                        <div key={arquivo.id} className="overflow-hidden rounded-xl border bg-white shadow-sm">
-                          {isImagem ? (
-                            <button type="button" onClick={() => visualizarImagemAnexo(arquivo, anexosExistentes)} className="block w-full">
-                              <img src={url} alt={arquivo.nomeOriginal} className="h-32 w-full object-cover" />
-                            </button>
-                          ) : (
-                            <div className="flex h-32 items-center justify-center bg-slate-100 text-sm font-bold text-slate-600">
-                              ARQUIVO
-                            </div>
-                          )}
-
-                          <div className="space-y-2 p-2">
-                            {!isImagem && <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>}
+                        return (
+                          <div
+                            key={arquivo.id}
+                            className="overflow-hidden rounded-xl border bg-white shadow-sm"
+                          >
                             {isImagem ? (
                               <button
                                 type="button"
-                                onClick={() => visualizarImagemAnexo(arquivo, anexosExistentes)}
-                                className="block w-full rounded-lg bg-slate-900 py-2 text-center text-xs text-white"
+                                onClick={() =>
+                                  visualizarImagemAnexo(
+                                    arquivo,
+                                    anexosExistentes,
+                                  )
+                                }
+                                className="block w-full"
                               >
-                                Visualizar
+                                <img
+                                  src={url}
+                                  alt={arquivo.nomeOriginal}
+                                  className="h-32 w-full object-cover"
+                                />
                               </button>
                             ) : (
-                              <a href={url} target="_blank" rel="noreferrer" className="block rounded-lg bg-slate-900 py-2 text-center text-xs text-white">
-                                Abrir arquivo
-                              </a>
+                              <div className="flex h-32 items-center justify-center bg-slate-100 text-sm font-bold text-slate-600">
+                                ARQUIVO
+                              </div>
                             )}
-                          </div>
 
-                          <button
-                            type="button"
-                            onClick={() => removerAnexoExistente(arquivo.id)}
-                            className="w-full bg-red-600 py-2 text-xs text-white hover:bg-red-700"
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {anexos.length > 0 && (
-                <div className="bg-gray-50 border rounded-lg p-4">
-                  <p className="font-semibold mb-4">Arquivos selecionados</p>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {anexos.map((arquivo, index) => {
-                      const isImagem = arquivo.type.startsWith("image/");
-
-                      return (
-                        <div
-                          key={index}
-                          className="border rounded-xl overflow-hidden bg-white shadow-sm"
-                        >
-                          {isImagem ? (
-                            <img
-                              src={URL.createObjectURL(arquivo)}
-                              alt={arquivo.name}
-                              className="w-full h-32 object-cover"
-                            />
-                          ) : (
-                            <div className="h-32 flex items-center justify-center bg-red-50 text-red-600 font-bold text-lg">
-                              PDF
+                            <div className="space-y-2 p-2">
+                              {!isImagem && (
+                                <p className="break-all text-xs text-gray-600">
+                                  {arquivo.nomeOriginal}
+                                </p>
+                              )}
+                              {isImagem ? (
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    visualizarImagemAnexo(
+                                      arquivo,
+                                      anexosExistentes,
+                                    )
+                                  }
+                                  className="block w-full rounded-lg bg-slate-900 py-2 text-center text-xs text-white"
+                                >
+                                  Visualizar
+                                </button>
+                              ) : (
+                                <a
+                                  href={url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block rounded-lg bg-slate-900 py-2 text-center text-xs text-white"
+                                >
+                                  Abrir arquivo
+                                </a>
+                              )}
                             </div>
-                          )}
 
-                          <div className="p-2">
-                            <p className="text-xs text-gray-600 break-all">
-                              {arquivo.name}
-                            </p>
+                            <button
+                              type="button"
+                              onClick={() => removerAnexoExistente(arquivo.id)}
+                              className="w-full bg-red-600 py-2 text-xs text-white hover:bg-red-700"
+                            >
+                              Remover
+                            </button>
                           </div>
-
-                          <button
-                            type="button"
-                            onClick={() => removerAnexo(index)}
-                            className="w-full bg-red-600 text-white text-xs py-2 hover:bg-red-700"
-                          >
-                            Remover
-                          </button>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
 
+                {anexos.length > 0 && (
+                  <div className="bg-gray-50 border rounded-lg p-4">
+                    <p className="font-semibold mb-4">Arquivos selecionados</p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {anexos.map((arquivo, index) => {
+                        const isImagem = arquivo.type.startsWith("image/");
+
+                        return (
+                          <div
+                            key={index}
+                            className="border rounded-xl overflow-hidden bg-white shadow-sm"
+                          >
+                            {isImagem ? (
+                              <img
+                                src={URL.createObjectURL(arquivo)}
+                                alt={arquivo.name}
+                                className="w-full h-32 object-cover"
+                              />
+                            ) : (
+                              <div className="h-32 flex items-center justify-center bg-red-50 text-red-600 font-bold text-lg">
+                                PDF
+                              </div>
+                            )}
+
+                            <div className="p-2">
+                              <p className="text-xs text-gray-600 break-all">
+                                {arquivo.name}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => removerAnexo(index)}
+                              className="w-full bg-red-600 text-white text-xs py-2 hover:bg-red-700"
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </fieldset>
 
           <div className="flex gap-3">
@@ -1851,15 +2271,24 @@ export default function Ocorrencias() {
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {ocorrencias.map((ocorrencia) => (
-                  <tr key={ocorrencia.id} className="transition hover:bg-blue-50/60 dark:hover:bg-blue-500/5">
+                  <tr
+                    key={ocorrencia.id}
+                    className="transition hover:bg-blue-50/60 dark:hover:bg-blue-500/5"
+                  >
                     <td className="px-4 py-4">
-                      <div className="font-black text-slate-900 dark:text-white">{ocorrencia.codigo}</div>
+                      <div className="font-black text-slate-900 dark:text-white">
+                        {ocorrencia.codigo}
+                      </div>
                       <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {new Date(ocorrencia.dataOcorrencia).toLocaleString("pt-BR")}
+                        {new Date(ocorrencia.dataOcorrencia).toLocaleString(
+                          "pt-BR",
+                        )}
                       </div>
                     </td>
                     <td className="max-w-[260px] px-4 py-4">
-                      <p className="line-clamp-2 font-semibold text-slate-800 dark:text-slate-100">{ocorrencia.assunto}</p>
+                      <p className="line-clamp-2 font-semibold text-slate-800 dark:text-slate-100">
+                        {ocorrencia.assunto}
+                      </p>
                     </td>
                     <td className="px-4 py-4">
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
@@ -1868,7 +2297,8 @@ export default function Ocorrencias() {
                     </td>
                     <td className="px-4 py-4">
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-900 dark:text-slate-300">
-                        <Tags size={13} /> {ocorrencia.natureza} / {ocorrencia.subNatureza}
+                        <Tags size={13} /> {ocorrencia.natureza} /{" "}
+                        {ocorrencia.subNatureza}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">
@@ -1884,36 +2314,102 @@ export default function Ocorrencias() {
                     <td className="px-4 py-4">
                       <div className="flex justify-end gap-2">
                         {podeAnalisar() && (
-                          <button type="button" onClick={() => ocorrencia.analise ? abrirAnaliseOcorrencia(ocorrencia) : (setOcorrenciaAnaliseModal(ocorrencia), iniciarAnaliseOcorrencia(ocorrencia.id, true))} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-600 transition hover:-translate-y-0.5 hover:bg-amber-500/20 dark:text-amber-200" title={ocorrencia.analise ? "Abrir análise" : "Iniciar análise"}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              ocorrencia.analise
+                                ? abrirAnaliseOcorrencia(ocorrencia)
+                                : (setOcorrenciaAnaliseModal(ocorrencia),
+                                  iniciarAnaliseOcorrencia(ocorrencia.id, true))
+                            }
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-amber-400/30 bg-amber-500/10 text-amber-600 transition hover:-translate-y-0.5 hover:bg-amber-500/20 dark:text-amber-200"
+                            title={
+                              ocorrencia.analise
+                                ? "Abrir análise"
+                                : "Iniciar análise"
+                            }
+                          >
                             <ClipboardCheck size={17} />
                           </button>
                         )}
-                        {(!ocorrencia.investigacao || ocorrencia.investigacao.status === "Anulada") && podeAnalisar() && (
-                          <button type="button" onClick={() => converterParaInvestigacao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-purple-400/30 bg-purple-500/10 text-purple-600 transition hover:-translate-y-0.5 hover:bg-purple-500/20 dark:text-purple-200" title={ocorrencia.investigacao?.status === "Anulada" ? "Reabrir investigação anulada" : "Converter para investigação"}>
-                            <FileSearch size={17} />
-                          </button>
-                        )}
-                        {ocorrencia.investigacao && ocorrencia.investigacao.status !== "Anulada" && podeAnalisar() && (
-                          <button type="button" onClick={() => cancelarConversaoInvestigacao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-400/30 bg-slate-500/10 text-slate-600 transition hover:-translate-y-0.5 hover:bg-slate-500/20 dark:text-slate-200" title="Cancelar conversão para R.I">
-                            <X size={17} />
-                          </button>
-                        )}
-                        <button type="button" onClick={() => setOcorrenciaMencao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-500/10 text-indigo-600 transition hover:-translate-y-0.5 hover:bg-indigo-500/20 dark:text-indigo-200" title="Mencionar usuário">
+                        {(!ocorrencia.investigacao ||
+                          ocorrencia.investigacao.status === "Anulada") &&
+                          podeAnalisar() && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                converterParaInvestigacao(ocorrencia)
+                              }
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-purple-400/30 bg-purple-500/10 text-purple-600 transition hover:-translate-y-0.5 hover:bg-purple-500/20 dark:text-purple-200"
+                              title={
+                                ocorrencia.investigacao?.status === "Anulada"
+                                  ? "Reabrir investigação anulada"
+                                  : "Converter para investigação"
+                              }
+                            >
+                              <FileSearch size={17} />
+                            </button>
+                          )}
+                        {ocorrencia.investigacao &&
+                          ocorrencia.investigacao.status !== "Anulada" &&
+                          podeAnalisar() && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                cancelarConversaoInvestigacao(ocorrencia)
+                              }
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-400/30 bg-slate-500/10 text-slate-600 transition hover:-translate-y-0.5 hover:bg-slate-500/20 dark:text-slate-200"
+                              title="Cancelar conversão para R.I"
+                            >
+                              <X size={17} />
+                            </button>
+                          )}
+                        <button
+                          type="button"
+                          onClick={() => setOcorrenciaMencao(ocorrencia)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-indigo-400/30 bg-indigo-500/10 text-indigo-600 transition hover:-translate-y-0.5 hover:bg-indigo-500/20 dark:text-indigo-200"
+                          title="Mencionar usuário"
+                        >
                           <AtSign size={17} />
                         </button>
                         {ocorrencia.anexos?.some(anexoEhImagem) && (
-                          <button type="button" onClick={() => visualizarImagemAnexo(ocorrencia.anexos!.find(anexoEhImagem)!, ocorrencia.anexos)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500/20 dark:text-emerald-200" title="Visualizar imagem anexada">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              visualizarImagemAnexo(
+                                ocorrencia.anexos!.find(anexoEhImagem)!,
+                                ocorrencia.anexos,
+                              )
+                            }
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-400/30 bg-emerald-500/10 text-emerald-600 transition hover:-translate-y-0.5 hover:bg-emerald-500/20 dark:text-emerald-200"
+                            title="Visualizar imagem anexada"
+                          >
                             <FileUp size={17} />
                           </button>
                         )}
-                        <button type="button" onClick={() => editarOcorrencia(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-blue-600 transition hover:-translate-y-0.5 hover:bg-blue-500/20 dark:text-blue-200" title="Editar relatório">
+                        <button
+                          type="button"
+                          onClick={() => editarOcorrencia(ocorrencia)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-400/30 bg-blue-500/10 text-blue-600 transition hover:-translate-y-0.5 hover:bg-blue-500/20 dark:text-blue-200"
+                          title="Editar relatório"
+                        >
                           <Edit3 size={17} />
                         </button>
-                        <button type="button" onClick={() => abrirPdfOcorrencia(ocorrencia.id)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 bg-red-500/10 text-red-600 transition hover:-translate-y-0.5 hover:bg-red-500/20 dark:text-red-200" title="Abrir PDF">
+                        <button
+                          type="button"
+                          onClick={() => abrirPdfOcorrencia(ocorrencia.id)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-red-400/30 bg-red-500/10 text-red-600 transition hover:-translate-y-0.5 hover:bg-red-500/20 dark:text-red-200"
+                          title="Abrir PDF"
+                        >
                           <FileText size={17} />
                         </button>
                         {ocorrencia.status !== "Anulado" && (
-                          <button type="button" onClick={() => setOcorrenciaAnulacao(ocorrencia)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-orange-400/30 bg-orange-500/10 text-orange-600 transition hover:-translate-y-0.5 hover:bg-orange-500/20 dark:text-orange-200" title="Solicitar anulação">
+                          <button
+                            type="button"
+                            onClick={() => setOcorrenciaAnulacao(ocorrencia)}
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-orange-400/30 bg-orange-500/10 text-orange-600 transition hover:-translate-y-0.5 hover:bg-orange-500/20 dark:text-orange-200"
+                            title="Solicitar anulação"
+                          >
                             <Ban size={17} />
                           </button>
                         )}
@@ -1940,10 +2436,12 @@ export default function Ocorrencias() {
                     Análise da ocorrência
                   </p>
                   <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                    {ocorrenciaAnaliseModal.codigo} - {ocorrenciaAnaliseModal.assunto}
+                    {ocorrenciaAnaliseModal.codigo} -{" "}
+                    {ocorrenciaAnaliseModal.assunto}
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Registre a avaliação técnica sem alterar os dados originais do relatório.
+                    Registre a avaliação técnica sem alterar os dados originais
+                    do relatório.
                   </p>
                 </div>
               </div>
@@ -1960,16 +2458,28 @@ export default function Ocorrencias() {
             <div className="max-h-[calc(92vh-104px)] space-y-5 overflow-auto p-5">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-xs font-bold uppercase text-slate-500">Status do relatório</p>
-                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{ocorrenciaAnaliseModal.status}</p>
+                  <p className="text-xs font-bold uppercase text-slate-500">
+                    Status do relatório
+                  </p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">
+                    {ocorrenciaAnaliseModal.status}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-xs font-bold uppercase text-slate-500">Local</p>
-                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{ocorrenciaAnaliseModal.local}</p>
+                  <p className="text-xs font-bold uppercase text-slate-500">
+                    Local
+                  </p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">
+                    {ocorrenciaAnaliseModal.local}
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-                  <p className="text-xs font-bold uppercase text-slate-500">Natureza</p>
-                  <p className="mt-1 font-bold text-slate-900 dark:text-white">{ocorrenciaAnaliseModal.natureza}</p>
+                  <p className="text-xs font-bold uppercase text-slate-500">
+                    Natureza
+                  </p>
+                  <p className="mt-1 font-bold text-slate-900 dark:text-white">
+                    {ocorrenciaAnaliseModal.natureza}
+                  </p>
                 </div>
               </div>
 
@@ -1986,7 +2496,9 @@ export default function Ocorrencias() {
                 <input
                   className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
                   value={prejuizoFinanceiro}
-                  onChange={(e) => setPrejuizoFinanceiro(formatarBrl(e.target.value))}
+                  onChange={(e) =>
+                    setPrejuizoFinanceiro(formatarBrl(e.target.value))
+                  }
                   placeholder="Prejuízo financeiro em BRL"
                   inputMode="numeric"
                 />
@@ -2037,7 +2549,8 @@ export default function Ocorrencias() {
                     Ler documento manuscrito ou escaneado
                   </h2>
                   <p className="text-sm text-slate-500 dark:text-slate-400">
-                    A sugestão deve ser revisada antes de ser aplicada no relatório.
+                    A sugestão deve ser revisada antes de ser aplicada no
+                    relatório.
                   </p>
                 </div>
               </div>
@@ -2054,7 +2567,10 @@ export default function Ocorrencias() {
             <div className="grid max-h-[calc(92vh-104px)] grid-cols-1 overflow-auto lg:grid-cols-[0.95fr_1.05fr]">
               <div className="space-y-4 border-b border-slate-200 p-5 dark:border-slate-800 lg:border-b-0 lg:border-r">
                 <label className="group flex min-h-[150px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/60 p-5 text-center transition hover:border-blue-400 hover:bg-blue-50 dark:border-blue-500/30 dark:bg-blue-500/10 dark:hover:bg-blue-500/15">
-                  <FileUp className="mb-3 text-blue-600 dark:text-blue-300" size={34} />
+                  <FileUp
+                    className="mb-3 text-blue-600 dark:text-blue-300"
+                    size={34}
+                  />
                   <span className="text-sm font-bold text-slate-900 dark:text-white">
                     Clique para anexar a foto ou PDF do relato
                   </span>
@@ -2065,7 +2581,9 @@ export default function Ocorrencias() {
                     type="file"
                     accept="image/jpeg,image/png,image/webp,application/pdf"
                     className="hidden"
-                    onChange={(e) => selecionarArquivoRelato(e.target.files?.[0])}
+                    onChange={(e) =>
+                      selecionarArquivoRelato(e.target.files?.[0])
+                    }
                   />
                 </label>
 
@@ -2076,67 +2594,80 @@ export default function Ocorrencias() {
                     </div>
                   )}
 
-                  {assistenteRelato.previewUrl && assistenteRelato.arquivo?.type === "application/pdf" && (
-                    <iframe
-                      src={assistenteRelato.previewUrl}
-                      title="Prévia do PDF anexado"
-                      className="h-[420px] w-full bg-white"
-                    />
-                  )}
+                  {assistenteRelato.previewUrl &&
+                    assistenteRelato.arquivo?.type === "application/pdf" && (
+                      <iframe
+                        src={assistenteRelato.previewUrl}
+                        title="Prévia do PDF anexado"
+                        className="h-[420px] w-full bg-white"
+                      />
+                    )}
 
-                  {assistenteRelato.previewUrl && assistenteRelato.arquivo?.type !== "application/pdf" && (
-                    <div className="space-y-3 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300">
-                        <span>
-                          Arraste sobre a imagem para selecionar somente a área do relato. Sem recorte, a leitura usa a imagem inteira.
-                        </span>
-                        {assistenteRelato.recorte && (
-                          <button
-                            type="button"
-                            onClick={() => setAssistenteRelato((atual) => ({ ...atual, recorte: null }))}
-                            className="rounded-full border border-slate-200 px-3 py-1 font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
-                          >
-                            Limpar recorte
-                          </button>
-                        )}
-                      </div>
-                      <div
-                        className="relative mx-auto inline-block max-w-full touch-none select-none overflow-hidden rounded-xl bg-slate-950/5 dark:bg-slate-950"
-                        onPointerDown={iniciarRecorteRelato}
-                        onPointerMove={moverRecorteRelato}
-                        onPointerUp={finalizarRecorteRelato}
-                        onPointerCancel={finalizarRecorteRelato}
-                      >
-                        <img
-                          ref={imagemRelatoRef}
-                          src={assistenteRelato.previewUrl}
-                          alt="Prévia do relato anexado"
-                          className="max-h-[420px] max-w-full object-contain"
-                          draggable={false}
-                        />
-                        {assistenteRelato.recorte && (
-                          <div
-                            className="pointer-events-none absolute border-2 border-blue-400 bg-blue-500/15 shadow-[0_0_0_9999px_rgba(2,6,23,0.45)]"
-                            style={{
-                              left: assistenteRelato.recorte.x,
-                              top: assistenteRelato.recorte.y,
-                              width: assistenteRelato.recorte.width,
-                              height: assistenteRelato.recorte.height,
-                            }}
+                  {assistenteRelato.previewUrl &&
+                    assistenteRelato.arquivo?.type !== "application/pdf" && (
+                      <div className="space-y-3 p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                          <span>
+                            Arraste sobre a imagem para selecionar somente a
+                            área do relato. Sem recorte, a leitura usa a imagem
+                            inteira.
+                          </span>
+                          {assistenteRelato.recorte && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAssistenteRelato((atual) => ({
+                                  ...atual,
+                                  recorte: null,
+                                }))
+                              }
+                              className="rounded-full border border-slate-200 px-3 py-1 font-bold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-800"
+                            >
+                              Limpar recorte
+                            </button>
+                          )}
+                        </div>
+                        <div
+                          className="relative mx-auto inline-block max-w-full touch-none select-none overflow-hidden rounded-xl bg-slate-950/5 dark:bg-slate-950"
+                          onPointerDown={iniciarRecorteRelato}
+                          onPointerMove={moverRecorteRelato}
+                          onPointerUp={finalizarRecorteRelato}
+                          onPointerCancel={finalizarRecorteRelato}
+                        >
+                          <img
+                            ref={imagemRelatoRef}
+                            src={assistenteRelato.previewUrl}
+                            alt="Prévia do relato anexado"
+                            className="max-h-[420px] max-w-full object-contain"
+                            draggable={false}
                           />
-                        )}
+                          {assistenteRelato.recorte && (
+                            <div
+                              className="pointer-events-none absolute border-2 border-blue-400 bg-blue-500/15 shadow-[0_0_0_9999px_rgba(2,6,23,0.45)]"
+                              style={{
+                                left: assistenteRelato.recorte.x,
+                                top: assistenteRelato.recorte.y,
+                                width: assistenteRelato.recorte.width,
+                                height: assistenteRelato.recorte.height,
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )}
                 </div>
               </div>
 
               <div className="space-y-4 p-5">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/70">
-                  <h3 className="font-bold text-slate-900 dark:text-white">Como funciona</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-white">
+                    Como funciona
+                  </h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                    O JetGuard envia o arquivo para leitura inteligente, extrai o texto possível e organiza uma
-                    sugestão profissional para o campo Relato do Envolvido. Trechos ilegíveis serão sinalizados.
+                    O JetGuard envia o arquivo para leitura inteligente, extrai
+                    o texto possível e organiza uma sugestão profissional para o
+                    campo Relato do Envolvido. Trechos ilegíveis serão
+                    sinalizados.
                   </p>
                 </div>
 
@@ -2155,7 +2686,9 @@ export default function Ocorrencias() {
                 <button
                   type="button"
                   onClick={lerRelatoAssistente}
-                  disabled={assistenteRelato.carregando || !assistenteRelato.arquivo}
+                  disabled={
+                    assistenteRelato.carregando || !assistenteRelato.arquivo
+                  }
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {assistenteRelato.carregando ? (
@@ -2180,7 +2713,10 @@ export default function Ocorrencias() {
                     placeholder="Após a leitura, a sugestão aparecerá aqui para revisão."
                     value={assistenteRelato.sugestao}
                     onChange={(e) =>
-                      setAssistenteRelato((atual) => ({ ...atual, sugestao: e.target.value }))
+                      setAssistenteRelato((atual) => ({
+                        ...atual,
+                        sugestao: e.target.value,
+                      }))
                     }
                   />
                 </div>
@@ -2213,11 +2749,22 @@ export default function Ocorrencias() {
           <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-2xl bg-white p-6 shadow-2xl dark:bg-slate-900">
             <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4 dark:border-slate-800">
               <div>
-                <p className="text-xs font-bold uppercase text-blue-600">Visualização do relatório</p>
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{ocorrenciaVisualizando.codigo}</h2>
-                <p className="text-gray-600 dark:text-slate-300">{ocorrenciaVisualizando.assunto}</p>
+                <p className="text-xs font-bold uppercase text-blue-600">
+                  Visualização do relatório
+                </p>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                  {ocorrenciaVisualizando.codigo}
+                </h2>
+                <p className="text-gray-600 dark:text-slate-300">
+                  {ocorrenciaVisualizando.assunto}
+                </p>
               </div>
-              <button onClick={() => setOcorrenciaVisualizando(null)} className="rounded bg-slate-200 px-3 py-2">Fechar</button>
+              <button
+                onClick={() => setOcorrenciaVisualizando(null)}
+                className="rounded bg-slate-200 px-3 py-2"
+              >
+                Fechar
+              </button>
             </div>
             <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
               {[
@@ -2225,41 +2772,80 @@ export default function Ocorrencias() {
                 ["Status", ocorrenciaVisualizando.status],
                 ["Natureza", ocorrenciaVisualizando.natureza],
                 ["Subnatureza", ocorrenciaVisualizando.subNatureza],
-                ["Data", new Date(ocorrenciaVisualizando.dataOcorrencia).toLocaleString("pt-BR")],
+                [
+                  "Data",
+                  new Date(
+                    ocorrenciaVisualizando.dataOcorrencia,
+                  ).toLocaleString("pt-BR"),
+                ],
               ].map(([rotulo, valor]) => (
-                <div key={rotulo} className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950">
-                  <p className="text-xs font-bold uppercase text-slate-500">{rotulo}</p>
-                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">{valor}</p>
+                <div
+                  key={rotulo}
+                  className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-800 dark:bg-slate-950"
+                >
+                  <p className="text-xs font-bold uppercase text-slate-500">
+                    {rotulo}
+                  </p>
+                  <p className="mt-1 font-semibold text-slate-900 dark:text-white">
+                    {valor}
+                  </p>
                 </div>
               ))}
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Relato</h3>
-              <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: ocorrenciaVisualizando.relatoSeguranca || "Sem relato." }} />
+              <div
+                className="mt-2 rounded-lg bg-slate-50 p-4 text-sm"
+                dangerouslySetInnerHTML={{
+                  __html:
+                    ocorrenciaVisualizando.relatoSeguranca || "Sem relato.",
+                }}
+              />
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Ações tomadas</h3>
-              <div className="mt-2 rounded-lg bg-slate-50 p-4 text-sm" dangerouslySetInnerHTML={{ __html: ocorrenciaVisualizando.acoesTomadas || "Nenhuma ação tomada informada." }} />
+              <div
+                className="mt-2 rounded-lg bg-slate-50 p-4 text-sm"
+                dangerouslySetInnerHTML={{
+                  __html:
+                    ocorrenciaVisualizando.acoesTomadas ||
+                    "Nenhuma ação tomada informada.",
+                }}
+              />
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Envolvidos</h3>
               <div className="mt-2 grid grid-cols-1 gap-3">
                 {ocorrenciaVisualizando.envolvidos.map((envolvido, index) => (
-                  <div key={index} className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950">
+                  <div
+                    key={index}
+                    className="rounded-xl border border-slate-200 bg-white p-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-950"
+                  >
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <strong className="text-base text-slate-900 dark:text-white">{envolvido.nome}</strong>
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">{envolvido.tipoEnvolvimento}</span>
+                      <strong className="text-base text-slate-900 dark:text-white">
+                        {envolvido.nome}
+                      </strong>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                        {envolvido.tipoEnvolvimento}
+                      </span>
                     </div>
-                    <p className="mt-2 text-slate-600 dark:text-slate-300">{envolvido.documento}</p>
-                    <p className="mt-3 whitespace-pre-line rounded-lg bg-slate-50 p-3 leading-relaxed text-slate-700 dark:bg-slate-900 dark:text-slate-200">{envolvido.relato || "Sem relato informado."}</p>
+                    <p className="mt-2 text-slate-600 dark:text-slate-300">
+                      {envolvido.documento}
+                    </p>
+                    <p className="mt-3 whitespace-pre-line rounded-lg bg-slate-50 p-3 leading-relaxed text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                      {envolvido.relato || "Sem relato informado."}
+                    </p>
                   </div>
                 ))}
               </div>
             </div>
             <div className="mt-5">
               <h3 className="font-bold">Anexos</h3>
-              {(!ocorrenciaVisualizando.anexos || ocorrenciaVisualizando.anexos.length === 0) && (
-                <p className="mt-2 text-sm text-gray-500">Nenhum anexo cadastrado.</p>
+              {(!ocorrenciaVisualizando.anexos ||
+                ocorrenciaVisualizando.anexos.length === 0) && (
+                <p className="mt-2 text-sm text-gray-500">
+                  Nenhum anexo cadastrado.
+                </p>
               )}
               <div className="mt-2 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 {ocorrenciaVisualizando.anexos?.map((arquivo) => {
@@ -2267,10 +2853,26 @@ export default function Ocorrencias() {
                   const isImagem = anexoEhImagem(arquivo);
 
                   return (
-                    <div key={arquivo.id} className="overflow-hidden rounded-lg border bg-white">
+                    <div
+                      key={arquivo.id}
+                      className="overflow-hidden rounded-lg border bg-white"
+                    >
                       {isImagem ? (
-                        <button type="button" onClick={() => visualizarImagemAnexo(arquivo, ocorrenciaVisualizando.anexos)} className="block w-full">
-                          <img src={url} alt={arquivo.nomeOriginal} className="h-40 w-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() =>
+                            visualizarImagemAnexo(
+                              arquivo,
+                              ocorrenciaVisualizando.anexos,
+                            )
+                          }
+                          className="block w-full"
+                        >
+                          <img
+                            src={url}
+                            alt={arquivo.nomeOriginal}
+                            className="h-40 w-full object-cover"
+                          />
                         </button>
                       ) : (
                         <div className="flex h-40 items-center justify-center bg-slate-100 text-sm font-bold text-slate-600">
@@ -2278,13 +2880,31 @@ export default function Ocorrencias() {
                         </div>
                       )}
                       <div className="space-y-2 p-3">
-                        {!isImagem && <p className="break-all text-xs text-gray-600">{arquivo.nomeOriginal}</p>}
+                        {!isImagem && (
+                          <p className="break-all text-xs text-gray-600">
+                            {arquivo.nomeOriginal}
+                          </p>
+                        )}
                         {isImagem ? (
-                          <button type="button" onClick={() => visualizarImagemAnexo(arquivo, ocorrenciaVisualizando.anexos)} className="block w-full rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              visualizarImagemAnexo(
+                                arquivo,
+                                ocorrenciaVisualizando.anexos,
+                              )
+                            }
+                            className="block w-full rounded bg-slate-900 px-3 py-2 text-center text-xs text-white"
+                          >
                             Visualizar
                           </button>
                         ) : (
-                          <a href={url} target="_blank" rel="noreferrer" className="block rounded bg-slate-900 px-3 py-2 text-center text-xs text-white">
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block rounded bg-slate-900 px-3 py-2 text-center text-xs text-white"
+                          >
                             Abrir arquivo
                           </a>
                         )}
@@ -2297,15 +2917,35 @@ export default function Ocorrencias() {
             <div className="mt-5">
               <h3 className="font-bold">Comentarios internos</h3>
               <div className="mt-2 flex flex-col gap-3 sm:flex-row">
-                <input className="flex-1 rounded-lg border p-3" placeholder="Adicionar comentario interno" value={novoComentario} onChange={(e) => setNovoComentario(e.target.value)} />
-                <button onClick={salvarComentario} className="rounded bg-blue-600 px-4 py-2 text-white">Comentar</button>
+                <input
+                  className="flex-1 rounded-lg border p-3"
+                  placeholder="Adicionar comentario interno"
+                  value={novoComentario}
+                  onChange={(e) => setNovoComentario(e.target.value)}
+                />
+                <button
+                  onClick={salvarComentario}
+                  className="rounded bg-blue-600 px-4 py-2 text-white"
+                >
+                  Comentar
+                </button>
               </div>
               <div className="mt-3 space-y-2">
-                {comentarios.length === 0 && <p className="text-sm text-gray-500">Nenhum comentario interno.</p>}
+                {comentarios.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    Nenhum comentario interno.
+                  </p>
+                )}
                 {comentarios.map((comentario) => (
-                  <div key={comentario.id} className="rounded-lg bg-slate-50 p-3 text-sm">
+                  <div
+                    key={comentario.id}
+                    className="rounded-lg bg-slate-50 p-3 text-sm"
+                  >
                     <p>{comentario.comentario}</p>
-                    <p className="mt-1 text-xs text-gray-500">{comentario.autor?.apelido || comentario.autor?.nome} - {new Date(comentario.createdAt).toLocaleString("pt-BR")}</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {comentario.autor?.apelido || comentario.autor?.nome} -{" "}
+                      {new Date(comentario.createdAt).toLocaleString("pt-BR")}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -2318,22 +2958,51 @@ export default function Ocorrencias() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-2xl">
             <h2 className="text-xl font-bold">Mencionar usuario</h2>
-            <p className="mt-1 text-sm text-gray-500">{ocorrenciaMencao.codigo} - {ocorrenciaMencao.assunto}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              {ocorrenciaMencao.codigo} - {ocorrenciaMencao.assunto}
+            </p>
             <div className="mt-4 space-y-3">
-              <select className="w-full rounded-lg border p-3" value={usuarioMencionadoId} onChange={(e) => setUsuarioMencionadoId(e.target.value)}>
+              <select
+                className="w-full rounded-lg border p-3"
+                value={usuarioMencionadoId}
+                onChange={(e) => setUsuarioMencionadoId(e.target.value)}
+              >
                 <option value="">Selecione o usuario</option>
-                {usuariosMencao.map((usuario) => <option key={usuario.id} value={usuario.id}>{usuario.apelido || usuario.nome} - {usuario.email}</option>)}
+                {usuariosMencao.map((usuario) => (
+                  <option key={usuario.id} value={usuario.id}>
+                    {usuario.apelido || usuario.nome} - {usuario.email}
+                  </option>
+                ))}
               </select>
-              <select className="w-full rounded-lg border p-3" value={tipoMencao} onChange={(e) => setTipoMencao(e.target.value)}>
+              <select
+                className="w-full rounded-lg border p-3"
+                value={tipoMencao}
+                onChange={(e) => setTipoMencao(e.target.value)}
+              >
                 <option>Responsavel por tratar</option>
                 <option>Acompanhar</option>
                 <option>Apoio</option>
                 <option>Validador</option>
               </select>
-              <textarea className="w-full rounded-lg border p-3" placeholder="Observacao" value={observacaoMencao} onChange={(e) => setObservacaoMencao(e.target.value)} />
+              <textarea
+                className="w-full rounded-lg border p-3"
+                placeholder="Observacao"
+                value={observacaoMencao}
+                onChange={(e) => setObservacaoMencao(e.target.value)}
+              />
               <div className="flex gap-3">
-                <button onClick={salvarMencao} className="rounded bg-blue-600 px-4 py-2 text-white">Salvar</button>
-                <button onClick={() => setOcorrenciaMencao(null)} className="rounded bg-slate-200 px-4 py-2">Cancelar</button>
+                <button
+                  onClick={salvarMencao}
+                  className="rounded bg-blue-600 px-4 py-2 text-white"
+                >
+                  Salvar
+                </button>
+                <button
+                  onClick={() => setOcorrenciaMencao(null)}
+                  className="rounded bg-slate-200 px-4 py-2"
+                >
+                  Cancelar
+                </button>
               </div>
             </div>
           </div>
@@ -2355,10 +3024,13 @@ export default function Ocorrencias() {
                 onChange={(e) => setMotivoAnulacao(e.target.value)}
               />
               <div className="rounded-lg bg-orange-50 p-3 text-sm text-orange-800">
-                A anulação será enviada para ciência e acordo dos analistas. O relatório não será excluído.
+                A anulação será enviada para ciência e acordo dos analistas. O
+                relatório não será excluído.
               </div>
               <label className="space-y-1">
-                <span className="text-xs font-bold uppercase text-orange-700">PIN operacional para confirmar</span>
+                <span className="text-xs font-bold uppercase text-orange-700">
+                  PIN operacional para confirmar
+                </span>
                 <input
                   type="password"
                   inputMode="numeric"
@@ -2366,14 +3038,27 @@ export default function Ocorrencias() {
                   className="w-full rounded-lg border border-orange-200 p-3 text-sm font-semibold uppercase outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
                   placeholder="****"
                   value={pinAnulacao}
-                  onChange={(e) => setPinAnulacao(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  onChange={(e) =>
+                    setPinAnulacao(
+                      e.target.value.replace(/\D/g, "").slice(0, 4),
+                    )
+                  }
                 />
               </label>
               <div className="flex gap-3">
-                <button onClick={solicitarAnulacao} className="rounded bg-orange-600 px-4 py-2 text-white">
+                <button
+                  onClick={solicitarAnulacao}
+                  className="rounded bg-orange-600 px-4 py-2 text-white"
+                >
                   Enviar solicitação
                 </button>
-                <button onClick={() => { setOcorrenciaAnulacao(null); setPinAnulacao(""); }} className="rounded bg-slate-200 px-4 py-2">
+                <button
+                  onClick={() => {
+                    setOcorrenciaAnulacao(null);
+                    setPinAnulacao("");
+                  }}
+                  className="rounded bg-slate-200 px-4 py-2"
+                >
                   Cancelar
                 </button>
               </div>
@@ -2396,12 +3081,17 @@ export default function Ocorrencias() {
           <div className="relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-950 shadow-2xl">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-slate-900/90 px-5 py-4">
               <div className="min-w-0">
-                <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-300">Galeria de evidências</p>
-                <h3 className="truncate text-lg font-bold text-white">Evidência fotográfica</h3>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-300">
+                  Galeria de evidências
+                </p>
+                <h3 className="truncate text-lg font-bold text-white">
+                  Evidência fotográfica
+                </h3>
               </div>
               <div className="flex items-center gap-3">
                 <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-slate-200">
-                  {imagemAnexoPreview.indice + 1} / {imagemAnexoPreview.imagens.length}
+                  {imagemAnexoPreview.indice + 1} /{" "}
+                  {imagemAnexoPreview.imagens.length}
                 </span>
                 <button
                   type="button"
@@ -2435,7 +3125,11 @@ export default function Ocorrencias() {
                   </button>
                 </>
               )}
-              <img src={urlAnexo(imagemAtualPreview)} alt="Evidência fotográfica" className="max-h-[68vh] max-w-full rounded-xl object-contain shadow-2xl" />
+              <img
+                src={urlAnexo(imagemAtualPreview)}
+                alt="Evidência fotográfica"
+                className="max-h-[68vh] max-w-full rounded-xl object-contain shadow-2xl"
+              />
             </div>
 
             {imagemAnexoPreview.imagens.length > 1 && (
@@ -2453,7 +3147,11 @@ export default function Ocorrencias() {
                       }`}
                       aria-label={`Visualizar evidência ${indice + 1}`}
                     >
-                      <img src={urlAnexo(imagem)} alt="Miniatura da evidência" className="h-full w-full object-cover" />
+                      <img
+                        src={urlAnexo(imagem)}
+                        alt="Miniatura da evidência"
+                        className="h-full w-full object-cover"
+                      />
                     </button>
                   ))}
                 </div>
@@ -2465,4 +3163,3 @@ export default function Ocorrencias() {
     </div>
   );
 }
-

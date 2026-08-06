@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+﻿import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 
@@ -11,16 +11,17 @@ export async function listarLogs(req: AuthRequest, res: Response) {
     const superAdminIds = superAdmins.map((usuario) => usuario.id);
 
     const logs = await prisma.logAuditoria.findMany({
-      where: req.usuarioPerfil === PERFIS.SUPER_ADMIN
-        ? {}
-        : {
-            NOT: {
-              AND: [
-                { usuarioId: { in: superAdminIds } },
-                { tipoRegistro: { in: ["Auth", "SessaoUsuario"] } },
-              ],
+      where:
+        req.usuarioPerfil === PERFIS.SUPER_ADMIN
+          ? {}
+          : {
+              NOT: {
+                AND: [
+                  { usuarioId: { in: superAdminIds } },
+                  { tipoRegistro: { in: ["Auth", "SessaoUsuario"] } },
+                ],
+              },
             },
-          },
       orderBy: {
         createdAt: "desc",
       },
@@ -43,7 +44,7 @@ const rotulosModulos: Record<string, string> = {
   Auth: "Acessos e Segurança",
   CameraChecklistOperacional: "Checklist CFTV",
   CameraEventoStatus: "Eventos CFTV",
-  CameraMonitoramento: "Câmeras CFTV",
+  CameraMonitoramento: "CÃ¢meras CFTV",
   ChecklistInspecao: "Inspeção Preventiva",
   ComentarioInterno: "Comentários Internos",
   ConfiguracaoSistema: "Configurações do Sistema",
@@ -70,7 +71,10 @@ const rotulosModulos: Record<string, string> = {
 };
 
 function rotuloModulo(tipoRegistro: string) {
-  return rotulosModulos[tipoRegistro] || tipoRegistro.replace(/([a-z])([A-Z])/g, "$1 $2");
+  return (
+    rotulosModulos[tipoRegistro] ||
+    tipoRegistro.replace(/([a-z])([A-Z])/g, "$1 $2")
+  );
 }
 
 function limitesDiaSaoPaulo(data: string) {
@@ -84,14 +88,20 @@ function horaSaoPaulo(data: Date) {
     timeZone: "America/Sao_Paulo",
     hour: "2-digit",
     hourCycle: "h23",
-  }).format(data).padStart(2, "0");
+  })
+    .format(data)
+    .padStart(2, "0");
 }
 
 export async function minhaJornada(req: AuthRequest, res: Response) {
   try {
-    const dataFiltro = typeof req.query.data === "string" && /^\d{4}-\d{2}-\d{2}$/.test(req.query.data)
-      ? req.query.data
-      : new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    const dataFiltro =
+      typeof req.query.data === "string" &&
+      /^\d{4}-\d{2}-\d{2}$/.test(req.query.data)
+        ? req.query.data
+        : new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/Sao_Paulo",
+          }).format(new Date());
     const modulo = String(req.query.modulo || "");
     const termo = String(req.query.q || "").toLowerCase();
     const { inicio, fim } = limitesDiaSaoPaulo(dataFiltro);
@@ -107,7 +117,9 @@ export async function minhaJornada(req: AuthRequest, res: Response) {
       orderBy: { createdAt: "desc" },
     });
 
-    const modulosDisponiveis = Array.from(new Set(logs.map((log) => log.tipoRegistro)))
+    const modulosDisponiveis = Array.from(
+      new Set(logs.map((log) => log.tipoRegistro)),
+    )
       .map((valor) => ({
         valor,
         label: rotuloModulo(valor),
@@ -115,11 +127,22 @@ export async function minhaJornada(req: AuthRequest, res: Response) {
       }))
       .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 
-    const logsModulo = modulo ? logs.filter((log) => log.tipoRegistro === modulo) : logs;
+    const logsModulo = modulo
+      ? logs.filter((log) => log.tipoRegistro === modulo)
+      : logs;
     const filtrados = termo
       ? logsModulo.filter((log) =>
-          [log.acao, log.tipoRegistro, rotuloModulo(log.tipoRegistro), log.usuarioNome, log.registroId]
-            .some((valor) => String(valor || "").toLowerCase().includes(termo))
+          [
+            log.acao,
+            log.tipoRegistro,
+            rotuloModulo(log.tipoRegistro),
+            log.usuarioNome,
+            log.registroId,
+          ].some((valor) =>
+            String(valor || "")
+              .toLowerCase()
+              .includes(termo),
+          ),
         )
       : logsModulo;
 
@@ -130,7 +153,10 @@ export async function minhaJornada(req: AuthRequest, res: Response) {
     }, {});
 
     const horasIniciais = Object.fromEntries(
-      Array.from({ length: 24 }, (_, hora) => [`${String(hora).padStart(2, "0")}:00`, 0])
+      Array.from({ length: 24 }, (_, hora) => [
+        `${String(hora).padStart(2, "0")}:00`,
+        0,
+      ]),
     ) as Record<string, number>;
     const porHora = filtrados.reduce<Record<string, number>>((acc, log) => {
       const hora = horaSaoPaulo(log.createdAt);

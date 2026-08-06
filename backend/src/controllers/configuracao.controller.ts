@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
@@ -14,15 +14,21 @@ async function obterOuCriarConfiguracao() {
   });
 }
 
-function mascararConfiguracao(configuracao: Awaited<ReturnType<typeof obterOuCriarConfiguracao>>) {
+function mascararConfiguracao(
+  configuracao: Awaited<ReturnType<typeof obterOuCriarConfiguracao>>,
+) {
   return {
     ...configuracao,
-    openaiApiKeyConfigurada: Boolean(configuracao.openaiApiKey || process.env.OPENAI_API_KEY),
+    openaiApiKeyConfigurada: Boolean(
+      configuracao.openaiApiKey || process.env.OPENAI_API_KEY,
+    ),
     openaiApiKey: configuracao.openaiApiKey ? chaveMascarada : "",
   };
 }
 
-function apiKeyOpenAi(configuracao: Awaited<ReturnType<typeof obterOuCriarConfiguracao>>) {
+function apiKeyOpenAi(
+  configuracao: Awaited<ReturnType<typeof obterOuCriarConfiguracao>>,
+) {
   return configuracao.openaiApiKey || process.env.OPENAI_API_KEY || "";
 }
 
@@ -68,13 +74,15 @@ async function validarChaveOpenAi(apiKey: string) {
     return {
       status: "erro_validacao",
       chaveValida: false,
-      mensagem: "Não foi possível validar a chave agora. Tente novamente em instantes.",
+      mensagem:
+        "Não foi possível validar a chave agora. Tente novamente em instantes.",
     };
   } catch {
     return {
       status: "indisponivel",
       chaveValida: false,
-      mensagem: "Validação indisponível no momento. Confira a conexão do servidor.",
+      mensagem:
+        "Validação indisponível no momento. Confira a conexão do servidor.",
     };
   }
 }
@@ -89,7 +97,10 @@ export async function buscarConfiguracao(req: AuthRequest, res: Response) {
   }
 }
 
-export async function buscarConfiguracaoOpenAi(req: AuthRequest, res: Response) {
+export async function buscarConfiguracaoOpenAi(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const configuracao = await obterOuCriarConfiguracao();
     const apiKey = apiKeyOpenAi(configuracao);
@@ -97,17 +108,26 @@ export async function buscarConfiguracaoOpenAi(req: AuthRequest, res: Response) 
 
     return res.json({
       ocrProvider: configuracao.ocrProvider || "openai",
-      openaiOcrModel: configuracao.openaiOcrModel || process.env.OPENAI_OCR_MODEL || "gpt-4.1-mini",
+      openaiOcrModel:
+        configuracao.openaiOcrModel ||
+        process.env.OPENAI_OCR_MODEL ||
+        "gpt-4.1-mini",
       openaiAprimoramentoTextoAtivo: configuracao.openaiAprimoramentoTextoAtivo,
       openaiApiKeyConfigurada: Boolean(apiKey),
       openaiApiKey: apiKey ? chaveMascarada : "",
-      origemChave: configuracao.openaiApiKey ? "Banco de dados" : process.env.OPENAI_API_KEY ? ".env do servidor" : "Nao configurada",
+      origemChave: configuracao.openaiApiKey
+        ? "Banco de dados"
+        : process.env.OPENAI_API_KEY
+          ? ".env do servidor"
+          : "Nao configurada",
       somenteLeitura: req.usuarioPerfil !== "SUPER_ADMIN",
       validacao,
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao buscar configuracao da OpenAI" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao buscar configuracao da OpenAI" });
   }
 }
 
@@ -119,15 +139,18 @@ export async function rankingUsoOpenAi(req: AuthRequest, res: Response) {
       take: 2000,
     });
 
-    const mapa = new Map<number | string, {
-      usuarioId: number | null;
-      usuarioNome: string;
-      requisicoes: number;
-      tokensEntrada: number;
-      tokensSaida: number;
-      tokensTotal: number;
-      ultimoUso: Date;
-    }>();
+    const mapa = new Map<
+      number | string,
+      {
+        usuarioId: number | null;
+        usuarioNome: string;
+        requisicoes: number;
+        tokensEntrada: number;
+        tokensSaida: number;
+        tokensTotal: number;
+        ultimoUso: Date;
+      }
+    >();
 
     for (const log of logs) {
       const dados = parseJsonSeguro(log.dadosNovos);
@@ -152,15 +175,24 @@ export async function rankingUsoOpenAi(req: AuthRequest, res: Response) {
     }
 
     const ranking = Array.from(mapa.values())
-      .sort((a, b) => b.tokensTotal - a.tokensTotal || b.requisicoes - a.requisicoes)
+      .sort(
+        (a, b) =>
+          b.tokensTotal - a.tokensTotal || b.requisicoes - a.requisicoes,
+      )
       .slice(0, 20);
 
     return res.json({
       ranking,
       resumo: {
         usuarios: ranking.length,
-        requisicoes: ranking.reduce((total, item) => total + item.requisicoes, 0),
-        tokensTotal: ranking.reduce((total, item) => total + item.tokensTotal, 0),
+        requisicoes: ranking.reduce(
+          (total, item) => total + item.requisicoes,
+          0,
+        ),
+        tokensTotal: ranking.reduce(
+          (total, item) => total + item.tokensTotal,
+          0,
+        ),
       },
     });
   } catch (error) {
@@ -175,15 +207,20 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
     const data: Record<string, string | number | boolean | null | undefined> = {
       nomeEmpresa: req.body.nomeEmpresa || anterior.nomeEmpresa,
       slaCameras: Number(req.body.slaCameras || anterior.slaCameras),
-      tempoMaximoOffline: Number(req.body.tempoMaximoOffline || anterior.tempoMaximoOffline),
-      checklistCameraDias: Number(req.body.checklistCameraDias || anterior.checklistCameraDias),
+      tempoMaximoOffline: Number(
+        req.body.tempoMaximoOffline || anterior.tempoMaximoOffline,
+      ),
+      checklistCameraDias: Number(
+        req.body.checklistCameraDias || anterior.checklistCameraDias,
+      ),
       corsPermitido: req.body.corsPermitido,
       logoUrl: req.body.logoUrl,
       rodapePdf: req.body.rodapePdf,
     };
 
     if (typeof req.body.openaiAprimoramentoTextoAtivo === "boolean") {
-      data.openaiAprimoramentoTextoAtivo = req.body.openaiAprimoramentoTextoAtivo;
+      data.openaiAprimoramentoTextoAtivo =
+        req.body.openaiAprimoramentoTextoAtivo;
     }
 
     if (req.usuarioPerfil === "SUPER_ADMIN") {
@@ -213,8 +250,14 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
       acao: "Atualizacao das configuracoes do sistema",
       tipoRegistro: "ConfiguracaoSistema",
       registroId: configuracao.id,
-      dadosAnteriores: { ...anterior, openaiApiKey: anterior.openaiApiKey ? chaveMascarada : "" },
-      dadosNovos: { ...configuracao, openaiApiKey: configuracao.openaiApiKey ? chaveMascarada : "" },
+      dadosAnteriores: {
+        ...anterior,
+        openaiApiKey: anterior.openaiApiKey ? chaveMascarada : "",
+      },
+      dadosNovos: {
+        ...configuracao,
+        openaiApiKey: configuracao.openaiApiKey ? chaveMascarada : "",
+      },
     });
 
     return res.json(mascararConfiguracao(configuracao));

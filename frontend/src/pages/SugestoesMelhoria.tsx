@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { ImagePlus, Lightbulb, RefreshCcw, Send } from "lucide-react";
 import { api } from "../services/api";
@@ -27,13 +27,22 @@ type SugestaoMelhoria = {
   } | null;
 };
 
-const statusSugestao = ["Recebida", "Em análise", "Aprovada", "Implementada", "Recusada"];
+const statusSugestao = [
+  "Recebida",
+  "Em análise",
+  "Aprovada",
+  "Implementada",
+  "Recusada",
+];
 
 const statusClasse: Record<string, string> = {
   Recebida: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200",
-  "Em análise": "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200",
-  Aprovada: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
-  Implementada: "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-200",
+  "Em análise":
+    "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-200",
+  Aprovada:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-200",
+  Implementada:
+    "bg-purple-100 text-purple-700 dark:bg-purple-500/15 dark:text-purple-200",
   Recusada: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-200",
 };
 
@@ -57,8 +66,19 @@ export default function SugestoesMelhoria() {
     try {
       const response = await api.get("/sugestoes-melhoria");
       setSugestoes(response.data);
-      setStatusEdicao(Object.fromEntries(response.data.map((item: SugestaoMelhoria) => [item.id, item.status])));
-      setRespostas(Object.fromEntries(response.data.map((item: SugestaoMelhoria) => [item.id, item.resposta || ""])));
+      setStatusEdicao(
+        Object.fromEntries(
+          response.data.map((item: SugestaoMelhoria) => [item.id, item.status]),
+        ),
+      );
+      setRespostas(
+        Object.fromEntries(
+          response.data.map((item: SugestaoMelhoria) => [
+            item.id,
+            item.resposta || "",
+          ]),
+        ),
+      );
     } finally {
       setCarregando(false);
     }
@@ -102,7 +122,9 @@ export default function SugestoesMelhoria() {
     <div className="space-y-6 text-slate-900 dark:text-slate-100">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">Administração</p>
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-300">
+            Administração
+          </p>
           <h1 className="text-3xl font-bold">Sugestão de melhorias</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
             Envie ideias, correções e melhorias para evolução do JetGuard.
@@ -119,14 +141,20 @@ export default function SugestoesMelhoria() {
         </button>
       </div>
 
-      <form onSubmit={salvar} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <form
+        onSubmit={salvar}
+        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+      >
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
             <Lightbulb size={22} />
           </div>
           <div>
             <h2 className="text-xl font-bold">Nova sugestão</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Inclua um print quando a melhoria for visual ou envolver alguma tela.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Inclua um print quando a melhoria for visual ou envolver alguma
+              tela.
+            </p>
           </div>
         </div>
 
@@ -141,12 +169,16 @@ export default function SugestoesMelhoria() {
 
           <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 p-3 text-slate-500 transition hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:text-slate-400">
             <ImagePlus size={20} />
-            <span className="truncate">{printTela?.name || "Anexar print de tela ou PDF"}</span>
+            <span className="truncate">
+              {printTela?.name || "Anexar print de tela ou PDF"}
+            </span>
             <input
               type="file"
               className="hidden"
               accept="image/*,.pdf"
-              onChange={(event) => setPrintTela(event.target.files?.[0] || null)}
+              onChange={(event) =>
+                setPrintTela(event.target.files?.[0] || null)
+              }
             />
           </label>
 
@@ -170,17 +202,24 @@ export default function SugestoesMelhoria() {
 
       <section className="space-y-4">
         {sugestoes.map((item) => (
-          <article key={item.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          <article
+            key={item.id}
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h2 className="text-xl font-bold">{item.assunto}</h2>
-                  <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusClasse[item.status] || statusClasse.Recebida}`}>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${statusClasse[item.status] || statusClasse.Recebida}`}
+                  >
                     {item.status}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Enviada por {nomePessoa(item.autor)} em {new Date(item.createdAt).toLocaleString("pt-BR")} | Unidade {item.unidade}
+                  Enviada por {nomePessoa(item.autor)} em{" "}
+                  {new Date(item.createdAt).toLocaleString("pt-BR")} | Unidade{" "}
+                  {item.unidade}
                 </p>
               </div>
 
@@ -211,17 +250,29 @@ export default function SugestoesMelhoria() {
                 <select
                   className="rounded-xl border border-slate-300 p-3 dark:border-slate-700 dark:bg-slate-950"
                   value={statusEdicao[item.id] || item.status}
-                  onChange={(event) => setStatusEdicao((atual) => ({ ...atual, [item.id]: event.target.value }))}
+                  onChange={(event) =>
+                    setStatusEdicao((atual) => ({
+                      ...atual,
+                      [item.id]: event.target.value,
+                    }))
+                  }
                 >
                   {statusSugestao.map((status) => (
-                    <option key={status} value={status}>{status}</option>
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
                   ))}
                 </select>
                 <input
                   className="rounded-xl border border-slate-300 p-3 dark:border-slate-700 dark:bg-slate-950"
                   placeholder="Resposta ou observação administrativa"
                   value={respostas[item.id] || ""}
-                  onChange={(event) => setRespostas((atual) => ({ ...atual, [item.id]: event.target.value }))}
+                  onChange={(event) =>
+                    setRespostas((atual) => ({
+                      ...atual,
+                      [item.id]: event.target.value,
+                    }))
+                  }
                 />
                 <button
                   type="button"
@@ -236,7 +287,10 @@ export default function SugestoesMelhoria() {
             {item.avaliadoPor && (
               <p className="mt-3 text-xs text-slate-400">
                 Última avaliação por {nomePessoa(item.avaliadoPor)}
-                {item.avaliadoEm ? ` em ${new Date(item.avaliadoEm).toLocaleString("pt-BR")}` : ""}.
+                {item.avaliadoEm
+                  ? ` em ${new Date(item.avaliadoEm).toLocaleString("pt-BR")}`
+                  : ""}
+                .
               </p>
             )}
           </article>

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Request, Response } from "express";
@@ -15,7 +15,11 @@ const resumoPortaria = [
 
 const assinaturasSegurancaPatrimonial = [
   path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png"),
-  path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.jpeg"),
+  path.resolve(
+    process.cwd(),
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
 ];
 
 function limparCpf(cpf: string) {
@@ -36,12 +40,19 @@ function cpfValido(cpf: string) {
     const soma = digitos
       .slice(0, tamanho)
       .split("")
-      .reduce((total, numero, index) => total + Number(numero) * (tamanho + 1 - index), 0);
+      .reduce(
+        (total, numero, index) =>
+          total + Number(numero) * (tamanho + 1 - index),
+        0,
+      );
     const resto = (soma * 10) % 11;
     return resto === 10 ? 0 : resto;
   };
 
-  return calcularDigito(9) === Number(digitos[9]) && calcularDigito(10) === Number(digitos[10]);
+  return (
+    calcularDigito(9) === Number(digitos[9]) &&
+    calcularDigito(10) === Number(digitos[10])
+  );
 }
 
 function limparTelefone(valor: string) {
@@ -54,16 +65,25 @@ function texto(valor: unknown) {
 
 function emailValido(email: string) {
   const normalizado = String(email || "").trim();
-  if (!normalizado || normalizado.length > 254 || normalizado.includes("..")) return false;
+  if (!normalizado || normalizado.length > 254 || normalizado.includes(".."))
+    return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
 }
 
 function videoPadrao() {
-  return process.env.TREINAMENTO_TERMINAL_VIDEO_URL || "/videos/treinamento-terminal.mp4";
+  return (
+    process.env.TREINAMENTO_TERMINAL_VIDEO_URL ||
+    "/videos/treinamento-terminal.mp4"
+  );
 }
 
 function appPublicUrl() {
-  return String(process.env.PUBLIC_APP_URL || process.env.APP_URL || process.env.FRONTEND_URL || "https://movecta.jetguard.com.br").replace(/\/$/, "");
+  return String(
+    process.env.PUBLIC_APP_URL ||
+      process.env.APP_URL ||
+      process.env.FRONTEND_URL ||
+      "https://movecta.jetguard.com.br",
+  ).replace(/\/$/, "");
 }
 
 function urlValidacaoCertificado(token: string) {
@@ -71,7 +91,9 @@ function urlValidacaoCertificado(token: string) {
 }
 
 function treinamentoConcluido(status?: string | null) {
-  return String(status || "").toLowerCase().startsWith("conclu");
+  return String(status || "")
+    .toLowerCase()
+    .startsWith("conclu");
 }
 
 function idade(data: Date) {
@@ -103,20 +125,28 @@ function extensaoAssinaturaDataUrl(dataUrl: string) {
 
 async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
-  await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext('movecta_treinamento_terminal_certificado_${ano}'))`);
+  await tx.$executeRawUnsafe(
+    `SELECT pg_advisory_xact_lock(hashtext('movecta_treinamento_terminal_certificado_${ano}'))`,
+  );
   const certificados = await tx.treinamentoTerminal.findMany({
     where: { codigo: { endsWith: `/${ano}` } },
     select: { codigo: true },
   });
-  const maiorNumero = certificados.reduce((maior: number, item: { codigo: string | null }) => {
-    const numero = Number(item.codigo?.match(/CERT-(\d+)\//)?.[1] || 0);
-    return Math.max(maior, numero);
-  }, 0);
+  const maiorNumero = certificados.reduce(
+    (maior: number, item: { codigo: string | null }) => {
+      const numero = Number(item.codigo?.match(/CERT-(\d+)\//)?.[1] || 0);
+      return Math.max(maior, numero);
+    },
+    0,
+  );
   const numero = maiorNumero + 1;
   return `CERT-${String(numero).padStart(5, "0")}/${ano}`;
 }
 
-async function garantirCodigoTreinamento(treinamento: { id: number; codigo?: string | null }) {
+async function garantirCodigoTreinamento(treinamento: {
+  id: number;
+  codigo?: string | null;
+}) {
   if (treinamento.codigo) return treinamento.codigo;
   const atualizado = await prisma.$transaction(async (tx) => {
     const codigo = await proximoCodigo(tx);
@@ -129,18 +159,47 @@ async function garantirCodigoTreinamento(treinamento: { id: number; codigo?: str
 }
 
 function arquivoCertificado(token: string) {
-  const pasta = path.resolve(process.cwd(), "uploads", "certificados-treinamento");
+  const pasta = path.resolve(
+    process.cwd(),
+    "uploads",
+    "certificados-treinamento",
+  );
   fs.mkdirSync(pasta, { recursive: true });
   return path.join(pasta, `certificado-${token}.pdf`);
 }
 
-function desenharLinhaAssinatura(doc: PDFKit.PDFDocument, x: number, y: number, largura: number, nome: string, cargo: string) {
-  doc.moveTo(x, y).lineTo(x + largura, y).strokeColor("#2f6bb2").lineWidth(1).stroke();
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9).text(nome, x, y + 12, { width: largura, align: "center" });
-  doc.fillColor("#111827").font("Helvetica").fontSize(8).text(cargo, x, y + 27, { width: largura, align: "center" });
+function desenharLinhaAssinatura(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  largura: number,
+  nome: string,
+  cargo: string,
+) {
+  doc
+    .moveTo(x, y)
+    .lineTo(x + largura, y)
+    .strokeColor("#2f6bb2")
+    .lineWidth(1)
+    .stroke();
+  doc
+    .fillColor("#111827")
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text(nome, x, y + 12, { width: largura, align: "center" });
+  doc
+    .fillColor("#111827")
+    .font("Helvetica")
+    .fontSize(8)
+    .text(cargo, x, y + 27, { width: largura, align: "center" });
 }
 
-function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: number, largura: number) {
+function desenharAssinaturaInstitucional(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  largura: number,
+) {
   for (const assinatura of assinaturasSegurancaPatrimonial) {
     if (!fs.existsSync(assinatura)) continue;
     try {
@@ -151,26 +210,47 @@ function desenharAssinaturaInstitucional(doc: PDFKit.PDFDocument, x: number, y: 
       });
       break;
     } catch (error) {
-      console.error("Falha ao inserir assinatura institucional no certificado:", error);
+      console.error(
+        "Falha ao inserir assinatura institucional no certificado:",
+        error,
+      );
     }
   }
 
-  doc.moveTo(x, y).lineTo(x + largura, y).strokeColor("#2f6bb2").lineWidth(1).stroke();
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(9.5).text("Segurança Patrimonial", x, y + 12, {
-    width: largura,
-    align: "center",
-  });
-  doc.fillColor("#111827").font("Helvetica").fontSize(8.5).text("Movecta S.A", x, y + 28, {
-    width: largura,
-    align: "center",
-  });
+  doc
+    .moveTo(x, y)
+    .lineTo(x + largura, y)
+    .strokeColor("#2f6bb2")
+    .lineWidth(1)
+    .stroke();
+  doc
+    .fillColor("#111827")
+    .font("Helvetica-Bold")
+    .fontSize(9.5)
+    .text("Segurança Patrimonial", x, y + 12, {
+      width: largura,
+      align: "center",
+    });
+  doc
+    .fillColor("#111827")
+    .font("Helvetica")
+    .fontSize(8.5)
+    .text("Movecta S.A", x, y + 28, {
+      width: largura,
+      align: "center",
+    });
 }
 
 async function gerarCertificadoPdf(treinamento: any) {
   const destino = arquivoCertificado(treinamento.token);
   const destinoTemporario = `${destino}.tmp`;
   fs.rmSync(destinoTemporario, { force: true });
-  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0, bufferPages: true });
+  const doc = new PDFDocument({
+    size: "A4",
+    layout: "landscape",
+    margin: 0,
+    bufferPages: true,
+  });
   const stream = fs.createWriteStream(destinoTemporario);
   doc.pipe(stream);
 
@@ -188,19 +268,41 @@ async function gerarCertificadoPdf(treinamento: any) {
   doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
   doc.rect(0, 0, pageWidth, 142).fill("#356bad");
   doc.save();
-  doc.fillColor("#ffffff").path("M300 142 L430 30 C472 -8 534 15 536 78 L536 132 C536 139 542 144 548 138 L674 32 C720 -7 783 17 785 80 L785 142 Z").fill();
+  doc
+    .fillColor("#ffffff")
+    .path(
+      "M300 142 L430 30 C472 -8 534 15 536 78 L536 132 C536 139 542 144 548 138 L674 32 C720 -7 783 17 785 80 L785 142 Z",
+    )
+    .fill();
   doc.restore();
 
-  doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(34).text("CERTIFICADO", 44, 58, { width: 270, lineBreak: false });
-  doc.roundedRect(pageWidth - 218, 34, 174, 34, 10).fillAndStroke("#ffffff", "#bfdbfe");
-  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15).text(treinamento.codigo, pageWidth - 204, 44, { width: 146, align: "center" });
+  doc
+    .fillColor("#ffffff")
+    .font("Helvetica-Bold")
+    .fontSize(34)
+    .text("CERTIFICADO", 44, 58, { width: 270, lineBreak: false });
+  doc
+    .roundedRect(pageWidth - 218, 34, 174, 34, 10)
+    .fillAndStroke("#ffffff", "#bfdbfe");
+  doc
+    .fillColor("#1d4ed8")
+    .font("Helvetica-Bold")
+    .fontSize(15)
+    .text(treinamento.codigo, pageWidth - 204, 44, {
+      width: 146,
+      align: "center",
+    });
 
   const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu o Curso Básico de Conhecimentos Aduaneiros, atendendo ao requisito para o credenciamento de pessoas para ingresso em recintos alfandegados, conforme a PORTARIA ALF/STS Nº 205, DE 22 DE JUNHO DE 2026 e demais normas aplicáveis, em ${dataCurta(concluidoEm)}.`;
-  doc.fillColor("#111827").font("Helvetica").fontSize(15.5).text(textoPrincipal, 160, 184, {
-    width: 540,
-    align: "center",
-    lineGap: 6,
-  });
+  doc
+    .fillColor("#111827")
+    .font("Helvetica")
+    .fontSize(15.5)
+    .text(textoPrincipal, 160, 184, {
+      width: 540,
+      align: "center",
+      lineGap: 6,
+    });
 
   if (treinamento.assinaturaDataUrl) {
     const assinaturaDataUrl = String(treinamento.assinaturaDataUrl);
@@ -208,25 +310,50 @@ async function gerarCertificadoPdf(treinamento: any) {
     const extensao = extensaoAssinaturaDataUrl(assinaturaDataUrl) || "png";
     if (assinaturaBase64) {
       const buffer = Buffer.from(assinaturaBase64, "base64");
-      const assinaturaArquivo = path.join(path.dirname(destino), `assinatura-${treinamento.token}.${extensao}`);
+      const assinaturaArquivo = path.join(
+        path.dirname(destino),
+        `assinatura-${treinamento.token}.${extensao}`,
+      );
       try {
         fs.writeFileSync(assinaturaArquivo, buffer);
-        doc.image(assinaturaArquivo, 176, 356, { fit: [240, 52], align: "center" });
+        doc.image(assinaturaArquivo, 176, 356, {
+          fit: [240, 52],
+          align: "center",
+        });
       } catch (error) {
-        console.error("Falha ao inserir assinatura do participante no certificado:", error);
+        console.error(
+          "Falha ao inserir assinatura do participante no certificado:",
+          error,
+        );
       } finally {
         fs.rmSync(assinaturaArquivo, { force: true });
       }
     }
   }
 
-  desenharLinhaAssinatura(doc, 158, 415, 275, treinamento.nomeCompleto, "Participante");
+  desenharLinhaAssinatura(
+    doc,
+    158,
+    415,
+    275,
+    treinamento.nomeCompleto,
+    "Participante",
+  );
   desenharAssinaturaInstitucional(doc, 472, 415, 275);
 
   doc.image(qrCode, 58, 424, { width: 72, height: 72 });
-  doc.fillColor("#334155").font("Helvetica-Bold").fontSize(7).text("VALIDAÇÃO", 49, 502, { width: 90, align: "center" });
+  doc
+    .fillColor("#334155")
+    .font("Helvetica-Bold")
+    .fontSize(7)
+    .text("VALIDAÃ‡ÃƒO", 49, 502, { width: 90, align: "center" });
 
-  doc.moveTo(206, 505).lineTo(580, 505).strokeColor("#86b91d").lineWidth(1).stroke();
+  doc
+    .moveTo(206, 505)
+    .lineTo(580, 505)
+    .strokeColor("#86b91d")
+    .lineWidth(1)
+    .stroke();
   doc.circle(206, 505, 3).fill("#86b91d");
   doc.circle(580, 505, 3).fill("#86b91d");
 
@@ -234,14 +361,30 @@ async function gerarCertificadoPdf(treinamento: any) {
     if (fs.existsSync(pdfAssets.logo)) {
       doc.image(pdfAssets.logo, 610, 488, { fit: [150, 46], align: "center" });
     } else {
-      doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
+      doc
+        .fillColor("#356bad")
+        .font("Helvetica-Bold")
+        .fontSize(22)
+        .text("Movecta", 618, 492, { width: 140, align: "center" });
     }
   } catch (error) {
     console.error("Falha ao inserir logo no certificado:", error);
-    doc.fillColor("#356bad").font("Helvetica-Bold").fontSize(22).text("Movecta", 618, 492, { width: 140, align: "center" });
+    doc
+      .fillColor("#356bad")
+      .font("Helvetica-Bold")
+      .fontSize(22)
+      .text("Movecta", 618, 492, { width: 140, align: "center" });
   }
 
-  doc.fillColor("#64748b").font("Helvetica").fontSize(7).text(`Validação: ${validacaoUrl}`, 44, pageHeight - 26, { width: pageWidth - 88, align: "center", ellipsis: true });
+  doc
+    .fillColor("#64748b")
+    .font("Helvetica")
+    .fontSize(7)
+    .text(`Validação: ${validacaoUrl}`, 44, pageHeight - 26, {
+      width: pageWidth - 88,
+      align: "center",
+      ellipsis: true,
+    });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
@@ -266,7 +409,9 @@ function respostaPublica(treinamento: any) {
     duracaoSegundos: treinamento.duracaoSegundos,
     videoConcluido: treinamento.videoConcluido,
     aceiteDeclaracao: treinamento.aceiteDeclaracao,
-    certificadoUrl: treinamento.certificadoArquivo ? `/api/public/treinamento-terminal/${treinamento.token}/certificado` : null,
+    certificadoUrl: treinamento.certificadoArquivo
+      ? `/api/public/treinamento-terminal/${treinamento.token}/certificado`
+      : null,
   };
 }
 
@@ -285,12 +430,26 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
     const email = texto(req.body.email).toLowerCase();
     const dataNascimento = new Date(req.body.dataNascimento);
 
-    if (!texto(req.body.nomeCompleto) || !cpfValido(cpf) || !emailValido(email) || Number.isNaN(dataNascimento.getTime())) {
-      return res.status(400).json({ error: "Informe nome completo, CPF válido, e-mail e data de nascimento." });
+    if (
+      !texto(req.body.nomeCompleto) ||
+      !cpfValido(cpf) ||
+      !emailValido(email) ||
+      Number.isNaN(dataNascimento.getTime())
+    ) {
+      return res
+        .status(400)
+        .json({
+          error:
+            "Informe nome completo, CPF válido, e-mail e data de nascimento.",
+        });
     }
 
     if (idade(dataNascimento) < 18) {
-      return res.status(400).json({ error: "O treinamento e recomendado apenas para maiores de 18 anos." });
+      return res
+        .status(400)
+        .json({
+          error: "O treinamento e recomendado apenas para maiores de 18 anos.",
+        });
     }
 
     const existente = await prisma.treinamentoTerminal.findFirst({
@@ -336,23 +495,40 @@ export async function iniciarTreinamentoTerminal(req: Request, res: Response) {
       },
     });
 
-    return res.status(201).json({ treinamento: respostaPublica(treinamento), emAndamento: false });
+    return res
+      .status(201)
+      .json({ treinamento: respostaPublica(treinamento), emAndamento: false });
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao iniciar treinamento." });
   }
 }
 
-export async function atualizarProgressoTreinamento(req: Request, res: Response) {
+export async function atualizarProgressoTreinamento(
+  req: Request,
+  res: Response,
+) {
   try {
     const token = String(req.params.token || "");
-    const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
-    if (treinamentoConcluido(treinamento.status)) return res.json({ treinamento: respostaPublica(treinamento) });
+    const treinamento = await prisma.treinamentoTerminal.findUnique({
+      where: { token },
+    });
+    if (!treinamento)
+      return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (treinamentoConcluido(treinamento.status))
+      return res.json({ treinamento: respostaPublica(treinamento) });
 
-    const progresso = Math.max(0, Math.floor(Number(req.body.progressoSegundos || 0)));
-    const duracao = Math.max(treinamento.duracaoSegundos || 0, Math.floor(Number(req.body.duracaoSegundos || 0)));
-    const videoConcluido = Boolean(req.body.videoConcluido) || (duracao > 0 && progresso >= Math.max(0, duracao - 2));
+    const progresso = Math.max(
+      0,
+      Math.floor(Number(req.body.progressoSegundos || 0)),
+    );
+    const duracao = Math.max(
+      treinamento.duracaoSegundos || 0,
+      Math.floor(Number(req.body.duracaoSegundos || 0)),
+    );
+    const videoConcluido =
+      Boolean(req.body.videoConcluido) ||
+      (duracao > 0 && progresso >= Math.max(0, duracao - 2));
 
     const atualizado = await prisma.treinamentoTerminal.update({
       where: { id: treinamento.id },
@@ -375,12 +551,23 @@ export async function atualizarProgressoTreinamento(req: Request, res: Response)
 export async function concluirTreinamentoTerminal(req: Request, res: Response) {
   try {
     const token = String(req.params.token || "");
-    const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
-    if (!treinamento.videoConcluido) return res.status(400).json({ error: "Conclua o vídeo antes de emitir o certificado." });
-    if (!req.body.aceiteDeclaracao) return res.status(400).json({ error: "Confirme a declaração de ciência." });
+    const treinamento = await prisma.treinamentoTerminal.findUnique({
+      where: { token },
+    });
+    if (!treinamento)
+      return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!treinamento.videoConcluido)
+      return res
+        .status(400)
+        .json({ error: "Conclua o vídeo antes de emitir o certificado." });
+    if (!req.body.aceiteDeclaracao)
+      return res
+        .status(400)
+        .json({ error: "Confirme a declaração de ciência." });
     if (!extensaoAssinaturaDataUrl(texto(req.body.assinaturaDataUrl))) {
-      return res.status(400).json({ error: "Informe a assinatura eletrônica." });
+      return res
+        .status(400)
+        .json({ error: "Informe a assinatura eletrônica." });
     }
 
     let atualizado = await prisma.$transaction(async (tx) => {
@@ -406,7 +593,13 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
       subject: `Certificado de treinamento - ${codigoCertificado}`,
       text: `Olá, ${atualizado.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.`,
       html: `<p>Olá, <strong>${atualizado.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.</p>`,
-      attachments: [{ filename: `certificado-${codigoCertificado.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
+      attachments: [
+        {
+          filename: `certificado-${codigoCertificado.replace("/", "-")}.pdf`,
+          path: certificadoArquivo,
+          contentType: "application/pdf",
+        },
+      ],
     });
 
     atualizado = await prisma.treinamentoTerminal.update({
@@ -426,9 +619,14 @@ export async function concluirTreinamentoTerminal(req: Request, res: Response) {
   }
 }
 
-export async function baixarCertificadoTreinamento(req: Request, res: Response) {
+export async function baixarCertificadoTreinamento(
+  req: Request,
+  res: Response,
+) {
   const token = String(req.params.token || "");
-  const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
+  const treinamento = await prisma.treinamentoTerminal.findUnique({
+    where: { token },
+  });
   if (!treinamento || !treinamentoConcluido(treinamento.status)) {
     return res.status(404).json({ error: "Certificado não encontrado." });
   }
@@ -445,14 +643,28 @@ export async function baixarCertificadoTreinamento(req: Request, res: Response) 
     return res.status(404).json({ error: "Certificado não encontrado." });
   }
 
-  return res.download(certificadoArquivo, `certificado-${codigo.replace("/", "-")}.pdf`);
+  return res.download(
+    certificadoArquivo,
+    `certificado-${codigo.replace("/", "-")}.pdf`,
+  );
 }
 
-export async function validarCertificadoTreinamento(req: Request, res: Response) {
+export async function validarCertificadoTreinamento(
+  req: Request,
+  res: Response,
+) {
   const token = String(req.params.token || "");
-  const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { token } });
-  if (!treinamento || !treinamentoConcluido(treinamento.status) || !treinamento.certificadoArquivo) {
-    return res.status(404).json({ error: "Certificado não encontrado ou ainda não emitido." });
+  const treinamento = await prisma.treinamentoTerminal.findUnique({
+    where: { token },
+  });
+  if (
+    !treinamento ||
+    !treinamentoConcluido(treinamento.status) ||
+    !treinamento.certificadoArquivo
+  ) {
+    return res
+      .status(404)
+      .json({ error: "Certificado não encontrado ou ainda não emitido." });
   }
 
   return res.json({
@@ -469,15 +681,26 @@ export async function validarCertificadoTreinamento(req: Request, res: Response)
   });
 }
 
-export async function reenviarCertificadoTreinamento(req: AuthRequest, res: Response) {
+export async function reenviarCertificadoTreinamento(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+    if (!Number.isInteger(id))
+      return res.status(400).json({ error: "Treinamento inválido." });
 
-    const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { id } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+    const treinamento = await prisma.treinamentoTerminal.findUnique({
+      where: { id },
+    });
+    if (!treinamento)
+      return res.status(404).json({ error: "Treinamento não encontrado." });
     if (!treinamentoConcluido(treinamento.status)) {
-      return res.status(400).json({ error: "O certificado só pode ser enviado após a conclusão do curso." });
+      return res
+        .status(400)
+        .json({
+          error: "O certificado só pode ser enviado após a conclusão do curso.",
+        });
     }
 
     const codigo = await garantirCodigoTreinamento(treinamento);
@@ -488,7 +711,13 @@ export async function reenviarCertificadoTreinamento(req: AuthRequest, res: Resp
       subject: `Certificado de treinamento - ${codigo}`,
       text: `Olá, ${treinamento.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.`,
       html: `<p>Olá, <strong>${treinamento.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento de acesso ao terminal.</p>`,
-      attachments: [{ filename: `certificado-${codigo.replace("/", "-")}.pdf`, path: certificadoArquivo, contentType: "application/pdf" }],
+      attachments: [
+        {
+          filename: `certificado-${codigo.replace("/", "-")}.pdf`,
+          path: certificadoArquivo,
+          contentType: "application/pdf",
+        },
+      ],
     });
 
     const atualizado = await prisma.treinamentoTerminal.update({
@@ -501,7 +730,9 @@ export async function reenviarCertificadoTreinamento(req: AuthRequest, res: Resp
     });
 
     return res.json({
-      mensagem: email.enviado ? "Certificado enviado com sucesso." : "Envio registrado. Verifique a configuração de SMTP.",
+      mensagem: email.enviado
+        ? "Certificado enviado com sucesso."
+        : "Envio registrado. Verifique a configuração de SMTP.",
       treinamento: {
         ...atualizado,
         assinaturaDataUrl: undefined,
@@ -514,28 +745,45 @@ export async function reenviarCertificadoTreinamento(req: AuthRequest, res: Resp
   }
 }
 
-export async function listarTreinamentosTerminal(req: AuthRequest, res: Response) {
+export async function listarTreinamentosTerminal(
+  req: AuthRequest,
+  res: Response,
+) {
   const treinamentos = await prisma.treinamentoTerminal.findMany({
     orderBy: { updatedAt: "desc" },
     take: 300,
   });
 
-  return res.json(treinamentos.map((item) => ({
-    ...item,
-    assinaturaDataUrl: undefined,
-    certificadoUrl: item.certificadoArquivo ? `/api/public/treinamento-terminal/${item.token}/certificado` : null,
-  })));
+  return res.json(
+    treinamentos.map((item) => ({
+      ...item,
+      assinaturaDataUrl: undefined,
+      certificadoUrl: item.certificadoArquivo
+        ? `/api/public/treinamento-terminal/${item.token}/certificado`
+        : null,
+    })),
+  );
 }
 
-export async function excluirTreinamentoTerminal(req: AuthRequest, res: Response) {
+export async function excluirTreinamentoTerminal(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+    if (!Number.isInteger(id))
+      return res.status(400).json({ error: "Treinamento inválido." });
 
-    const treinamento = await prisma.treinamentoTerminal.findUnique({ where: { id } });
-    if (!treinamento) return res.status(404).json({ error: "Treinamento não encontrado." });
+    const treinamento = await prisma.treinamentoTerminal.findUnique({
+      where: { id },
+    });
+    if (!treinamento)
+      return res.status(404).json({ error: "Treinamento não encontrado." });
 
-    if (treinamento.certificadoArquivo && fs.existsSync(treinamento.certificadoArquivo)) {
+    if (
+      treinamento.certificadoArquivo &&
+      fs.existsSync(treinamento.certificadoArquivo)
+    ) {
       fs.rmSync(treinamento.certificadoArquivo, { force: true });
     }
 

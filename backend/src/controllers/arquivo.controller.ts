@@ -1,4 +1,4 @@
-import fs from "fs";
+﻿import fs from "fs";
 import path from "path";
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
@@ -17,7 +17,11 @@ function variantesCaminho(caminho: string) {
 function dentroDeUploads(caminhoAbsoluto: string) {
   const raizUploads = path.resolve(process.cwd(), "uploads");
   const relativo = path.relative(raizUploads, caminhoAbsoluto);
-  return Boolean(relativo) && !relativo.startsWith("..") && !path.isAbsolute(relativo);
+  return (
+    Boolean(relativo) &&
+    !relativo.startsWith("..") &&
+    !path.isAbsolute(relativo)
+  );
 }
 
 function podeVerTodasUnidades(perfil?: string) {
@@ -25,17 +29,28 @@ function podeVerTodasUnidades(perfil?: string) {
 }
 
 function unidadePermitida(req: AuthRequest, unidade?: string | null) {
-  return podeVerTodasUnidades(req.usuarioPerfil) || !unidade || unidade === req.unidadeAtiva;
+  return (
+    podeVerTodasUnidades(req.usuarioPerfil) ||
+    !unidade ||
+    unidade === req.unidadeAtiva
+  );
 }
 
 async function localizarArquivo(req: AuthRequest, caminhoNormalizado: string) {
   if (caminhoNormalizado.startsWith("uploads/perfis/")) {
-    return { permitido: true, tipoRegistro: "UsuarioPerfil", registroId: req.usuarioId, unidade: req.unidadeAtiva };
+    return {
+      permitido: true,
+      tipoRegistro: "UsuarioPerfil",
+      registroId: req.usuarioId,
+      unidade: req.unidadeAtiva,
+    };
   }
 
   const ocorrencia = await prisma.anexoOcorrencia.findFirst({
     where: { caminho: { in: variantesCaminho(caminhoNormalizado) } },
-    include: { ocorrencia: { select: { id: true, unidade: true, codigo: true } } },
+    include: {
+      ocorrencia: { select: { id: true, unidade: true, codigo: true } },
+    },
   });
   if (ocorrencia) {
     return {
@@ -61,7 +76,9 @@ async function localizarArquivo(req: AuthRequest, caminhoNormalizado: string) {
 
   const risco = await prisma.fotoRisco.findFirst({
     where: { caminho: { in: variantesCaminho(caminhoNormalizado) } },
-    include: { analiseRisco: { select: { id: true, unidade: true, codigo: true } } },
+    include: {
+      analiseRisco: { select: { id: true, unidade: true, codigo: true } },
+    },
   });
   if (risco) {
     return {
@@ -74,7 +91,9 @@ async function localizarArquivo(req: AuthRequest, caminhoNormalizado: string) {
 
   const quadra = await prisma.quadraSegurancaAnexo.findFirst({
     where: { caminho: { in: variantesCaminho(caminhoNormalizado) } },
-    include: { container: { select: { id: true, unidade: true, numeroContainer: true } } },
+    include: {
+      container: { select: { id: true, unidade: true, numeroContainer: true } },
+    },
   });
   if (quadra) {
     return {
@@ -108,8 +127,12 @@ async function localizarArquivo(req: AuthRequest, caminhoNormalizado: string) {
 
 export async function servirArquivoProtegido(req: AuthRequest, res: Response) {
   try {
-    const caminhoSolicitado = Array.isArray(req.params[0]) ? req.params[0].join("/") : String(req.params[0] || "");
-    const caminhoNormalizado = normalizarCaminho(`uploads/${caminhoSolicitado}`);
+    const caminhoSolicitado = Array.isArray(req.params[0])
+      ? req.params[0].join("/")
+      : String(req.params[0] || "");
+    const caminhoNormalizado = normalizarCaminho(
+      `uploads/${caminhoSolicitado}`,
+    );
     const caminhoAbsoluto = path.resolve(process.cwd(), caminhoNormalizado);
 
     if (!dentroDeUploads(caminhoAbsoluto) || !fs.existsSync(caminhoAbsoluto)) {
@@ -118,7 +141,9 @@ export async function servirArquivoProtegido(req: AuthRequest, res: Response) {
 
     const vinculo = await localizarArquivo(req, caminhoNormalizado);
     if (!vinculo?.permitido) {
-      return res.status(403).json({ error: "Acesso não autorizado ao arquivo." });
+      return res
+        .status(403)
+        .json({ error: "Acesso não autorizado ao arquivo." });
     }
 
     await registrarLog({
@@ -140,6 +165,8 @@ export async function servirArquivoProtegido(req: AuthRequest, res: Response) {
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao carregar arquivo protegido." });
+    return res
+      .status(500)
+      .json({ error: "Erro ao carregar arquivo protegido." });
   }
 }

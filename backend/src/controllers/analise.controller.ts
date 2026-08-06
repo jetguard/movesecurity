@@ -2,19 +2,29 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
-import { assinarDocumento, exigirSenhaAssinatura } from "../services/assinaturaDocumento.service";
+import {
+  assinarDocumento,
+  exigirSenhaAssinatura,
+} from "../services/assinaturaDocumento.service";
 
 function normalizarBrl(valor: unknown) {
   return String(valor || "0,00").trim() || "0,00";
 }
 
-function statusRelatorioAposAnalise(concluindo: boolean, investigacao?: { status?: string | null } | null) {
+function statusRelatorioAposAnalise(
+  concluindo: boolean,
+  investigacao?: { status?: string | null } | null,
+) {
   if (!concluindo) return "Em Análise";
-  if (investigacao && investigacao.status !== "Concluído") return "Em Investigação";
+  if (investigacao && investigacao.status !== "Concluído")
+    return "Em Investigação";
   return "Aguardando Aprovação";
 }
 
-export async function iniciarAnaliseOcorrencia(req: AuthRequest, res: Response) {
+export async function iniciarAnaliseOcorrencia(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { ocorrenciaId } = req.params;
 
@@ -68,11 +78,16 @@ export async function iniciarAnaliseOcorrencia(req: AuthRequest, res: Response) 
     return res.status(201).json(analise);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao iniciar análise da ocorrência" });
+    return res
+      .status(500)
+      .json({ error: "Erro ao iniciar análise da ocorrência" });
   }
 }
 
-export async function atualizarAnaliseOcorrencia(req: AuthRequest, res: Response) {
+export async function atualizarAnaliseOcorrencia(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const { id } = req.params;
     const anterior = await prisma.analiseOcorrencia.findFirst({
@@ -120,10 +135,16 @@ export async function atualizarAnaliseOcorrencia(req: AuthRequest, res: Response
           id: analiseAtual.ocorrenciaId,
         },
         data: {
-          status: statusRelatorioAposAnalise(concluindo, anterior.ocorrencia.investigacao),
-          fluxoStatus: concluindo && (!anterior.ocorrencia.investigacao || anterior.ocorrencia.investigacao.status === "Concluído")
-            ? "Aguardando Revisao"
-            : anterior.ocorrencia.fluxoStatus,
+          status: statusRelatorioAposAnalise(
+            concluindo,
+            anterior.ocorrencia.investigacao,
+          ),
+          fluxoStatus:
+            concluindo &&
+            (!anterior.ocorrencia.investigacao ||
+              anterior.ocorrencia.investigacao.status === "Concluído")
+              ? "Aguardando Revisao"
+              : anterior.ocorrencia.fluxoStatus,
         },
       });
 
@@ -155,8 +176,11 @@ export async function atualizarAnaliseOcorrencia(req: AuthRequest, res: Response
   } catch (error) {
     console.error(error);
     const status = (error as Error & { status?: number }).status;
-    if (status) return res.status(status).json({ error: (error as Error).message });
-    return res.status(500).json({ error: "Erro ao atualizar análise da ocorrência" });
+    if (status)
+      return res.status(status).json({ error: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar análise da ocorrência" });
   }
 }
 
@@ -263,7 +287,9 @@ export async function atualizarAnaliseEvento(req: AuthRequest, res: Response) {
         },
         data: {
           status: concluindo ? "Aguardando Aprovação" : "Em Análise",
-          fluxoStatus: concluindo ? "Aguardando Revisao" : anterior.evento.fluxoStatus,
+          fluxoStatus: concluindo
+            ? "Aguardando Revisao"
+            : anterior.evento.fluxoStatus,
         },
       });
 
@@ -295,8 +321,10 @@ export async function atualizarAnaliseEvento(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     const status = (error as Error & { status?: number }).status;
-    if (status) return res.status(status).json({ error: (error as Error).message });
-    return res.status(500).json({ error: "Erro ao atualizar análise do evento" });
+    if (status)
+      return res.status(status).json({ error: (error as Error).message });
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar análise do evento" });
   }
 }
-

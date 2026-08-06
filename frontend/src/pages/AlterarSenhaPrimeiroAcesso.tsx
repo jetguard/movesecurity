@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import type { FormEvent } from "react";
 import type { AxiosError } from "axios";
 import { LockKeyhole, ShieldCheck } from "lucide-react";
@@ -49,23 +49,34 @@ export default function AlterarSenhaPrimeiroAcesso() {
     <main className="flex min-h-screen items-center justify-center bg-slate-950 px-5 py-10 text-white">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(37,99,235,0.35),transparent_34%),radial-gradient(circle_at_80%_10%,rgba(14,165,233,0.18),transparent_30%)]" />
 
-      <form onSubmit={salvar} className="relative z-10 w-full max-w-lg rounded-3xl border border-white/10 bg-white/10 p-7 shadow-2xl backdrop-blur-xl sm:p-8">
+      <form
+        onSubmit={salvar}
+        className="relative z-10 w-full max-w-lg rounded-3xl border border-white/10 bg-white/10 p-7 shadow-2xl backdrop-blur-xl sm:p-8"
+      >
         <div className="mb-7 flex items-start gap-4">
           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-200 ring-1 ring-blue-300/20">
             <LockKeyhole size={26} />
           </div>
           <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-200">Primeiro acesso</p>
-            <h1 className="mt-2 text-2xl font-bold">Configure seu acesso seguro</h1>
+            <p className="text-sm font-semibold uppercase tracking-[0.16em] text-blue-200">
+              Primeiro acesso
+            </p>
+            <h1 className="mt-2 text-2xl font-bold">
+              Configure seu acesso seguro
+            </h1>
             <p className="mt-2 text-sm leading-6 text-slate-300">
-              Olá, {usuario?.apelido || usuario?.nome || "usuário"}. Para continuar no JetGuard, cadastre uma senha definitiva e um PIN operacional.
+              Olá, {usuario?.apelido || usuario?.nome || "usuário"}. Para
+              continuar no JetGuard, cadastre uma senha definitiva e um PIN
+              operacional.
             </p>
           </div>
         </div>
 
         <div className="space-y-4">
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-200">Senha provisória</span>
+            <span className="mb-2 block text-sm font-semibold text-slate-200">
+              Senha provisória
+            </span>
             <input
               type="password"
               placeholder="Digite a senha provisória recebida"
@@ -77,7 +88,9 @@ export default function AlterarSenhaPrimeiroAcesso() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-200">Nova senha</span>
+            <span className="mb-2 block text-sm font-semibold text-slate-200">
+              Nova senha
+            </span>
             <input
               type="password"
               placeholder="Crie uma nova senha definitiva"
@@ -90,7 +103,9 @@ export default function AlterarSenhaPrimeiroAcesso() {
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-slate-200">Confirmar nova senha</span>
+            <span className="mb-2 block text-sm font-semibold text-slate-200">
+              Confirmar nova senha
+            </span>
             <input
               type="password"
               placeholder="Repita a nova senha"
@@ -104,7 +119,9 @@ export default function AlterarSenhaPrimeiroAcesso() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-200">PIN operacional</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-200">
+                PIN operacional
+              </span>
               <input
                 type="password"
                 inputMode="numeric"
@@ -112,14 +129,18 @@ export default function AlterarSenhaPrimeiroAcesso() {
                 maxLength={4}
                 placeholder="4 dígitos"
                 value={pinOperacional}
-                onChange={(event) => setPinOperacional(normalizarPin(event.target.value))}
+                onChange={(event) =>
+                  setPinOperacional(normalizarPin(event.target.value))
+                }
                 className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
                 required
               />
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-slate-200">Confirmar PIN</span>
+              <span className="mb-2 block text-sm font-semibold text-slate-200">
+                Confirmar PIN
+              </span>
               <input
                 type="password"
                 inputMode="numeric"
@@ -127,7 +148,9 @@ export default function AlterarSenhaPrimeiroAcesso() {
                 maxLength={4}
                 placeholder="Repita o PIN"
                 value={confirmarPinOperacional}
-                onChange={(event) => setConfirmarPinOperacional(normalizarPin(event.target.value))}
+                onChange={(event) =>
+                  setConfirmarPinOperacional(normalizarPin(event.target.value))
+                }
                 className="w-full rounded-xl border border-white/10 bg-white px-4 py-3 text-slate-900 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/20"
                 required
               />
@@ -140,7 +163,9 @@ export default function AlterarSenhaPrimeiroAcesso() {
             <ShieldCheck size={18} />
             Regra de segurança
           </div>
-          A nova senha deve ter pelo menos 8 caracteres. O PIN deve ter 4 dígitos e será usado para desbloquear sessão, enviar relatórios e assinar ações sensíveis.
+          A nova senha deve ter pelo menos 8 caracteres. O PIN deve ter 4
+          dígitos e será usado para desbloquear sessão, enviar relatórios e
+          assinar ações sensíveis.
         </div>
 
         <button

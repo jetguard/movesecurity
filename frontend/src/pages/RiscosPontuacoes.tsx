@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { AlertTriangle, Edit3, Gauge, RotateCcw, Save, X } from "lucide-react";
 
 type LinhaPontuacao = {

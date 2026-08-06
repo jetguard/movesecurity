@@ -39,12 +39,8 @@ const ALIASES_GRUPOS_TREINAMENTO: Record<string, string> = {
   lideranca: "LIDERANCA",
   liderana: "LIDERANCA",
   lideranaa: "LIDERANCA",
-  "lideranã§a": "LIDERANCA",
-  "lideranÃ§a": "LIDERANCA",
   balanca: "BALANCA",
   balanaa: "BALANCA",
-  "balanã§a": "BALANCA",
-  "balanÃ§a": "BALANCA",
   portaria: "PORTARIA",
   terceirizado: "TERCEIRIZADO",
 };
@@ -134,7 +130,7 @@ function gerarTextoCertificado(modelo: any, participante: any) {
       .replace(/\{\{treinamento\}\}/gi, modelo.nome);
   }
 
-  return `Certificamos que ${participante.nomeCompleto}, portador(a) do CPF nÂº ${formatarCpf(
+  return `Certificamos que ${participante.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(
     participante.cpf || "",
   )}, concluiu com aproveitamento o treinamento ${modelo.codigo} - ${modelo.nome} na data de ${data}.`;
 }
@@ -298,7 +294,7 @@ function lerSnapshot(
       const snapshot = JSON.parse(participante.snapshotJson);
       return incluirCorretas ? snapshot : removerGabarito(snapshot);
     } catch {
-      // Se o snapshot estiver invÃ¡lido, usa o modelo atual.
+      // Se o snapshot estiver inválido, usa o modelo atual.
     }
   }
 
@@ -434,7 +430,7 @@ async function gerarCertificado(modelo: any, participante: any) {
     .fillColor("#0f172a")
     .font("Helvetica-Bold")
     .fontSize(7)
-    .text("VALIDAÃ‡ÃƒO", 70, 508, { width: 102, align: "center" });
+    .text("VALIDAÇÃO", 70, 508, { width: 102, align: "center" });
 
   if (participante.assinaturaDataUrl) {
     const assinaturaBase64 = String(participante.assinaturaDataUrl).split(
@@ -472,7 +468,7 @@ async function gerarCertificado(modelo: any, participante: any) {
     .fillColor("#64748b")
     .font("Helvetica")
     .fontSize(7.5)
-    .text(`ValidaÃ§Ã£o: ${validacaoUrl}`, 170, pageHeight - 70, {
+    .text(`Validação: ${validacaoUrl}`, 170, pageHeight - 70, {
       width: pageWidth - 340,
       align: "center",
     });
@@ -494,8 +490,8 @@ async function enviarCertificado(
   return enviarEmail({
     to: participante.email,
     subject: `Certificado ${modelo.codigo} - ${participante.codigo}`,
-    text: `OlÃ¡, ${participante.nomeCompleto}. Segue em anexo o certificado de conclusÃ£o do treinamento ${modelo.codigo}.`,
-    html: `<p>OlÃ¡, <strong>${participante.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusÃ£o do treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong>.</p>`,
+    text: `Olá, ${participante.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento ${modelo.codigo}.`,
+    html: `<p>Olá, <strong>${participante.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong>.</p>`,
     attachments: [
       {
         filename: `certificado-${String(participante.codigo || modelo.codigo).replace("/", "-")}.pdf`,
@@ -529,9 +525,9 @@ async function enviarConvitesTreinamento(modelo: any, grupos: string[]) {
     selecionados.map((usuario: any) =>
       enviarEmail({
         to: usuario.email,
-        subject: `Treinamento disponÃ­vel - ${modelo.codigo}`,
-        text: `OlÃ¡, ${usuario.nome}. O treinamento ${modelo.codigo} - ${modelo.nome} estÃ¡ disponÃ­vel em ${link}`,
-        html: `<p>OlÃ¡, <strong>${usuario.nome}</strong>.</p><p>O treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong> estÃ¡ disponÃ­vel para o seu grupo.</p><p><a href="${link}">Acessar treinamento</a></p>`,
+        subject: `Treinamento disponível - ${modelo.codigo}`,
+        text: `Olá, ${usuario.nome}. O treinamento ${modelo.codigo} - ${modelo.nome} está disponível em ${link}`,
+        html: `<p>Olá, <strong>${usuario.nome}</strong>.</p><p>O treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong> está disponível para o seu grupo.</p><p><a href="${link}">Acessar treinamento</a></p>`,
       }),
     ),
   );
@@ -551,13 +547,13 @@ function validarPayloadModelo(body: any) {
   );
 
   if (!codigo || !nome || !tipo) {
-    return { error: "Informe tipo, cÃ³digo e nome do treinamento." };
+    return { error: "Informe tipo, código e nome do treinamento." };
   }
   if (!etapas.length) {
-    return { error: "Cadastre pelo menos uma etapa de conteÃºdo." };
+    return { error: "Cadastre pelo menos uma etapa de conteúdo." };
   }
   if (!perguntas.length) {
-    return { error: "Cadastre pelo menos uma pergunta para avaliaÃ§Ã£o." };
+    return { error: "Cadastre pelo menos uma pergunta para avaliação." };
   }
   for (const pergunta of perguntas) {
     const alternativas = Array.isArray(pergunta.alternativas)
@@ -785,7 +781,7 @@ export async function excluirTreinamentoModelo(
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id))
-      return res.status(400).json({ error: "Treinamento invÃ¡lido." });
+      return res.status(400).json({ error: "Treinamento inválido." });
     await db.treinamentoModelo.delete({ where: { id } });
     return res.status(204).send();
   } catch (error: any) {
@@ -802,12 +798,12 @@ export async function excluirParticipanteTreinamentoModelo(
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id))
-      return res.status(400).json({ error: "Registro invÃƒÂ¡lido." });
+      return res.status(400).json({ error: "Registro inválido." });
     const participante = await db.treinamentoModeloParticipante.findUnique({
       where: { id },
     });
     if (!participante)
-      return res.status(404).json({ error: "Registro nÃƒÂ£o encontrado." });
+      return res.status(404).json({ error: "Registro não encontrado." });
     if (participante.certificadoArquivo) {
       fs.rmSync(participante.certificadoArquivo, { force: true });
     }
@@ -823,7 +819,7 @@ export async function excluirParticipanteTreinamentoModelo(
 export async function buscarTreinamentoPublico(req: Request, res: Response) {
   const modelo = await carregarModeloPorSlug(texto(req.params.slug));
   if (!modelo || modelo.status !== "Publicado") {
-    return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
+    return res.status(404).json({ error: "Treinamento não encontrado." });
   }
   return res.json({ treinamento: serializarModelo(modelo, false) });
 }
@@ -985,16 +981,16 @@ export async function concluirEtapaTreinamentoModelo(
       },
     });
     if (!participante)
-      return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
+      return res.status(404).json({ error: "Treinamento não encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     const totalEtapas = snapshot.etapas.length;
     if (!Number.isInteger(etapa) || etapa < 1 || etapa > totalEtapas) {
-      return res.status(400).json({ error: "Etapa invÃ¡lida." });
+      return res.status(400).json({ error: "Etapa inválida." });
     }
     if (etapa > participante.etapaAtual) {
       return res
         .status(403)
-        .json({ error: "Conclua as etapas anteriores antes de avanÃ§ar." });
+        .json({ error: "Conclua as etapas anteriores antes de avançar." });
     }
     const proxima = Math.max(participante.etapaAtual, etapa + 1);
     const atualizado = await db.treinamentoModeloParticipante.update({
@@ -1036,13 +1032,13 @@ export async function responderQuizTreinamentoModelo(
       },
     });
     if (!participante)
-      return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
+      return res.status(404).json({ error: "Treinamento não encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     const perguntas = snapshot.perguntas || [];
     if (perguntas.length === 0)
-      return res.status(400).json({ error: "Treinamento sem avaliaÃ§Ã£o." });
+      return res.status(400).json({ error: "Treinamento sem avaliação." });
     if (Object.keys(respostas).length < perguntas.length) {
-      return res.status(400).json({ error: "Responda todas as questÃµes." });
+      return res.status(400).json({ error: "Responda todas as questões." });
     }
 
     const detalhes = perguntas.map((pergunta: any) => {
@@ -1086,7 +1082,7 @@ export async function responderQuizTreinamentoModelo(
   } catch (error: any) {
     return res
       .status(500)
-      .json({ error: error?.message || "Erro ao validar avaliaÃ§Ã£o." });
+      .json({ error: error?.message || "Erro ao validar avaliação." });
   }
 }
 
@@ -1123,13 +1119,12 @@ export async function salvarAvaliacaoTreinamentoModelo(
       },
     });
     if (!participante)
-      return res.status(404).json({ error: "Treinamento nÃƒÂ£o encontrado." });
+      return res.status(404).json({ error: "Treinamento não encontrado." });
 
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     if ((participante.nota || 0) < snapshot.notaMinima) {
       return res.status(400).json({
-        error:
-          "Conclua a avaliaÃƒÂ§ÃƒÂ£o final antes de avaliar o treinamento.",
+        error: "Conclua a avaliação final antes de avaliar o treinamento.",
       });
     }
 
@@ -1139,7 +1134,7 @@ export async function salvarAvaliacaoTreinamentoModelo(
     if (faltantes.length) {
       return res.status(400).json({
         error:
-          "Responda todos os itens obrigatÃƒÂ³rios da avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
+          "Responda todos os itens obrigatórios da avaliação do treinamento.",
       });
     }
 
@@ -1169,12 +1164,12 @@ export async function salvarAvaliacaoTreinamentoModelo(
     });
 
     return res.json({
-      mensagem: "AvaliaÃƒÂ§ÃƒÂ£o do treinamento registrada com sucesso.",
+      mensagem: "Avaliação do treinamento registrada com sucesso.",
       participante: respostaParticipante(atualizado),
     });
   } catch (error: any) {
     return res.status(500).json({
-      error: error?.message || "Erro ao salvar avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
+      error: error?.message || "Erro ao salvar avaliação do treinamento.",
     });
   }
 }
@@ -1184,7 +1179,7 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     const token = texto(req.params.token);
     const assinaturaDataUrl = texto(req.body.assinaturaDataUrl);
     if (!assinaturaDataUrl.startsWith("data:image/")) {
-      return res.status(400).json({ error: "Assinatura invÃ¡lida." });
+      return res.status(400).json({ error: "Assinatura inválida." });
     }
 
     const participante = await db.treinamentoModeloParticipante.findUnique({
@@ -1202,18 +1197,18 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
       },
     });
     if (!participante)
-      return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
+      return res.status(404).json({ error: "Treinamento não encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     if ((participante.nota || 0) < snapshot.notaMinima) {
       return res
         .status(400)
-        .json({ error: "A nota mÃ­nima ainda nÃ£o foi atingida." });
+        .json({ error: "A nota mínima ainda não foi atingida." });
     }
 
     if (!participante.avaliacaoTreinamentoJson) {
       return res.status(400).json({
         error:
-          "Responda a avaliaÃƒÂ§ÃƒÂ£o do treinamento antes de emitir o certificado.",
+          "Responda a avaliação do treinamento antes de emitir o certificado.",
       });
     }
 
@@ -1253,7 +1248,7 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     return res.json({
       mensagem: email.enviado
         ? "Certificado emitido e enviado por e-mail."
-        : "Certificado emitido. O envio por e-mail nÃ£o foi confirmado.",
+        : "Certificado emitido. O envio por e-mail não foi confirmado.",
       participante: respostaParticipante(atualizado),
     });
   } catch (error: any) {
@@ -1285,7 +1280,7 @@ export async function baixarCertificadoTreinamentoModelo(
       },
     });
     if (!participante || !treinamentoConcluido(participante.status)) {
-      return res.status(404).json({ error: "Certificado nÃ£o encontrado." });
+      return res.status(404).json({ error: "Certificado não encontrado." });
     }
     const certificadoArquivo =
       participante.certificadoArquivo &&
@@ -1333,11 +1328,11 @@ export async function reenviarEmailTreinamentoModelo(
       },
     });
     if (!participante)
-      return res.status(404).json({ error: "Registro nÃ£o encontrado." });
+      return res.status(404).json({ error: "Registro não encontrado." });
     if (!treinamentoConcluido(participante.status)) {
       return res
         .status(400)
-        .json({ error: "SÃ³ Ã© possÃ­vel enviar apÃ³s a conclusÃ£o." });
+        .json({ error: "Só é possível enviar após a conclusão." });
     }
     const certificadoArquivo =
       participante.certificadoArquivo &&
