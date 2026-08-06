@@ -1,4 +1,15 @@
 ﻿import { useEffect, useMemo, useState } from "react";
+import {
+  KeyRound,
+  LockKeyhole,
+  Pencil,
+  Plus,
+  Search,
+  ShieldCheck,
+  Trash2,
+  UnlockKeyhole,
+  UserRound,
+} from "lucide-react";
 import { api } from "../services/api";
 import { podeSuperAdmin } from "../utils/permissoes";
 
@@ -89,6 +100,44 @@ function mascararCpf(valor: string) {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
+function perfilLabel(valor: string) {
+  if (valor === "SUPER_ADMIN") return "Super Admin";
+  return perfis.find((perfil) => perfil.value === valor)?.label || valor || "-";
+}
+
+function statusClasse(status: string) {
+  if (status === "ATIVO") {
+    return "bg-emerald-50 text-emerald-700 ring-emerald-200";
+  }
+  if (status === "BLOQUEADO") {
+    return "bg-red-50 text-red-700 ring-red-200";
+  }
+  return "bg-slate-100 text-slate-600 ring-slate-200";
+}
+
+function IconButton({
+  title,
+  onClick,
+  children,
+  className = "",
+}: {
+  title: string;
+  onClick: () => void;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={`inline-flex h-9 w-9 items-center justify-center rounded-lg border text-slate-600 transition hover:-translate-y-0.5 hover:bg-slate-50 hover:text-slate-950 ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [formulario, setFormulario] = useState({ ...vazio });
@@ -339,34 +388,43 @@ export default function Usuarios() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-5 p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Usuários</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-3xl font-bold text-slate-950 dark:text-white">
+            Usuários
+          </h1>
+          <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-300">
             Cadastro, permissões e status de acesso.
           </p>
         </div>
 
         <button
           onClick={novoUsuario}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
         >
+          <Plus size={18} />
           Novo Usuário
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 rounded-xl bg-white p-4 shadow">
-        <input
-          value={busca}
-          onChange={(e) => setBusca(e.target.value)}
-          className="rounded-lg border p-3"
-          placeholder="Pesquisar nome, email ou R.E"
-        />
+      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_180px] dark:border-slate-800 dark:bg-slate-900">
+        <label className="relative">
+          <Search
+            size={18}
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+            placeholder="Pesquisar nome, e-mail, CPF, R.E ou grupo"
+          />
+        </label>
         <select
           value={filtroPerfil}
           onChange={(e) => setFiltroPerfil(e.target.value)}
-          className="rounded-lg border p-3"
+          className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
         >
           <option value="">Todos os perfis</option>
           <option value="SUPER_ADMIN">Super Admin</option>
@@ -379,7 +437,7 @@ export default function Usuarios() {
         <select
           value={filtroStatus}
           onChange={(e) => setFiltroStatus(e.target.value)}
-          className="rounded-lg border p-3"
+          className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
         >
           <option value="">Todos os status</option>
           <option value="ATIVO">Ativo</option>
@@ -387,7 +445,6 @@ export default function Usuarios() {
           <option value="BLOQUEADO">Bloqueado</option>
         </select>
       </div>
-
       {abrirFormulario && (
         <form
           onSubmit={salvarUsuario}
@@ -694,109 +751,219 @@ export default function Usuarios() {
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-xl bg-white shadow">
-        <table className="min-w-full text-sm">
-          <thead className="bg-slate-100 text-left text-slate-600">
-            <tr>
-              <th className="p-3">Nome</th>
-              <th className="p-3">E-mail</th>
-              <th className="p-3">R.E</th>
-              <th className="p-3">CPF</th>
-              <th className="p-3">Cargo</th>
-              <th className="p-3">Setor</th>
-              <th className="p-3">Equipe</th>
-              <th className="p-3">Unidade</th>
-              <th className="p-3">Grupos</th>
-              <th className="p-3">Tipo</th>
-              <th className="p-3">Perfil</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">PIN</th>
-              <th className="p-3">Último acesso</th>
-              <th className="p-3">Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {usuariosFiltrados.map((usuario) => (
-              <tr key={usuario.id} className="border-t">
-                <td className="p-3 font-semibold">{usuario.nome}</td>
-                <td className="p-3">{usuario.email}</td>
-                <td className="p-3">{usuario.re}</td>
-                <td className="p-3">{mascararCpf(usuario.cpf || "") || "-"}</td>
-                <td className="p-3">{usuario.cargo}</td>
-                <td className="p-3">{usuario.setor}</td>
-                <td className="p-3">{usuario.equipe || "-"}</td>
-                <td className="p-3">
-                  {usuario.unidadesPermitidas?.join(", ") || usuario.unidade}
-                </td>
-                <td className="p-3">
-                  {usuario.gruposTreinamento?.length
-                    ? usuario.gruposTreinamento.join(", ")
-                    : "-"}
-                </td>
-                <td className="p-3">
-                  {usuario.terceirizado ? "Terceirizado" : "Colaborador"}
-                </td>
-                <td className="p-3">{usuario.perfilAcesso}</td>
-                <td className="p-3">{usuario.statusUsuario}</td>
-                <td className="p-3">
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-semibold ${usuario.possuiPinOperacional ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}
-                  >
-                    {usuario.possuiPinOperacional ? "Cadastrado" : "Pendente"}
-                  </span>
-                </td>
-                <td className="p-3">
-                  {usuario.ultimoAcesso
-                    ? new Date(usuario.ultimoAcesso).toLocaleString()
-                    : "Nunca"}
-                </td>
-                <td className="p-3">
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => editarUsuario(usuario)}
-                      className="rounded bg-blue-600 px-3 py-1 text-white"
-                    >
-                      Editar
-                    </button>
-                    {superAdmin && (
-                      <button
-                        onClick={() => resetarPin(usuario)}
-                        className="rounded bg-slate-700 px-3 py-1 text-white"
-                      >
-                        PIN 1234
-                      </button>
-                    )}
-                    {usuario.perfilAcesso !== "SUPER_ADMIN" && (
-                      <>
-                        <button
-                          onClick={() =>
-                            alterarStatus(
-                              usuario,
-                              usuario.statusUsuario === "ATIVO"
-                                ? "BLOQUEADO"
-                                : "ATIVO",
-                            )
-                          }
-                          className="rounded bg-amber-600 px-3 py-1 text-white"
-                        >
-                          {usuario.statusUsuario === "ATIVO"
-                            ? "Bloquear"
-                            : "Ativar"}
-                        </button>
-                        <button
-                          onClick={() => excluirUsuario(usuario)}
-                          className="rounded bg-red-600 px-3 py-1 text-white"
-                        >
-                          Excluir
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </td>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
+              Cadastro de acessos
+            </p>
+            <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-300">
+              {usuariosFiltrados.length} de {usuarios.length} usuário(s)
+              exibido(s)
+            </p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-300">
+            <span className="inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            Ativos
+            <span className="ml-2 inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+            Bloqueados
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-[1320px] text-left text-xs">
+            <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950 dark:text-slate-300">
+              <tr>
+                <th className="px-4 py-3">Usuário</th>
+                <th className="px-3 py-3">Identificação</th>
+                <th className="px-3 py-3">Lotação</th>
+                <th className="px-3 py-3">Unidades</th>
+                <th className="px-3 py-3">Grupos</th>
+                <th className="px-3 py-3">Perfil</th>
+                <th className="px-3 py-3">Status</th>
+                <th className="px-3 py-3">PIN</th>
+                <th className="px-3 py-3">Último acesso</th>
+                <th className="sticky right-0 bg-slate-50 px-4 py-3 text-right dark:bg-slate-950">
+                  Ações
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              {usuariosFiltrados.map((usuario) => (
+                <tr
+                  key={usuario.id}
+                  className="align-top transition hover:bg-blue-50/50 dark:hover:bg-slate-800/70"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-200 dark:ring-blue-500/20">
+                        <UserRound size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-slate-950 dark:text-white">
+                          {usuario.nome}
+                        </p>
+                        <p className="mt-1 truncate text-xs font-semibold text-slate-500 dark:text-slate-300">
+                          {usuario.email}
+                        </p>
+                        <p className="mt-1 text-[11px] font-black uppercase tracking-[0.08em] text-slate-400">
+                          {usuario.terceirizado
+                            ? "Terceirizado"
+                            : usuario.somenteCadastro
+                              ? "Somente cadastro"
+                              : "Colaborador"}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="space-y-1 font-semibold text-slate-700 dark:text-slate-200">
+                      <p>R.E: {usuario.re || "-"}</p>
+                      <p>CPF: {mascararCpf(usuario.cpf || "") || "-"}</p>
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="max-w-[180px] space-y-1">
+                      <p className="font-black text-slate-900 dark:text-white">
+                        {usuario.setor || "-"}
+                      </p>
+                      <p className="text-slate-500 dark:text-slate-300">
+                        {usuario.cargo || "-"}
+                      </p>
+                      <p className="text-slate-400">
+                        {usuario.equipe || "Sem equipe"}
+                      </p>
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex max-w-[170px] flex-wrap gap-1.5">
+                      {(usuario.unidadesPermitidas?.length
+                        ? usuario.unidadesPermitidas
+                        : [usuario.unidade || "-"]
+                      ).map((unidade) => (
+                        <span
+                          key={unidade}
+                          className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-600 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700"
+                        >
+                          {unidade}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <div className="flex max-w-[190px] flex-wrap gap-1.5">
+                      {usuario.gruposTreinamento?.length ? (
+                        usuario.gruposTreinamento.map((grupo) => (
+                          <span
+                            key={grupo}
+                            className="rounded-full bg-blue-50 px-2 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-200 dark:ring-blue-500/20"
+                          >
+                            {grupo}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs font-semibold text-slate-400">
+                          Sem grupo
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">
+                    <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-black text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-200 dark:ring-indigo-500/20">
+                      {perfilLabel(usuario.perfilAcesso)}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${statusClasse(usuario.statusUsuario)}`}
+                    >
+                      {usuario.statusUsuario}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3">
+                    <span
+                      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${
+                        usuario.possuiPinOperacional
+                          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                          : "bg-amber-50 text-amber-700 ring-amber-200"
+                      }`}
+                    >
+                      <ShieldCheck size={13} />
+                      {usuario.possuiPinOperacional ? "OK" : "Pendente"}
+                    </span>
+                  </td>
+                  <td className="px-3 py-3 text-xs font-semibold text-slate-500 dark:text-slate-300">
+                    {usuario.ultimoAcesso
+                      ? new Date(usuario.ultimoAcesso).toLocaleString("pt-BR")
+                      : "Nunca"}
+                  </td>
+                  <td className="sticky right-0 bg-white px-4 py-3 dark:bg-slate-900">
+                    <div className="flex justify-end gap-1.5">
+                      <IconButton
+                        title="Editar usuário"
+                        onClick={() => editarUsuario(usuario)}
+                        className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Pencil size={16} />
+                      </IconButton>
+                      {superAdmin && (
+                        <IconButton
+                          title="Restaurar PIN para 1234"
+                          onClick={() => resetarPin(usuario)}
+                          className="border-slate-200 text-slate-700"
+                        >
+                          <KeyRound size={16} />
+                        </IconButton>
+                      )}
+                      {usuario.perfilAcesso !== "SUPER_ADMIN" && (
+                        <>
+                          <IconButton
+                            title={
+                              usuario.statusUsuario === "ATIVO"
+                                ? "Bloquear usuário"
+                                : "Ativar usuário"
+                            }
+                            onClick={() =>
+                              alterarStatus(
+                                usuario,
+                                usuario.statusUsuario === "ATIVO"
+                                  ? "BLOQUEADO"
+                                  : "ATIVO",
+                              )
+                            }
+                            className="border-amber-200 text-amber-700 hover:bg-amber-50"
+                          >
+                            {usuario.statusUsuario === "ATIVO" ? (
+                              <LockKeyhole size={16} />
+                            ) : (
+                              <UnlockKeyhole size={16} />
+                            )}
+                          </IconButton>
+                          <IconButton
+                            title="Excluir usuário"
+                            onClick={() => excluirUsuario(usuario)}
+                            className="border-red-200 text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!usuariosFiltrados.length && (
+                <tr>
+                  <td
+                    colSpan={10}
+                    className="px-4 py-12 text-center text-sm font-bold text-slate-500"
+                  >
+                    Nenhum usuário encontrado com os filtros atuais.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
