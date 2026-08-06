@@ -19,8 +19,10 @@ type Historico = {
   id: number;
   acao: string;
   detalhes?: string | null;
+  dadosAnteriores?: string | null;
+  dadosNovos?: string | null;
   createdAt: string;
-  usuario?: { nome: string; apelido?: string | null };
+  usuario?: { nome: string; apelido?: string | null; equipe?: string | null };
 };
 
 type ContainerQuadra = {
@@ -99,6 +101,31 @@ function inputData(data?: string | null) {
 
 function nomeUsuario(usuario?: { nome: string; apelido?: string | null }) {
   return usuario?.apelido || usuario?.nome || "Sistema";
+}
+
+function lerJsonSeguro(valor?: string | null) {
+  if (!valor) return null;
+  try {
+    return JSON.parse(valor);
+  } catch {
+    return null;
+  }
+}
+
+function posicaoTimeline(item: Historico) {
+  const anterior = lerJsonSeguro(item.dadosAnteriores);
+  const novo = lerJsonSeguro(item.dadosNovos);
+  const posicaoAnterior = String(anterior?.posicionamento || "").trim() || "Sem posição";
+  const posicaoAtual = String(novo?.posicionamento || "").trim() || "Sem posição";
+  const reposicionamento =
+    item.acao === "Reposicionamento de contêiner" ||
+    ((anterior?.posicionamento !== undefined || novo?.posicionamento !== undefined) && posicaoAnterior !== posicaoAtual);
+
+  return {
+    reposicionamento,
+    posicaoAnterior,
+    posicaoAtual,
+  };
 }
 
 function mascararContainer(valor: string) {
@@ -1667,13 +1694,51 @@ export default function QuadraSeguranca() {
               <section>
                 <h3 className="mb-3 font-bold">Timeline Operacional</h3>
                 <div className="space-y-3">
-                  {(dossie.historico || []).map((item) => (
-                    <div key={item.id} className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                      <p className="font-semibold">{item.acao}</p>
-                      <p className="text-sm text-slate-500">{item.detalhes}</p>
-                      <p className="mt-1 text-xs text-slate-400">{nomeUsuario(item.usuario)} - {new Date(item.createdAt).toLocaleString("pt-BR")}</p>
-                    </div>
-                  ))}
+                  {(dossie.historico || []).map((item) => {
+                    const posicao = posicaoTimeline(item);
+                    return (
+                      <div
+                        key={item.id}
+                        className={`rounded-xl border p-4 shadow-sm ${
+                          posicao.reposicionamento
+                            ? "border-blue-200 bg-blue-50/80 dark:border-blue-500/40 dark:bg-blue-950/30"
+                            : "border-slate-200 dark:border-slate-800"
+                        }`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div>
+                            <p className="font-semibold text-slate-950 dark:text-white">{item.acao}</p>
+                            <p className="mt-1 text-xs font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">
+                              {new Date(item.createdAt).toLocaleString("pt-BR")}
+                            </p>
+                          </div>
+                          <div className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-600 dark:border-slate-700 dark:text-slate-200">
+                            {nomeUsuario(item.usuario)}
+                          </div>
+                        </div>
+
+                        {posicao.reposicionamento ? (
+                          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
+                            <div className="rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
+                              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Posição anterior</p>
+                              <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">{posicao.posicaoAnterior}</p>
+                            </div>
+                            <span className="text-center text-sm font-black text-blue-700 dark:text-blue-300">para</span>
+                            <div className="rounded-lg border border-blue-200 bg-white p-3 dark:border-blue-500/40 dark:bg-slate-950">
+                              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">Posição atual</p>
+                              <p className="mt-1 text-lg font-black text-blue-700 dark:text-blue-300">{posicao.posicaoAtual}</p>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{item.detalhes || "Sem detalhes"}</p>
+                        )}
+
+                        <p className="mt-3 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                          Equipe: {item.usuario?.equipe || "Não informada"}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
               </section>
             </div>

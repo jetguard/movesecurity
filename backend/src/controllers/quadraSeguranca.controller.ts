@@ -21,6 +21,49 @@ function texto(valor: unknown) {
   return String(valor || "").trim();
 }
 
+function formatarDataHora(data?: Date | string | null) {
+  if (!data) return "Não informado";
+  const date = data instanceof Date ? data : new Date(data);
+  if (Number.isNaN(date.getTime())) return "Não informado";
+  return date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function nomeResponsavel(usuario?: { nome?: string | null; apelido?: string | null; equipe?: string | null } | null) {
+  return usuario?.apelido || usuario?.nome || "Sistema";
+}
+
+function equipeResponsavel(usuario?: { equipe?: string | null } | null) {
+  return usuario?.equipe || "Equipe não informada";
+}
+
+function lerJsonSeguro(valor?: string | null) {
+  if (!valor) return null;
+  try {
+    return JSON.parse(valor);
+  } catch {
+    return null;
+  }
+}
+
+function posicaoTexto(valor?: string | null) {
+  return texto(valor) || "Sem posição";
+}
+
+function dadosReposicionamento(item: { dadosAnteriores?: string | null; dadosNovos?: string | null }) {
+  const anterior = lerJsonSeguro(item.dadosAnteriores);
+  const novo = lerJsonSeguro(item.dadosNovos);
+  const posicaoAnterior = posicaoTexto(anterior?.posicionamento);
+  const posicaoAtual = posicaoTexto(novo?.posicionamento);
+  const mudouPosicao = normalizarPosicionamento(posicaoAnterior) !== normalizarPosicionamento(posicaoAtual);
+  return {
+    anterior,
+    novo,
+    posicaoAnterior,
+    posicaoAtual,
+    mudouPosicao,
+  };
+}
+
 function numeroContainer(valor: unknown) {
   return texto(valor).toLocaleUpperCase("pt-BR");
 }
@@ -228,7 +271,7 @@ export async function buscarContainer(req: AuthRequest, res: Response) {
         },
         historico: {
           orderBy: { createdAt: "desc" },
-          include: { usuario: { select: { nome: true, apelido: true } } },
+          include: { usuario: { select: { nome: true, apelido: true, equipe: true } } },
         },
       },
     });
@@ -260,7 +303,7 @@ export async function exportarDossieContainerPdf(req: AuthRequest, res: Response
         },
         historico: {
           orderBy: { createdAt: "desc" },
-          include: { usuario: { select: { nome: true, apelido: true } } },
+          include: { usuario: { select: { nome: true, apelido: true, equipe: true } } },
         },
       },
     });
@@ -269,52 +312,132 @@ export async function exportarDossieContainerPdf(req: AuthRequest, res: Response
       return res.status(404).json({ error: "Contêiner não encontrado" });
     }
 
-    const doc = new PDFDocument({ margin: 44, size: "A4" });
+    const doc = new PDFDocument({ margin: 36, size: "A4", bufferPages: true });
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename=dossie-container-${container.numeroContainer}.pdf`);
     doc.pipe(res);
 
-    doc.font("Helvetica-Bold").fontSize(18).fillColor("#0f172a").text("Dossiê do Contêiner");
-    doc.font("Helvetica").fontSize(10).fillColor("#475569").text(`Quadra de Segurança | Unidade ${container.unidade}`);
-    doc.moveDown();
+    const margem = 36;
+    const largura = doc.page.width - margem * 2;
+    const azul = "#123f78";
+    const azulClaro = "#e8f1ff";
+    const textoEscuro = "#0f172a";
+    const textoMedio = "#475569";
+    const linhaCor = "#dbe7f5";
 
-    const linha = (titulo: string, conteudo: unknown) => {
-      doc.font("Helvetica-Bold").fontSize(9).fillColor("#64748b").text(titulo.toUpperCase());
-      doc.font("Helvetica").fontSize(11).fillColor("#111827").text(String(conteudo || "Não informado"));
-      doc.moveDown(0.35);
+    const novaPaginaSePreciso = (altura: number) => {
+      if (doc.y + altura > doc.page.height - 58) doc.addPage();
     };
 
-    linha("Contêiner", container.numeroContainer);
-    linha("Status operacional", container.statusOperacional);
-    linha("Tempo no terminal", serializarContainer(container).tempoTerminal);
-    linha("Entrada", container.dataHoraEntrada.toLocaleString("pt-BR"));
-    linha("Saída", container.dataHoraSaida?.toLocaleString("pt-BR") || "Em aberto");
-    linha("Tipo / dimensão / destino", `${container.tipoContainer} | ${container.dimensao} | ${container.destino}`);
-    linha("Lacre de entrada", container.numeroLacre);
-    linha("Lacre de saída", container.novoLacre || "Não informado");
-    linha("Divergência de lacre", lacreDivergente(container) ? "Sim" : "Não");
-    linha("Scanner", `Entrada: ${container.scannerEntrada ? "Sim" : "Não"} | Saída: ${container.scannerSaida ? "Sim" : "Não"}`);
-    linha("Transportadora / motorista", `${container.transportadora || "Não informado"} | ${container.motoristaResponsavel || "Não informado"}`);
-    linha("Observações", container.observacoes || "Sem observações");
-    linha("Observações de saída", container.observacoesSaida || "Sem observações");
+    const cabecalho = () => {
+      doc.roundedRect(margem, 28, largura, 70, 12).fillColor(azul).fill();
+      doc.fillColor("#ffffff").font("Helvetica-Bold").fontSize(18).text("Dossiê do Contêiner", margem + 22, 48, { width: 300 });
+      doc.fillColor("#bfdbfe").font("Helvetica").fontSize(9).text(`Quadra de Segurança | Unidade ${container.unidade}`, margem + 22, 73, { width: 300 });
+      doc.roundedRect(doc.page.width - margem - 164, 45, 142, 34, 8).fillColor("#ffffff").fill();
+      doc.fillColor(azul).font("Helvetica-Bold").fontSize(13).text(container.numeroContainer, doc.page.width - margem - 154, 56, { width: 122, align: "center" });
+      doc.y = 122;
+    };
 
-    doc.addPage();
-    doc.font("Helvetica-Bold").fontSize(14).fillColor("#0f172a").text("Timeline operacional");
-    doc.moveDown();
+    const tituloSecao = (titulo: string, subtitulo?: string) => {
+      novaPaginaSePreciso(48);
+      doc.moveDown(0.4);
+      doc.fillColor(azul).font("Helvetica-Bold").fontSize(12).text(titulo.toUpperCase(), margem, doc.y, { width: largura });
+      if (subtitulo) {
+        doc.fillColor(textoMedio).font("Helvetica").fontSize(8.5).text(subtitulo, margem, doc.y + 3, { width: largura });
+      }
+      doc.moveTo(margem, doc.y + 7).lineTo(doc.page.width - margem, doc.y + 7).strokeColor(linhaCor).lineWidth(0.8).stroke();
+      doc.moveDown(0.9);
+    };
+
+    const card = (x: number, y: number, w: number, h: number, rotulo: string, valor: unknown, destaque = textoEscuro) => {
+      doc.roundedRect(x, y, w, h, 9).fillColor("#f8fbff").fill().strokeColor(linhaCor).lineWidth(0.8).stroke();
+      doc.fillColor("#64748b").font("Helvetica-Bold").fontSize(7.5).text(rotulo.toUpperCase(), x + 11, y + 9, { width: w - 22 });
+      doc.fillColor(destaque).font("Helvetica-Bold").fontSize(10).text(String(valor || "Não informado"), x + 11, y + 25, { width: w - 22, ellipsis: true });
+    };
+
+    cabecalho();
+
+    tituloSecao("Resumo operacional");
+    const yResumo = doc.y;
+    const col = (largura - 20) / 3;
+    card(margem, yResumo, col, 54, "Status", container.statusOperacional, container.statusOperacional === "Liberado" ? "#047857" : azul);
+    card(margem + col + 10, yResumo, col, 54, "Posição atual", container.posicionamento || "Sem posição", "#2563eb");
+    card(margem + (col + 10) * 2, yResumo, col, 54, "Tempo no terminal", serializarContainer(container).tempoTerminal, "#0f766e");
+    doc.y = yResumo + 72;
+
+    tituloSecao("Dados do contêiner");
+    const yDados = doc.y;
+    card(margem, yDados, col, 48, "Entrada", formatarDataHora(container.dataHoraEntrada));
+    card(margem + col + 10, yDados, col, 48, "Saída", container.dataHoraSaida ? formatarDataHora(container.dataHoraSaida) : "Em aberto");
+    card(margem + (col + 10) * 2, yDados, col, 48, "Tipo / dimensão", `${container.tipoContainer} | ${container.dimensao}`);
+    card(margem, yDados + 58, col, 48, "Destino", container.destino);
+    card(margem + col + 10, yDados + 58, col, 48, "Lacres", `Entrada: ${container.numeroLacre || "N/I"} | Saída: ${container.novoLacre || "N/I"}`, lacreDivergente(container) ? "#dc2626" : textoEscuro);
+    card(margem + (col + 10) * 2, yDados + 58, col, 48, "Scanner", `Entrada: ${container.scannerEntrada ? "Sim" : "Não"} | Saída: ${container.scannerSaida ? "Sim" : "Não"}`);
+    doc.y = yDados + 124;
+
+    tituloSecao("Transporte e observações");
+    doc.roundedRect(margem, doc.y, largura, 82, 10).fillColor("#ffffff").fill().strokeColor(linhaCor).lineWidth(0.8).stroke();
+    doc.fillColor(textoEscuro).font("Helvetica-Bold").fontSize(10).text("Transportadora / motorista", margem + 14, doc.y + 12, { width: largura - 28 });
+    doc.fillColor(textoMedio).font("Helvetica").fontSize(9).text(`${container.transportadora || "Não informado"} | ${container.motoristaResponsavel || "Não informado"}`, margem + 14, doc.y + 29, { width: largura - 28 });
+    doc.fillColor(textoEscuro).font("Helvetica-Bold").fontSize(10).text("Observações", margem + 14, doc.y + 50, { width: 120 });
+    doc.fillColor(textoMedio).font("Helvetica").fontSize(8.5).text(`${container.observacoes || "Sem observações"} | Saída: ${container.observacoesSaida || "Sem observações"}`, margem + 110, doc.y + 50, { width: largura - 128, ellipsis: true });
+    doc.y += 102;
+
+    const reposicionamentos = container.historico.filter((item) => item.acao === "Reposicionamento de contêiner" || dadosReposicionamento(item).mudouPosicao);
+    tituloSecao("Histórico de reposicionamentos", "Posição anterior, posição atual, data, usuário e equipe responsável.");
+    if (reposicionamentos.length === 0) {
+      doc.roundedRect(margem, doc.y, largura, 38, 8).fillColor(azulClaro).fill();
+      doc.fillColor(azul).font("Helvetica-Bold").fontSize(9).text("Nenhum reposicionamento registrado para este contêiner.", margem + 12, doc.y + 13, { width: largura - 24 });
+      doc.y += 52;
+    } else {
+      reposicionamentos.forEach((item, index) => {
+        novaPaginaSePreciso(72);
+        const dados = dadosReposicionamento(item);
+        const y = doc.y;
+        doc.roundedRect(margem, y, largura, 62, 9).fillColor(index % 2 === 0 ? "#ffffff" : "#f8fbff").fill().strokeColor(linhaCor).lineWidth(0.8).stroke();
+        doc.fillColor(azul).font("Helvetica-Bold").fontSize(9).text(formatarDataHora(item.createdAt), margem + 12, y + 11, { width: 105 });
+        doc.fillColor(textoEscuro).font("Helvetica-Bold").fontSize(10).text(`${dados.posicaoAnterior}  →  ${dados.posicaoAtual}`, margem + 126, y + 10, { width: 180 });
+        doc.fillColor(textoMedio).font("Helvetica").fontSize(8.4).text(item.detalhes || "Reposicionamento operacional", margem + 126, y + 29, { width: 180, ellipsis: true });
+        doc.fillColor(textoEscuro).font("Helvetica-Bold").fontSize(8.6).text(nomeResponsavel(item.usuario), margem + 322, y + 12, { width: 92, ellipsis: true });
+        doc.fillColor(textoMedio).font("Helvetica").fontSize(8).text(equipeResponsavel(item.usuario), margem + 322, y + 29, { width: 92, ellipsis: true });
+        doc.fillColor(textoMedio).font("Helvetica").fontSize(7.5).text("Atualizado por", margem + 322, y + 45, { width: 92 });
+        doc.y = y + 76;
+      });
+    }
+
+    tituloSecao("Timeline operacional completa");
     container.historico.forEach((item) => {
-      doc.font("Helvetica-Bold").fontSize(10).fillColor("#111827").text(`${item.createdAt.toLocaleString("pt-BR")} - ${item.acao}`);
-      doc.font("Helvetica").fontSize(9).fillColor("#475569").text(`${item.usuario?.apelido || item.usuario?.nome || "Sistema"} | ${item.detalhes || "Sem detalhes"}`);
-      doc.moveDown(0.6);
+      novaPaginaSePreciso(48);
+      const dados = dadosReposicionamento(item);
+      const detalhe = item.acao === "Reposicionamento de contêiner" || dados.mudouPosicao
+        ? `${dados.posicaoAnterior} → ${dados.posicaoAtual}`
+        : item.detalhes || "Sem detalhes";
+      doc.fillColor(textoEscuro).font("Helvetica-Bold").fontSize(9.2).text(`${formatarDataHora(item.createdAt)} - ${item.acao}`, margem, doc.y, { width: largura });
+      doc.fillColor(textoMedio).font("Helvetica").fontSize(8.4).text(`${nomeResponsavel(item.usuario)} | ${equipeResponsavel(item.usuario)} | ${detalhe}`, margem, doc.y + 2, { width: largura });
+      doc.moveDown(0.9);
     });
 
     doc.addPage();
-    doc.font("Helvetica-Bold").fontSize(14).fillColor("#0f172a").text("Anexos e evidências");
-    doc.moveDown();
+    cabecalho();
+    tituloSecao("Anexos e evidências");
+    if (container.anexos.length === 0) {
+      doc.fillColor(textoMedio).font("Helvetica").fontSize(9).text("Nenhum anexo registrado.", margem, doc.y);
+    }
     container.anexos.forEach((anexo) => {
-      doc.font("Helvetica-Bold").fontSize(10).fillColor("#111827").text(`${anexo.categoria} - ${anexo.nomeOriginal}`);
-      doc.font("Helvetica").fontSize(9).fillColor("#475569").text(`Responsável: ${anexo.usuario?.apelido || anexo.usuario?.nome || "Não informado"} | Hash: ${anexo.hashArquivo || "Não calculado"}`);
-      doc.moveDown(0.6);
+      novaPaginaSePreciso(42);
+      doc.roundedRect(margem, doc.y, largura, 36, 8).fillColor("#ffffff").fill().strokeColor(linhaCor).lineWidth(0.8).stroke();
+      doc.fillColor(textoEscuro).font("Helvetica-Bold").fontSize(9).text(`${anexo.categoria} - ${anexo.nomeOriginal}`, margem + 12, doc.y + 8, { width: largura - 24, ellipsis: true });
+      doc.fillColor(textoMedio).font("Helvetica").fontSize(7.8).text(`Responsável: ${nomeResponsavel(anexo.usuario)} | Hash: ${anexo.hashArquivo || "Não calculado"}`, margem + 12, doc.y + 21, { width: largura - 24, ellipsis: true });
+      doc.y += 46;
     });
+
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i++) {
+      doc.switchToPage(i);
+      doc.moveTo(margem, doc.page.height - 40).lineTo(doc.page.width - margem, doc.page.height - 40).strokeColor(linhaCor).lineWidth(0.8).stroke();
+      doc.fillColor("#64748b").font("Helvetica").fontSize(7.5).text(`JetGuard | Dossiê gerado em ${formatarDataHora(new Date())}`, margem, doc.page.height - 30, { width: largura / 2 });
+      doc.fillColor("#64748b").font("Helvetica").fontSize(7.5).text(`Página ${i + 1 - range.start} de ${range.count}`, margem + largura / 2, doc.page.height - 30, { width: largura / 2, align: "right" });
+    }
 
     doc.end();
   } catch (error) {
@@ -466,13 +589,30 @@ export async function atualizarContainer(req: AuthRequest, res: Response) {
       include: { anexos: true, criadoPor: true, atualizadoPor: true },
     });
 
+    const reposicionamento = normalizarPosicionamento(anterior.posicionamento) !== normalizarPosicionamento(container.posicionamento);
+    const registroSaida = Boolean(container.dataHoraSaida && !anterior.dataHoraSaida);
+
     await registrarHistorico({
       containerId: container.id,
       usuarioId: req.usuarioId,
-      acao: container.dataHoraSaida && !anterior.dataHoraSaida ? "Registro de saída" : "Atualização operacional",
-      detalhes: `Atualização do contêiner ${container.numeroContainer}`,
-      dadosAnteriores: anterior,
-      dadosNovos: container,
+      acao: registroSaida ? "Registro de saída" : reposicionamento ? "Reposicionamento de contêiner" : "Atualização operacional",
+      detalhes: reposicionamento
+        ? `Posição anterior: ${posicaoTexto(anterior.posicionamento)} | Posição atual: ${posicaoTexto(container.posicionamento)}`
+        : `Atualização do contêiner ${container.numeroContainer}`,
+      dadosAnteriores: reposicionamento
+        ? {
+            posicionamento: anterior.posicionamento,
+            statusOperacional: anterior.statusOperacional,
+            updatedAt: anterior.updatedAt,
+          }
+        : anterior,
+      dadosNovos: reposicionamento
+        ? {
+            posicionamento: container.posicionamento,
+            statusOperacional: container.statusOperacional,
+            updatedAt: container.updatedAt,
+          }
+        : container,
     });
 
     await registrarLog({
