@@ -41,6 +41,7 @@ type ModeloForm = {
   versao?: number;
   status: string;
   textoCertificado: string;
+  gruposPermitidos: string[];
   etapas: EtapaForm[];
   perguntas: PerguntaForm[];
 };
@@ -79,6 +80,7 @@ const modeloInicial: ModeloForm = {
   status: "Publicado",
   textoCertificado:
     "Certificamos que {{nome}}, portador(a) do CPF nº {{cpf}}, concluiu com aproveitamento o treinamento {{codigo}} - {{treinamento}} na data de {{data}}.",
+  gruposPermitidos: [],
   etapas: [
     {
       titulo: "Introdução",
@@ -102,12 +104,22 @@ const modeloInicial: ModeloForm = {
   ],
 };
 
+const gruposTreinamento = [
+  "CCOS",
+  "Liderança",
+  "Balança",
+  "Portaria",
+  "Terceirizado",
+];
+
 function data(valor?: string | null) {
   return valor ? new Date(valor).toLocaleString("pt-BR") : "-";
 }
 
 function concluido(status?: string | null) {
-  return String(status || "").toLowerCase().startsWith("conclu");
+  return String(status || "")
+    .toLowerCase()
+    .startsWith("conclu");
 }
 
 function copiarLink(link: string) {
@@ -169,9 +181,13 @@ export default function TreinamentosDinamicos() {
       notaMinima: modelo.notaMinima || 80,
       validadeMeses: modelo.validadeMeses || 24,
       status: modelo.status || "Publicado",
-      textoCertificado: modelo.textoCertificado || modeloInicial.textoCertificado,
+      textoCertificado:
+        modelo.textoCertificado || modeloInicial.textoCertificado,
+      gruposPermitidos: modelo.gruposPermitidos || [],
       etapas: modelo.etapas?.length ? modelo.etapas : modeloInicial.etapas,
-      perguntas: modelo.perguntas?.length ? modelo.perguntas : modeloInicial.perguntas,
+      perguntas: modelo.perguntas?.length
+        ? modelo.perguntas
+        : modeloInicial.perguntas,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -182,7 +198,20 @@ export default function TreinamentosDinamicos() {
     setMensagem("");
   }
 
-  function atualizarEtapa(index: number, campo: keyof EtapaForm, valor: string | string[]) {
+  function alternarGrupo(grupo: string) {
+    setForm((atual) => ({
+      ...atual,
+      gruposPermitidos: atual.gruposPermitidos.includes(grupo)
+        ? atual.gruposPermitidos.filter((item) => item !== grupo)
+        : [...atual.gruposPermitidos, grupo],
+    }));
+  }
+
+  function atualizarEtapa(
+    index: number,
+    campo: keyof EtapaForm,
+    valor: string | string[],
+  ) {
     setForm((atual) => ({
       ...atual,
       etapas: atual.etapas.map((etapa, pos) =>
@@ -191,7 +220,11 @@ export default function TreinamentosDinamicos() {
     }));
   }
 
-  function atualizarPergunta(index: number, campo: keyof PerguntaForm, valor: string | number) {
+  function atualizarPergunta(
+    index: number,
+    campo: keyof PerguntaForm,
+    valor: string | number,
+  ) {
     setForm((atual) => ({
       ...atual,
       perguntas: atual.perguntas.map((pergunta, pos) =>
@@ -200,7 +233,11 @@ export default function TreinamentosDinamicos() {
     }));
   }
 
-  function atualizarAlternativa(perguntaIndex: number, alternativaIndex: number, valor: string) {
+  function atualizarAlternativa(
+    perguntaIndex: number,
+    alternativaIndex: number,
+    valor: string,
+  ) {
     setForm((atual) => ({
       ...atual,
       perguntas: atual.perguntas.map((pergunta, pos) =>
@@ -208,7 +245,9 @@ export default function TreinamentosDinamicos() {
           ? {
               ...pergunta,
               alternativas: pergunta.alternativas.map((alternativa, altPos) =>
-                altPos === alternativaIndex ? { ...alternativa, texto: valor } : alternativa,
+                altPos === alternativaIndex
+                  ? { ...alternativa, texto: valor }
+                  : alternativa,
               ),
             }
           : pergunta,
@@ -223,10 +262,12 @@ export default function TreinamentosDinamicos() {
         pos === perguntaIndex
           ? {
               ...pergunta,
-              alternativas: pergunta.alternativas.map((alternativa, altPos) => ({
-                ...alternativa,
-                correta: altPos === alternativaIndex,
-              })),
+              alternativas: pergunta.alternativas.map(
+                (alternativa, altPos) => ({
+                  ...alternativa,
+                  correta: altPos === alternativaIndex,
+                }),
+              ),
             }
           : pergunta,
       ),
@@ -239,15 +280,23 @@ export default function TreinamentosDinamicos() {
     setSalvando(true);
     setMensagem("");
     try {
-      const url = form.id ? `/treinamentos-dinamicos/${form.id}` : "/treinamentos-dinamicos";
+      const url = form.id
+        ? `/treinamentos-dinamicos/${form.id}`
+        : "/treinamentos-dinamicos";
       const method = form.id ? api.put : api.post;
       const response = await method(url, form);
       await carregar();
       setForm((atual) => ({ ...atual, id: response.data.id }));
       setSelecionadoId(response.data.id);
-      setMensagem("Treinamento salvo com sucesso. O link público já está disponível.");
+      setMensagem(
+        response.data?.convitesEnviados
+          ? `Treinamento salvo. Link enviado para ${response.data.convitesEnviados} participante(s) dos grupos selecionados.`
+          : "Treinamento salvo com sucesso. O link público já está disponível.",
+      );
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível salvar o treinamento.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível salvar o treinamento.",
+      );
     } finally {
       setSalvando(false);
     }
@@ -262,7 +311,9 @@ export default function TreinamentosDinamicos() {
       setMensagem(response.data?.mensagem || "E-mail enviado com sucesso.");
       await carregar();
     } catch (error: any) {
-      setMensagem(error.response?.data?.error || "Não foi possível reenviar o e-mail.");
+      setMensagem(
+        error.response?.data?.error || "Não foi possível reenviar o e-mail.",
+      );
     }
   }
 
@@ -286,7 +337,8 @@ export default function TreinamentosDinamicos() {
             Criador de treinamentos
           </h1>
           <p className="mt-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
-            Monte etapas, perguntas, link público, assinatura e certificado sem criar uma página fixa nova.
+            Monte etapas, perguntas, link público, assinatura e certificado sem
+            criar uma página fixa nova.
           </p>
         </div>
         <button
@@ -314,7 +366,9 @@ export default function TreinamentosDinamicos() {
               Tipo
               <select
                 value={form.tipo}
-                onChange={(event) => setForm({ ...form, tipo: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, tipo: event.target.value })
+                }
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               >
                 <option>Operacional</option>
@@ -345,7 +399,9 @@ export default function TreinamentosDinamicos() {
               Nome do treinamento
               <input
                 value={form.nome}
-                onChange={(event) => setForm({ ...form, nome: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, nome: event.target.value })
+                }
                 placeholder="Ex.: Controle de acesso de pessoas e veículos"
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
@@ -354,7 +410,9 @@ export default function TreinamentosDinamicos() {
               Link público
               <input
                 value={form.slug}
-                onChange={(event) => setForm({ ...form, slug: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, slug: event.target.value })
+                }
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
             </label>
@@ -362,30 +420,65 @@ export default function TreinamentosDinamicos() {
               Status
               <select
                 value={form.status}
-                onChange={(event) => setForm({ ...form, status: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, status: event.target.value })
+                }
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               >
                 <option>Publicado</option>
                 <option>Rascunho</option>
               </select>
             </label>
+            <div className="md:col-span-2 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-200">
+                Grupos liberados
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-300">
+                Selecione os grupos que poderão acessar este treinamento. O link
+                será enviado aos usuários cadastrados nesses grupos.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                {gruposTreinamento.map((grupo) => (
+                  <label
+                    key={grupo}
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-black ${
+                      form.gruposPermitidos.includes(grupo)
+                        ? "border-blue-400 bg-blue-500 text-white"
+                        : "border-slate-700 bg-slate-900 text-slate-200"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.gruposPermitidos.includes(grupo)}
+                      onChange={() => alternarGrupo(grupo)}
+                    />
+                    {grupo}
+                  </label>
+                ))}
+              </div>
+            </div>
             <label className="md:col-span-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
               Texto do certificado
               <textarea
                 value={form.textoCertificado}
-                onChange={(event) => setForm({ ...form, textoCertificado: event.target.value })}
+                onChange={(event) =>
+                  setForm({ ...form, textoCertificado: event.target.value })
+                }
                 rows={3}
                 className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
               />
               <span className="mt-1 block text-[11px] font-bold normal-case tracking-normal text-slate-500">
-                Variáveis: {"{{nome}}"}, {"{{cpf}}"}, {"{{data}}"}, {"{{codigo}}"}, {"{{treinamento}}"}.
+                Variáveis: {"{{nome}}"}, {"{{cpf}}"}, {"{{data}}"},{" "}
+                {"{{codigo}}"}, {"{{treinamento}}"}.
               </span>
             </label>
           </div>
 
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white">Etapas</h2>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                Etapas
+              </h2>
               <button
                 type="button"
                 onClick={() =>
@@ -393,7 +486,13 @@ export default function TreinamentosDinamicos() {
                     ...form,
                     etapas: [
                       ...form.etapas,
-                      { titulo: "", objetivo: "", conteudo: "", topicos: [], atencao: "" },
+                      {
+                        titulo: "",
+                        objetivo: "",
+                        conteudo: "",
+                        topicos: [],
+                        atencao: "",
+                      },
                     ],
                   })
                 }
@@ -403,14 +502,22 @@ export default function TreinamentosDinamicos() {
               </button>
             </div>
             {form.etapas.map((etapa, index) => (
-              <div key={index} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+              <div
+                key={index}
+                className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+              >
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="font-black text-slate-900 dark:text-white">Etapa {index + 1}</p>
+                  <p className="font-black text-slate-900 dark:text-white">
+                    Etapa {index + 1}
+                  </p>
                   {form.etapas.length > 1 && (
                     <button
                       type="button"
                       onClick={() =>
-                        setForm({ ...form, etapas: form.etapas.filter((_, pos) => pos !== index) })
+                        setForm({
+                          ...form,
+                          etapas: form.etapas.filter((_, pos) => pos !== index),
+                        })
                       }
                       className="text-red-500"
                     >
@@ -421,19 +528,25 @@ export default function TreinamentosDinamicos() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <input
                     value={etapa.titulo}
-                    onChange={(event) => atualizarEtapa(index, "titulo", event.target.value)}
+                    onChange={(event) =>
+                      atualizarEtapa(index, "titulo", event.target.value)
+                    }
                     placeholder="Título"
                     className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <input
                     value={etapa.objetivo}
-                    onChange={(event) => atualizarEtapa(index, "objetivo", event.target.value)}
+                    onChange={(event) =>
+                      atualizarEtapa(index, "objetivo", event.target.value)
+                    }
                     placeholder="Objetivo"
                     className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
                   <textarea
                     value={etapa.conteudo}
-                    onChange={(event) => atualizarEtapa(index, "conteudo", event.target.value)}
+                    onChange={(event) =>
+                      atualizarEtapa(index, "conteudo", event.target.value)
+                    }
                     placeholder="Conteúdo resumido em linguagem simples"
                     rows={4}
                     className="md:col-span-2 rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
@@ -444,7 +557,10 @@ export default function TreinamentosDinamicos() {
                       atualizarEtapa(
                         index,
                         "topicos",
-                        event.target.value.split(";").map((item) => item.trim()).filter(Boolean),
+                        event.target.value
+                          .split(";")
+                          .map((item) => item.trim())
+                          .filter(Boolean),
                       )
                     }
                     placeholder="Pontos importantes separados por ;"
@@ -452,7 +568,9 @@ export default function TreinamentosDinamicos() {
                   />
                   <input
                     value={etapa.atencao}
-                    onChange={(event) => atualizarEtapa(index, "atencao", event.target.value)}
+                    onChange={(event) =>
+                      atualizarEtapa(index, "atencao", event.target.value)
+                    }
                     placeholder="Caixa de atenção"
                     className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
@@ -463,7 +581,9 @@ export default function TreinamentosDinamicos() {
 
           <div className="mt-6 space-y-4">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white">Perguntas</h2>
+              <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                Perguntas
+              </h2>
               <button
                 type="button"
                 onClick={() =>
@@ -490,14 +610,24 @@ export default function TreinamentosDinamicos() {
               </button>
             </div>
             {form.perguntas.map((pergunta, index) => (
-              <div key={index} className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
+              <div
+                key={index}
+                className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+              >
                 <div className="mb-3 flex items-center justify-between">
-                  <p className="font-black text-slate-900 dark:text-white">Pergunta {index + 1}</p>
+                  <p className="font-black text-slate-900 dark:text-white">
+                    Pergunta {index + 1}
+                  </p>
                   {form.perguntas.length > 1 && (
                     <button
                       type="button"
                       onClick={() =>
-                        setForm({ ...form, perguntas: form.perguntas.filter((_, pos) => pos !== index) })
+                        setForm({
+                          ...form,
+                          perguntas: form.perguntas.filter(
+                            (_, pos) => pos !== index,
+                          ),
+                        })
                       }
                       className="text-red-500"
                     >
@@ -508,7 +638,13 @@ export default function TreinamentosDinamicos() {
                 <div className="grid gap-3">
                   <select
                     value={pergunta.etapaOrdem}
-                    onChange={(event) => atualizarPergunta(index, "etapaOrdem", Number(event.target.value))}
+                    onChange={(event) =>
+                      atualizarPergunta(
+                        index,
+                        "etapaOrdem",
+                        Number(event.target.value),
+                      )
+                    }
                     className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   >
                     {form.etapas.map((etapa, etapaIndex) => (
@@ -519,7 +655,9 @@ export default function TreinamentosDinamicos() {
                   </select>
                   <input
                     value={pergunta.pergunta}
-                    onChange={(event) => atualizarPergunta(index, "pergunta", event.target.value)}
+                    onChange={(event) =>
+                      atualizarPergunta(index, "pergunta", event.target.value)
+                    }
                     placeholder="Texto da pergunta"
                     className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                   />
@@ -537,7 +675,13 @@ export default function TreinamentosDinamicos() {
                         />
                         <input
                           value={alternativa.texto}
-                          onChange={(event) => atualizarAlternativa(index, altIndex, event.target.value)}
+                          onChange={(event) =>
+                            atualizarAlternativa(
+                              index,
+                              altIndex,
+                              event.target.value,
+                            )
+                          }
                           placeholder={`Alternativa ${altIndex + 1}`}
                           className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none"
                         />
@@ -560,7 +704,9 @@ export default function TreinamentosDinamicos() {
 
         <aside className="hidden">
           <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-            <h2 className="text-lg font-black text-slate-900 dark:text-white">Treinamentos criados</h2>
+            <h2 className="text-lg font-black text-slate-900 dark:text-white">
+              Treinamentos criados
+            </h2>
             <label className="mt-4 block text-xs font-black uppercase tracking-[0.16em] text-slate-500">
               Selecione o treinamento
               <select
@@ -586,9 +732,17 @@ export default function TreinamentosDinamicos() {
                   key={modelo.id}
                   className={`rounded-2xl border p-3 ${selecionadoId === modelo.id ? "border-blue-400 bg-blue-50 dark:bg-blue-500/10" : "border-slate-200 dark:border-slate-800"}`}
                 >
-                  <button type="button" onClick={() => editar(modelo)} className="block w-full text-left">
-                    <p className="font-black text-slate-900 dark:text-white">{modelo.codigo}</p>
-                    <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{modelo.nome}</p>
+                  <button
+                    type="button"
+                    onClick={() => editar(modelo)}
+                    className="block w-full text-left"
+                  >
+                    <p className="font-black text-slate-900 dark:text-white">
+                      {modelo.codigo}
+                    </p>
+                    <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+                      {modelo.nome}
+                    </p>
                     <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-300">
                       Versão publicada: {modelo.versao || 1}
                     </p>
@@ -631,7 +785,9 @@ export default function TreinamentosDinamicos() {
 
           {modeloSelecionado && (
             <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-              <h2 className="text-lg font-black text-slate-900 dark:text-white">Controle de participantes</h2>
+              <h2 className="text-lg font-black text-slate-900 dark:text-white">
+                Controle de participantes
+              </h2>
               <div className="relative mt-4">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                 <input
@@ -658,7 +814,10 @@ export default function TreinamentosDinamicos() {
                   </thead>
                   <tbody className="divide-y divide-slate-200">
                     {filtrados.map((item) => (
-                      <tr key={item.id} className="bg-white align-top text-slate-950">
+                      <tr
+                        key={item.id}
+                        className="bg-white align-top text-slate-950"
+                      >
                         <td className="px-4 py-3">
                           <div className="flex items-start gap-2">
                             {concluido(item.status) ? (
@@ -676,19 +835,34 @@ export default function TreinamentosDinamicos() {
                         </td>
                         <td className="px-4 py-3">
                           <p className="font-bold">{item.cpf || "-"}</p>
-                          <p className="mt-1 text-xs font-semibold text-slate-500">{item.email}</p>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">
+                            {item.email}
+                          </p>
                         </td>
                         <td className="px-4 py-3 font-black">{item.status}</td>
                         <td className="px-4 py-3">
                           <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-200">
-                            <div className="h-full rounded-full bg-blue-600" style={{ width: `${item.porcentagem}%` }} />
+                            <div
+                              className="h-full rounded-full bg-blue-600"
+                              style={{ width: `${item.porcentagem}%` }}
+                            />
                           </div>
-                          <p className="mt-1 text-xs font-black">{item.porcentagem}%</p>
+                          <p className="mt-1 text-xs font-black">
+                            {item.porcentagem}%
+                          </p>
                         </td>
-                        <td className="px-4 py-3 font-black">{item.nota ?? "-"}</td>
-                        <td className="px-4 py-3 font-black">{item.tentativas}</td>
-                        <td className="px-4 py-3 font-black">{item.codigo || "Sem certificado"}</td>
-                        <td className="px-4 py-3 text-xs font-bold text-slate-600">{data(item.updatedAt)}</td>
+                        <td className="px-4 py-3 font-black">
+                          {item.nota ?? "-"}
+                        </td>
+                        <td className="px-4 py-3 font-black">
+                          {item.tentativas}
+                        </td>
+                        <td className="px-4 py-3 font-black">
+                          {item.codigo || "Sem certificado"}
+                        </td>
+                        <td className="px-4 py-3 text-xs font-bold text-slate-600">
+                          {data(item.updatedAt)}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="flex justify-end gap-2">
                             {item.certificadoUrl && (
@@ -716,7 +890,10 @@ export default function TreinamentosDinamicos() {
                     ))}
                     {!filtrados.length && (
                       <tr>
-                        <td colSpan={9} className="bg-white px-4 py-10 text-center text-sm font-black text-slate-600">
+                        <td
+                          colSpan={9}
+                          className="bg-white px-4 py-10 text-center text-sm font-black text-slate-600"
+                        >
                           Nenhum participante encontrado.
                         </td>
                       </tr>
@@ -726,13 +903,22 @@ export default function TreinamentosDinamicos() {
               </div>
               <div className="hidden">
                 {filtrados.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800">
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-slate-200 p-3 dark:border-slate-800"
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-black text-slate-900 dark:text-white">{item.nomeCompleto}</p>
-                        <p className="text-xs font-semibold text-slate-500">{item.email}</p>
+                        <p className="font-black text-slate-900 dark:text-white">
+                          {item.nomeCompleto}
+                        </p>
+                        <p className="text-xs font-semibold text-slate-500">
+                          {item.email}
+                        </p>
                         <p className="mt-1 text-xs font-bold text-slate-600 dark:text-slate-300">
-                          {item.codigo || "Sem certificado"} · {item.porcentagem}% · nota {item.nota ?? "-"} · {item.tentativas} tentativa(s)
+                          {item.codigo || "Sem certificado"} ·{" "}
+                          {item.porcentagem}% · nota {item.nota ?? "-"} ·{" "}
+                          {item.tentativas} tentativa(s)
                         </p>
                         <p className="mt-1 text-[11px] font-black uppercase tracking-[0.12em] text-blue-600 dark:text-blue-300">
                           Versão do participante: {item.versao || 1}
@@ -744,7 +930,9 @@ export default function TreinamentosDinamicos() {
                         <FileCheck2 className="h-5 w-5 text-blue-500" />
                       )}
                     </div>
-                    <p className="mt-2 text-xs font-bold text-slate-500">{item.status} · {data(item.updatedAt)}</p>
+                    <p className="mt-2 text-xs font-bold text-slate-500">
+                      {item.status} · {data(item.updatedAt)}
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {item.certificadoUrl && (
                         <a

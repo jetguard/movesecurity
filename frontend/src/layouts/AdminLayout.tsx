@@ -557,18 +557,16 @@ export default function AdminLayout() {
                     <FileCheck2 size={16} />
                     Integração de Motorista
                   </Link>
-                  {["001", "002", "003", "004", "005", "006", "007"].map(
-                    (codigo) => (
-                      <Link
-                        key={codigo}
-                        to={`/treinamentos-poc-sep-${codigo}`}
-                        className={subItem}
-                      >
-                        <FileCheck2 size={16} />
-                        POC-SEP-{codigo}
-                      </Link>
-                    ),
-                  )}
+                  {["006", "007"].map((codigo) => (
+                    <Link
+                      key={codigo}
+                      to={`/treinamentos-poc-sep-${codigo}`}
+                      className={subItem}
+                    >
+                      <FileCheck2 size={16} />
+                      POC-SEP-{codigo}
+                    </Link>
+                  ))}
                   <Link to="/treinamentos-dinamicos" className={subItem}>
                     <FileCheck2 size={16} />
                     Criador de Treinamentos
@@ -617,18 +615,16 @@ export default function AdminLayout() {
                           Painel Analítico
                         </Link>
                       )}
-                      {["001", "002", "003", "004", "005", "006", "007"].map(
-                        (codigo) => (
-                          <Link
-                            key={codigo}
-                            to={`/treinamentos-poc-sep-${codigo}`}
-                            className={subItem}
-                          >
-                            <FileCheck2 size={16} />
-                            POC-SEP-{codigo}
-                          </Link>
-                        ),
-                      )}
+                      {["006", "007"].map((codigo) => (
+                        <Link
+                          key={codigo}
+                          to={`/treinamentos-poc-sep-${codigo}`}
+                          className={subItem}
+                        >
+                          <FileCheck2 size={16} />
+                          POC-SEP-{codigo}
+                        </Link>
+                      ))}
                       <Link to="/treinamentos-dinamicos" className={subItem}>
                         <FileCheck2 size={16} />
                         Criador de Treinamentos

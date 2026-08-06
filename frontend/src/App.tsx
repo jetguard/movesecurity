@@ -85,21 +85,6 @@ const TreinamentoTerminalPublico = lazyWithReload(
 const TreinamentoPocSep007Publico = lazyWithReload(
   () => import("./pages/TreinamentoPocSep007Publico"),
 );
-const TreinamentoPocSep001Publico = lazyWithReload(
-  () => import("./pages/TreinamentoPocSep001Publico"),
-);
-const TreinamentoPocSep002Publico = lazyWithReload(
-  () => import("./pages/TreinamentoPocSep002Publico"),
-);
-const TreinamentoPocSep003Publico = lazyWithReload(
-  () => import("./pages/TreinamentoPocSep003Publico"),
-);
-const TreinamentoPocSep004Publico = lazyWithReload(
-  () => import("./pages/TreinamentoPocSep004Publico"),
-);
-const TreinamentoPocSep005Publico = lazyWithReload(
-  () => import("./pages/TreinamentoPocSep005Publico"),
-);
 const TreinamentoPocSep006Publico = lazyWithReload(
   () => import("./pages/TreinamentoPocSep006Publico"),
 );
@@ -120,21 +105,6 @@ const TreinamentosTerminal = lazyWithReload(
 );
 const TreinamentosPocSep007 = lazyWithReload(
   () => import("./pages/TreinamentosPocSep007"),
-);
-const TreinamentosPocSep001 = lazyWithReload(
-  () => import("./pages/TreinamentosPocSep001"),
-);
-const TreinamentosPocSep002 = lazyWithReload(
-  () => import("./pages/TreinamentosPocSep002"),
-);
-const TreinamentosPocSep003 = lazyWithReload(
-  () => import("./pages/TreinamentosPocSep003"),
-);
-const TreinamentosPocSep004 = lazyWithReload(
-  () => import("./pages/TreinamentosPocSep004"),
-);
-const TreinamentosPocSep005 = lazyWithReload(
-  () => import("./pages/TreinamentosPocSep005"),
 );
 const TreinamentosPocSep006 = lazyWithReload(
   () => import("./pages/TreinamentosPocSep006"),
@@ -167,26 +137,6 @@ export default function App() {
           <Route
             path="/treinamento-poc-sep-007"
             element={<TreinamentoPocSep007Publico />}
-          />
-          <Route
-            path="/treinamento-poc-sep-001"
-            element={<TreinamentoPocSep001Publico />}
-          />
-          <Route
-            path="/treinamento-poc-sep-002"
-            element={<TreinamentoPocSep002Publico />}
-          />
-          <Route
-            path="/treinamento-poc-sep-003"
-            element={<TreinamentoPocSep003Publico />}
-          />
-          <Route
-            path="/treinamento-poc-sep-004"
-            element={<TreinamentoPocSep004Publico />}
-          />
-          <Route
-            path="/treinamento-poc-sep-005"
-            element={<TreinamentoPocSep005Publico />}
           />
           <Route
             path="/treinamento-poc-sep-006"
@@ -312,45 +262,26 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="treinamentos-poc-sep-001"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                    PERFIS.PORTARIA,
-                  ]}
-                >
-                  <TreinamentosPocSep001 />
-                </ProtectedRoute>
-              }
-            />
-            {[
-              ["treinamentos-poc-sep-002", <TreinamentosPocSep002 />],
-              ["treinamentos-poc-sep-003", <TreinamentosPocSep003 />],
-              ["treinamentos-poc-sep-004", <TreinamentosPocSep004 />],
-              ["treinamentos-poc-sep-005", <TreinamentosPocSep005 />],
-              ["treinamentos-poc-sep-006", <TreinamentosPocSep006 />],
-            ].map(([path, element]) => (
-              <Route
-                key={String(path)}
-                path={String(path)}
-                element={
-                  <ProtectedRoute
-                    perfis={[
-                      PERFIS.SUPER_ADMIN,
-                      PERFIS.ADMINISTRADOR,
-                      PERFIS.ANALISTA,
-                      PERFIS.PORTARIA,
-                    ]}
-                  >
-                    {element}
-                  </ProtectedRoute>
-                }
-              />
-            ))}
+            {[["treinamentos-poc-sep-006", <TreinamentosPocSep006 />]].map(
+              ([path, element]) => (
+                <Route
+                  key={String(path)}
+                  path={String(path)}
+                  element={
+                    <ProtectedRoute
+                      perfis={[
+                        PERFIS.SUPER_ADMIN,
+                        PERFIS.ADMINISTRADOR,
+                        PERFIS.ANALISTA,
+                        PERFIS.PORTARIA,
+                      ]}
+                    >
+                      {element}
+                    </ProtectedRoute>
+                  }
+                />
+              ),
+            )}
             <Route
               path="treinamentos-dinamicos"
               element={

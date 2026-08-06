@@ -1,6 +1,7 @@
 ﻿import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
+import { randomUUID } from "node:crypto";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import {
@@ -24,12 +25,15 @@ const selectUsuario = {
   setor: true,
   cargo: true,
   empresa: true,
+  terceirizado: true,
   equipe: true,
   unidade: true,
   unidadesPermitidas: true,
   perfilAcesso: true,
   statusUsuario: true,
   deveAlterarSenha: true,
+  somenteCadastro: true,
+  gruposTreinamentoJson: true,
   senhaAlteradaEm: true,
   pinOperacionalHash: true,
   pinOperacionalCriadoEm: true,
@@ -42,6 +46,11 @@ function formatarUsuario(usuario: any) {
   if (!usuario) return usuario;
   return {
     ...usuario,
+    gruposTreinamento: normalizarGruposTreinamento(
+      usuario.gruposTreinamentoJson,
+      usuario.terceirizado,
+    ),
+    gruposTreinamentoJson: undefined,
     unidadesPermitidas: normalizarUnidadesPermitidas(
       usuario.unidadesPermitidas,
       usuario.unidade,
@@ -133,6 +142,43 @@ function cpfValido(cpf: string) {
   );
 }
 
+const GRUPOS_TREINAMENTO = [
+  "CCOS",
+  "Liderança",
+  "Balança",
+  "Portaria",
+  "Terceirizado",
+];
+
+function normalizarGrupoTreinamento(grupo: string) {
+  const valor = String(grupo || "")
+    .trim()
+    .toLowerCase();
+  return GRUPOS_TREINAMENTO.find((item) => item.toLowerCase() === valor) || "";
+}
+
+function normalizarGruposTreinamento(valor: unknown, terceirizado = false) {
+  let itens: unknown[] = [];
+  if (Array.isArray(valor)) {
+    itens = valor;
+  } else if (typeof valor === "string") {
+    try {
+      const parsed = JSON.parse(valor);
+      itens = Array.isArray(parsed) ? parsed : valor.split(",");
+    } catch {
+      itens = valor.split(",");
+    }
+  }
+
+  const grupos = itens
+    .map((item) => normalizarGrupoTreinamento(String(item)))
+    .filter(Boolean);
+  if (terceirizado && !grupos.includes("Terceirizado")) {
+    grupos.push("Terceirizado");
+  }
+  return Array.from(new Set(grupos));
+}
+
 async function vincularTreinamentosPocSep007(usuario: {
   id: number;
   email: string;
@@ -144,31 +190,6 @@ async function vincularTreinamentosPocSep007(usuario: {
 }) {
   const cpf = limparCpf(usuario.cpf || "");
   await prisma.treinamentoPocSep007.updateMany({
-    where: {
-      usuarioId: null,
-      OR: [{ email: usuario.email }, ...(cpf ? [{ cpf }] : [])],
-    },
-    data: {
-      usuarioId: usuario.id,
-      cargo: usuario.cargo,
-      departamento: usuario.setor,
-      unidade: usuario.unidade,
-      empresa: usuario.empresa || "Movecta S/A",
-    },
-  });
-}
-
-async function vincularTreinamentosPocSep001(usuario: {
-  id: number;
-  email: string;
-  cpf?: string | null;
-  cargo?: string | null;
-  setor?: string | null;
-  unidade?: string | null;
-  empresa?: string | null;
-}) {
-  const cpf = limparCpf(usuario.cpf || "");
-  await prisma.treinamentoPocSep001.updateMany({
     where: {
       usuarioId: null,
       OR: [{ email: usuario.email }, ...(cpf ? [{ cpf }] : [])],
@@ -205,13 +226,7 @@ async function vincularTreinamentosPocComplementares(usuario: {
     OR: [{ email: usuario.email }, ...(cpf ? [{ cpf }] : [])],
   };
 
-  await Promise.all([
-    prisma.treinamentoPocSep002.updateMany({ where, data }),
-    prisma.treinamentoPocSep003.updateMany({ where, data }),
-    prisma.treinamentoPocSep004.updateMany({ where, data }),
-    prisma.treinamentoPocSep005.updateMany({ where, data }),
-    prisma.treinamentoPocSep006.updateMany({ where, data }),
-  ]);
+  await prisma.treinamentoPocSep006.updateMany({ where, data });
 }
 
 export async function listarUsuarios(req: Request, res: Response) {
@@ -240,6 +255,9 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       perfilAcesso,
       senha,
       confirmarSenha,
+      terceirizado,
+      somenteCadastro,
+      gruposTreinamento,
     } = req.body;
 
     const unidadesDoUsuario = normalizarUnidadesPermitidas(
@@ -251,16 +269,21 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         ? unidade
         : unidadesDoUsuario[0];
     const cpfNormalizado = limparCpf(cpf);
+    const cadastroSemAcesso = Boolean(somenteCadastro);
+    const colaboradorTerceirizado = Boolean(terceirizado);
+    const grupos = normalizarGruposTreinamento(
+      gruposTreinamento ?? req.body.gruposTreinamentoJson,
+      colaboradorTerceirizado,
+    );
 
     if (
       !nome ||
       !email ||
-      !re ||
+      (!re && !cpfNormalizado) ||
       !setor ||
       !cargo ||
       !unidadePrincipal ||
-      !perfilAcesso ||
-      !senha
+      (!cadastroSemAcesso && (!perfilAcesso || !senha))
     ) {
       return res
         .status(400)
@@ -271,7 +294,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "CPF inválido." });
     }
 
-    if (senha !== confirmarSenha) {
+    if (!cadastroSemAcesso && senha !== confirmarSenha) {
       return res.status(400).json({ error: "As senhas não coincidem." });
     }
 
@@ -297,6 +320,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         re,
         setor,
         cargo,
+        terceirizado: colaboradorTerceirizado,
         equipe: validarEquipe(equipe),
         unidade: unidadePrincipal,
         unidadesPermitidas: serializarUnidadesPermitidas(
@@ -304,10 +328,17 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
           unidadePrincipal,
         ),
         empresa: "Movecta S/A",
-        perfilAcesso: normalizarPerfil(perfilAcesso),
-        statusUsuario: "ATIVO",
-        deveAlterarSenha: true,
-        senha: await bcrypt.hash(senha, 10),
+        perfilAcesso: cadastroSemAcesso
+          ? "CADASTRO"
+          : normalizarPerfil(perfilAcesso),
+        statusUsuario: cadastroSemAcesso ? "INATIVO" : "ATIVO",
+        deveAlterarSenha: !cadastroSemAcesso,
+        somenteCadastro: cadastroSemAcesso,
+        gruposTreinamentoJson: JSON.stringify(grupos),
+        senha: await bcrypt.hash(
+          cadastroSemAcesso ? randomUUID() : String(senha),
+          10,
+        ),
       },
       select: selectUsuario,
     });
@@ -321,7 +352,6 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
     });
 
     await vincularTreinamentosPocSep007(usuario);
-    await vincularTreinamentosPocSep001(usuario);
     await vincularTreinamentosPocComplementares(usuario);
 
     return res.status(201).json(formatarUsuario(usuario));
@@ -364,6 +394,9 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       unidadesPermitidas,
       perfilAcesso,
       statusUsuario,
+      terceirizado,
+      somenteCadastro,
+      gruposTreinamento,
     } = req.body;
     const unidadesDoUsuario = normalizarUnidadesPermitidas(
       unidadesPermitidas,
@@ -374,6 +407,12 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
         ? unidade
         : unidadesDoUsuario[0];
     const cpfNormalizado = limparCpf(cpf);
+    const cadastroSemAcesso = Boolean(somenteCadastro);
+    const colaboradorTerceirizado = Boolean(terceirizado);
+    const grupos = normalizarGruposTreinamento(
+      gruposTreinamento ?? req.body.gruposTreinamentoJson,
+      colaboradorTerceirizado,
+    );
 
     if (!cpfValido(cpfNormalizado)) {
       return res.status(400).json({ error: "CPF inválido." });
@@ -400,6 +439,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
         re,
         setor,
         cargo,
+        terceirizado: colaboradorTerceirizado,
         equipe: validarEquipe(equipe),
         unidade: unidadePrincipal,
         unidadesPermitidas: serializarUnidadesPermitidas(
@@ -407,8 +447,17 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
           unidadePrincipal,
         ),
         empresa: "Movecta S/A",
-        perfilAcesso: normalizarPerfil(perfilAcesso),
-        statusUsuario: validarStatus(statusUsuario),
+        perfilAcesso: cadastroSemAcesso
+          ? "CADASTRO"
+          : normalizarPerfil(perfilAcesso),
+        statusUsuario: cadastroSemAcesso
+          ? "INATIVO"
+          : validarStatus(statusUsuario),
+        deveAlterarSenha: cadastroSemAcesso
+          ? false
+          : usuarioAnterior.deveAlterarSenha,
+        somenteCadastro: cadastroSemAcesso,
+        gruposTreinamentoJson: JSON.stringify(grupos),
       },
       select: selectUsuario,
     });
@@ -426,7 +475,6 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
     });
 
     await vincularTreinamentosPocSep007(usuario);
-    await vincularTreinamentosPocSep001(usuario);
     await vincularTreinamentosPocComplementares(usuario);
 
     return res.json(formatarUsuario(usuario));

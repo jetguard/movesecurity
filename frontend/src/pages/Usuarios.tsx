@@ -14,6 +14,9 @@ type Usuario = {
   unidade?: string;
   unidadesPermitidas?: string[];
   empresa?: string;
+  terceirizado?: boolean;
+  somenteCadastro?: boolean;
+  gruposTreinamento?: string[];
   perfilAcesso: string;
   statusUsuario: string;
   possuiPinOperacional?: boolean;
@@ -46,6 +49,13 @@ const perfis = [
   { label: "Cadastro", value: "CADASTRO" },
   { label: "Técnico/Manutenção", value: "TECNICO_MANUTENCAO" },
 ];
+const gruposTreinamento = [
+  "CCOS",
+  "Liderança",
+  "Balança",
+  "Portaria",
+  "Terceirizado",
+];
 
 const vazio = {
   nome: "",
@@ -58,6 +68,9 @@ const vazio = {
   unidade: "GJA-T1",
   unidadesPermitidas: ["GJA-T1"],
   empresa: "Movecta S/A",
+  terceirizado: false,
+  somenteCadastro: false,
+  gruposTreinamento: [] as string[],
   perfilAcesso: "",
   statusUsuario: "ATIVO",
   senha: "",
@@ -103,7 +116,12 @@ export default function Usuarios() {
       const bateBusca =
         usuario.nome.toLowerCase().includes(texto) ||
         usuario.email.toLowerCase().includes(texto) ||
-        (usuario.re || "").toLowerCase().includes(texto);
+        (usuario.re || "").toLowerCase().includes(texto) ||
+        (usuario.cpf || "").includes(apenasDigitos(texto)) ||
+        (usuario.gruposTreinamento || [])
+          .join(" ")
+          .toLowerCase()
+          .includes(texto);
 
       return (
         bateBusca &&
@@ -113,10 +131,51 @@ export default function Usuarios() {
     });
   }, [busca, filtroPerfil, filtroStatus, usuarios]);
 
-  function atualizarCampo(campo: string, valor: string | string[]) {
+  function atualizarCampo(campo: string, valor: string | string[] | boolean) {
     if (campo === "cpf" && typeof valor === "string")
       valor = mascararCpf(valor);
-    setFormulario((atual) => ({ ...atual, [campo]: valor }));
+    setFormulario((atual) => {
+      if (campo === "terceirizado") {
+        const grupos = valor
+          ? Array.from(new Set([...atual.gruposTreinamento, "Terceirizado"]))
+          : atual.gruposTreinamento.filter((item) => item !== "Terceirizado");
+        return {
+          ...atual,
+          terceirizado: Boolean(valor),
+          gruposTreinamento: grupos,
+        };
+      }
+      if (campo === "somenteCadastro" && valor) {
+        return {
+          ...atual,
+          somenteCadastro: true,
+          perfilAcesso: "CADASTRO",
+          statusUsuario: "INATIVO",
+          senha: "",
+          confirmarSenha: "",
+        };
+      }
+      if (campo === "somenteCadastro") {
+        return { ...atual, somenteCadastro: false, statusUsuario: "ATIVO" };
+      }
+      return { ...atual, [campo]: valor };
+    });
+  }
+
+  function alternarGrupoTreinamento(grupo: string) {
+    setFormulario((atual) => {
+      const selecionados = atual.gruposTreinamento.includes(grupo)
+        ? atual.gruposTreinamento.filter((item) => item !== grupo)
+        : [...atual.gruposTreinamento, grupo];
+      return {
+        ...atual,
+        gruposTreinamento: selecionados,
+        terceirizado:
+          grupo === "Terceirizado"
+            ? selecionados.includes("Terceirizado")
+            : atual.terceirizado,
+      };
+    });
   }
 
   function alternarUnidadePermitida(unidade: string) {
@@ -160,6 +219,9 @@ export default function Usuarios() {
         ? usuario.unidadesPermitidas
         : [usuario.unidade || "GJA-T1"],
       empresa: usuario.empresa || "Movecta S/A",
+      terceirizado: Boolean(usuario.terceirizado),
+      somenteCadastro: Boolean(usuario.somenteCadastro),
+      gruposTreinamento: usuario.gruposTreinamento || [],
       perfilAcesso: usuario.perfilAcesso,
       statusUsuario: usuario.statusUsuario,
       senha: "",
@@ -173,8 +235,13 @@ export default function Usuarios() {
   async function salvarUsuario(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!formulario.perfilAcesso) {
+    if (!formulario.somenteCadastro && !formulario.perfilAcesso) {
       alert("Selecione o perfil de acesso do usuário.");
+      return;
+    }
+
+    if (!formulario.re && !apenasDigitos(formulario.cpf)) {
+      alert("Informe o R.E ou o CPF do usuário.");
       return;
     }
 
@@ -196,7 +263,11 @@ export default function Usuarios() {
       unidade: formulario.unidade,
     };
 
-    if (!editando && formulario.senha !== formulario.confirmarSenha) {
+    if (
+      !editando &&
+      !formulario.somenteCadastro &&
+      formulario.senha !== formulario.confirmarSenha
+    ) {
       alert("As senhas não coincidem.");
       return;
     }
@@ -325,6 +396,32 @@ export default function Usuarios() {
           <h2 className="text-xl font-bold">
             {editando ? "Editar usuário" : "Novo usuário"}
           </h2>
+          <div className="grid gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4 md:grid-cols-2">
+            <label className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={!formulario.somenteCadastro}
+                onChange={(e) =>
+                  atualizarCampo("somenteCadastro", !e.target.checked)
+                }
+              />
+              Habilitar acesso à plataforma
+            </label>
+            <label className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={formulario.terceirizado}
+                onChange={(e) =>
+                  atualizarCampo("terceirizado", e.target.checked)
+                }
+              />
+              Colaborador terceirizado
+            </label>
+            <p className="md:col-span-2 text-sm text-slate-600">
+              Use somente cadastro para registrar pessoas que farão
+              treinamentos, sem liberar login no JetGuard.
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               className="rounded-lg border p-3"
@@ -335,7 +432,11 @@ export default function Usuarios() {
             />
             <input
               className="rounded-lg border p-3"
-              placeholder="E-mail"
+              placeholder={
+                formulario.terceirizado
+                  ? "E-mail pessoal"
+                  : "E-mail corporativo"
+              }
               type="email"
               value={formulario.email}
               onChange={(e) => atualizarCampo("email", e.target.value)}
@@ -354,7 +455,6 @@ export default function Usuarios() {
               placeholder="R.E"
               value={formulario.re}
               onChange={(e) => atualizarCampo("re", e.target.value)}
-              required
             />
             <input
               className="rounded-lg border p-3"
@@ -423,36 +523,64 @@ export default function Usuarios() {
               value="Movecta S/A"
               readOnly
             />
-            <select
-              className="rounded-lg border p-3"
-              value={formulario.perfilAcesso}
-              onChange={(e) => atualizarCampo("perfilAcesso", e.target.value)}
-              required
-              disabled={editando?.perfilAcesso === "SUPER_ADMIN"}
-            >
-              {!editando && (
-                <option value="">Selecione o perfil de acesso</option>
-              )}
-              {editando?.perfilAcesso === "SUPER_ADMIN" && (
-                <option value="SUPER_ADMIN">Super Admin</option>
-              )}
-              {perfis.map((perfil) => (
-                <option key={perfil.value} value={perfil.value}>
-                  {perfil.label}
-                </option>
-              ))}
-            </select>
-            <select
-              className="rounded-lg border p-3"
-              value={formulario.statusUsuario}
-              onChange={(e) => atualizarCampo("statusUsuario", e.target.value)}
-              disabled={editando?.perfilAcesso === "SUPER_ADMIN"}
-            >
-              <option value="ATIVO">Ativo</option>
-              <option value="INATIVO">Inativo</option>
-              <option value="BLOQUEADO">Bloqueado</option>
-            </select>
-            {!editando && (
+            <div className="rounded-lg border p-3 md:col-span-2">
+              <p className="mb-3 text-sm font-semibold text-slate-700">
+                Atribuição grupo de treinamento
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                {gruposTreinamento.map((grupo) => (
+                  <label
+                    key={grupo}
+                    className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={formulario.gruposTreinamento.includes(grupo)}
+                      onChange={() => alternarGrupoTreinamento(grupo)}
+                    />
+                    {grupo}
+                  </label>
+                ))}
+              </div>
+            </div>
+            {!formulario.somenteCadastro && (
+              <>
+                <select
+                  className="rounded-lg border p-3"
+                  value={formulario.perfilAcesso}
+                  onChange={(e) =>
+                    atualizarCampo("perfilAcesso", e.target.value)
+                  }
+                  required
+                  disabled={editando?.perfilAcesso === "SUPER_ADMIN"}
+                >
+                  {!editando && (
+                    <option value="">Selecione o perfil de acesso</option>
+                  )}
+                  {editando?.perfilAcesso === "SUPER_ADMIN" && (
+                    <option value="SUPER_ADMIN">Super Admin</option>
+                  )}
+                  {perfis.map((perfil) => (
+                    <option key={perfil.value} value={perfil.value}>
+                      {perfil.label}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="rounded-lg border p-3"
+                  value={formulario.statusUsuario}
+                  onChange={(e) =>
+                    atualizarCampo("statusUsuario", e.target.value)
+                  }
+                  disabled={editando?.perfilAcesso === "SUPER_ADMIN"}
+                >
+                  <option value="ATIVO">Ativo</option>
+                  <option value="INATIVO">Inativo</option>
+                  <option value="BLOQUEADO">Bloqueado</option>
+                </select>
+              </>
+            )}
+            {!editando && !formulario.somenteCadastro && (
               <>
                 <input
                   className="rounded-lg border p-3"
@@ -527,9 +655,13 @@ export default function Usuarios() {
           )}
 
           {editando &&
-            ["OPERADOR", "ANALISTA", "PORTARIA", "CADASTRO", "TECNICO_MANUTENCAO"].includes(
-              editando.perfilAcesso,
-            ) && (
+            [
+              "OPERADOR",
+              "ANALISTA",
+              "PORTARIA",
+              "CADASTRO",
+              "TECNICO_MANUTENCAO",
+            ].includes(editando.perfilAcesso) && (
               <div className="rounded-lg border bg-blue-50 p-4">
                 <p className="font-semibold mb-2">Dispositivo autorizado</p>
                 <p className="mb-3 text-sm text-slate-600">
@@ -574,6 +706,8 @@ export default function Usuarios() {
               <th className="p-3">Setor</th>
               <th className="p-3">Equipe</th>
               <th className="p-3">Unidade</th>
+              <th className="p-3">Grupos</th>
+              <th className="p-3">Tipo</th>
               <th className="p-3">Perfil</th>
               <th className="p-3">Status</th>
               <th className="p-3">PIN</th>
@@ -593,6 +727,14 @@ export default function Usuarios() {
                 <td className="p-3">{usuario.equipe || "-"}</td>
                 <td className="p-3">
                   {usuario.unidadesPermitidas?.join(", ") || usuario.unidade}
+                </td>
+                <td className="p-3">
+                  {usuario.gruposTreinamento?.length
+                    ? usuario.gruposTreinamento.join(", ")
+                    : "-"}
+                </td>
+                <td className="p-3">
+                  {usuario.terceirizado ? "Terceirizado" : "Colaborador"}
                 </td>
                 <td className="p-3">{usuario.perfilAcesso}</td>
                 <td className="p-3">{usuario.statusUsuario}</td>

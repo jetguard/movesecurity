@@ -1,4 +1,4 @@
-import { Response } from "express";
+﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 
@@ -48,41 +48,6 @@ const TREINAMENTOS = [
     competencias: ["Controle de Acesso", "Segurança Patrimonial"],
   },
   {
-    chave: "treinamentoPocSep001",
-    titulo: "POC-SEP-001",
-    poc: "POC-SEP-001",
-    certificado: "treinamento-poc-sep-001",
-    competencias: ["Ocorrências", "Eventos", "Investigação"],
-  },
-  {
-    chave: "treinamentoPocSep002",
-    titulo: "POC-SEP-002",
-    poc: "POC-SEP-002",
-    certificado: "treinamento-poc-sep-002",
-    competencias: ["Rondas", "CCOS", "Segurança Patrimonial"],
-  },
-  {
-    chave: "treinamentoPocSep003",
-    titulo: "POC-SEP-003",
-    poc: "POC-SEP-003",
-    certificado: "treinamento-poc-sep-003",
-    competencias: ["Análise de Risco", "Investigação"],
-  },
-  {
-    chave: "treinamentoPocSep004",
-    titulo: "POC-SEP-004",
-    poc: "POC-SEP-004",
-    certificado: "treinamento-poc-sep-004",
-    competencias: ["Contratos", "Segurança Patrimonial"],
-  },
-  {
-    chave: "treinamentoPocSep005",
-    titulo: "POC-SEP-005",
-    poc: "POC-SEP-005",
-    certificado: "treinamento-poc-sep-005",
-    competencias: ["Scanner", "CCOS", "Análise de Risco"],
-  },
-  {
     chave: "treinamentoPocSep006",
     titulo: "POC-SEP-006",
     poc: "POC-SEP-006",
@@ -103,12 +68,12 @@ const COMPETENCIAS = [
   "CCOS",
   "Rondas",
   "Scanner",
-  "Investigação",
-  "Ocorrências",
+  "InvestigaÃ§Ã£o",
+  "OcorrÃªncias",
   "Eventos",
   "Contratos",
-  "Análise de Risco",
-  "Segurança Patrimonial",
+  "AnÃ¡lise de Risco",
+  "SeguranÃ§a Patrimonial",
 ];
 
 function texto(valor: unknown) {
@@ -151,7 +116,7 @@ function agruparMedia<T>(
 ) {
   const grupos = new Map<string, Array<number | null | undefined>>();
   itens.forEach((item) => {
-    const nome = texto(chave(item)) || "Não informado";
+    const nome = texto(chave(item)) || "NÃ£o informado";
     grupos.set(nome, [...(grupos.get(nome) || []), valor(item)]);
   });
 
@@ -229,7 +194,7 @@ function calcularIco(registros: RegistroTreinamento[]) {
       fatorPendencia * 0.1,
   );
 
-  let classificacao = "Reciclagem Prioritária";
+  let classificacao = "Reciclagem PrioritÃ¡ria";
   if (ico >= 90) classificacao = "Excelente";
   else if (ico >= 80) classificacao = "Muito Bom";
   else if (ico >= 70) classificacao = "Bom";
@@ -248,11 +213,11 @@ function recomendacoes(registros: RegistroTreinamento[], ico: number) {
   if (registros.some((item) => item.tentativas > 3))
     saida.push("Sugerir acompanhamento pelo gestor por excesso de tentativas.");
   if (ico >= 95)
-    saida.push("Indicar aptidão para atuar como multiplicador interno.");
+    saida.push("Indicar aptidÃ£o para atuar como multiplicador interno.");
   if (registros.some((item) => item.vencido))
     saida.push("Priorizar reciclagem de treinamentos vencidos.");
   if (!saida.length)
-    saida.push("Manter acompanhamento periódico de desempenho.");
+    saida.push("Manter acompanhamento periÃ³dico de desempenho.");
   return saida;
 }
 
@@ -405,7 +370,7 @@ export async function painelAnaliticoTreinamentos(
       if (filtros.treinamento && item.treinamento !== filtros.treinamento)
         return false;
       if (filtros.status && item.status !== filtros.status) return false;
-      if (filtros.situacao === "Concluído" && !item.aprovado) return false;
+      if (filtros.situacao === "ConcluÃ­do" && !item.aprovado) return false;
       if (filtros.situacao === "Pendente" && item.aprovado) return false;
       if (filtros.situacao === "Vencido" && !item.vencido) return false;
       if (
@@ -673,6 +638,6 @@ export async function painelAnaliticoTreinamentos(
     console.error(error);
     return res
       .status(500)
-      .json({ error: "Erro ao gerar painel analítico de treinamentos." });
+      .json({ error: "Erro ao gerar painel analÃ­tico de treinamentos." });
   }
 }

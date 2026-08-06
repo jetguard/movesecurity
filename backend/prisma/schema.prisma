@@ -19,12 +19,15 @@ model Usuario {
   setor                      String?
   cargo                      String?
   empresa                    String?
+  terceirizado               Boolean   @default(false)
   equipe                     String?
   unidade                    String?
   unidadesPermitidas         String?
   perfilAcesso               String    @default("USUARIO")
   statusUsuario              String    @default("ATIVO")
   deveAlterarSenha           Boolean   @default(true)
+  somenteCadastro            Boolean   @default(false)
+  gruposTreinamentoJson      String    @default("[]")
   senhaAlteradaEm            DateTime?
   pinOperacionalHash         String?
   pinOperacionalCriadoEm     DateTime?
@@ -904,70 +907,70 @@ model ControlePreventivoCadastro {
 }
 
 model AnaliseRiscoCompleta {
-  id                         Int      @id @default(autoincrement())
-  numero                     Int
-  ano                        Int
-  codigo                     String
-  unidade                    String
-  macroProcessoId            Int?
-  macroProcessoCodigo        String
-  macroProcessoNome          String
-  setorId                    Int?
-  setorNome                  String
-  riscoId                    Int?
-  riscoCodigo                String
-  riscoNome                  String
-  fatoresRiscoJson           String   @default("[]")
-  sc                         Int
-  fe                         Int
-  intervalo                  Int
-  sse                        Int
-  ope                        Int
-  fin                        Int
-  adm                        Int
-  img                        Int
-  lc                         Int
-  notaProbabilidade          Float
-  mediaProbabilidade         Float
-  percentualProbabilidade    Float
-  nivelProbabilidade         String
-  notaConsequencia           Float
-  mediaConsequencia          Float
-  nivelConsequencia          String
-  resultadoInerente          Float
-  nivelRiscoInerente         String
-  classificacaoRisco         String
-  periodicidadeAcao          String
-  preventivosJson            String   @default("[]")
-  detectivosJson             String   @default("[]")
-  corretivosJson             String   @default("[]")
-  scResidual                 Int?
-  feResidual                 Int?
-  intervaloResidual          Int?
-  sseResidual                Int?
-  opeResidual                Int?
-  finResidual                Int?
-  admResidual                Int?
-  imgResidual                Int?
-  lcResidual                 Int?
-  notaProbabilidadeResidual  Float?
-  probabilidadeResidual      Float?
+  id                              Int      @id @default(autoincrement())
+  numero                          Int
+  ano                             Int
+  codigo                          String
+  unidade                         String
+  macroProcessoId                 Int?
+  macroProcessoCodigo             String
+  macroProcessoNome               String
+  setorId                         Int?
+  setorNome                       String
+  riscoId                         Int?
+  riscoCodigo                     String
+  riscoNome                       String
+  fatoresRiscoJson                String   @default("[]")
+  sc                              Int
+  fe                              Int
+  intervalo                       Int
+  sse                             Int
+  ope                             Int
+  fin                             Int
+  adm                             Int
+  img                             Int
+  lc                              Int
+  notaProbabilidade               Float
+  mediaProbabilidade              Float
+  percentualProbabilidade         Float
+  nivelProbabilidade              String
+  notaConsequencia                Float
+  mediaConsequencia               Float
+  nivelConsequencia               String
+  resultadoInerente               Float
+  nivelRiscoInerente              String
+  classificacaoRisco              String
+  periodicidadeAcao               String
+  preventivosJson                 String   @default("[]")
+  detectivosJson                  String   @default("[]")
+  corretivosJson                  String   @default("[]")
+  scResidual                      Int?
+  feResidual                      Int?
+  intervaloResidual               Int?
+  sseResidual                     Int?
+  opeResidual                     Int?
+  finResidual                     Int?
+  admResidual                     Int?
+  imgResidual                     Int?
+  lcResidual                      Int?
+  notaProbabilidadeResidual       Float?
+  probabilidadeResidual           Float?
   percentualProbabilidadeResidual Float?
-  nivelProbabilidadeResidual String?
-  notaConsequenciaResidual   Float?
-  consequenciaResidual       Float?
-  nivelConsequenciaResidual  String?
-  resultadoResidual          Float?
-  nivelRiscoResidual         String?
-  classificacaoResidual      String?
-  desempenhoNota             Float?
-  desempenhoProbabilidade    Float?
-  desempenhoConsequencia     Float?
-  desempenhoNivelRisco       Float?
-  responsavelId              Int?
-  status                     String   @default("Ativo")
-  createdAt                  DateTime @default(now())
-  updatedAt                  DateTime @updatedAt
+  nivelProbabilidadeResidual      String?
+  notaConsequenciaResidual        Float?
+  consequenciaResidual            Float?
+  nivelConsequenciaResidual       String?
+  resultadoResidual               Float?
+  nivelRiscoResidual              String?
+  classificacaoResidual           String?
+  desempenhoNota                  Float?
+  desempenhoProbabilidade         Float?
+  desempenhoConsequencia          Float?
+  desempenhoNivelRisco            Float?
+  responsavelId                   Int?
+  status                          String   @default("Ativo")
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
 
   @@unique([codigo, unidade])
   @@index([unidade, status])
@@ -1656,20 +1659,21 @@ model TreinamentoPocSep006 {
 }
 
 model TreinamentoModelo {
-  id                Int       @id @default(autoincrement())
-  codigo            String    @unique
-  slug              String    @unique
-  tipo              String
-  nome              String
-  descricao         String?
-  subtitulo         String?
-  notaMinima        Int       @default(80)
-  validadeMeses     Int       @default(24)
-  textoCertificado  String?
-  versao            Int       @default(1)
-  status            String    @default("Rascunho")
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                   Int      @id @default(autoincrement())
+  codigo               String   @unique
+  slug                 String   @unique
+  tipo                 String
+  nome                 String
+  descricao            String?
+  subtitulo            String?
+  notaMinima           Int      @default(80)
+  validadeMeses        Int      @default(24)
+  textoCertificado     String?
+  gruposPermitidosJson String   @default("[]")
+  versao               Int      @default(1)
+  status               String   @default("Rascunho")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   etapas        TreinamentoModeloEtapa[]
   perguntas     TreinamentoModeloPergunta[]
@@ -1691,7 +1695,7 @@ model TreinamentoModeloEtapa {
   updatedAt     DateTime @updatedAt
 
   treinamento TreinamentoModelo           @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
-  perguntas    TreinamentoModeloPergunta[]
+  perguntas   TreinamentoModeloPergunta[]
 
   @@unique([treinamentoId, ordem])
   @@index([treinamentoId])
@@ -1706,8 +1710,8 @@ model TreinamentoModeloPergunta {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  treinamento TreinamentoModelo              @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
-  etapa       TreinamentoModeloEtapa?        @relation(fields: [etapaId], references: [id], onDelete: SetNull)
+  treinamento  TreinamentoModelo              @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
+  etapa        TreinamentoModeloEtapa?        @relation(fields: [etapaId], references: [id], onDelete: SetNull)
   alternativas TreinamentoModeloAlternativa[]
 
   @@unique([treinamentoId, ordem])
@@ -1730,40 +1734,40 @@ model TreinamentoModeloAlternativa {
 }
 
 model TreinamentoModeloParticipante {
-  id                 Int       @id @default(autoincrement())
-  treinamentoId      Int
-  token              String    @unique
-  usuarioId          Int?
-  codigo             String?   @unique
-  nomeCompleto       String
-  cpf                String?
-  email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
-  etapaAtual         Int       @default(1)
-  status             String    @default("Em andamento")
-  porcentagem        Int       @default(0)
-  nota               Float?
-  tentativas         Int       @default(0)
-  respostasQuiz      String?
+  id                       Int       @id @default(autoincrement())
+  treinamentoId            Int
+  token                    String    @unique
+  usuarioId                Int?
+  codigo                   String?   @unique
+  nomeCompleto             String
+  cpf                      String?
+  email                    String
+  cargo                    String?
+  departamento             String?
+  unidade                  String?
+  empresa                  String?
+  etapaAtual               Int       @default(1)
+  status                   String    @default("Em andamento")
+  porcentagem              Int       @default(0)
+  nota                     Float?
+  tentativas               Int       @default(0)
+  respostasQuiz            String?
   avaliacaoTreinamentoJson String?
   avaliacaoTreinamentoEm   DateTime?
-  versao             Int       @default(1)
-  snapshotJson       String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
-  emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
-  dataInicio         DateTime  @default(now())
-  dataConclusao      DateTime?
-  ultimoAcessoEm     DateTime  @default(now())
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
+  versao                   Int       @default(1)
+  snapshotJson             String?
+  assinaturaDataUrl        String?
+  certificadoArquivo       String?
+  emailStatus              String?
+  emailEnviadoEm           DateTime?
+  ipInicio                 String?
+  navegador                String?
+  sistema                  String?
+  dataInicio               DateTime  @default(now())
+  dataConclusao            DateTime?
+  ultimoAcessoEm           DateTime  @default(now())
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
 
   treinamento TreinamentoModelo @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
 

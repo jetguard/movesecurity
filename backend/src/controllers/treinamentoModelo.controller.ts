@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { Request, Response } from "express";
@@ -19,25 +19,6 @@ function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
 }
 
-function cpfValido(cpf: string) {
-  const digitos = limparCpf(cpf);
-  if (digitos.length !== 11 || /^(\d)\1{10}$/.test(digitos)) return false;
-
-  const calcular = (tamanho: number) => {
-    const soma = digitos
-      .slice(0, tamanho)
-      .split("")
-      .reduce(
-        (total, numero, index) => total + Number(numero) * (tamanho + 1 - index),
-        0,
-      );
-    const resto = (soma * 10) % 11;
-    return resto === 10 ? 0 : resto;
-  };
-
-  return calcular(9) === Number(digitos[9]) && calcular(10) === Number(digitos[10]);
-}
-
 function emailValido(email: string) {
   const normalizado = texto(email).toLowerCase();
   if (!normalizado || normalizado.length > 254 || normalizado.includes(".."))
@@ -45,8 +26,46 @@ function emailValido(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
 }
 
-function unidadeValida(unidade: string) {
-  return UNIDADES_SISTEMA.includes(unidade);
+const GRUPOS_TREINAMENTO = [
+  "CCOS",
+  "LideranÃ§a",
+  "BalanÃ§a",
+  "Portaria",
+  "Terceirizado",
+];
+
+function normalizarGrupoTreinamento(grupo: string) {
+  const valor = texto(grupo).toLowerCase();
+  return GRUPOS_TREINAMENTO.find((item) => item.toLowerCase() === valor) || "";
+}
+
+function normalizarGruposTreinamento(valor: unknown) {
+  let itens: unknown[] = [];
+  if (Array.isArray(valor)) {
+    itens = valor;
+  } else if (typeof valor === "string") {
+    try {
+      const parsed = JSON.parse(valor);
+      itens = Array.isArray(parsed) ? parsed : valor.split(",");
+    } catch {
+      itens = valor.split(",");
+    }
+  }
+  return Array.from(
+    new Set(
+      itens
+        .map((item) => normalizarGrupoTreinamento(String(item)))
+        .filter(Boolean),
+    ),
+  );
+}
+
+function temGrupoTreinamento(usuario: any, gruposPermitidos: string[]) {
+  if (!gruposPermitidos.length) return true;
+  const gruposUsuario = normalizarGruposTreinamento(
+    usuario?.gruposTreinamentoJson,
+  );
+  return gruposUsuario.some((grupo) => gruposPermitidos.includes(grupo));
 }
 
 function userAgent(req: Request) {
@@ -88,7 +107,7 @@ function gerarTextoCertificado(modelo: any, participante: any) {
       .replace(/\{\{treinamento\}\}/gi, modelo.nome);
   }
 
-  return `Certificamos que ${participante.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(
+  return `Certificamos que ${participante.nomeCompleto}, portador(a) do CPF nÂº ${formatarCpf(
     participante.cpf || "",
   )}, concluiu com aproveitamento o treinamento ${modelo.codigo} - ${modelo.nome} na data de ${data}.`;
 }
@@ -154,14 +173,28 @@ function caminhoFundoCertificado() {
   return caminhos.find((item) => fs.existsSync(item));
 }
 
-function porcentagem(etapaAtual: number, totalEtapas: number, status?: string | null) {
-  if (String(status || "").toLowerCase().startsWith("conclu")) return 100;
+function porcentagem(
+  etapaAtual: number,
+  totalEtapas: number,
+  status?: string | null,
+) {
+  if (
+    String(status || "")
+      .toLowerCase()
+      .startsWith("conclu")
+  )
+    return 100;
   const total = Math.max(totalEtapas + 3, 2);
-  return Math.max(0, Math.min(99, Math.round(((etapaAtual - 1) / total) * 100)));
+  return Math.max(
+    0,
+    Math.min(99, Math.round(((etapaAtual - 1) / total) * 100)),
+  );
 }
 
 function treinamentoConcluido(status?: string | null) {
-  return String(status || "").toLowerCase().startsWith("conclu");
+  return String(status || "")
+    .toLowerCase()
+    .startsWith("conclu");
 }
 
 function respostaParticipante(registro: any) {
@@ -184,7 +217,9 @@ function respostaParticipante(registro: any) {
     versao: registro.versao,
     dataConclusao: registro.dataConclusao,
     emailStatus: registro.emailStatus,
-    certificadoUrl: registro.certificadoArquivo ? certificadoUrl(registro.token) : null,
+    certificadoUrl: registro.certificadoArquivo
+      ? certificadoUrl(registro.token)
+      : null,
   };
 }
 
@@ -192,6 +227,8 @@ function serializarModelo(modelo: any, incluirCorretas = true) {
   return {
     ...modelo,
     publicUrl: `/treinamento/${modelo.slug}`,
+    gruposPermitidos: normalizarGruposTreinamento(modelo.gruposPermitidosJson),
+    gruposPermitidosJson: undefined,
     etapas: (modelo.etapas || []).map((etapa: any) => ({
       ...etapa,
       topicos: parseJsonArray(etapa.topicosJson),
@@ -224,17 +261,24 @@ function criarSnapshot(modelo: any) {
   return JSON.stringify(serializarModelo(modelo, true));
 }
 
-function lerSnapshot(participante: any, modeloFallback?: any, incluirCorretas = true) {
+function lerSnapshot(
+  participante: any,
+  modeloFallback?: any,
+  incluirCorretas = true,
+) {
   if (participante?.snapshotJson) {
     try {
       const snapshot = JSON.parse(participante.snapshotJson);
       return incluirCorretas ? snapshot : removerGabarito(snapshot);
     } catch {
-      // Se o snapshot estiver inválido, usa o modelo atual.
+      // Se o snapshot estiver invÃ¡lido, usa o modelo atual.
     }
   }
 
-  const serializado = serializarModelo(modeloFallback || participante?.treinamento || {}, incluirCorretas);
+  const serializado = serializarModelo(
+    modeloFallback || participante?.treinamento || {},
+    incluirCorretas,
+  );
   return incluirCorretas ? serializado : removerGabarito(serializado);
 }
 
@@ -265,7 +309,9 @@ async function proximoCodigoCertificado(tx: any, modelo: any) {
     select: { codigo: true },
   });
   const maior = certificados.reduce((atual: number, item: any) => {
-    const numero = Number(String(item.codigo || "").match(/-(\d+)\//)?.[1] || 0);
+    const numero = Number(
+      String(item.codigo || "").match(/-(\d+)\//)?.[1] || 0,
+    );
     return Math.max(atual, numero);
   }, 0);
   return `${prefixo}-${String(maior + 1).padStart(5, "0")}/${ano}`;
@@ -299,33 +345,57 @@ async function gerarCertificado(modelo: any, participante: any) {
     doc.restore();
   }
 
-  doc.roundedRect(42, 38, pageWidth - 84, pageHeight - 76, 26)
+  doc
+    .roundedRect(42, 38, pageWidth - 84, pageHeight - 76, 26)
     .lineWidth(1.4)
     .strokeColor("#93c5fd")
     .stroke();
-  doc.roundedRect(54, 50, pageWidth - 108, pageHeight - 100, 20)
+  doc
+    .roundedRect(54, 50, pageWidth - 108, pageHeight - 100, 20)
     .lineWidth(0.7)
     .strokeColor("#dbeafe")
     .stroke();
 
-  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(11)
+  doc
+    .fillColor("#1d4ed8")
+    .font("Helvetica-Bold")
+    .fontSize(11)
     .text(participante.codigo || "CERTIFICADO", pageWidth - 220, 64, {
       width: 158,
       align: "right",
     });
-  doc.fillColor("#07142f").font("Helvetica-Bold").fontSize(34)
+  doc
+    .fillColor("#07142f")
+    .font("Helvetica-Bold")
+    .fontSize(34)
     .text(modelo.codigo, 92, 86, { width: pageWidth - 184, align: "center" });
-  doc.fillColor("#1d4ed8").font("Helvetica-Bold").fontSize(15)
+  doc
+    .fillColor("#1d4ed8")
+    .font("Helvetica-Bold")
+    .fontSize(15)
     .text(modelo.nome, 110, 132, { width: pageWidth - 220, align: "center" });
   if (modelo.subtitulo) {
-    doc.fillColor("#334155").font("Helvetica-Bold").fontSize(11)
-      .text(modelo.subtitulo, 118, 156, { width: pageWidth - 236, align: "center" });
+    doc
+      .fillColor("#334155")
+      .font("Helvetica-Bold")
+      .fontSize(11)
+      .text(modelo.subtitulo, 118, 156, {
+        width: pageWidth - 236,
+        align: "center",
+      });
   }
 
-  doc.moveTo(190, 184).lineTo(pageWidth - 190, 184)
-    .strokeColor("#7ed321").lineWidth(2).stroke();
+  doc
+    .moveTo(190, 184)
+    .lineTo(pageWidth - 190, 184)
+    .strokeColor("#7ed321")
+    .lineWidth(2)
+    .stroke();
 
-  doc.fillColor("#111827").font("Helvetica").fontSize(19)
+  doc
+    .fillColor("#111827")
+    .font("Helvetica")
+    .fontSize(19)
     .text(gerarTextoCertificado(modelo, participante), 104, 220, {
       width: pageWidth - 208,
       align: "center",
@@ -333,11 +403,16 @@ async function gerarCertificado(modelo: any, participante: any) {
     });
 
   doc.image(qrCode, 84, 424, { width: 78, height: 78 });
-  doc.fillColor("#0f172a").font("Helvetica-Bold").fontSize(7)
-    .text("VALIDAÇÃO", 70, 508, { width: 102, align: "center" });
+  doc
+    .fillColor("#0f172a")
+    .font("Helvetica-Bold")
+    .fontSize(7)
+    .text("VALIDAÃ‡ÃƒO", 70, 508, { width: 102, align: "center" });
 
   if (participante.assinaturaDataUrl) {
-    const assinaturaBase64 = String(participante.assinaturaDataUrl).split(",")[1];
+    const assinaturaBase64 = String(participante.assinaturaDataUrl).split(
+      ",",
+    )[1];
     if (assinaturaBase64) {
       const assinaturaPng = path.join(
         path.dirname(destino),
@@ -349,15 +424,28 @@ async function gerarCertificado(modelo: any, participante: any) {
     }
   }
 
-  doc.moveTo(256, 448).lineTo(586, 448)
-    .strokeColor("#1d4ed8").lineWidth(1.2).stroke();
-  doc.fillColor("#111827").font("Helvetica-Bold").fontSize(10.5)
+  doc
+    .moveTo(256, 448)
+    .lineTo(586, 448)
+    .strokeColor("#1d4ed8")
+    .lineWidth(1.2)
+    .stroke();
+  doc
+    .fillColor("#111827")
+    .font("Helvetica-Bold")
+    .fontSize(10.5)
     .text(participante.nomeCompleto, 256, 464, { width: 330, align: "center" });
-  doc.fillColor("#334155").font("Helvetica").fontSize(9)
+  doc
+    .fillColor("#334155")
+    .font("Helvetica")
+    .fontSize(9)
     .text("Participante", 256, 480, { width: 330, align: "center" });
 
-  doc.fillColor("#64748b").font("Helvetica").fontSize(7.5)
-    .text(`Validação: ${validacaoUrl}`, 170, pageHeight - 70, {
+  doc
+    .fillColor("#64748b")
+    .font("Helvetica")
+    .fontSize(7.5)
+    .text(`ValidaÃ§Ã£o: ${validacaoUrl}`, 170, pageHeight - 70, {
       width: pageWidth - 340,
       align: "center",
     });
@@ -371,12 +459,16 @@ async function gerarCertificado(modelo: any, participante: any) {
   return destino;
 }
 
-async function enviarCertificado(modelo: any, participante: any, certificadoArquivo: string) {
+async function enviarCertificado(
+  modelo: any,
+  participante: any,
+  certificadoArquivo: string,
+) {
   return enviarEmail({
     to: participante.email,
     subject: `Certificado ${modelo.codigo} - ${participante.codigo}`,
-    text: `Olá, ${participante.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento ${modelo.codigo}.`,
-    html: `<p>Olá, <strong>${participante.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong>.</p>`,
+    text: `OlÃ¡, ${participante.nomeCompleto}. Segue em anexo o certificado de conclusÃ£o do treinamento ${modelo.codigo}.`,
+    html: `<p>OlÃ¡, <strong>${participante.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusÃ£o do treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong>.</p>`,
     attachments: [
       {
         filename: `certificado-${String(participante.codigo || modelo.codigo).replace("/", "-")}.pdf`,
@@ -387,38 +479,80 @@ async function enviarCertificado(modelo: any, participante: any, certificadoArqu
   });
 }
 
+async function enviarConvitesTreinamento(modelo: any, grupos: string[]) {
+  if (!grupos.length || modelo.status !== "Publicado") return 0;
+  const usuarios = await prisma.usuario.findMany({
+    select: {
+      nome: true,
+      email: true,
+      statusUsuario: true,
+      gruposTreinamentoJson: true,
+    },
+  });
+  const selecionados = usuarios.filter(
+    (usuario: any) =>
+      usuario.email &&
+      usuario.statusUsuario !== "BLOQUEADO" &&
+      normalizarGruposTreinamento(usuario.gruposTreinamentoJson).some((grupo) =>
+        grupos.includes(grupo),
+      ),
+  );
+  const link = `${appPublicUrl()}/treinamento/${modelo.slug}`;
+  const resultados = await Promise.allSettled(
+    selecionados.map((usuario: any) =>
+      enviarEmail({
+        to: usuario.email,
+        subject: `Treinamento disponÃ­vel - ${modelo.codigo}`,
+        text: `OlÃ¡, ${usuario.nome}. O treinamento ${modelo.codigo} - ${modelo.nome} estÃ¡ disponÃ­vel em ${link}`,
+        html: `<p>OlÃ¡, <strong>${usuario.nome}</strong>.</p><p>O treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong> estÃ¡ disponÃ­vel para o seu grupo.</p><p><a href="${link}">Acessar treinamento</a></p>`,
+      }),
+    ),
+  );
+  return resultados.filter((item) => item.status === "fulfilled").length;
+}
+
 function validarPayloadModelo(body: any) {
   const codigo = normalizarCodigo(body.codigo);
   const nome = texto(body.nome);
   const tipo = texto(body.tipo);
   const etapas = Array.isArray(body.etapas) ? body.etapas : [];
   const perguntas = Array.isArray(body.perguntas) ? body.perguntas : [];
+  const gruposPermitidos = normalizarGruposTreinamento(body.gruposPermitidos);
 
   if (!codigo || !nome || !tipo) {
-    return { error: "Informe tipo, código e nome do treinamento." };
+    return { error: "Informe tipo, cÃ³digo e nome do treinamento." };
   }
   if (!etapas.length) {
-    return { error: "Cadastre pelo menos uma etapa de conteúdo." };
+    return { error: "Cadastre pelo menos uma etapa de conteÃºdo." };
   }
   if (!perguntas.length) {
-    return { error: "Cadastre pelo menos uma pergunta para avaliação." };
+    return { error: "Cadastre pelo menos uma pergunta para avaliaÃ§Ã£o." };
   }
   for (const pergunta of perguntas) {
     const alternativas = Array.isArray(pergunta.alternativas)
       ? pergunta.alternativas
       : [];
     if (!texto(pergunta.pergunta) || alternativas.length < 2) {
-      return { error: "Cada pergunta precisa de texto e pelo menos duas alternativas." };
+      return {
+        error: "Cada pergunta precisa de texto e pelo menos duas alternativas.",
+      };
     }
-    if (alternativas.filter((item: any) => item.correta === true).length !== 1) {
-      return { error: "Cada pergunta deve ter exatamente uma alternativa correta." };
+    if (
+      alternativas.filter((item: any) => item.correta === true).length !== 1
+    ) {
+      return {
+        error: "Cada pergunta deve ter exatamente uma alternativa correta.",
+      };
     }
   }
 
-  return { codigo, nome, tipo, etapas, perguntas };
+  return { codigo, nome, tipo, etapas, perguntas, gruposPermitidos };
 }
 
-export async function listarTreinamentosModelo(req: AuthRequest, res: Response) {
+export async function listarTreinamentosModelo(
+  req: AuthRequest,
+  res: Response,
+) {
   const modelos = await db.treinamentoModelo.findMany({
     orderBy: { updatedAt: "desc" },
     include: {
@@ -434,21 +568,27 @@ export async function listarTreinamentosModelo(req: AuthRequest, res: Response) 
     },
   });
 
-  return res.json(modelos.map((modelo: any) => ({
-    ...serializarModelo(modelo),
-    participantes: modelo.participantes.map((item: any) => ({
-      ...item,
-      assinaturaDataUrl: undefined,
-      certificadoUrl: treinamentoConcluido(item.status) || item.certificadoArquivo ? certificadoUrl(item.token) : null,
+  return res.json(
+    modelos.map((modelo: any) => ({
+      ...serializarModelo(modelo),
+      participantes: modelo.participantes.map((item: any) => ({
+        ...item,
+        assinaturaDataUrl: undefined,
+        certificadoUrl:
+          treinamentoConcluido(item.status) || item.certificadoArquivo
+            ? certificadoUrl(item.token)
+            : null,
+      })),
     })),
-  })));
+  );
 }
 
 export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id || 0);
     const validacao = validarPayloadModelo(req.body);
-    if ("error" in validacao) return res.status(400).json({ error: validacao.error });
+    if ("error" in validacao)
+      return res.status(400).json({ error: validacao.error });
 
     const slugBase = slugify(req.body.slug || validacao.codigo);
     const modelo = await prisma.$transaction(async (tx) => {
@@ -466,6 +606,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               notaMinima: Number(req.body.notaMinima) || 80,
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
+              gruposPermitidosJson: JSON.stringify(validacao.gruposPermitidos),
               versao: { increment: 1 },
               status: texto(req.body.status) || "Rascunho",
             },
@@ -481,6 +622,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               notaMinima: Number(req.body.notaMinima) || 80,
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
+              gruposPermitidosJson: JSON.stringify(validacao.gruposPermitidos),
               status: texto(req.body.status) || "Rascunho",
             },
           });
@@ -546,7 +688,15 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
       });
     });
 
-    return res.status(id ? 200 : 201).json(serializarModelo(modelo));
+    const serializado = serializarModelo(modelo);
+    const convitesEnviados = await enviarConvitesTreinamento(
+      serializado,
+      validacao.gruposPermitidos,
+    );
+
+    return res
+      .status(id ? 200 : 201)
+      .json({ ...serializado, convitesEnviados });
   } catch (error: any) {
     console.error(error);
     return res
@@ -555,53 +705,72 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
   }
 }
 
-export async function excluirTreinamentoModelo(req: AuthRequest, res: Response) {
+export async function excluirTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id)) return res.status(400).json({ error: "Treinamento inválido." });
+    if (!Number.isInteger(id))
+      return res.status(400).json({ error: "Treinamento invÃ¡lido." });
     await db.treinamentoModelo.delete({ where: { id } });
     return res.status(204).send();
   } catch (error: any) {
-    return res.status(500).json({ error: error?.message || "Erro ao excluir treinamento." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao excluir treinamento." });
   }
 }
 
-export async function excluirParticipanteTreinamentoModelo(req: AuthRequest, res: Response) {
+export async function excluirParticipanteTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const id = Number(req.params.id);
-    if (!Number.isInteger(id)) return res.status(400).json({ error: "Registro invÃ¡lido." });
-    const participante = await db.treinamentoModeloParticipante.findUnique({ where: { id } });
-    if (!participante) return res.status(404).json({ error: "Registro nÃ£o encontrado." });
+    if (!Number.isInteger(id))
+      return res.status(400).json({ error: "Registro invÃƒÂ¡lido." });
+    const participante = await db.treinamentoModeloParticipante.findUnique({
+      where: { id },
+    });
+    if (!participante)
+      return res.status(404).json({ error: "Registro nÃƒÂ£o encontrado." });
     if (participante.certificadoArquivo) {
       fs.rmSync(participante.certificadoArquivo, { force: true });
     }
     await db.treinamentoModeloParticipante.delete({ where: { id } });
     return res.status(204).send();
   } catch (error: any) {
-    return res.status(500).json({ error: error?.message || "Erro ao excluir participante." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao excluir participante." });
   }
 }
 
 export async function buscarTreinamentoPublico(req: Request, res: Response) {
   const modelo = await carregarModeloPorSlug(texto(req.params.slug));
   if (!modelo || modelo.status !== "Publicado") {
-    return res.status(404).json({ error: "Treinamento não encontrado." });
+    return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
   }
   return res.json({ treinamento: serializarModelo(modelo, false) });
 }
 
-export async function listarUnidadesTreinamentoModelo(req: Request, res: Response) {
+export async function listarUnidadesTreinamentoModelo(
+  req: Request,
+  res: Response,
+) {
   return res.json({ unidades: UNIDADES_SISTEMA });
 }
 
-export async function localizarParticipanteTreinamentoModelo(req: Request, res: Response) {
-  const identificador = texto(req.query.identificador).toLowerCase();
-  const cpf = limparCpf(identificador);
-  const email = emailValido(identificador) ? identificador : "";
-  if (!email && !cpfValido(cpf)) return res.json({ participante: null });
+export async function localizarParticipanteTreinamentoModelo(
+  req: Request,
+  res: Response,
+) {
+  const email = texto(req.query.identificador).toLowerCase();
+  if (!emailValido(email)) return res.json({ participante: null });
 
   const usuario = await prisma.usuario.findFirst({
-    where: { OR: [...(email ? [{ email }] : []), ...(cpfValido(cpf) ? [{ cpf }] : [])] },
+    where: { email },
     select: {
       nome: true,
       cpf: true,
@@ -613,7 +782,8 @@ export async function localizarParticipanteTreinamentoModelo(req: Request, res: 
       statusUsuario: true,
     },
   });
-  if (!usuario || usuario.statusUsuario !== "ATIVO") return res.json({ participante: null });
+  if (!usuario || usuario.statusUsuario === "BLOQUEADO")
+    return res.json({ participante: null });
 
   return res.json({
     participante: {
@@ -634,31 +804,47 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
     if (!modelo || modelo.status !== "Publicado")
       return res.status(404).json({ error: "Treinamento não encontrado." });
 
-    const nomeCompleto = texto(req.body.nomeCompleto);
-    const cpf = limparCpf(req.body.cpf);
     const email = texto(req.body.email).toLowerCase();
-    const unidade = texto(req.body.unidade);
-    if (!nomeCompleto || !cpfValido(cpf) || !emailValido(email) || !unidadeValida(unidade)) {
-      return res.status(400).json({
-        error: "Informe nome completo, CPF válido, e-mail válido e unidade para iniciar.",
+    if (!emailValido(email)) {
+      return res
+        .status(400)
+        .json({ error: "Informe o e-mail cadastrado para iniciar." });
+    }
+
+    const usuario = await prisma.usuario.findFirst({ where: { email } });
+    if (!usuario || usuario.statusUsuario === "BLOQUEADO") {
+      return res.status(404).json({
+        error: "E-mail não cadastrado para este treinamento.",
       });
     }
 
-    const usuario = await prisma.usuario.findFirst({ where: { OR: [{ cpf }, { email }] } });
+    const gruposPermitidos = normalizarGruposTreinamento(
+      modelo.gruposPermitidosJson,
+    );
+    if (!temGrupoTreinamento(usuario, gruposPermitidos)) {
+      return res.status(403).json({
+        error: "Este treinamento não está disponível para sua função.",
+      });
+    }
+
+    const cpf = limparCpf(usuario.cpf || "");
     const existente = await db.treinamentoModeloParticipante.findFirst({
-      where: { treinamentoId: modelo.id, OR: [{ cpf }, { email }] },
+      where: {
+        treinamentoId: modelo.id,
+        OR: [...(cpf ? [{ cpf }] : []), { email }],
+      },
       orderBy: { updatedAt: "desc" },
     });
 
     const data = {
-      usuarioId: usuario?.id || existente?.usuarioId,
-      nomeCompleto,
+      usuarioId: usuario.id || existente?.usuarioId,
+      nomeCompleto: usuario.nome,
       cpf,
       email,
-      cargo: usuario?.cargo || texto(req.body.cargo) || existente?.cargo || null,
-      departamento: usuario?.setor || texto(req.body.departamento) || existente?.departamento || null,
-      unidade,
-      empresa: usuario?.empresa || texto(req.body.empresa) || existente?.empresa || null,
+      cargo: usuario.cargo || existente?.cargo || null,
+      departamento: usuario.setor || existente?.departamento || null,
+      unidade: usuario.unidade || existente?.unidade || "Não informado",
+      empresa: usuario.empresa || existente?.empresa || null,
       ultimoAcessoEm: new Date(),
       navegador: userAgent(req),
       sistema: userAgent(req),
@@ -698,11 +884,16 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error(error);
-    return res.status(500).json({ error: error?.message || "Erro ao iniciar treinamento." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao iniciar treinamento." });
   }
 }
 
-export async function concluirEtapaTreinamentoModelo(req: Request, res: Response) {
+export async function concluirEtapaTreinamentoModelo(
+  req: Request,
+  res: Response,
+) {
   try {
     const token = texto(req.params.token);
     const etapa = Number(req.body.etapa);
@@ -720,14 +911,17 @@ export async function concluirEtapaTreinamentoModelo(req: Request, res: Response
         },
       },
     });
-    if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!participante)
+      return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     const totalEtapas = snapshot.etapas.length;
     if (!Number.isInteger(etapa) || etapa < 1 || etapa > totalEtapas) {
-      return res.status(400).json({ error: "Etapa inválida." });
+      return res.status(400).json({ error: "Etapa invÃ¡lida." });
     }
     if (etapa > participante.etapaAtual) {
-      return res.status(403).json({ error: "Conclua as etapas anteriores antes de avançar." });
+      return res
+        .status(403)
+        .json({ error: "Conclua as etapas anteriores antes de avanÃ§ar." });
     }
     const proxima = Math.max(participante.etapaAtual, etapa + 1);
     const atualizado = await db.treinamentoModeloParticipante.update({
@@ -741,11 +935,16 @@ export async function concluirEtapaTreinamentoModelo(req: Request, res: Response
     });
     return res.json({ participante: respostaParticipante(atualizado) });
   } catch (error: any) {
-    return res.status(500).json({ error: error?.message || "Erro ao salvar etapa." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao salvar etapa." });
   }
 }
 
-export async function responderQuizTreinamentoModelo(req: Request, res: Response) {
+export async function responderQuizTreinamentoModelo(
+  req: Request,
+  res: Response,
+) {
   try {
     const token = texto(req.params.token);
     const respostas: Record<string, number> = req.body.respostas || {};
@@ -763,12 +962,14 @@ export async function responderQuizTreinamentoModelo(req: Request, res: Response
         },
       },
     });
-    if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!participante)
+      return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     const perguntas = snapshot.perguntas || [];
-    if (perguntas.length === 0) return res.status(400).json({ error: "Treinamento sem avaliação." });
+    if (perguntas.length === 0)
+      return res.status(400).json({ error: "Treinamento sem avaliaÃ§Ã£o." });
     if (Object.keys(respostas).length < perguntas.length) {
-      return res.status(400).json({ error: "Responda todas as questões." });
+      return res.status(400).json({ error: "Responda todas as questÃµes." });
     }
 
     const detalhes = perguntas.map((pergunta: any) => {
@@ -794,15 +995,25 @@ export async function responderQuizTreinamentoModelo(req: Request, res: Response
         tentativas: { increment: 1 },
         status: aprovado ? "Aguardando assinatura" : "Reprovado",
         etapaAtual: aprovado ? etapaAssinatura : snapshot.etapas.length + 1,
-        porcentagem: aprovado ? 99 : porcentagem(snapshot.etapas.length + 1, snapshot.etapas.length),
+        porcentagem: aprovado
+          ? 99
+          : porcentagem(snapshot.etapas.length + 1, snapshot.etapas.length),
         ultimoAcessoEm: new Date(),
         navegador: userAgent(req),
       },
     });
 
-    return res.json({ aprovado, acertos, nota, detalhes, participante: respostaParticipante(atualizado) });
+    return res.json({
+      aprovado,
+      acertos,
+      nota,
+      detalhes,
+      participante: respostaParticipante(atualizado),
+    });
   } catch (error: any) {
-    return res.status(500).json({ error: error?.message || "Erro ao validar avaliação." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao validar avaliaÃ§Ã£o." });
   }
 }
 
@@ -816,7 +1027,10 @@ const camposAvaliacaoTreinamento = [
   "avaliacaoGeral",
 ];
 
-export async function salvarAvaliacaoTreinamentoModelo(req: Request, res: Response) {
+export async function salvarAvaliacaoTreinamentoModelo(
+  req: Request,
+  res: Response,
+) {
   try {
     const token = texto(req.params.token);
     const respostas = req.body.respostas || {};
@@ -835,23 +1049,39 @@ export async function salvarAvaliacaoTreinamentoModelo(req: Request, res: Respon
         },
       },
     });
-    if (!participante) return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
+    if (!participante)
+      return res.status(404).json({ error: "Treinamento nÃƒÂ£o encontrado." });
 
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     if ((participante.nota || 0) < snapshot.notaMinima) {
-      return res.status(400).json({ error: "Conclua a avaliaÃ§Ã£o final antes de avaliar o treinamento." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Conclua a avaliaÃƒÂ§ÃƒÂ£o final antes de avaliar o treinamento.",
+        });
     }
 
-    const faltantes = camposAvaliacaoTreinamento.filter((campo) => !texto(respostas[campo]));
+    const faltantes = camposAvaliacaoTreinamento.filter(
+      (campo) => !texto(respostas[campo]),
+    );
     if (faltantes.length) {
-      return res.status(400).json({ error: "Responda todos os itens obrigatÃ³rios da avaliaÃ§Ã£o do treinamento." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Responda todos os itens obrigatÃƒÂ³rios da avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
+        });
     }
 
     const payload = {
-      respostas: camposAvaliacaoTreinamento.reduce((mapa: Record<string, string>, campo) => {
-        mapa[campo] = texto(respostas[campo]);
-        return mapa;
-      }, {}),
+      respostas: camposAvaliacaoTreinamento.reduce(
+        (mapa: Record<string, string>, campo) => {
+          mapa[campo] = texto(respostas[campo]);
+          return mapa;
+        },
+        {},
+      ),
       comentario: comentario || null,
       respondidoEm: new Date().toISOString(),
     };
@@ -870,11 +1100,16 @@ export async function salvarAvaliacaoTreinamentoModelo(req: Request, res: Respon
     });
 
     return res.json({
-      mensagem: "AvaliaÃ§Ã£o do treinamento registrada com sucesso.",
+      mensagem: "AvaliaÃƒÂ§ÃƒÂ£o do treinamento registrada com sucesso.",
       participante: respostaParticipante(atualizado),
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error?.message || "Erro ao salvar avaliaÃ§Ã£o do treinamento." });
+    return res
+      .status(500)
+      .json({
+        error:
+          error?.message || "Erro ao salvar avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
+      });
   }
 }
 
@@ -883,7 +1118,7 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     const token = texto(req.params.token);
     const assinaturaDataUrl = texto(req.body.assinaturaDataUrl);
     if (!assinaturaDataUrl.startsWith("data:image/")) {
-      return res.status(400).json({ error: "Assinatura inválida." });
+      return res.status(400).json({ error: "Assinatura invÃ¡lida." });
     }
 
     const participante = await db.treinamentoModeloParticipante.findUnique({
@@ -900,19 +1135,28 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
         },
       },
     });
-    if (!participante) return res.status(404).json({ error: "Treinamento não encontrado." });
+    if (!participante)
+      return res.status(404).json({ error: "Treinamento nÃ£o encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     if ((participante.nota || 0) < snapshot.notaMinima) {
-      return res.status(400).json({ error: "A nota mínima ainda não foi atingida." });
+      return res
+        .status(400)
+        .json({ error: "A nota mÃ­nima ainda nÃ£o foi atingida." });
     }
 
     if (!participante.avaliacaoTreinamentoJson) {
-      return res.status(400).json({ error: "Responda a avaliaÃ§Ã£o do treinamento antes de emitir o certificado." });
+      return res
+        .status(400)
+        .json({
+          error:
+            "Responda a avaliaÃƒÂ§ÃƒÂ£o do treinamento antes de emitir o certificado.",
+        });
     }
 
     const comCodigo = await prisma.$transaction(async (tx) => {
       const repo = tx as any;
-      const codigo = participante.codigo || (await proximoCodigoCertificado(repo, snapshot));
+      const codigo =
+        participante.codigo || (await proximoCodigoCertificado(repo, snapshot));
       return repo.treinamentoModeloParticipante.update({
         where: { id: participante.id },
         data: {
@@ -928,7 +1172,11 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     });
 
     const certificadoArquivo = await gerarCertificado(snapshot, comCodigo);
-    const email = await enviarCertificado(snapshot, comCodigo, certificadoArquivo);
+    const email = await enviarCertificado(
+      snapshot,
+      comCodigo,
+      certificadoArquivo,
+    );
     const atualizado = await db.treinamentoModeloParticipante.update({
       where: { id: comCodigo.id },
       data: {
@@ -941,16 +1189,21 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     return res.json({
       mensagem: email.enviado
         ? "Certificado emitido e enviado por e-mail."
-        : "Certificado emitido. O envio por e-mail não foi confirmado.",
+        : "Certificado emitido. O envio por e-mail nÃ£o foi confirmado.",
       participante: respostaParticipante(atualizado),
     });
   } catch (error: any) {
     console.error(error);
-    return res.status(500).json({ error: error?.message || "Erro ao concluir treinamento." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao concluir treinamento." });
   }
 }
 
-export async function baixarCertificadoTreinamentoModelo(req: Request, res: Response) {
+export async function baixarCertificadoTreinamentoModelo(
+  req: Request,
+  res: Response,
+) {
   try {
     const token = texto(req.params.token);
     const participante = await db.treinamentoModeloParticipante.findUnique({
@@ -968,12 +1221,16 @@ export async function baixarCertificadoTreinamentoModelo(req: Request, res: Resp
       },
     });
     if (!participante || !treinamentoConcluido(participante.status)) {
-      return res.status(404).json({ error: "Certificado não encontrado." });
+      return res.status(404).json({ error: "Certificado nÃ£o encontrado." });
     }
     const certificadoArquivo =
-      participante.certificadoArquivo && fs.existsSync(participante.certificadoArquivo)
+      participante.certificadoArquivo &&
+      fs.existsSync(participante.certificadoArquivo)
         ? participante.certificadoArquivo
-        : await gerarCertificado(lerSnapshot(participante, participante.treinamento, true), participante);
+        : await gerarCertificado(
+            lerSnapshot(participante, participante.treinamento, true),
+            participante,
+          );
     if (!participante.certificadoArquivo) {
       await db.treinamentoModeloParticipante.update({
         where: { id: participante.id },
@@ -985,11 +1242,16 @@ export async function baixarCertificadoTreinamentoModelo(req: Request, res: Resp
       `certificado-${String(participante.codigo || participante.treinamento.codigo).replace("/", "-")}.pdf`,
     );
   } catch (error: any) {
-    return res.status(500).json({ error: error?.message || "Erro ao baixar certificado." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao baixar certificado." });
   }
 }
 
-export async function reenviarEmailTreinamentoModelo(req: AuthRequest, res: Response) {
+export async function reenviarEmailTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
   try {
     const id = Number(req.params.id);
     const participante = await db.treinamentoModeloParticipante.findUnique({
@@ -1006,14 +1268,21 @@ export async function reenviarEmailTreinamentoModelo(req: AuthRequest, res: Resp
         },
       },
     });
-    if (!participante) return res.status(404).json({ error: "Registro não encontrado." });
+    if (!participante)
+      return res.status(404).json({ error: "Registro nÃ£o encontrado." });
     if (!treinamentoConcluido(participante.status)) {
-      return res.status(400).json({ error: "Só é possível enviar após a conclusão." });
+      return res
+        .status(400)
+        .json({ error: "SÃ³ Ã© possÃ­vel enviar apÃ³s a conclusÃ£o." });
     }
     const certificadoArquivo =
-      participante.certificadoArquivo && fs.existsSync(participante.certificadoArquivo)
+      participante.certificadoArquivo &&
+      fs.existsSync(participante.certificadoArquivo)
         ? participante.certificadoArquivo
-        : await gerarCertificado(lerSnapshot(participante, participante.treinamento, true), participante);
+        : await gerarCertificado(
+            lerSnapshot(participante, participante.treinamento, true),
+            participante,
+          );
     const email = await enviarCertificado(
       lerSnapshot(participante, participante.treinamento, true),
       participante,
@@ -1024,14 +1293,24 @@ export async function reenviarEmailTreinamentoModelo(req: AuthRequest, res: Resp
       data: {
         certificadoArquivo,
         emailStatus: email.status,
-        emailEnviadoEm: email.enviado ? new Date() : participante.emailEnviadoEm,
+        emailEnviadoEm: email.enviado
+          ? new Date()
+          : participante.emailEnviadoEm,
       },
     });
     return res.json({
-      mensagem: email.enviado ? "E-mail enviado com sucesso." : "Envio registrado. Verifique o SMTP.",
-      participante: { ...atualizado, assinaturaDataUrl: undefined, certificadoUrl: certificadoUrl(atualizado.token) },
+      mensagem: email.enviado
+        ? "E-mail enviado com sucesso."
+        : "Envio registrado. Verifique o SMTP.",
+      participante: {
+        ...atualizado,
+        assinaturaDataUrl: undefined,
+        certificadoUrl: certificadoUrl(atualizado.token),
+      },
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error?.message || "Erro ao reenviar e-mail." });
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao reenviar e-mail." });
   }
 }
