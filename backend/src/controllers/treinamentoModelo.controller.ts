@@ -688,20 +688,55 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
       });
     });
 
-    const serializado = serializarModelo(modelo);
-    const convitesEnviados = await enviarConvitesTreinamento(
-      serializado,
-      validacao.gruposPermitidos,
-    );
-
-    return res
-      .status(id ? 200 : 201)
-      .json({ ...serializado, convitesEnviados });
+    return res.status(id ? 200 : 201).json(serializarModelo(modelo));
   } catch (error: any) {
     console.error(error);
     return res
       .status(500)
       .json({ error: error?.message || "Erro ao salvar treinamento." });
+  }
+}
+
+export async function enviarConvitesTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: "Treinamento inválido." });
+    }
+
+    const modelo = await db.treinamentoModelo.findUnique({ where: { id } });
+    if (!modelo) {
+      return res.status(404).json({ error: "Treinamento não encontrado." });
+    }
+    if (modelo.status !== "Publicado") {
+      return res.status(400).json({
+        error: "Publique o treinamento antes de enviar o link aos grupos.",
+      });
+    }
+
+    const grupos = normalizarGruposTreinamento(modelo.gruposPermitidosJson);
+    if (!grupos.length) {
+      return res.status(400).json({
+        error: "Selecione ao menos um grupo liberado para este treinamento.",
+      });
+    }
+
+    const convitesEnviados = await enviarConvitesTreinamento(modelo, grupos);
+    return res.json({
+      convitesEnviados,
+      mensagem:
+        convitesEnviados > 0
+          ? `Treinamento enviado para ${convitesEnviados} participante(s).`
+          : "Nenhum usuário cadastrado foi encontrado nos grupos selecionados.",
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao enviar treinamento." });
   }
 }
 
@@ -1054,24 +1089,20 @@ export async function salvarAvaliacaoTreinamentoModelo(
 
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     if ((participante.nota || 0) < snapshot.notaMinima) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Conclua a avaliaÃƒÂ§ÃƒÂ£o final antes de avaliar o treinamento.",
-        });
+      return res.status(400).json({
+        error:
+          "Conclua a avaliaÃƒÂ§ÃƒÂ£o final antes de avaliar o treinamento.",
+      });
     }
 
     const faltantes = camposAvaliacaoTreinamento.filter(
       (campo) => !texto(respostas[campo]),
     );
     if (faltantes.length) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Responda todos os itens obrigatÃƒÂ³rios da avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
-        });
+      return res.status(400).json({
+        error:
+          "Responda todos os itens obrigatÃƒÂ³rios da avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
+      });
     }
 
     const payload = {
@@ -1104,12 +1135,9 @@ export async function salvarAvaliacaoTreinamentoModelo(
       participante: respostaParticipante(atualizado),
     });
   } catch (error: any) {
-    return res
-      .status(500)
-      .json({
-        error:
-          error?.message || "Erro ao salvar avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
-      });
+    return res.status(500).json({
+      error: error?.message || "Erro ao salvar avaliaÃƒÂ§ÃƒÂ£o do treinamento.",
+    });
   }
 }
 
@@ -1145,12 +1173,10 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     }
 
     if (!participante.avaliacaoTreinamentoJson) {
-      return res
-        .status(400)
-        .json({
-          error:
-            "Responda a avaliaÃƒÂ§ÃƒÂ£o do treinamento antes de emitir o certificado.",
-        });
+      return res.status(400).json({
+        error:
+          "Responda a avaliaÃƒÂ§ÃƒÂ£o do treinamento antes de emitir o certificado.",
+      });
     }
 
     const comCodigo = await prisma.$transaction(async (tx) => {

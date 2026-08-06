@@ -4,6 +4,7 @@ import {
   buscarTreinamentoPublico,
   concluirEtapaTreinamentoModelo,
   concluirTreinamentoModelo,
+  enviarConvitesTreinamentoModelo,
   excluirParticipanteTreinamentoModelo,
   excluirTreinamentoModelo,
   iniciarTreinamentoModelo,
@@ -24,15 +25,39 @@ import {
 
 const router = Router();
 
-router.get("/public/treinamentos-dinamicos/unidades", listarUnidadesTreinamentoModelo);
-router.get("/public/treinamentos-dinamicos/participante", localizarParticipanteTreinamentoModelo);
+router.get(
+  "/public/treinamentos-dinamicos/unidades",
+  listarUnidadesTreinamentoModelo,
+);
+router.get(
+  "/public/treinamentos-dinamicos/participante",
+  localizarParticipanteTreinamentoModelo,
+);
 router.get("/public/treinamentos-dinamicos/:slug", buscarTreinamentoPublico);
-router.post("/public/treinamentos-dinamicos/:slug/iniciar", iniciarTreinamentoModelo);
-router.put("/public/treinamentos-dinamicos/:token/etapa", concluirEtapaTreinamentoModelo);
-router.post("/public/treinamentos-dinamicos/:token/quiz", responderQuizTreinamentoModelo);
-router.post("/public/treinamentos-dinamicos/:token/avaliacao", salvarAvaliacaoTreinamentoModelo);
-router.post("/public/treinamentos-dinamicos/:token/concluir", concluirTreinamentoModelo);
-router.get("/public/treinamentos-dinamicos/:token/certificado", baixarCertificadoTreinamentoModelo);
+router.post(
+  "/public/treinamentos-dinamicos/:slug/iniciar",
+  iniciarTreinamentoModelo,
+);
+router.put(
+  "/public/treinamentos-dinamicos/:token/etapa",
+  concluirEtapaTreinamentoModelo,
+);
+router.post(
+  "/public/treinamentos-dinamicos/:token/quiz",
+  responderQuizTreinamentoModelo,
+);
+router.post(
+  "/public/treinamentos-dinamicos/:token/avaliacao",
+  salvarAvaliacaoTreinamentoModelo,
+);
+router.post(
+  "/public/treinamentos-dinamicos/:token/concluir",
+  concluirTreinamentoModelo,
+);
+router.get(
+  "/public/treinamentos-dinamicos/:token/certificado",
+  baixarCertificadoTreinamentoModelo,
+);
 
 router.get(
   "/treinamentos-dinamicos",
@@ -51,6 +76,12 @@ router.put(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   salvarTreinamentoModelo,
+);
+router.post(
+  "/treinamentos-dinamicos/:id/enviar",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  enviarConvitesTreinamentoModelo,
 );
 router.delete(
   "/treinamentos-dinamicos/participantes/:id",

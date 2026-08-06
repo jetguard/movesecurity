@@ -135,6 +135,7 @@ export default function TreinamentosDinamicos() {
   const [busca, setBusca] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [enviandoId, setEnviandoId] = useState<number | null>(null);
   const podeEditar = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
     perfilAtual(),
   );
@@ -289,9 +290,7 @@ export default function TreinamentosDinamicos() {
       setForm((atual) => ({ ...atual, id: response.data.id }));
       setSelecionadoId(response.data.id);
       setMensagem(
-        response.data?.convitesEnviados
-          ? `Treinamento salvo. Link enviado para ${response.data.convitesEnviados} participante(s) dos grupos selecionados.`
-          : "Treinamento salvo com sucesso. O link público já está disponível.",
+        "Treinamento salvo com sucesso. Use o botão Enviar treinamento para disparar o link aos grupos selecionados.",
       );
     } catch (error: any) {
       setMensagem(
@@ -314,6 +313,25 @@ export default function TreinamentosDinamicos() {
       setMensagem(
         error.response?.data?.error || "Não foi possível reenviar o e-mail.",
       );
+    }
+  }
+
+  async function enviarTreinamento(modelo?: Pick<Modelo, "id">) {
+    const id = modelo?.id || form.id;
+    if (!id || !podeEditar) return;
+    setEnviandoId(id);
+    setMensagem("");
+    try {
+      const response = await api.post(`/treinamentos-dinamicos/${id}/enviar`);
+      setMensagem(
+        response.data?.mensagem || "Treinamento enviado com sucesso.",
+      );
+    } catch (error: any) {
+      setMensagem(
+        error.response?.data?.error || "Não foi possível enviar o treinamento.",
+      );
+    } finally {
+      setEnviandoId(null);
     }
   }
 
@@ -693,13 +711,27 @@ export default function TreinamentosDinamicos() {
             ))}
           </div>
 
-          <button
-            type="submit"
-            disabled={!podeEditar || salvando}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"
-          >
-            <Save size={18} /> {salvando ? "Salvando..." : "Salvar treinamento"}
-          </button>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={!podeEditar || salvando}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              <Save size={18} />{" "}
+              {salvando ? "Salvando..." : "Salvar treinamento"}
+            </button>
+            {form.id && (
+              <button
+                type="button"
+                onClick={() => enviarTreinamento()}
+                disabled={!podeEditar || enviandoId === form.id}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-50"
+              >
+                <Mail size={18} />{" "}
+                {enviandoId === form.id ? "Enviando..." : "Enviar treinamento"}
+              </button>
+            )}
+          </div>
         </form>
 
         <aside className="hidden">
@@ -763,6 +795,17 @@ export default function TreinamentosDinamicos() {
                     >
                       <Copy size={14} /> Copiar link
                     </button>
+                    {podeEditar && (
+                      <button
+                        type="button"
+                        onClick={() => enviarTreinamento(modelo)}
+                        disabled={enviandoId === modelo.id}
+                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-600 px-2.5 py-1.5 text-xs font-black text-white disabled:opacity-50"
+                      >
+                        <Mail size={14} />{" "}
+                        {enviandoId === modelo.id ? "Enviando" : "Enviar"}
+                      </button>
+                    )}
                     {podeEditar && (
                       <button
                         type="button"
