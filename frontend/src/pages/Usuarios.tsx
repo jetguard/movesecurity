@@ -89,7 +89,7 @@ const vazio = {
 };
 
 function apenasDigitos(valor: string) {
-  return valor.replace(/\D/g, "");
+  return String(valor || "").replace(/\D/g, "");
 }
 
 function mascararCpf(valor: string) {
@@ -98,6 +98,14 @@ function mascararCpf(valor: string) {
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+}
+
+function normalizarBusca(valor: unknown) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 function normalizarGrupo(valor: string) {
@@ -188,17 +196,18 @@ export default function Usuarios() {
   }, []);
 
   const usuariosFiltrados = useMemo(() => {
-    const texto = busca.toLowerCase();
+    const texto = normalizarBusca(busca);
+    const numerosBusca = apenasDigitos(busca);
     return usuarios.filter((usuario) => {
+      const grupos = (usuario.gruposTreinamento || []).join(" ");
       const bateBusca =
-        usuario.nome.toLowerCase().includes(texto) ||
-        usuario.email.toLowerCase().includes(texto) ||
-        (usuario.re || "").toLowerCase().includes(texto) ||
-        (usuario.cpf || "").includes(apenasDigitos(texto)) ||
-        (usuario.gruposTreinamento || [])
-          .join(" ")
-          .toLowerCase()
-          .includes(texto);
+        !texto ||
+        normalizarBusca(usuario.nome).includes(texto) ||
+        normalizarBusca(usuario.email).includes(texto) ||
+        normalizarBusca(usuario.re).includes(texto) ||
+        normalizarBusca(grupos).includes(texto) ||
+        (numerosBusca.length > 0 &&
+          apenasDigitos(usuario.cpf || "").includes(numerosBusca));
 
       return (
         bateBusca &&

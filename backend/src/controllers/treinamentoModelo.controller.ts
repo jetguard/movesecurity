@@ -104,6 +104,15 @@ function appPublicUrl() {
   ).replace(/\/$/, "");
 }
 
+function escaparHtml(valor: unknown) {
+  return String(valor || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function slugify(valor: string) {
   const base = texto(valor)
     .normalize("NFD")
@@ -522,14 +531,43 @@ async function enviarConvitesTreinamento(modelo: any, grupos: string[]) {
   );
   const link = `${appPublicUrl()}/treinamento/${modelo.slug}`;
   const resultados = await Promise.allSettled(
-    selecionados.map((usuario: any) =>
-      enviarEmail({
+    selecionados.map((usuario: any) => {
+      const nomeColaborador = texto(usuario.nome) || "colaborador(a)";
+      const nomeTreinamento = texto(modelo.nome) || texto(modelo.codigo);
+      const treinamentoCompleto = [modelo.codigo, modelo.nome]
+        .map(texto)
+        .filter(Boolean)
+        .join(" - ");
+
+      return enviarEmail({
         to: usuario.email,
-        subject: `Treinamento disponível - ${modelo.codigo}`,
-        text: `Olá, ${usuario.nome}. O treinamento ${modelo.codigo} - ${modelo.nome} está disponível em ${link}`,
-        html: `<p>Olá, <strong>${usuario.nome}</strong>.</p><p>O treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong> está disponível para o seu grupo.</p><p><a href="${link}">Acessar treinamento</a></p>`,
-      }),
-    ),
+        subject: `Treinamento ${nomeTreinamento}`,
+        text: [
+          `Olá, ${nomeColaborador}`,
+          "",
+          `Segue o treinamento ${treinamentoCompleto}.`,
+          "Leia com atenção todas as etapas e conclua a avaliação final para registrar sua participação.",
+          "",
+          `Acesse pelo link: ${link}`,
+          "",
+          "Atenciosamente,",
+          "Segurança Patrimonial - Movecta",
+        ].join("\n"),
+        html: `
+          <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+            <p>Olá, <strong>${escaparHtml(nomeColaborador)}</strong></p>
+            <p>Segue o treinamento <strong>${escaparHtml(treinamentoCompleto)}</strong>.</p>
+            <p>Leia com atenção todas as etapas e conclua a avaliação final para registrar sua participação.</p>
+            <p style="margin: 24px 0;">
+              <a href="${escaparHtml(link)}" style="background: #2563eb; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: 700;">
+                Acessar treinamento
+              </a>
+            </p>
+            <p>Atenciosamente,<br><strong>Segurança Patrimonial - Movecta</strong></p>
+          </div>
+        `,
+      });
+    }),
   );
   return resultados.filter((item) => item.status === "fulfilled").length;
 }
