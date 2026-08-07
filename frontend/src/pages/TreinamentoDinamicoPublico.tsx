@@ -519,19 +519,29 @@ export default function TreinamentoDinamicoPublico() {
             </div>
 
             {etapa && indice < indiceQuiz && (
-              <section className="rounded-2xl border border-blue-200 bg-white/97 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-6">
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
+              <section className="rounded-2xl border border-blue-200 bg-white/97 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-7">
+                <p className="text-sm font-black uppercase tracking-[0.22em] text-blue-700">
                   Etapa {indice + 1}
                 </p>
-                <h2 className="mt-2 text-3xl font-black text-slate-950">
-                  {etapa.titulo}
-                </h2>
-                {etapa.objetivo && (
-                  <p className="mt-4 rounded-2xl bg-blue-50 p-4 text-sm font-black text-blue-950">
-                    {etapa.objetivo}
+                <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/80 p-5">
+                  <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+                    Assunto
                   </p>
+                  <h2 className="mt-2 text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
+                    {etapa.titulo}
+                  </h2>
+                </div>
+                {etapa.objetivo && (
+                  <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-5 text-emerald-950">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+                      Objetivo
+                    </p>
+                    <p className="mt-2 text-lg font-black leading-7">
+                      {etapa.objetivo}
+                    </p>
+                  </div>
                 )}
-                <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-4 text-base font-semibold leading-8 text-slate-950 shadow-sm">
+                <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 text-[17px] font-semibold leading-8 text-slate-950 shadow-sm sm:text-lg">
                   <p className="whitespace-pre-line text-slate-950">
                     {etapa.conteudo}
                   </p>

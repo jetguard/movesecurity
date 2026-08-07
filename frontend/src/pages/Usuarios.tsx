@@ -146,6 +146,7 @@ export default function Usuarios() {
   const [busca, setBusca] = useState("");
   const [filtroPerfil, setFiltroPerfil] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
+  const [filtroGrupo, setFiltroGrupo] = useState("");
   const [senhaReset, setSenhaReset] = useState("");
   const [confirmarReset, setConfirmarReset] = useState("");
   const superAdmin = podeSuperAdmin();
@@ -175,10 +176,12 @@ export default function Usuarios() {
       return (
         bateBusca &&
         (!filtroPerfil || usuario.perfilAcesso === filtroPerfil) &&
-        (!filtroStatus || usuario.statusUsuario === filtroStatus)
+        (!filtroStatus || usuario.statusUsuario === filtroStatus) &&
+        (!filtroGrupo ||
+          (usuario.gruposTreinamento || []).includes(filtroGrupo))
       );
     });
-  }, [busca, filtroPerfil, filtroStatus, usuarios]);
+  }, [busca, filtroGrupo, filtroPerfil, filtroStatus, usuarios]);
 
   function atualizarCampo(campo: string, valor: string | string[] | boolean) {
     if (campo === "cpf" && typeof valor === "string")
@@ -408,7 +411,7 @@ export default function Usuarios() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_180px] dark:border-slate-800 dark:bg-slate-900">
+      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_190px_180px] dark:border-slate-800 dark:bg-slate-900">
         <label className="relative">
           <Search
             size={18}
@@ -443,6 +446,18 @@ export default function Usuarios() {
           <option value="ATIVO">Ativo</option>
           <option value="INATIVO">Inativo</option>
           <option value="BLOQUEADO">Bloqueado</option>
+        </select>
+        <select
+          value={filtroGrupo}
+          onChange={(e) => setFiltroGrupo(e.target.value)}
+          className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+        >
+          <option value="">Todos os grupos</option>
+          {gruposTreinamento.map((grupo) => (
+            <option key={grupo} value={grupo}>
+              {grupo}
+            </option>
+          ))}
         </select>
       </div>
       {abrirFormulario && (
