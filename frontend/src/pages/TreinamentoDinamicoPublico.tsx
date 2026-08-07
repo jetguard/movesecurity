@@ -56,6 +56,7 @@ type Participante = {
 
 const formInicial = {
   email: "",
+  terceirizado: false,
 };
 
 const perguntasAvaliacaoTreinamento = [
@@ -179,8 +180,12 @@ export default function TreinamentoDinamicoPublico() {
       .catch(() => setMensagem("Treinamento não encontrado ou indisponível."));
   }, [slug]);
 
-  function alterar(valor: string) {
-    setForm({ email: valor.trim().toLowerCase() });
+  function alterarEmail(valor: string) {
+    setForm((atual) => ({ ...atual, email: valor.trim().toLowerCase() }));
+  }
+
+  function alterarTerceirizado(valor: boolean) {
+    setForm((atual) => ({ ...atual, terceirizado: valor }));
   }
   async function iniciar(event: FormEvent) {
     event.preventDefault();
@@ -470,17 +475,30 @@ export default function TreinamentoDinamicoPublico() {
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm font-bold text-blue-950">
-                Este treinamento é restrito por grupo de treinamento. Informe o
-                e-mail cadastrado no JetGuard para liberar as etapas.
+                Este treinamento é restrito, informe seu e-mail corporativo para
+                continuar.
               </div>
               <input
                 value={form.email}
-                onChange={(e) => alterar(e.target.value)}
+                onChange={(e) => alterarEmail(e.target.value)}
                 required
                 type="email"
-                placeholder="E-mail cadastrado"
+                placeholder={
+                  form.terceirizado
+                    ? "E-mail pessoal cadastrado"
+                    : "E-mail corporativo cadastrado"
+                }
                 className="md:col-span-2 rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
               />
+              <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={form.terceirizado}
+                  onChange={(e) => alterarTerceirizado(e.target.checked)}
+                  className="h-5 w-5 rounded border-blue-300 accent-blue-600"
+                />
+                Sou terceirizado
+              </label>
             </div>
             <button
               disabled={carregando}

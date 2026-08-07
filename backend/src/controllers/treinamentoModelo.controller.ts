@@ -26,6 +26,10 @@ function emailValido(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(normalizado);
 }
 
+function emailCorporativoMovecta(email: string) {
+  return texto(email).toLowerCase().endsWith("@movecta.com.br");
+}
+
 const GRUPOS_TREINAMENTO = [
   "CCOS",
   "LIDERANCA",
@@ -940,10 +944,18 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
       return res.status(404).json({ error: "Treinamento não encontrado." });
 
     const email = texto(req.body.email).toLowerCase();
+    const terceirizado = Boolean(req.body.terceirizado);
     if (!emailValido(email)) {
       return res
         .status(400)
         .json({ error: "Informe o e-mail cadastrado para iniciar." });
+    }
+
+    if (!terceirizado && !emailCorporativoMovecta(email)) {
+      return res.status(400).json({
+        error:
+          "Informe seu e-mail corporativo ou marque a opção Sou terceirizado para usar e-mail pessoal.",
+      });
     }
 
     const usuario = await prisma.usuario.findFirst({ where: { email } });
