@@ -493,6 +493,12 @@ export default function TreinamentoDinamicoPublico() {
 
         {participante && modelo && (
           <div className="space-y-5">
+            <div className="sticky top-3 z-20 flex justify-end">
+              <div className="rounded-full border border-blue-200 bg-white/92 px-3 py-1.5 text-xs font-black text-blue-950 shadow-lg shadow-blue-900/10 backdrop-blur">
+                Olá, {participante.nomeCompleto}
+              </div>
+            </div>
+
             <div className="grid gap-2 md:grid-cols-5">
               {[
                 "Etapas",
