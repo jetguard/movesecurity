@@ -100,6 +100,33 @@ function mascararCpf(valor: string) {
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 }
 
+function normalizarGrupo(valor: string) {
+  const chave = String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "");
+
+  const mapa: Record<string, string> = {
+    CCOS: "CCOS",
+    LIDERANCA: "LIDERANCA",
+    BALANCA: "BALANCA",
+    PORTARIA: "PORTARIA",
+    TERCEIRIZADO: "TERCEIRIZADO",
+  };
+
+  return mapa[chave] || chave;
+}
+
+function grupoLabel(valor: string) {
+  const normalizado = normalizarGrupo(valor);
+  return (
+    gruposTreinamento.find((grupo) => normalizarGrupo(grupo) === normalizado) ||
+    valor
+  );
+}
+
 function perfilLabel(valor: string) {
   if (valor === "SUPER_ADMIN") return "Super Admin";
   return perfis.find((perfil) => perfil.value === valor)?.label || valor || "-";
@@ -178,7 +205,9 @@ export default function Usuarios() {
         (!filtroPerfil || usuario.perfilAcesso === filtroPerfil) &&
         (!filtroStatus || usuario.statusUsuario === filtroStatus) &&
         (!filtroGrupo ||
-          (usuario.gruposTreinamento || []).includes(filtroGrupo))
+          (usuario.gruposTreinamento || []).some(
+            (grupo) => normalizarGrupo(grupo) === normalizarGrupo(filtroGrupo),
+          ))
       );
     });
   }, [busca, filtroGrupo, filtroPerfil, filtroStatus, usuarios]);
@@ -190,7 +219,10 @@ export default function Usuarios() {
       if (campo === "terceirizado") {
         const grupos = valor
           ? Array.from(new Set([...atual.gruposTreinamento, "Terceirizado"]))
-          : atual.gruposTreinamento.filter((item) => item !== "Terceirizado");
+          : atual.gruposTreinamento.filter(
+              (item) =>
+                normalizarGrupo(item) !== normalizarGrupo("Terceirizado"),
+            );
         return {
           ...atual,
           terceirizado: Boolean(valor),
@@ -216,15 +248,24 @@ export default function Usuarios() {
 
   function alternarGrupoTreinamento(grupo: string) {
     setFormulario((atual) => {
-      const selecionados = atual.gruposTreinamento.includes(grupo)
-        ? atual.gruposTreinamento.filter((item) => item !== grupo)
+      const grupoNormalizado = normalizarGrupo(grupo);
+      const jaSelecionado = atual.gruposTreinamento.some(
+        (item) => normalizarGrupo(item) === grupoNormalizado,
+      );
+      const selecionados = jaSelecionado
+        ? atual.gruposTreinamento.filter(
+            (item) => normalizarGrupo(item) !== grupoNormalizado,
+          )
         : [...atual.gruposTreinamento, grupo];
       return {
         ...atual,
         gruposTreinamento: selecionados,
         terceirizado:
-          grupo === "Terceirizado"
-            ? selecionados.includes("Terceirizado")
+          grupoNormalizado === normalizarGrupo("Terceirizado")
+            ? selecionados.some(
+                (item) =>
+                  normalizarGrupo(item) === normalizarGrupo("Terceirizado"),
+              )
             : atual.terceirizado,
       };
     });
@@ -607,7 +648,11 @@ export default function Usuarios() {
                   >
                     <input
                       type="checkbox"
-                      checked={formulario.gruposTreinamento.includes(grupo)}
+                      checked={formulario.gruposTreinamento.some(
+                        (selecionado) =>
+                          normalizarGrupo(selecionado) ===
+                          normalizarGrupo(grupo),
+                      )}
                       onChange={() => alternarGrupoTreinamento(grupo)}
                     />
                     {grupo}
@@ -872,7 +917,7 @@ export default function Usuarios() {
                             key={grupo}
                             className="rounded-full bg-blue-50 px-2 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-200 dark:ring-blue-500/20"
                           >
-                            {grupo}
+                            {grupoLabel(grupo)}
                           </span>
                         ))
                       ) : (
