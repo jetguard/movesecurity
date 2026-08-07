@@ -226,6 +226,13 @@ export default function TreinamentoDinamicoPublico() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function voltarParaIdentificacao() {
+    setParticipante(null);
+    setIndice(0);
+    setMensagem("");
+    rolarTopo();
+  }
+
   async function concluirEtapa() {
     if (!participante) return;
     setCarregando(true);
@@ -587,13 +594,24 @@ export default function TreinamentoDinamicoPublico() {
                     {etapa.atencao}
                   </p>
                 )}
-                <button
-                  disabled={carregando}
-                  onClick={concluirEtapa}
-                  className="mt-6 rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
-                >
-                  Li e compreendi esta etapa
-                </button>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  {indice === 0 && (
+                    <button
+                      type="button"
+                      onClick={voltarParaIdentificacao}
+                      className="rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm hover:border-blue-500 hover:bg-blue-50"
+                    >
+                      Voltar etapa
+                    </button>
+                  )}
+                  <button
+                    disabled={carregando}
+                    onClick={concluirEtapa}
+                    className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
+                  >
+                    Li e compreendi esta etapa
+                  </button>
+                </div>
               </section>
             )}
 
