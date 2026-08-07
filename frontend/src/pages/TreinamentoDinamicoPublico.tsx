@@ -226,9 +226,8 @@ export default function TreinamentoDinamicoPublico() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function voltarParaIdentificacao() {
-    setParticipante(null);
-    setIndice(0);
+  function voltarEtapaConteudo() {
+    setIndice((atual) => Math.max(0, atual - 1));
     setMensagem("");
     rolarTopo();
   }
@@ -595,10 +594,10 @@ export default function TreinamentoDinamicoPublico() {
                   </p>
                 )}
                 <div className="mt-6 flex flex-wrap gap-3">
-                  {indice === 0 && (
+                  {indice > 0 && (
                     <button
                       type="button"
-                      onClick={voltarParaIdentificacao}
+                      onClick={voltarEtapaConteudo}
                       className="rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm hover:border-blue-500 hover:bg-blue-50"
                     >
                       Voltar etapa
