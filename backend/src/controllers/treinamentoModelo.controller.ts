@@ -133,19 +133,19 @@ function normalizarCodigo(valor: string) {
 
 function gerarTextoCertificado(modelo: any, participante: any) {
   const data = dataPtBr(participante.dataConclusao || new Date());
+  const cpfFormatado = formatarCpf(participante.cpf || "");
+  const textoCpf = cpfFormatado || "não informado";
   const template = texto(modelo.textoCertificado);
   if (template) {
     return template
       .replace(/\{\{nome\}\}/gi, participante.nomeCompleto)
-      .replace(/\{\{cpf\}\}/gi, formatarCpf(participante.cpf || ""))
+      .replace(/\{\{cpf\}\}/gi, textoCpf)
       .replace(/\{\{data\}\}/gi, data)
       .replace(/\{\{codigo\}\}/gi, modelo.codigo)
       .replace(/\{\{treinamento\}\}/gi, modelo.nome);
   }
 
-  return `Certificamos que ${participante.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(
-    participante.cpf || "",
-  )}, concluiu com aproveitamento o treinamento ${modelo.codigo} - ${modelo.nome} na data de ${data}.`;
+  return `Certificamos que ${participante.nomeCompleto}, portador(a) do CPF nº ${textoCpf}, concluiu com aproveitamento o treinamento ${modelo.codigo} - ${modelo.nome} na data de ${data}.`;
 }
 
 function formatarCpf(cpf: string) {
@@ -182,6 +182,35 @@ function arquivoCertificado(token: string) {
 
 function certificadoUrl(token: string) {
   return `/api/public/treinamentos-dinamicos/${token}/certificado`;
+}
+
+async function sincronizarCpfParticipante(participante: any) {
+  const cpfAtual = limparCpf(participante?.cpf || "");
+  if (cpfAtual) {
+    return {
+      participante: { ...participante, cpf: cpfAtual },
+      atualizado: false,
+    };
+  }
+
+  const usuario = await prisma.usuario.findFirst({
+    where: { email: participante.email },
+    select: { cpf: true },
+  });
+  const cpfUsuario = limparCpf(usuario?.cpf || "");
+  if (!cpfUsuario) {
+    return { participante, atualizado: false };
+  }
+
+  await db.treinamentoModeloParticipante.update({
+    where: { id: participante.id },
+    data: { cpf: cpfUsuario },
+  });
+
+  return {
+    participante: { ...participante, cpf: cpfUsuario },
+    atualizado: true,
+  };
 }
 
 function caminhoFundoCertificado() {
@@ -1290,6 +1319,9 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
       });
     }
 
+    const participanteCpf = await sincronizarCpfParticipante(participante);
+    const participanteParaCertificado = participanteCpf.participante;
+
     const comCodigo = await prisma.$transaction(async (tx) => {
       const repo = tx as any;
       const codigo =
@@ -1298,6 +1330,7 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
         where: { id: participante.id },
         data: {
           codigo,
+          cpf: participanteParaCertificado.cpf || participante.cpf || null,
           assinaturaDataUrl,
           status: "Concluido",
           porcentagem: 100,
@@ -1360,15 +1393,29 @@ export async function baixarCertificadoTreinamentoModelo(
     if (!participante || !treinamentoConcluido(participante.status)) {
       return res.status(404).json({ error: "Certificado não encontrado." });
     }
+    const participanteCpf = await sincronizarCpfParticipante(participante);
+    const participanteParaCertificado = participanteCpf.participante;
+    if (
+      participanteCpf.atualizado &&
+      participante.certificadoArquivo &&
+      fs.existsSync(participante.certificadoArquivo)
+    ) {
+      fs.rmSync(participante.certificadoArquivo, { force: true });
+    }
     const certificadoArquivo =
+      !participanteCpf.atualizado &&
       participante.certificadoArquivo &&
       fs.existsSync(participante.certificadoArquivo)
         ? participante.certificadoArquivo
         : await gerarCertificado(
-            lerSnapshot(participante, participante.treinamento, true),
-            participante,
+            lerSnapshot(
+              participanteParaCertificado,
+              participante.treinamento,
+              true,
+            ),
+            participanteParaCertificado,
           );
-    if (!participante.certificadoArquivo) {
+    if (!participante.certificadoArquivo || participanteCpf.atualizado) {
       await db.treinamentoModeloParticipante.update({
         where: { id: participante.id },
         data: { certificadoArquivo },
@@ -1412,17 +1459,31 @@ export async function reenviarEmailTreinamentoModelo(
         .status(400)
         .json({ error: "Só é possível enviar após a conclusão." });
     }
+    const participanteCpf = await sincronizarCpfParticipante(participante);
+    const participanteParaCertificado = participanteCpf.participante;
+    if (
+      participanteCpf.atualizado &&
+      participante.certificadoArquivo &&
+      fs.existsSync(participante.certificadoArquivo)
+    ) {
+      fs.rmSync(participante.certificadoArquivo, { force: true });
+    }
     const certificadoArquivo =
+      !participanteCpf.atualizado &&
       participante.certificadoArquivo &&
       fs.existsSync(participante.certificadoArquivo)
         ? participante.certificadoArquivo
         : await gerarCertificado(
-            lerSnapshot(participante, participante.treinamento, true),
-            participante,
+            lerSnapshot(
+              participanteParaCertificado,
+              participante.treinamento,
+              true,
+            ),
+            participanteParaCertificado,
           );
     const email = await enviarCertificado(
-      lerSnapshot(participante, participante.treinamento, true),
-      participante,
+      lerSnapshot(participanteParaCertificado, participante.treinamento, true),
+      participanteParaCertificado,
       certificadoArquivo,
     );
     const atualizado = await db.treinamentoModeloParticipante.update({
