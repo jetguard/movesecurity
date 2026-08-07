@@ -737,36 +737,38 @@ export default function TreinamentoDinamicoPublico() {
                       style={{ width: `${progressoAvaliacaoTreinamento}%` }}
                     />
                   </div>
-                  <div className="mt-4 grid grid-cols-4 gap-2 sm:grid-cols-8">
-                    {Array.from({ length: totalAvaliacaoTreinamento }).map(
-                      (_, index) => {
-                        const preenchida =
-                          index < perguntasAvaliacaoTreinamento.length
-                            ? Boolean(
-                                avaliacaoTreinamento[
-                                  perguntasAvaliacaoTreinamento[index].id
-                                ],
-                              )
-                            : true;
-                        const atual = index === perguntaAvaliacaoAtual;
-                        return (
-                          <button
-                            key={index}
-                            type="button"
-                            onClick={() => setPerguntaAvaliacaoAtual(index)}
-                            className={`rounded-xl border px-3 py-2 text-xs font-black transition ${
-                              atual
-                                ? "border-blue-600 bg-blue-600 text-white"
-                                : preenchida
-                                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                                  : "border-blue-100 bg-white text-blue-900"
-                            }`}
-                          >
-                            {index + 1}
-                          </button>
-                        );
-                      },
-                    )}
+                  <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-3 shadow-sm">
+                    <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
+                      {Array.from({ length: totalAvaliacaoTreinamento }).map(
+                        (_, index) => {
+                          const preenchida =
+                            index < perguntasAvaliacaoTreinamento.length
+                              ? Boolean(
+                                  avaliacaoTreinamento[
+                                    perguntasAvaliacaoTreinamento[index].id
+                                  ],
+                                )
+                              : true;
+                          const atual = index === perguntaAvaliacaoAtual;
+                          return (
+                            <button
+                              key={index}
+                              type="button"
+                              onClick={() => setPerguntaAvaliacaoAtual(index)}
+                              className={`min-h-11 rounded-xl border px-3 py-2 text-sm font-black transition ${
+                                atual
+                                  ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200"
+                                  : preenchida
+                                    ? "border-emerald-300 bg-emerald-50 text-emerald-950"
+                                    : "border-blue-200 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
+                              }`}
+                            >
+                              {index + 1}
+                            </button>
+                          );
+                        },
+                      )}
+                    </div>
                   </div>
                 </div>
 
