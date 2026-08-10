@@ -181,9 +181,9 @@ const camposProbabilidade: Array<{
   campo: CampoNota;
   label: string;
 }> = [
-  { campo: "sc", label: "Controle" },
+  { campo: "sc", label: "Severidade da consequência" },
   { campo: "fe", label: "Frequência / Exposição" },
-  { campo: "intervalo", label: "Intervalo" },
+  { campo: "intervalo", label: "Intensidade" },
 ];
 
 const camposConsequencia: Array<{
@@ -202,9 +202,9 @@ const camposProbabilidadeResidual: Array<{
   campo: CampoResidual;
   label: string;
 }> = [
-  { campo: "scResidual", label: "Controle" },
+  { campo: "scResidual", label: "Severidade da consequência" },
   { campo: "feResidual", label: "Frequência / Exposição" },
-  { campo: "intervaloResidual", label: "Intervalo" },
+  { campo: "intervaloResidual", label: "Intensidade" },
 ];
 
 const camposConsequenciaResidual: Array<{
