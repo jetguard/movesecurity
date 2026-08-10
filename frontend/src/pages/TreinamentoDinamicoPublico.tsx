@@ -136,6 +136,16 @@ function emailValido(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 }
 
+function avaliacaoTreinamentoPadrao() {
+  return perguntasAvaliacaoTreinamento.reduce<Record<string, string>>(
+    (respostas, pergunta) => ({
+      ...respostas,
+      [pergunta.id]: pergunta.opcoes[0],
+    }),
+    {},
+  );
+}
+
 function resultadoDoParticipante(participante: Participante, modelo: Modelo) {
   if (participante.nota == null) return null;
   const nota = Number(participante.nota) || 0;
@@ -163,7 +173,7 @@ export default function TreinamentoDinamicoPublico() {
   } | null>(null);
   const [avaliacaoTreinamento, setAvaliacaoTreinamento] = useState<
     Record<string, string>
-  >({});
+  >(() => avaliacaoTreinamentoPadrao());
   const [perguntaAvaliacaoAtual, setPerguntaAvaliacaoAtual] = useState(0);
   const [comentarioAvaliacao, setComentarioAvaliacao] = useState("");
   const [assinaturaVazia, setAssinaturaVazia] = useState(true);
@@ -310,8 +320,12 @@ export default function TreinamentoDinamicoPublico() {
 
   async function salvarAvaliacaoTreinamento() {
     if (!participante) return;
+    const respostas = {
+      ...avaliacaoTreinamentoPadrao(),
+      ...avaliacaoTreinamento,
+    };
     const faltantes = perguntasAvaliacaoTreinamento.filter(
-      (pergunta) => !avaliacaoTreinamento[pergunta.id],
+      (pergunta) => !respostas[pergunta.id],
     );
     if (faltantes.length) {
       setMensagem(
@@ -325,7 +339,7 @@ export default function TreinamentoDinamicoPublico() {
       const response = await axios.post(
         `/api/public/treinamentos-dinamicos/${participante.token}/avaliacao`,
         {
-          respostas: avaliacaoTreinamento,
+          respostas,
           comentario: comentarioAvaliacao,
         },
       );
@@ -350,8 +364,10 @@ export default function TreinamentoDinamicoPublico() {
     if (perguntaAvaliacaoAtual < perguntasAvaliacaoTreinamento.length) {
       const atual = perguntasAvaliacaoTreinamento[perguntaAvaliacaoAtual];
       if (!avaliacaoTreinamento[atual.id]) {
-        setMensagem("Selecione uma opção para avançar.");
-        return;
+        setAvaliacaoTreinamento((respostas) => ({
+          ...respostas,
+          [atual.id]: atual.opcoes[0],
+        }));
       }
     }
     setMensagem("");
