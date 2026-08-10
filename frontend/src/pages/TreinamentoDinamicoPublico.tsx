@@ -754,7 +754,7 @@ export default function TreinamentoDinamicoPublico() {
                       style={{ width: `${progressoAvaliacaoTreinamento}%` }}
                     />
                   </div>
-                  <div className="mt-4 rounded-2xl border border-blue-100 bg-white p-3 shadow-sm">
+                  <div className="mt-4 hidden rounded-2xl border border-blue-100 bg-white p-3 shadow-sm sm:block">
                     <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
                       {Array.from({ length: totalAvaliacaoTreinamento }).map(
                         (_, index) => {
