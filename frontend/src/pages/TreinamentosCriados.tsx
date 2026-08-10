@@ -77,9 +77,7 @@ export default function TreinamentosCriados() {
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
   const [excluindoId, setExcluindoId] = useState<number | null>(null);
-  const podeEditar = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
-    perfilAtual(),
-  );
+  const podeEditar = perfilAtual() === PERFIS.SUPER_ADMIN;
 
   async function carregar() {
     const response = await api.get("/treinamentos-dinamicos");

@@ -12,10 +12,10 @@ import {
   responderQuizTreinamentoPocSep002,
 } from "../controllers/treinamentoPocSep002.controller";
 import {
-  acessoTotal,
   acessoTreinamentosTerminal,
   autenticarUsuario,
   autorizarPerfis,
+  PERFIS,
 } from "../middlewares/auth";
 
 const router = Router();
@@ -63,7 +63,7 @@ router.post(
 router.delete(
   "/treinamentos-poc-sep-002/:id",
   autenticarUsuario,
-  autorizarPerfis(acessoTotal),
+  autorizarPerfis([PERFIS.SUPER_ADMIN]),
   excluirTreinamentoPocSep002,
 );
 

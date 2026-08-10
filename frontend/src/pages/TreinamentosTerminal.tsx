@@ -97,9 +97,7 @@ export default function TreinamentosTerminal() {
   const [status, setStatus] = useState("Todos");
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
-  const podeExcluir = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
-    perfilAtual(),
-  );
+  const podeExcluir = perfilAtual() === PERFIS.SUPER_ADMIN;
 
   async function carregar() {
     const response = await api.get("/treinamentos-terminal");

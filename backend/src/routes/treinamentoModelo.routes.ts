@@ -21,6 +21,7 @@ import {
   acessoTreinamentosTerminal,
   autenticarUsuario,
   autorizarPerfis,
+  PERFIS,
 } from "../middlewares/auth";
 
 const router = Router();
@@ -74,7 +75,7 @@ router.post(
 router.put(
   "/treinamentos-dinamicos/:id",
   autenticarUsuario,
-  autorizarPerfis(acessoTotal),
+  autorizarPerfis([PERFIS.SUPER_ADMIN]),
   salvarTreinamentoModelo,
 );
 router.post(
@@ -86,13 +87,13 @@ router.post(
 router.delete(
   "/treinamentos-dinamicos/participantes/:id",
   autenticarUsuario,
-  autorizarPerfis(acessoTotal),
+  autorizarPerfis([PERFIS.SUPER_ADMIN]),
   excluirParticipanteTreinamentoModelo,
 );
 router.delete(
   "/treinamentos-dinamicos/:id",
   autenticarUsuario,
-  autorizarPerfis(acessoTotal),
+  autorizarPerfis([PERFIS.SUPER_ADMIN]),
   excluirTreinamentoModelo,
 );
 router.post(

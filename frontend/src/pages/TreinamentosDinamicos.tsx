@@ -161,8 +161,11 @@ export default function TreinamentosDinamicos() {
   const [mensagem, setMensagem] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
-  const podeEditar = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
-    perfilAtual(),
+  const perfil = perfilAtual();
+  const podeEditar = perfil === PERFIS.SUPER_ADMIN;
+  const podeSalvar = !form.id || podeEditar;
+  const podeEnviar = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
+    perfil,
   );
 
   async function carregar() {
@@ -308,7 +311,7 @@ export default function TreinamentosDinamicos() {
 
   async function salvar(event?: FormEvent, statusForcado?: string) {
     event?.preventDefault();
-    if (!podeEditar) return;
+    if (!podeSalvar) return;
     setSalvando(true);
     setMensagem("");
     try {
@@ -352,7 +355,7 @@ export default function TreinamentosDinamicos() {
 
   async function enviarTreinamento(modelo?: Pick<Modelo, "id">) {
     const id = modelo?.id || form.id;
-    if (!id || !podeEditar) return;
+    if (!id || !podeEnviar) return;
     setEnviandoId(id);
     setMensagem("");
     try {
@@ -759,7 +762,7 @@ export default function TreinamentosDinamicos() {
             </button>
             <button
               type="submit"
-              disabled={!podeEditar || salvando}
+              disabled={!podeSalvar || salvando}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               <Save size={18} />{" "}
@@ -769,7 +772,7 @@ export default function TreinamentosDinamicos() {
               <button
                 type="button"
                 onClick={() => enviarTreinamento()}
-                disabled={!podeEditar || enviandoId === form.id}
+                disabled={!podeEnviar || enviandoId === form.id}
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-700 disabled:opacity-50"
               >
                 <Mail size={18} />{" "}
@@ -840,7 +843,7 @@ export default function TreinamentosDinamicos() {
                     >
                       <Copy size={14} /> Copiar link
                     </button>
-                    {podeEditar && (
+                    {podeEnviar && (
                       <button
                         type="button"
                         onClick={() => enviarTreinamento(modelo)}
