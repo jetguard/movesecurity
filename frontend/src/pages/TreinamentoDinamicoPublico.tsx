@@ -50,6 +50,7 @@ type Participante = {
   status: string;
   porcentagem: number;
   nota?: number | null;
+  acertos?: number | null;
   tentativas: number;
   certificadoUrl?: string | null;
 };
@@ -135,6 +136,16 @@ function emailValido(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 }
 
+function resultadoDoParticipante(participante: Participante, modelo: Modelo) {
+  if (participante.nota == null) return null;
+  const nota = Number(participante.nota) || 0;
+  return {
+    aprovado: nota >= modelo.notaMinima,
+    nota,
+    acertos: Number(participante.acertos ?? 0),
+  };
+}
+
 export default function TreinamentoDinamicoPublico() {
   const { slug = "" } = useParams();
   const [modelo, setModelo] = useState<Modelo | null>(null);
@@ -172,6 +183,10 @@ export default function TreinamentoDinamicoPublico() {
   const progressoAvaliacaoTreinamento = Math.round(
     ((perguntaAvaliacaoAtual + 1) / totalAvaliacaoTreinamento) * 100,
   );
+  const resultadoAtual =
+    participante && modelo
+      ? resultado || resultadoDoParticipante(participante, modelo)
+      : resultado;
 
   useEffect(() => {
     axios
@@ -204,6 +219,7 @@ export default function TreinamentoDinamicoPublico() {
       setModelo(treinamentoRecebido);
       const registro = response.data.participante as Participante;
       setParticipante(registro);
+      setResultado(resultadoDoParticipante(registro, treinamentoRecebido));
       const etapaAssinaturaRecebida =
         (treinamentoRecebido.etapas?.length || 0) + 3;
       setIndice(
@@ -697,11 +713,11 @@ export default function TreinamentoDinamicoPublico() {
                   Resultado da avaliação
                 </h2>
                 <p className="mt-4 rounded-2xl bg-blue-50 p-4 text-lg font-black text-blue-950">
-                  {resultado?.acertos || 0} acertos · nota{" "}
-                  {resultado?.nota || participante.nota || 0}% · mínimo{" "}
+                  {resultadoAtual?.acertos ?? 0} acertos · nota{" "}
+                  {resultadoAtual?.nota ?? participante.nota ?? 0}% · mínimo{" "}
                   {modelo.notaMinima}%
                 </p>
-                {resultado?.aprovado ? (
+                {resultadoAtual?.aprovado ? (
                   <button
                     onClick={() => {
                       setPerguntaAvaliacaoAtual(0);

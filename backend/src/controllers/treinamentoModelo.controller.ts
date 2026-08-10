@@ -262,6 +262,20 @@ function treinamentoConcluido(status?: string | null) {
     .startsWith("conclu");
 }
 
+function contarAcertosQuiz(respostasQuiz: unknown) {
+  if (!respostasQuiz) return null;
+  try {
+    const respostas =
+      typeof respostasQuiz === "string"
+        ? JSON.parse(respostasQuiz)
+        : respostasQuiz;
+    if (!Array.isArray(respostas)) return null;
+    return respostas.filter((item: any) => Boolean(item?.correto)).length;
+  } catch {
+    return null;
+  }
+}
+
 function respostaParticipante(registro: any) {
   return {
     token: registro.token,
@@ -278,6 +292,7 @@ function respostaParticipante(registro: any) {
     status: registro.status,
     porcentagem: registro.porcentagem,
     nota: registro.nota,
+    acertos: contarAcertosQuiz(registro.respostasQuiz),
     tentativas: registro.tentativas,
     versao: registro.versao,
     dataConclusao: registro.dataConclusao,
