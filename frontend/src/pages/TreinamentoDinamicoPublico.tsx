@@ -476,23 +476,23 @@ export default function TreinamentoDinamicoPublico() {
           className="h-full w-full object-cover object-center"
         />
       </picture>
-      <div className="fixed inset-0 z-0 bg-white/55" />
+      <div className="fixed inset-0 z-0 bg-white/68" />
 
-      <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl flex-col px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
-        <div className="mb-5 flex items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-white/92 px-4 py-3 shadow-xl backdrop-blur sm:mb-8 sm:px-5 sm:py-4">
+      <section className="relative z-10 mx-auto flex min-h-screen w-full max-w-5xl flex-col px-3 py-4 sm:px-6 sm:py-7 lg:px-8">
+        <div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-sm backdrop-blur sm:mb-6 sm:px-5 sm:py-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
               {modelo?.codigo || "Movecta"}
             </p>
-            <h1 className="mt-2 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
+            <h1 className="mt-1.5 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
               {modelo?.nome || "Treinamento"}
             </h1>
           </div>
-          <ShieldCheck className="h-9 w-9 shrink-0 text-blue-600 sm:h-10 sm:w-10" />
+          <ShieldCheck className="h-8 w-8 shrink-0 text-blue-600 sm:h-9 sm:w-9" />
         </div>
 
         {mensagem && (
-          <div className="mb-5 rounded-2xl border border-blue-200 bg-white/95 px-4 py-3 text-sm font-black text-blue-950 shadow-lg">
+          <div className="mb-4 rounded-2xl border border-blue-100 bg-white/95 px-4 py-3 text-sm font-black text-blue-950 shadow-sm">
             {mensagem}
           </div>
         )}
@@ -548,14 +548,14 @@ export default function TreinamentoDinamicoPublico() {
         )}
 
         {participante && modelo && (
-          <div className="space-y-5">
+          <div className="space-y-4">
             <div className="sticky top-3 z-20 flex justify-end">
-              <div className="rounded-full border border-blue-200 bg-white/92 px-3 py-1.5 text-xs font-black text-blue-950 shadow-lg shadow-blue-900/10 backdrop-blur">
+              <div className="rounded-full border border-blue-100 bg-white/90 px-3 py-1.5 text-xs font-black text-blue-950 shadow-sm backdrop-blur">
                 Olá, {participante.nomeCompleto}
               </div>
             </div>
 
-            <div className="grid gap-2 md:grid-cols-5">
+            <div className="grid gap-1.5 rounded-2xl border border-blue-100 bg-white/82 p-2 shadow-sm backdrop-blur md:grid-cols-5">
               {[
                 "Etapas",
                 "Avaliação",
@@ -572,7 +572,11 @@ export default function TreinamentoDinamicoPublico() {
                 return (
                   <div
                     key={label}
-                    className={`rounded-2xl px-4 py-3 text-sm font-black shadow ${ativo ? "bg-blue-600 text-white" : "bg-white/90 text-blue-950"}`}
+                    className={`rounded-xl px-3 py-2.5 text-center text-xs font-black transition ${
+                      ativo
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-transparent text-slate-500"
+                    }`}
                   >
                     {label}
                   </div>
@@ -581,39 +585,39 @@ export default function TreinamentoDinamicoPublico() {
             </div>
 
             {etapa && indice < indiceQuiz && (
-              <section className="rounded-2xl border border-blue-200 bg-white/97 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-7">
+              <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 text-slate-950 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-6">
                 <p className="text-sm font-black uppercase tracking-[0.22em] text-blue-700">
                   Etapa {indice + 1}
                 </p>
-                <div className="mt-3 rounded-2xl border border-blue-100 bg-blue-50/80 p-5">
+                <div className="mt-3 border-b border-blue-100 pb-4">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
                     Assunto
                   </p>
-                  <h2 className="mt-2 text-3xl font-black leading-tight text-slate-950 sm:text-4xl">
+                  <h2 className="mt-1.5 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
                     {etapa.titulo}
                   </h2>
                 </div>
                 {etapa.objetivo && (
-                  <div className="mt-4 rounded-2xl border border-blue-200 bg-white p-5 text-slate-950 shadow-sm">
+                  <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50/70 p-4 text-slate-950">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
                       Objetivo
                     </p>
-                    <p className="mt-2 text-lg font-black leading-7 text-slate-950">
+                    <p className="mt-2 text-base font-black leading-7 text-slate-950 sm:text-lg">
                       {etapa.objetivo}
                     </p>
                   </div>
                 )}
-                <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5 text-[17px] font-semibold leading-8 text-slate-950 shadow-sm sm:text-lg">
+                <div className="mt-4 rounded-xl border border-slate-100 bg-white/85 p-4 text-base font-semibold leading-7 text-slate-950 shadow-sm shadow-slate-200/40 sm:text-[17px]">
                   <p className="whitespace-pre-line text-slate-950">
                     {etapa.conteudo}
                   </p>
                 </div>
                 {!!etapa.topicos?.length && (
-                  <ul className="mt-5 grid gap-2">
+                  <ul className="mt-4 grid gap-2">
                     {etapa.topicos.map((topico) => (
                       <li
                         key={topico}
-                        className="rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 shadow-sm"
+                        className="rounded-xl border border-blue-100 bg-blue-50/45 px-4 py-3 text-sm font-bold text-slate-900"
                       >
                         {topico}
                       </li>
@@ -621,16 +625,16 @@ export default function TreinamentoDinamicoPublico() {
                   </ul>
                 )}
                 {etapa.atencao && (
-                  <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-black text-amber-950">
+                  <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-sm font-black text-amber-950">
                     {etapa.atencao}
                   </p>
                 )}
-                <div className="mt-6 flex flex-wrap gap-3">
+                <div className="mt-5 flex flex-wrap gap-3">
                   {indice > 0 && (
                     <button
                       type="button"
                       onClick={voltarEtapaConteudo}
-                      className="rounded-2xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm hover:border-blue-500 hover:bg-blue-50"
+                      className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm hover:border-blue-500 hover:bg-blue-50"
                     >
                       Voltar etapa
                     </button>
@@ -638,7 +642,7 @@ export default function TreinamentoDinamicoPublico() {
                   <button
                     disabled={carregando}
                     onClick={concluirEtapa}
-                    className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700 disabled:opacity-60"
+                    className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:opacity-60"
                   >
                     Li e compreendi esta etapa
                   </button>
@@ -647,11 +651,11 @@ export default function TreinamentoDinamicoPublico() {
             )}
 
             {indice === indiceQuiz && (
-              <section className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
+              <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-6">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
                   Avaliação final
                 </p>
-                <h2 className="mt-2 text-3xl font-black text-slate-950">
+                <h2 className="mt-2 text-2xl font-black text-slate-950 sm:text-3xl">
                   Pergunta {perguntaAtual + 1} de {perguntas.length}
                 </h2>
                 {perguntas[perguntaAtual] && (
@@ -672,11 +676,11 @@ export default function TreinamentoDinamicoPublico() {
                                   alternativa.id,
                               }))
                             }
-                            className={`rounded-2xl border px-4 py-4 text-left text-sm font-black shadow-sm ${
+                            className={`rounded-xl border px-4 py-4 text-left text-sm font-black shadow-sm ${
                               respostas[String(perguntas[perguntaAtual].id)] ===
                               alternativa.id
                                 ? "border-blue-600 bg-blue-600 text-white"
-                                : "border-blue-200 bg-white text-blue-950 hover:border-blue-500"
+                                : "border-blue-100 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
                             }`}
                           >
                             {alternativa.texto}
@@ -723,12 +727,12 @@ export default function TreinamentoDinamicoPublico() {
             )}
 
             {indice === indiceResultado && (
-              <section className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
+              <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-6">
                 <Award className="h-10 w-10 text-blue-600" />
-                <h2 className="mt-3 text-3xl font-black text-slate-950">
+                <h2 className="mt-3 text-2xl font-black text-slate-950 sm:text-3xl">
                   Resultado da avaliação
                 </h2>
-                <p className="mt-4 rounded-2xl bg-blue-50 p-4 text-lg font-black text-blue-950">
+                <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50/80 p-4 text-lg font-black text-blue-950">
                   {resultadoAtual?.acertos ?? 0} acertos · nota{" "}
                   {resultadoAtual?.nota ?? participante.nota ?? 0}% · mínimo{" "}
                   {modelo.notaMinima}%
@@ -758,13 +762,13 @@ export default function TreinamentoDinamicoPublico() {
             )}
 
             {indice === indiceAvaliacaoTreinamento && (
-              <section className="rounded-2xl border border-blue-200 bg-white/96 p-5 text-slate-950 shadow-2xl backdrop-blur sm:p-6">
+              <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 text-slate-950 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-5">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
                   Avaliação do treinamento
                 </p>
                 <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <h2 className="text-3xl font-black text-slate-950">
+                    <h2 className="text-2xl font-black text-slate-950 sm:text-3xl">
                       Conte como foi sua experiência
                     </h2>
                     <p className="mt-2 max-w-3xl text-sm font-bold leading-6 text-slate-700">
@@ -773,20 +777,20 @@ export default function TreinamentoDinamicoPublico() {
                       emissão do certificado.
                     </p>
                   </div>
-                  <div className="rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800">
+                  <div className="rounded-xl border border-blue-100 bg-blue-50/80 px-4 py-2.5 text-sm font-black text-blue-800">
                     Etapa {perguntaAvaliacaoAtual + 1} de{" "}
                     {totalAvaliacaoTreinamento}
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+                <div className="mt-5">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-blue-100">
                     <div
                       className="h-full rounded-full bg-blue-600 transition-all"
                       style={{ width: `${progressoAvaliacaoTreinamento}%` }}
                     />
                   </div>
-                  <div className="mt-4 hidden rounded-2xl border border-blue-100 bg-white p-3 shadow-sm sm:block">
+                  <div className="mt-3 hidden rounded-xl border border-blue-100 bg-slate-50/80 p-2 shadow-sm sm:block">
                     <div className="grid grid-cols-4 gap-2 sm:grid-cols-8">
                       {Array.from({ length: totalAvaliacaoTreinamento }).map(
                         (_, index) => {
@@ -804,12 +808,12 @@ export default function TreinamentoDinamicoPublico() {
                               key={index}
                               type="button"
                               onClick={() => setPerguntaAvaliacaoAtual(index)}
-                              className={`min-h-11 rounded-xl border px-3 py-2 text-sm font-black transition ${
+                              className={`min-h-9 rounded-lg border px-2 py-1.5 text-xs font-black transition ${
                                 atual
-                                  ? "border-blue-600 bg-blue-600 text-white shadow-md shadow-blue-200"
+                                  ? "border-blue-600 bg-blue-600 text-white"
                                   : preenchida
-                                    ? "border-emerald-300 bg-emerald-50 text-emerald-950"
-                                    : "border-blue-200 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
+                                    ? "border-emerald-200 bg-white text-emerald-800"
+                                    : "border-blue-100 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
                               }`}
                             >
                               {index + 1}
@@ -822,19 +826,19 @@ export default function TreinamentoDinamicoPublico() {
                 </div>
 
                 {perguntaAvaliacao ? (
-                  <article className="mt-6 rounded-3xl border border-blue-100 bg-white p-5 shadow-lg shadow-blue-100/50 sm:p-6">
+                  <article className="mt-5 rounded-2xl border border-blue-100 bg-white/90 p-4 shadow-sm sm:p-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-lg font-black text-white">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-base font-black text-white">
                         {perguntaAvaliacaoAtual + 1}
                       </span>
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
                           {perguntaAvaliacao.titulo}
                         </p>
-                        <h3 className="mt-2 text-2xl font-black leading-tight text-slate-950">
+                        <h3 className="mt-2 text-xl font-black leading-tight text-slate-950 sm:text-2xl">
                           {perguntaAvaliacao.pergunta}
                         </h3>
-                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                        <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
                           {perguntaAvaliacao.opcoes.map((opcao) => {
                             const ativo =
                               avaliacaoTreinamento[perguntaAvaliacao.id] ===
@@ -849,10 +853,10 @@ export default function TreinamentoDinamicoPublico() {
                                     [perguntaAvaliacao.id]: opcao,
                                   }))
                                 }
-                                className={`min-h-14 rounded-2xl border px-4 py-3 text-left text-sm font-black shadow-sm transition ${
+                                className={`min-h-12 rounded-xl border px-4 py-3 text-left text-sm font-black transition ${
                                   ativo
-                                    ? "border-blue-600 bg-blue-600 text-white shadow-blue-200"
-                                    : "border-blue-200 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
+                                    ? "border-blue-500 bg-blue-50 text-blue-950 ring-2 ring-blue-500/20"
+                                    : "border-blue-100 bg-white text-blue-950 hover:border-blue-500 hover:bg-blue-50"
                                 }`}
                               >
                                 {opcao}
@@ -864,11 +868,11 @@ export default function TreinamentoDinamicoPublico() {
                     </div>
                   </article>
                 ) : (
-                  <article className="mt-6 rounded-3xl border border-blue-100 bg-white p-5 shadow-lg shadow-blue-100/50 sm:p-6">
+                  <article className="mt-5 rounded-2xl border border-blue-100 bg-white/90 p-4 shadow-sm sm:p-5">
                     <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
                       Etapa final da opinião
                     </p>
-                    <h3 className="mt-2 text-2xl font-black text-slate-950">
+                    <h3 className="mt-2 text-xl font-black text-slate-950 sm:text-2xl">
                       Comentários ou sugestões
                     </h3>
                     <p className="mt-2 text-sm font-bold leading-6 text-slate-700">
@@ -882,9 +886,9 @@ export default function TreinamentoDinamicoPublico() {
                       }
                       rows={5}
                       placeholder="Escreva aqui sua sugestão."
-                      className="mt-5 w-full resize-none rounded-2xl border border-blue-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                      className="mt-4 w-full resize-none rounded-xl border border-blue-100 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
                     />
-                    <div className="mt-5 rounded-2xl bg-slate-50 p-4 text-sm font-black text-slate-700">
+                    <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm font-black text-slate-700">
                       Respostas marcadas:{" "}
                       {Object.keys(avaliacaoTreinamento).length} de{" "}
                       {perguntasAvaliacaoTreinamento.length}
@@ -900,7 +904,7 @@ export default function TreinamentoDinamicoPublico() {
                         ? () => setIndice(indiceResultado)
                         : voltarAvaliacaoTreinamento
                     }
-                    className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700"
+                    className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"
                   >
                     {perguntaAvaliacaoAtual === 0
                       ? "Voltar ao resultado"
@@ -910,7 +914,7 @@ export default function TreinamentoDinamicoPublico() {
                     <button
                       type="button"
                       onClick={avancarAvaliacaoTreinamento}
-                      className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-blue-700"
+                      className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-700"
                     >
                       Próxima etapa
                     </button>
@@ -919,7 +923,7 @@ export default function TreinamentoDinamicoPublico() {
                       type="button"
                       disabled={carregando}
                       onClick={salvarAvaliacaoTreinamento}
-                      className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-lg hover:bg-emerald-700 disabled:opacity-60"
+                      className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
                     >
                       Salvar avaliação e assinar
                     </button>
@@ -929,17 +933,17 @@ export default function TreinamentoDinamicoPublico() {
             )}
 
             {indice >= indiceAssinatura && (
-              <section className="rounded-2xl border border-blue-200 bg-white/94 p-5 shadow-2xl backdrop-blur sm:p-6">
+              <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-6">
                 <FileSignature className="h-10 w-10 text-blue-600" />
-                <h2 className="mt-3 text-3xl font-black text-slate-950">
+                <h2 className="mt-3 text-2xl font-black text-slate-950 sm:text-3xl">
                   Declaração e assinatura
                 </h2>
-                <p className="mt-4 rounded-2xl border border-blue-200 bg-white p-4 text-sm font-black leading-6 text-slate-950">
+                <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50/55 p-4 text-sm font-black leading-6 text-slate-950">
                   Declaro que li integralmente o conteúdo, respondi à avaliação
                   e estou ciente das orientações apresentadas neste treinamento.
                 </p>
                 {!participante.certificadoUrl && (
-                  <div className="mt-5 rounded-2xl border border-blue-200 bg-white p-4">
+                  <div className="mt-5 rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
                     <div className="mb-3 flex items-center justify-between">
                       <span className="text-sm font-black text-slate-950">
                         Assinatura
