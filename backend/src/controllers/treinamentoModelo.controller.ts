@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { Request, Response } from "express";
+import archiver = require("archiver");
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
@@ -13,6 +14,17 @@ const db = prisma as any;
 
 function texto(valor: unknown) {
   return String(valor || "").trim();
+}
+
+function nomeArquivoSeguro(valor: unknown, fallback = "arquivo") {
+  const limpo = texto(valor)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\d\s._-]/gu, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .slice(0, 90);
+  return limpo || fallback;
 }
 
 function limparCpf(cpf: string) {
@@ -1444,6 +1456,133 @@ export async function baixarCertificadoTreinamentoModelo(
     return res
       .status(500)
       .json({ error: error?.message || "Erro ao baixar certificado." });
+  }
+}
+
+export async function baixarCertificadosTreinamentoModeloZip(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const treinamentoId = Number(req.params.id);
+    if (!Number.isInteger(treinamentoId)) {
+      return res.status(400).json({ error: "Treinamento inválido." });
+    }
+
+    const ids = texto(req.query.ids)
+      .split(",")
+      .map((item) => Number(item))
+      .filter((item) => Number.isInteger(item));
+
+    const modelo = await db.treinamentoModelo.findUnique({
+      where: { id: treinamentoId },
+      include: {
+        etapas: { orderBy: { ordem: "asc" } },
+        perguntas: {
+          orderBy: { ordem: "asc" },
+          include: { alternativas: { orderBy: { ordem: "asc" } } },
+        },
+      },
+    });
+    if (!modelo) {
+      return res.status(404).json({ error: "Treinamento não encontrado." });
+    }
+
+    const participantes = (
+      await db.treinamentoModeloParticipante.findMany({
+        where: {
+          treinamentoId,
+          ...(ids.length ? { id: { in: ids } } : {}),
+        },
+        orderBy: [{ dataConclusao: "desc" }, { updatedAt: "desc" }],
+      })
+    ).filter((item: any) => treinamentoConcluido(item.status));
+
+    if (!participantes.length) {
+      return res
+        .status(404)
+        .json({ error: "Nenhum certificado concluído encontrado." });
+    }
+
+    const nomeTreinamento = nomeArquivoSeguro(
+      modelo.nome || modelo.codigo || modelo.slug,
+      "treinamento",
+    );
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="certificados-${nomeTreinamento}.zip"`,
+    );
+
+    const arquivoZip = new archiver.ZipArchive({ zlib: { level: 9 } });
+    arquivoZip.on("error", (error: archiver.ArchiverError) => {
+      console.error(error);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Erro ao gerar arquivo ZIP." });
+      } else {
+        res.end();
+      }
+    });
+    arquivoZip.pipe(res);
+
+    const usados = new Set<string>();
+    for (const participanteOriginal of participantes) {
+      const participanteCpf = await sincronizarCpfParticipante({
+        ...participanteOriginal,
+        treinamento: modelo,
+      });
+      const participante = participanteCpf.participante;
+
+      if (
+        participanteCpf.atualizado &&
+        participanteOriginal.certificadoArquivo &&
+        fs.existsSync(participanteOriginal.certificadoArquivo)
+      ) {
+        fs.rmSync(participanteOriginal.certificadoArquivo, { force: true });
+      }
+
+      const certificadoArquivo =
+        !participanteCpf.atualizado &&
+        participanteOriginal.certificadoArquivo &&
+        fs.existsSync(participanteOriginal.certificadoArquivo)
+          ? participanteOriginal.certificadoArquivo
+          : await gerarCertificado(
+              lerSnapshot(participante, modelo, true),
+              participante,
+            );
+
+      if (
+        !participanteOriginal.certificadoArquivo ||
+        participanteCpf.atualizado
+      ) {
+        await db.treinamentoModeloParticipante.update({
+          where: { id: participanteOriginal.id },
+          data: { certificadoArquivo },
+        });
+      }
+
+      const nome = nomeArquivoSeguro(participante.nomeCompleto, "participante");
+      const codigo = nomeArquivoSeguro(modelo.codigo, "treinamento");
+      const base = `${nome}-${codigo}`;
+      const repeticoes = Array.from(usados).filter((item) =>
+        item.startsWith(base),
+      ).length;
+      const arquivo = `${base}${repeticoes ? `-${repeticoes + 1}` : ""}.pdf`;
+      usados.add(arquivo);
+
+      arquivoZip.file(certificadoArquivo, { name: arquivo });
+    }
+
+    await arquivoZip.finalize();
+  } catch (error: any) {
+    console.error(error);
+    if (!res.headersSent) {
+      return res
+        .status(500)
+        .json({ error: error?.message || "Erro ao baixar certificados." });
+    }
+    return res.end();
   }
 }
 

@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Clock3,
   Copy,
+  Download,
   Edit,
   ExternalLink,
   FileText,
@@ -77,6 +78,7 @@ export default function TreinamentosCriados() {
   const [mensagem, setMensagem] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
   const [excluindoId, setExcluindoId] = useState<number | null>(null);
+  const [baixandoCertificados, setBaixandoCertificados] = useState(false);
   const podeEditar = perfilAtual() === PERFIS.SUPER_ADMIN;
 
   async function carregar() {
@@ -186,6 +188,52 @@ export default function TreinamentosCriados() {
     }
   }
 
+  async function baixarCertificadosFiltrados() {
+    if (!modeloSelecionado) return;
+    const participantesComCertificado = filtrados.filter((item) =>
+      concluido(item.status),
+    );
+    if (!participantesComCertificado.length) {
+      setMensagem(
+        "Nenhum certificado concluído encontrado nos filtros atuais.",
+      );
+      return;
+    }
+
+    setBaixandoCertificados(true);
+    setMensagem("");
+    try {
+      const response = await api.get(
+        `/treinamentos-dinamicos/${modeloSelecionado.id}/certificados.zip`,
+        {
+          params: {
+            ids: participantesComCertificado.map((item) => item.id).join(","),
+          },
+          responseType: "blob",
+        },
+      );
+      const blob = new Blob([response.data], { type: "application/zip" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `certificados-${modeloSelecionado.codigo || modeloSelecionado.slug}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      setMensagem(
+        `${participantesComCertificado.length} certificado(s) preparado(s) para download.`,
+      );
+    } catch (error: any) {
+      setMensagem(
+        error.response?.data?.error ||
+          "Não foi possível baixar os certificados filtrados.",
+      );
+    } finally {
+      setBaixandoCertificados(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <section className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-200 pb-5 dark:border-slate-800">
@@ -245,7 +293,7 @@ export default function TreinamentosCriados() {
       </section>
 
       <section className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
-        <div className="grid gap-3 md:grid-cols-[minmax(260px,420px)_1fr_minmax(180px,220px)]">
+        <div className="grid gap-3 md:grid-cols-[minmax(260px,420px)_1fr_minmax(180px,220px)_auto]">
           <select
             value={selecionadoId}
             onChange={(event) => {
@@ -280,6 +328,15 @@ export default function TreinamentosCriados() {
             <option>Reprovado</option>
             <option value="Concluido">Concluído</option>
           </select>
+          <button
+            type="button"
+            onClick={baixarCertificadosFiltrados}
+            disabled={!modeloSelecionado || baixandoCertificados}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-black text-white shadow-lg transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Download size={18} />
+            {baixandoCertificados ? "Baixando..." : "Baixar certificados"}
+          </button>
         </div>
       </section>
 

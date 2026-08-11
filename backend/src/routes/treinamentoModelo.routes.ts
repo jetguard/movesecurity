@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   baixarCertificadoTreinamentoModelo,
+  baixarCertificadosTreinamentoModeloZip,
   buscarTreinamentoPublico,
   concluirEtapaTreinamentoModelo,
   concluirTreinamentoModelo,
@@ -83,6 +84,12 @@ router.post(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   enviarConvitesTreinamentoModelo,
+);
+router.get(
+  "/treinamentos-dinamicos/:id/certificados.zip",
+  autenticarUsuario,
+  autorizarPerfis(acessoTreinamentosTerminal),
+  baixarCertificadosTreinamentoModeloZip,
 );
 router.delete(
   "/treinamentos-dinamicos/participantes/:id",
