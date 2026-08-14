@@ -220,7 +220,7 @@ function blocoFatoresTratativa(
     .fillColor("#92400e")
     .font("Helvetica-Bold")
     .fontSize(8)
-    .text("FATORES DE RISCO E TRATATIVAS 5W2H", x + 12, y + 10, {
+    .text("FATORES DE RISCO E PLANOS DE AÇÃO 5W2H", x + 12, y + 10, {
       width: width - 24,
     });
   const lista = itens.length

@@ -1376,24 +1376,18 @@ function parseListaJson<T>(valor: string | null | undefined): T[] {
 
 type PlanoFatorResumo = {
   fatorRiscoId: number | null;
-  percentual: number;
   status: string;
 };
 
 function resumirPlanosPorFator(planos: PlanoFatorResumo[]) {
-  const mapa = new Map<
-    number,
-    { total: number; soma: number; concluidos: number }
-  >();
+  const mapa = new Map<number, { total: number; concluidos: number }>();
   for (const plano of planos) {
     if (!plano.fatorRiscoId) continue;
     const atual = mapa.get(plano.fatorRiscoId) || {
       total: 0,
-      soma: 0,
       concluidos: 0,
     };
     atual.total += 1;
-    atual.soma += Number(plano.percentual || 0);
     if (plano.status === "Concluido" || plano.status === "Concluído") {
       atual.concluidos += 1;
     }
@@ -1415,7 +1409,7 @@ function apresentarAnaliseCompleta(
     return {
       ...fator,
       percentualTratativa: resumo
-        ? Math.round(resumo.soma / Math.max(1, resumo.total))
+        ? Math.round((resumo.concluidos / Math.max(1, resumo.total)) * 100)
         : 0,
       planosTratativa: resumo?.total || 0,
       planosConcluidos: resumo?.concluidos || 0,
@@ -1515,7 +1509,6 @@ export async function listarAnalisesCompletasRisco(
           select: {
             origemId: true,
             fatorRiscoId: true,
-            percentual: true,
             status: true,
           },
         })
@@ -1563,7 +1556,6 @@ export async function listarTratativasAnaliseCompletaRisco(
           select: {
             origemId: true,
             fatorRiscoId: true,
-            percentual: true,
             status: true,
           },
         })
@@ -1886,7 +1878,6 @@ export async function gerarPdfAnaliseCompletaRisco(
       },
       select: {
         fatorRiscoId: true,
-        percentual: true,
         status: true,
       },
     });

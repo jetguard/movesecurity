@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Edit3, Link2, Plus } from "lucide-react";
+import { ClipboardList, Edit3, Link2, Plus, Trash2 } from "lucide-react";
 import { api } from "../services/api";
 
 type Plano = {
@@ -126,6 +126,9 @@ export default function PlanosAcao() {
       [nome]: valor,
       ...(nome === "origemModulo" ? { origemId: "", fatorRiscoId: "" } : {}),
       ...(nome === "origemId" ? { fatorRiscoId: "" } : {}),
+      ...(nome === "status"
+        ? { percentual: valor === "Concluido" ? "100" : "0" }
+        : {}),
     }));
   }
 
@@ -169,6 +172,15 @@ export default function PlanosAcao() {
     await carregar();
   }
 
+  async function excluir(plano: Plano) {
+    const confirmar = window.confirm(
+      `Deseja excluir o plano ${plano.codigo}? O fator de risco ficará disponível novamente para novo plano.`,
+    );
+    if (!confirmar) return;
+    await api.delete(`/planos-acao/${plano.id}`);
+    await carregar();
+  }
+
   const registrosOrigem =
     form.origemModulo && form.origemModulo !== "Independente"
       ? origens[form.origemModulo] || []
@@ -180,6 +192,20 @@ export default function PlanosAcao() {
     form.origemModulo === "AnaliseRisco"
       ? origemSelecionada?.fatoresRisco || []
       : [];
+  const fatoresUsadosNaArc = new Set(
+    planos
+      .filter(
+        (plano) =>
+          plano.origemModulo === "AnaliseRisco" &&
+          String(plano.origemId || "") === form.origemId &&
+          plano.id !== editando?.id &&
+          plano.fatorRiscoId,
+      )
+      .map((plano) => String(plano.fatorRiscoId)),
+  );
+  const fatoresDisponiveisDaArc = fatoresDaArc.filter(
+    (fator) => !fatoresUsadosNaArc.has(String(fator.id || "")),
+  );
   const classeCampo =
     "w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white";
   const classeCard =
@@ -194,7 +220,7 @@ export default function PlanosAcao() {
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Controle de ações corretivas e preventivas, com vínculo opcional ao
-            registro que originou a tratativa.
+            registro que originou o plano.
           </p>
         </div>
         <button
@@ -238,6 +264,7 @@ export default function PlanosAcao() {
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
               Selecione a origem para vincular o plano a um documento existente.
               Use “Plano independente” quando a ação não nasceu de outro módulo.
+              Para análise de risco, cada plano trata um único fator de risco.
             </p>
           </div>
 
@@ -316,18 +343,6 @@ export default function PlanosAcao() {
               </select>
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-              Progresso da execução (%)
-              <input
-                type="number"
-                min="0"
-                max="100"
-                className={classeCampo}
-                placeholder="Informe um valor de 0 a 100"
-                value={form.percentual}
-                onChange={(evento) => campo("percentual", evento.target.value)}
-              />
-            </label>
-            <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Origem do plano de ação
               <select
                 className={classeCampo}
@@ -386,7 +401,7 @@ export default function PlanosAcao() {
                   <option value="" disabled>
                     Selecione o fator de risco da ARC
                   </option>
-                  {fatoresDaArc.map((fator) => (
+                  {fatoresDisponiveisDaArc.map((fator) => (
                     <option
                       key={fator.id || fator.codigo}
                       value={fator.id || ""}
@@ -396,6 +411,11 @@ export default function PlanosAcao() {
                     </option>
                   ))}
                 </select>
+                {!fatoresDisponiveisDaArc.length && (
+                  <span className="block rounded-lg border border-amber-300/40 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                    Todos os fatores desta ARC já possuem plano de ação.
+                  </span>
+                )}
               </label>
             )}
           </div>
@@ -490,12 +510,20 @@ export default function PlanosAcao() {
                   </p>
                 )}
               </div>
-              <button
-                onClick={() => editar(plano)}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500"
-              >
-                <Edit3 size={16} /> Editar
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => editar(plano)}
+                  className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500"
+                >
+                  <Edit3 size={16} /> Editar
+                </button>
+                <button
+                  onClick={() => excluir(plano)}
+                  className="flex items-center gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-500 hover:text-white dark:text-red-200"
+                >
+                  <Trash2 size={16} /> Excluir
+                </button>
+              </div>
             </div>
             <div className="mt-4 h-2 rounded bg-slate-100 dark:bg-slate-800">
               <div

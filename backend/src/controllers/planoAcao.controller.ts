@@ -64,6 +64,33 @@ async function fatorRiscoDaArc(req: AuthRequest) {
   };
 }
 
+async function validarFatorAindaDisponivel(
+  req: AuthRequest,
+  fatorRiscoId: number | null,
+  ignorarPlanoId?: number,
+) {
+  if (req.body.origemModulo !== "AnaliseRisco" || !fatorRiscoId) return;
+  const origemId = normalizarId(req.body.origemId);
+  if (!origemId) return;
+
+  const existente = await prisma.planoAcaoCorporativo.findFirst({
+    where: {
+      unidade: req.unidadeAtiva,
+      origemModulo: "AnaliseRisco",
+      origemId,
+      fatorRiscoId,
+      ...(ignorarPlanoId ? { id: { not: ignorarPlanoId } } : {}),
+    },
+    select: { codigo: true },
+  });
+
+  if (existente) {
+    throw new Error(
+      `Este fator de risco já possui o plano de ação ${existente.codigo}. Selecione outro fator.`,
+    );
+  }
+}
+
 async function responsavelDoPlano(req: AuthRequest) {
   const responsavelId = normalizarId(req.body.responsavelId);
   if (!responsavelId) {
@@ -252,7 +279,12 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     const codigo = `PA${String(numero).padStart(4, "0")}/${ano}`;
     const status = req.body.status || "Pendente";
     const fatorRisco = await fatorRiscoDaArc(req);
+    await validarFatorAindaDisponivel(req, fatorRisco.fatorRiscoId);
     const responsavel = await responsavelDoPlano(req);
+    const percentual =
+      status === "Concluido" || status === "Concluído"
+        ? 100
+        : Number(req.body.percentual || 0);
 
     const plano = await prisma.planoAcaoCorporativo.create({
       data: {
@@ -266,7 +298,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         ...fatorRisco,
         prioridade: req.body.prioridade || "Media",
         status,
-        percentual: Number(req.body.percentual || 0),
+        percentual,
         descricao,
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
@@ -309,7 +341,16 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
 
     const status = req.body.status || anterior.status;
     const fatorRisco = await fatorRiscoDaArc(req);
+    await validarFatorAindaDisponivel(
+      req,
+      fatorRisco.fatorRiscoId,
+      anterior.id,
+    );
     const responsavel = await responsavelDoPlano(req);
+    const percentual =
+      status === "Concluido" || status === "Concluído"
+        ? 100
+        : Number(req.body.percentual || 0);
     const plano = await prisma.planoAcaoCorporativo.update({
       where: { id: Number(id) },
       data: {
@@ -319,7 +360,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         ...fatorRisco,
         prioridade: req.body.prioridade,
         status,
-        percentual: Number(req.body.percentual || 0),
+        percentual,
         descricao: req.body.descricao,
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
@@ -350,6 +391,37 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         error instanceof Error
           ? error.message
           : "Erro ao atualizar plano de acao",
+    });
+  }
+}
+
+export async function excluirPlanoAcao(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.planoAcaoCorporativo.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Plano de acao nao encontrado" });
+
+    await prisma.planoAcaoCorporativo.delete({ where: { id } });
+
+    await registrarLog({
+      req,
+      acao: `Exclusao de plano de acao ${anterior.codigo}`,
+      tipoRegistro: "PlanoAcao",
+      registroId: anterior.id,
+      dadosAnteriores: anterior,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao excluir plano de acao",
     });
   }
 }

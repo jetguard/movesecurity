@@ -2,6 +2,7 @@
 import {
   atualizarPlanoAcao,
   criarPlanoAcao,
+  excluirPlanoAcao,
   listarOrigensPlanoAcao,
   listarPlanosAcao,
   listarResponsaveisPlanoAcao,
@@ -43,6 +44,12 @@ router.put(
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   atualizarPlanoAcao,
+);
+router.delete(
+  "/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  excluirPlanoAcao,
 );
 
 export default router;
