@@ -12,6 +12,16 @@ function textoObrigatorio(valor: unknown) {
   return String(valor || "").trim();
 }
 
+function normalizarStatusPlano(valor: unknown) {
+  const status = textoObrigatorio(valor);
+  if (status === "Concluído") return "Concluido";
+  if (status === "Em Andamento") return "Em andamento";
+  if (["Pendente", "Em andamento", "Concluido"].includes(status)) {
+    return status;
+  }
+  return "Pendente";
+}
+
 function parseListaJson<T>(valor: string | null | undefined): T[] {
   try {
     const lista = JSON.parse(valor || "[]");
@@ -132,7 +142,12 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
         responsavel: { select: { id: true, nome: true, apelido: true } },
       },
     });
-    return res.json(planos);
+    return res.json(
+      planos.map((plano) => ({
+        ...plano,
+        status: normalizarStatusPlano(plano.status),
+      })),
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar planos de acao" });
@@ -277,7 +292,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     });
     const numero = ultimo ? ultimo.numero + 1 : 1;
     const codigo = `PA${String(numero).padStart(4, "0")}/${ano}`;
-    const status = req.body.status || "Pendente";
+    const status = normalizarStatusPlano(req.body.status);
     const fatorRisco = await fatorRiscoDaArc(req);
     await validarFatorAindaDisponivel(req, fatorRisco.fatorRiscoId);
     const responsavel = await responsavelDoPlano(req);
@@ -339,7 +354,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
     if (!anterior)
       return res.status(404).json({ error: "Plano de acao nao encontrado" });
 
-    const status = req.body.status || anterior.status;
+    const status = normalizarStatusPlano(req.body.status || anterior.status);
     const fatorRisco = await fatorRiscoDaArc(req);
     await validarFatorAindaDisponivel(
       req,
