@@ -206,6 +206,15 @@ export default function PlanosAcao() {
   const fatoresDisponiveisDaArc = fatoresDaArc.filter(
     (fator) => !fatoresUsadosNaArc.has(String(fator.id || "")),
   );
+  function origemDoPlano(plano: Plano) {
+    if (!plano.origemModulo || !plano.origemId) return null;
+    return (
+      (origens[plano.origemModulo] || []).find(
+        (origem) => String(origem.id) === String(plano.origemId),
+      ) || null
+    );
+  }
+
   const classeCampo =
     "w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white";
   const classeCard =
@@ -481,7 +490,10 @@ export default function PlanosAcao() {
       )}
 
       <div className="space-y-4">
-        {planos.map((plano) => (
+        {planos.map((plano) => {
+          const origemPlano = origemDoPlano(plano);
+
+          return (
           <div key={plano.id} className={`${classeCard} p-5`}>
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -500,6 +512,16 @@ export default function PlanosAcao() {
                   {rotuloModulo(plano.origemModulo)}
                   {plano.origemId ? " | registro vinculado" : ""}
                 </p>
+                {plano.origemModulo === "AnaliseRisco" && (
+                  <p className="mt-2 inline-flex max-w-full flex-wrap items-center gap-1 rounded-full border border-cyan-300/60 bg-cyan-50 px-3 py-1 text-xs font-bold text-cyan-900 dark:border-cyan-400/30 dark:bg-cyan-400/10 dark:text-cyan-100">
+                    ARC atribuída:
+                    <span>
+                      {origemPlano
+                        ? `${origemPlano.codigo} - ${origemPlano.titulo}`
+                        : `registro #${plano.origemId}`}
+                    </span>
+                  </p>
+                )}
                 {plano.fatorRiscoNome && (
                   <p className="mt-2 inline-flex rounded-full border border-amber-300/60 bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
                     Fator tratado:{" "}
@@ -535,7 +557,8 @@ export default function PlanosAcao() {
               {plano.descricao}
             </p>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
