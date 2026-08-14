@@ -109,9 +109,6 @@ export default function RiscosCadastroGeral() {
   });
   const [simplesEditando, setSimplesEditando] =
     useState<CadastroSimples | null>(null);
-  const [riscoFatoresPopup, setRiscoFatoresPopup] =
-    useState<CadastroSimples | null>(null);
-  const [filtroFatoresPopup, setFiltroFatoresPopup] = useState("");
   const [filtroRiscosTabela, setFiltroRiscosTabela] = useState("");
   const [seletorFatoresAberto, setSeletorFatoresAberto] = useState(false);
   const [filtroFatoresSelecao, setFiltroFatoresSelecao] = useState("");
@@ -121,17 +118,6 @@ export default function RiscosCadastroGeral() {
     () => abas.find((item) => item.id === aba) || abas[0],
     [aba],
   );
-
-  const fatoresPopupFiltrados = useMemo(() => {
-    const fatores = riscoFatoresPopup?.fatoresRisco || [];
-    const termo = filtroFatoresPopup.trim().toLowerCase();
-    if (!termo) return fatores;
-    return fatores.filter((fator) =>
-      `${fator.codigo} ${fator.nome} ${fator.descricao || ""}`
-        .toLowerCase()
-        .includes(termo),
-    );
-  }, [filtroFatoresPopup, riscoFatoresPopup]);
 
   const riscosTabelaFiltrados = useMemo(() => {
     const termo = filtroRiscosTabela.trim().toLowerCase();
@@ -292,6 +278,48 @@ export default function RiscosCadastroGeral() {
     }, "Cadastro excluído.");
   }
 
+  function montarFatoresRiscoPayload() {
+    return simples.fatoresIds
+      .map((id) => dados.fatores.find((fator) => String(fator.id) === id))
+      .filter(Boolean)
+      .map((fator) => ({
+        id: fator!.id,
+        codigo: fator!.codigo,
+        nome: fator!.nome,
+      }));
+  }
+
+  function abrirAtribuicaoFatores(item: CadastroSimples) {
+    setSimplesEditando(item);
+    setSimples({
+      nome: item.nome,
+      descricao: item.descricao || "",
+      fatoresIds: (item.fatoresRisco || [])
+        .map((fator) => String(fator.id || ""))
+        .filter(Boolean),
+    });
+    setFiltroFatoresSelecao("");
+    setSeletorFatoresAberto(true);
+  }
+
+  async function salvarAtribuicaoFatores() {
+    if (!simplesEditando) {
+      setSeletorFatoresAberto(false);
+      return;
+    }
+    await executar(async () => {
+      await api.put(`${rotas.riscos}/${simplesEditando.id}`, {
+        nome: simples.nome,
+        descricao: simples.descricao,
+        status: simplesEditando.status,
+        fatoresRisco: montarFatoresRiscoPayload(),
+      });
+      setSeletorFatoresAberto(false);
+      setSimplesEditando(null);
+      setSimples({ nome: "", descricao: "", fatoresIds: [] });
+    }, "Fatores de risco atualizados.");
+  }
+
   function alternarFatorRisco(id: string) {
     setSimples((atual) => ({
       ...atual,
@@ -363,13 +391,10 @@ export default function RiscosCadastroGeral() {
                   <div className="flex justify-end gap-2">
                     {mostrarFatores && (
                       <button
-                        onClick={() => {
-                          setRiscoFatoresPopup(item);
-                          setFiltroFatoresPopup("");
-                        }}
+                        onClick={() => abrirAtribuicaoFatores(item)}
                         className="rounded-lg border border-cyan-700 px-3 py-2 text-cyan-200 hover:bg-cyan-950"
-                        title="Ver fatores de risco atribuídos"
-                        aria-label={`Ver fatores de risco de ${item.nome}`}
+                        title="Atribuir fatores de risco"
+                        aria-label={`Atribuir fatores de risco para ${item.nome}`}
                       >
                         <ListChecks size={15} />
                       </button>
@@ -766,75 +791,6 @@ export default function RiscosCadastroGeral() {
         <TabelaSimples itens={dados.controles} rota={rotas.controles} />
       )}
 
-      {riscoFatoresPopup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl shadow-slate-950">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-300">
-                  Fatores de risco atribuídos
-                </p>
-                <h3 className="mt-2 text-xl font-black text-white">
-                  {riscoFatoresPopup.codigo} - {riscoFatoresPopup.nome}
-                </h3>
-                <p className="mt-1 text-sm font-semibold text-slate-300">
-                  {riscoFatoresPopup.fatoresRisco?.length || 0} fator(es)
-                  vinculado(s) a este risco.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setRiscoFatoresPopup(null)}
-                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:bg-slate-800 hover:text-white"
-                aria-label="Fechar fatores de risco"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="border-b border-slate-800 p-5">
-              <label className="relative block">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-                  size={16}
-                />
-                <input
-                  className="h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 pl-10 text-sm font-bold text-white outline-none transition focus:border-blue-400"
-                  value={filtroFatoresPopup}
-                  onChange={(event) => setFiltroFatoresPopup(event.target.value)}
-                  placeholder="Filtrar por código ou nome do fator"
-                />
-              </label>
-            </div>
-
-            <div className="max-h-[420px] overflow-y-auto p-5">
-              <div className="grid gap-2">
-                {fatoresPopupFiltrados.map((fator) => (
-                  <div
-                    key={`${riscoFatoresPopup.id}-${fator.id}`}
-                    className="rounded-xl border border-slate-800 bg-slate-950 p-4"
-                  >
-                    <p className="text-sm font-black text-blue-100">
-                      {fator.codigo} - {fator.nome}
-                    </p>
-                    {fator.descricao && (
-                      <p className="mt-1 text-xs font-semibold text-slate-300">
-                        {fator.descricao}
-                      </p>
-                    )}
-                  </div>
-                ))}
-                {!fatoresPopupFiltrados.length && (
-                  <p className="rounded-xl border border-slate-800 bg-slate-950 p-5 text-center text-sm font-bold text-slate-400">
-                    Nenhum fator encontrado para este filtro.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {seletorFatoresAberto && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
           <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl shadow-slate-950">
@@ -928,14 +884,23 @@ export default function RiscosCadastroGeral() {
               </div>
             </div>
 
-            <div className="flex justify-end border-t border-slate-800 p-5">
+            <div className="flex flex-col justify-end gap-3 border-t border-slate-800 p-5 sm:flex-row">
               <button
                 type="button"
                 onClick={() => setSeletorFatoresAberto(false)}
-                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 hover:bg-slate-800"
               >
                 Concluir atribuição
               </button>
+              {simplesEditando && (
+                <button
+                  type="button"
+                  onClick={salvarAtribuicaoFatores}
+                  className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+                >
+                  Salvar fatores do risco
+                </button>
+              )}
             </div>
           </div>
         </div>
