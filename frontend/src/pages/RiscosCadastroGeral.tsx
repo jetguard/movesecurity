@@ -112,6 +112,7 @@ export default function RiscosCadastroGeral() {
   const [riscoFatoresPopup, setRiscoFatoresPopup] =
     useState<CadastroSimples | null>(null);
   const [filtroFatoresPopup, setFiltroFatoresPopup] = useState("");
+  const [filtroRiscosTabela, setFiltroRiscosTabela] = useState("");
   const podeEditar = podeAnalisar();
 
   const abaAtual = useMemo(
@@ -129,6 +130,19 @@ export default function RiscosCadastroGeral() {
         .includes(termo),
     );
   }, [filtroFatoresPopup, riscoFatoresPopup]);
+
+  const riscosTabelaFiltrados = useMemo(() => {
+    const termo = filtroRiscosTabela.trim().toLowerCase();
+    if (!termo) return dados.riscos;
+    return dados.riscos.filter((risco) => {
+      const fatores = (risco.fatoresRisco || [])
+        .map((fator) => `${fator.codigo} ${fator.nome}`)
+        .join(" ");
+      return `${risco.codigo} ${risco.nome} ${risco.descricao || ""} ${fatores}`
+        .toLowerCase()
+        .includes(termo);
+    });
+  }, [dados.riscos, filtroRiscosTabela]);
 
   async function carregar() {
     setCarregando(true);
@@ -381,6 +395,7 @@ export default function RiscosCadastroGeral() {
               setAba(item.id);
               setSimplesEditando(null);
               setSimples({ nome: "", descricao: "", fatoresIds: [] });
+              setFiltroRiscosTabela("");
             }}
             className={`rounded-xl border p-4 text-left transition ${aba === item.id ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-950/40" : "border-slate-800 bg-slate-900 text-slate-300 hover:border-blue-800 hover:bg-slate-800"}`}
           >
@@ -673,12 +688,31 @@ export default function RiscosCadastroGeral() {
       )}
 
       {aba === "riscos" && (
-        <TabelaSimples
-          itens={dados.riscos}
-          rota={rotas.riscos}
-          limitarDezLinhas
-          mostrarFatores
-        />
+        <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg">
+          <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+            <label className="relative block">
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                size={16}
+              />
+              <input
+                className="h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 pl-10 text-sm font-bold text-white outline-none transition focus:border-blue-400"
+                value={filtroRiscosTabela}
+                onChange={(event) => setFiltroRiscosTabela(event.target.value)}
+                placeholder="Buscar risco por código, nome, descrição ou fator vinculado"
+              />
+            </label>
+            <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100">
+              {riscosTabelaFiltrados.length} de {dados.riscos.length} risco(s)
+            </div>
+          </div>
+          <TabelaSimples
+            itens={riscosTabelaFiltrados}
+            rota={rotas.riscos}
+            limitarDezLinhas
+            mostrarFatores
+          />
+        </section>
       )}
       {aba === "fatores" && (
         <TabelaSimples
