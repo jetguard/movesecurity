@@ -1279,13 +1279,13 @@ export default function RiscosAnaliseCompleta() {
               {fatoresSelecionados().map((fator) => (
                 <span
                   key={fator.id}
-                  className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100"
+                  className="inline-flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-400/15 px-3 py-2 text-xs font-black text-amber-100"
                 >
                   {etiquetaControle(fator)}
                   <button
                     type="button"
                     onClick={() => removerFator(String(fator.id))}
-                    className="rounded-lg border border-blue-300/20 p-1 text-blue-100 hover:border-red-300/50 hover:text-red-100"
+                    className="rounded-lg border border-amber-200/30 p-1 text-amber-100 hover:border-red-300/50 hover:text-red-100"
                     aria-label={`Remover ${etiquetaControle(fator)}`}
                   >
                     <X size={12} />
@@ -1552,7 +1552,7 @@ export default function RiscosAnaliseCompleta() {
                         {analise.fatoresRisco.map((fator) => (
                           <span
                             key={`${fator.codigo}-${fator.nome}`}
-                            className="rounded-lg border border-slate-700 bg-slate-900 px-2.5 py-1 text-xs font-bold leading-4 text-slate-200"
+                            className="rounded-lg border border-amber-300/35 bg-amber-400/15 px-2.5 py-1 text-xs font-bold leading-4 text-amber-100"
                           >
                             {etiquetaControle(fator)}
                           </span>
