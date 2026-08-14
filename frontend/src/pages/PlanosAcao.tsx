@@ -65,6 +65,41 @@ function rotuloModulo(valor?: string) {
   );
 }
 
+function normalizarStatusManual(status?: string) {
+  if (status === "Concluído") return "Concluido";
+  if (status === "Em Andamento") return "Em andamento";
+  if (["Pendente", "Em andamento", "Concluido"].includes(status || "")) {
+    return status || "";
+  }
+  return "Pendente";
+}
+
+function planoEstaAtrasado(plano: Pick<Plano, "status" | "prazo">) {
+  if (normalizarStatusManual(plano.status) === "Concluido") return false;
+  const prazo = new Date(plano.prazo);
+  return !Number.isNaN(prazo.getTime()) && prazo < new Date();
+}
+
+function statusExibicaoPlano(plano: Pick<Plano, "status" | "prazo">) {
+  if (planoEstaAtrasado(plano)) return "Em atraso";
+  const status = normalizarStatusManual(plano.status);
+  return status === "Concluido" ? "Concluído" : status;
+}
+
+function classeStatusPlano(plano: Pick<Plano, "status" | "prazo">) {
+  if (planoEstaAtrasado(plano)) {
+    return "border-red-300/60 bg-red-100 text-red-700 dark:border-red-400/30 dark:bg-red-500/15 dark:text-red-100";
+  }
+  const status = normalizarStatusManual(plano.status);
+  if (status === "Concluido") {
+    return "border-emerald-300/60 bg-emerald-100 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-500/15 dark:text-emerald-100";
+  }
+  if (status === "Em andamento") {
+    return "border-blue-300/60 bg-blue-100 text-blue-700 dark:border-blue-400/30 dark:bg-blue-500/15 dark:text-blue-100";
+  }
+  return "border-amber-300/60 bg-amber-100 text-amber-800 dark:border-amber-400/30 dark:bg-amber-500/15 dark:text-amber-100";
+}
+
 const vazio = {
   titulo: "",
   origemModulo: "",
@@ -111,10 +146,11 @@ export default function PlanosAcao() {
     () => ({
       total: planos.length,
       atrasados: planos.filter(
-        (plano) =>
-          plano.status !== "Concluido" && new Date(plano.prazo) < new Date(),
+        (plano) => planoEstaAtrasado(plano),
       ).length,
-      concluidos: planos.filter((plano) => plano.status === "Concluido").length,
+      concluidos: planos.filter(
+        (plano) => normalizarStatusManual(plano.status) === "Concluido",
+      ).length,
       criticos: planos.filter((plano) => plano.prioridade === "Critica").length,
     }),
     [planos],
@@ -147,6 +183,7 @@ export default function PlanosAcao() {
       origemId: plano.origemId ? String(plano.origemId) : "",
       fatorRiscoId: plano.fatorRiscoId ? String(plano.fatorRiscoId) : "",
       responsavelId: plano.responsavelId ? String(plano.responsavelId) : "",
+      status: normalizarStatusManual(plano.status),
       percentual: String(plano.percentual || 0),
       prazo: plano.prazo.slice(0, 16),
     });
@@ -329,8 +366,11 @@ export default function PlanosAcao() {
                 <option value="Pendente">Pendente</option>
                 <option value="Em andamento">Em andamento</option>
                 <option value="Concluido">Concluído</option>
-                <option value="Atrasado">Atrasado</option>
               </select>
+              <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                O status “Em atraso” aparece automaticamente quando o prazo
+                vence antes da conclusão.
+              </span>
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Responsável pela execução
@@ -503,10 +543,22 @@ export default function PlanosAcao() {
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
                   {plano.titulo}
                 </h2>
-                <p className="text-sm text-slate-500">
-                  Responsável: {plano.responsavelNome || "Não informado"} |
-                  Prazo: {new Date(plano.prazo).toLocaleString("pt-BR")}
-                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                  <span>
+                    Responsável: {plano.responsavelNome || "Não informado"}
+                  </span>
+                  <span className="hidden text-slate-300 dark:text-slate-700 sm:inline">
+                    |
+                  </span>
+                  <span>
+                    Prazo: {new Date(plano.prazo).toLocaleString("pt-BR")}
+                  </span>
+                  <span
+                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${classeStatusPlano(plano)}`}
+                  >
+                    Status: {statusExibicaoPlano(plano)}
+                  </span>
+                </div>
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                   <ClipboardList size={14} /> Origem:{" "}
                   {rotuloModulo(plano.origemModulo)}
