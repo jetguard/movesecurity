@@ -218,12 +218,18 @@ export default function RiscosCadastroGeral() {
   function TabelaSimples({
     itens,
     rota,
+    limitarDezLinhas = false,
   }: {
     itens: CadastroSimples[];
     rota: string;
+    limitarDezLinhas?: boolean;
   }) {
     return (
-      <div className="overflow-x-auto rounded-xl border border-slate-800">
+      <div
+        className={`overflow-x-auto rounded-xl border border-slate-800 ${
+          limitarDezLinhas ? "max-h-[552px] overflow-y-auto" : ""
+        }`}
+      >
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-slate-950 text-left text-xs uppercase tracking-[0.18em] text-blue-200">
             <tr>
@@ -533,10 +539,18 @@ export default function RiscosCadastroGeral() {
       )}
 
       {aba === "riscos" && (
-        <TabelaSimples itens={dados.riscos} rota={rotas.riscos} />
+        <TabelaSimples
+          itens={dados.riscos}
+          rota={rotas.riscos}
+          limitarDezLinhas
+        />
       )}
       {aba === "fatores" && (
-        <TabelaSimples itens={dados.fatores} rota={rotas.fatores} />
+        <TabelaSimples
+          itens={dados.fatores}
+          rota={rotas.fatores}
+          limitarDezLinhas
+        />
       )}
       {aba === "controles" && (
         <TabelaSimples itens={dados.controles} rota={rotas.controles} />
