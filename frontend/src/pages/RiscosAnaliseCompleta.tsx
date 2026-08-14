@@ -35,6 +35,7 @@ type Cadastro = {
   id: number;
   codigo: string;
   nome: string;
+  descricao?: string | null;
 };
 
 type CadastroGeral = {
@@ -357,6 +358,8 @@ export default function RiscosAnaliseCompleta() {
   const [residual, setResidual] = useState<ResidualFormulario>(residualInicial);
   const [mensagemControles, setMensagemControles] = useState("");
   const [erroControles, setErroControles] = useState("");
+  const [filtroRiscos, setFiltroRiscos] = useState("");
+  const [seletorRiscoAberto, setSeletorRiscoAberto] = useState(false);
   const [filtroFatores, setFiltroFatores] = useState("");
   const [seletorFatoresAberto, setSeletorFatoresAberto] = useState(false);
   const [analisesSelecionadas, setAnalisesSelecionadas] = useState<number[]>(
@@ -474,6 +477,22 @@ export default function RiscosAnaliseCompleta() {
     );
   }, [cadastro.fatores, filtroFatores]);
 
+  const riscosFiltrados = useMemo(() => {
+    const termo = filtroRiscos.trim().toLowerCase();
+    if (!termo) return cadastro.riscos;
+    return cadastro.riscos.filter((item) =>
+      `${item.codigo} ${item.nome} ${item.descricao || ""}`
+        .toLowerCase()
+        .includes(termo),
+    );
+  }, [cadastro.riscos, filtroRiscos]);
+
+  const riscoSelecionado = useMemo(
+    () =>
+      cadastro.riscos.find((item) => String(item.id) === form.riscoId) || null,
+    [cadastro.riscos, form.riscoId],
+  );
+
   const resumoAnalises = useMemo(() => {
     const extremos = analises.filter(
       (item) => item.classificacaoRisco === "EXTREMO",
@@ -529,6 +548,14 @@ export default function RiscosAnaliseCompleta() {
     }));
   }
 
+  function selecionarRisco(id: string) {
+    setForm((atual) => ({ ...atual, riscoId: id }));
+  }
+
+  function removerRisco() {
+    setForm((atual) => ({ ...atual, riscoId: "" }));
+  }
+
   function itensSelecionados(ids: string[]) {
     return ids
       .map((id) => cadastro.controles.find((item) => String(item.id) === id))
@@ -574,6 +601,10 @@ export default function RiscosAnaliseCompleta() {
     event.preventDefault();
     setErro("");
     setMensagem("");
+    if (!form.riscoId) {
+      setErro("Selecione o risco da análise.");
+      return;
+    }
     setSalvando(true);
     const payload = {
       macroProcessoId: Number(form.macroProcessoId),
@@ -1068,7 +1099,7 @@ export default function RiscosAnaliseCompleta() {
             </span>
           </div>
 
-          <div className="mt-5 grid gap-4 xl:grid-cols-3">
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
             <label className="text-sm font-black text-slate-200">
               Macro Processo
               <select
@@ -1114,28 +1145,78 @@ export default function RiscosAnaliseCompleta() {
                 ))}
               </select>
             </label>
+          </div>
 
-            <label className="text-sm font-black text-slate-200">
-              Risco
-              <select
-                className={`${inputClass} mt-2 w-full`}
-                value={form.riscoId}
-                onChange={(event) =>
-                  setForm((atual) => ({
-                    ...atual,
-                    riscoId: event.target.value,
-                  }))
-                }
-                required
+          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-sm font-black text-white">Risco</p>
+                <p className="mt-1 text-xs font-semibold text-slate-300">
+                  Busque pelo código ou nome. Esta análise permite selecionar
+                  somente um risco principal.
+                </p>
+              </div>
+              <span
+                className={`w-fit rounded-full border px-3 py-2 text-xs font-black ${
+                  riscoSelecionado
+                    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+                    : "border-amber-400/30 bg-amber-500/10 text-amber-100"
+                }`}
               >
-                <option value="">Selecione</option>
-                {cadastro.riscos.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.codigo} - {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
+                {riscoSelecionado ? "1 risco selecionado" : "Seleção pendente"}
+              </span>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+              <label className="relative min-w-0 flex-1">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  size={16}
+                />
+                <input
+                  className={`${inputClass} w-full pl-10`}
+                  value={filtroRiscos}
+                  onChange={(event) => setFiltroRiscos(event.target.value)}
+                  placeholder="Digite R001, número ou palavra-chave"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setSeletorRiscoAberto(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
+              >
+                <ListPlus size={16} />
+                Busca detalhada
+              </button>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
+              {riscoSelecionado ? (
+                <div className="flex flex-col gap-3 rounded-xl border border-blue-400/30 bg-blue-500/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-blue-100">
+                      {riscoSelecionado.codigo} - {riscoSelecionado.nome}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-slate-300">
+                      {riscoSelecionado.descricao ||
+                        "Sem descrição cadastrada."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removerRisco}
+                    className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-300/30 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/10"
+                  >
+                    <X size={13} />
+                    Remover
+                  </button>
+                </div>
+              ) : (
+                <p className="text-sm font-bold text-slate-400">
+                  Nenhum risco selecionado ainda.
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
@@ -1810,6 +1891,121 @@ export default function RiscosAnaliseCompleta() {
               >
                 <Save size={16} />
                 Salvar avaliação residual
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {seletorRiscoAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
+          <div className="max-h-[86vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-300">
+                  Busca detalhada
+                </p>
+                <h3 className="mt-1 text-2xl font-black text-white">
+                  Selecionar risco principal
+                </h3>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  Escolha um único risco para esta análise completa.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSeletorRiscoAberto(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-800 p-5">
+              <label className="relative block">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  size={16}
+                />
+                <input
+                  className={`${inputClass} w-full pl-10`}
+                  value={filtroRiscos}
+                  onChange={(event) => setFiltroRiscos(event.target.value)}
+                  placeholder="Buscar por R, código, número ou palavra"
+                />
+              </label>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs font-black text-slate-300">
+                <span>
+                  {riscosFiltrados.length} resultado(s) ·{" "}
+                  {riscoSelecionado ? "1 selecionado" : "nenhum selecionado"}
+                </span>
+                {riscoSelecionado && (
+                  <button
+                    type="button"
+                    onClick={removerRisco}
+                    className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-red-400 hover:text-red-100"
+                  >
+                    Limpar seleção
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="max-h-[46vh] overflow-y-auto p-5">
+              <div className="grid gap-2">
+                {riscosFiltrados.map((item) => {
+                  const marcado = form.riscoId === String(item.id);
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => selecionarRisco(String(item.id))}
+                      className={`flex items-start justify-between gap-4 rounded-xl border p-3 text-left transition ${
+                        marcado
+                          ? "border-blue-400 bg-blue-600 text-white"
+                          : "border-slate-700 bg-slate-950 text-slate-200 hover:border-blue-400"
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <strong className="text-sm">{item.codigo}</strong>
+                        <span className="ml-2 text-sm font-bold">
+                          {item.nome}
+                        </span>
+                        {item.descricao && (
+                          <span
+                            className={`mt-1 block text-xs font-semibold leading-5 ${
+                              marcado ? "text-blue-50" : "text-slate-400"
+                            }`}
+                          >
+                            {item.descricao}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border ${
+                          marcado
+                            ? "border-white bg-white shadow-inner"
+                            : "border-slate-600"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+                {!riscosFiltrados.length && (
+                  <p className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm font-bold text-slate-300">
+                    Nenhum risco encontrado para a busca informada.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-800 p-5">
+              <button
+                type="button"
+                onClick={() => setSeletorRiscoAberto(false)}
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+              >
+                Concluir seleção
               </button>
             </div>
           </div>
