@@ -4,15 +4,45 @@ import {
   criarPlanoAcao,
   listarOrigensPlanoAcao,
   listarPlanosAcao,
+  listarResponsaveisPlanoAcao,
 } from "../controllers/planoAcao.controller";
-import { acessoAnalise, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
+import {
+  acessoAnalise,
+  autenticarUsuario,
+  autorizarPerfis,
+} from "../middlewares/auth";
 
 const router = Router();
 
-router.get("/", autenticarUsuario, autorizarPerfis(acessoAnalise), listarPlanosAcao);
-router.get("/origens", autenticarUsuario, autorizarPerfis(acessoAnalise), listarOrigensPlanoAcao);
-router.post("/", autenticarUsuario, autorizarPerfis(acessoAnalise), criarPlanoAcao);
-router.put("/:id", autenticarUsuario, autorizarPerfis(acessoAnalise), atualizarPlanoAcao);
+router.get(
+  "/",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  listarPlanosAcao,
+);
+router.get(
+  "/origens",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  listarOrigensPlanoAcao,
+);
+router.get(
+  "/responsaveis",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  listarResponsaveisPlanoAcao,
+);
+router.post(
+  "/",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  criarPlanoAcao,
+);
+router.put(
+  "/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  atualizarPlanoAcao,
+);
 
 export default router;
-

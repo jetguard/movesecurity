@@ -64,6 +64,38 @@ async function fatorRiscoDaArc(req: AuthRequest) {
   };
 }
 
+async function responsavelDoPlano(req: AuthRequest) {
+  const responsavelId = normalizarId(req.body.responsavelId);
+  if (!responsavelId) {
+    return {
+      responsavelId: null,
+      responsavelNome: textoObrigatorio(req.body.responsavelNome) || null,
+    };
+  }
+
+  const responsavel = await prisma.usuario.findFirst({
+    where: {
+      id: responsavelId,
+      statusUsuario: "ATIVO",
+      OR: [
+        { unidade: req.unidadeAtiva },
+        { unidade: null },
+        { unidadesPermitidas: { contains: req.unidadeAtiva || "" } },
+      ],
+    },
+    select: { id: true, nome: true },
+  });
+
+  if (!responsavel) {
+    throw new Error("Responsável selecionado não encontrado ou inativo.");
+  }
+
+  return {
+    responsavelId: responsavel.id,
+    responsavelNome: responsavel.nome,
+  };
+}
+
 export async function listarPlanosAcao(req: AuthRequest, res: Response) {
   try {
     const planos = await prisma.planoAcaoCorporativo.findMany({
@@ -77,6 +109,38 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar planos de acao" });
+  }
+}
+
+export async function listarResponsaveisPlanoAcao(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const responsaveis = await prisma.usuario.findMany({
+      where: {
+        statusUsuario: "ATIVO",
+        OR: [
+          { unidade: req.unidadeAtiva },
+          { unidade: null },
+          { unidadesPermitidas: { contains: req.unidadeAtiva || "" } },
+        ],
+      },
+      orderBy: { nome: "asc" },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        setor: true,
+        cargo: true,
+        perfilAcesso: true,
+      },
+    });
+
+    return res.json(responsaveis);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar responsáveis." });
   }
 }
 
@@ -188,6 +252,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     const codigo = `PA${String(numero).padStart(4, "0")}/${ano}`;
     const status = req.body.status || "Pendente";
     const fatorRisco = await fatorRiscoDaArc(req);
+    const responsavel = await responsavelDoPlano(req);
 
     const plano = await prisma.planoAcaoCorporativo.create({
       data: {
@@ -205,8 +270,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         descricao,
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
-        responsavelId: normalizarId(req.body.responsavelId),
-        responsavelNome: req.body.responsavelNome,
+        ...responsavel,
         prazo: new Date(prazo),
         concluidoEm: status === "Concluido" ? new Date() : null,
         evidencia: req.body.evidencia,
@@ -245,6 +309,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
 
     const status = req.body.status || anterior.status;
     const fatorRisco = await fatorRiscoDaArc(req);
+    const responsavel = await responsavelDoPlano(req);
     const plano = await prisma.planoAcaoCorporativo.update({
       where: { id: Number(id) },
       data: {
@@ -258,8 +323,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         descricao: req.body.descricao,
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
-        responsavelId: normalizarId(req.body.responsavelId),
-        responsavelNome: req.body.responsavelNome,
+        ...responsavel,
         prazo: req.body.prazo ? new Date(req.body.prazo) : anterior.prazo,
         concluidoEm: status === "Concluido" ? new Date() : null,
         evidencia: req.body.evidencia,

@@ -11,6 +11,7 @@ type Plano = {
   fatorRiscoId?: number;
   fatorRiscoCodigo?: string;
   fatorRiscoNome?: string;
+  responsavelId?: number;
   prioridade: string;
   status: string;
   percentual: number;
@@ -37,6 +38,15 @@ type Origem = {
 };
 
 type OrigensPorModulo = Record<string, Origem[]>;
+
+type Responsavel = {
+  id: number;
+  nome: string;
+  email: string;
+  setor?: string | null;
+  cargo?: string | null;
+  perfilAcesso?: string | null;
+};
 
 const modulosOrigem = [
   { valor: "Independente", label: "Plano independente (sem vínculo)" },
@@ -66,6 +76,7 @@ const vazio = {
   descricao: "",
   acaoCorretiva: "",
   acaoPreventiva: "",
+  responsavelId: "",
   responsavelNome: "",
   prazo: "",
   evidencia: "",
@@ -75,17 +86,21 @@ const vazio = {
 export default function PlanosAcao() {
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [origens, setOrigens] = useState<OrigensPorModulo>({});
+  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [form, setForm] = useState({ ...vazio });
   const [editando, setEditando] = useState<Plano | null>(null);
   const [abrir, setAbrir] = useState(false);
 
   async function carregar() {
-    const [planosResponse, origensResponse] = await Promise.all([
-      api.get("/planos-acao"),
-      api.get("/planos-acao/origens"),
-    ]);
+    const [planosResponse, origensResponse, responsaveisResponse] =
+      await Promise.all([
+        api.get("/planos-acao"),
+        api.get("/planos-acao/origens"),
+        api.get("/planos-acao/responsaveis"),
+      ]);
     setPlanos(planosResponse.data);
     setOrigens(origensResponse.data);
+    setResponsaveis(responsaveisResponse.data);
   }
 
   useEffect(() => {
@@ -128,6 +143,7 @@ export default function PlanosAcao() {
       origemModulo: plano.origemModulo || "Independente",
       origemId: plano.origemId ? String(plano.origemId) : "",
       fatorRiscoId: plano.fatorRiscoId ? String(plano.fatorRiscoId) : "",
+      responsavelId: plano.responsavelId ? String(plano.responsavelId) : "",
       percentual: String(plano.percentual || 0),
       prazo: plano.prazo.slice(0, 16),
     });
@@ -143,6 +159,7 @@ export default function PlanosAcao() {
       origemId: form.origemModulo === "Independente" ? null : form.origemId,
       fatorRiscoId:
         form.origemModulo === "AnaliseRisco" ? form.fatorRiscoId : null,
+      responsavelNome: form.responsavelId ? "" : form.responsavelNome,
     };
 
     if (editando) await api.put(`/planos-acao/${editando.id}`, dados);
@@ -281,14 +298,22 @@ export default function PlanosAcao() {
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Responsável pela execução
-              <input
+              <select
                 className={classeCampo}
-                placeholder="Nome do responsável pela ação"
-                value={form.responsavelNome}
+                value={form.responsavelId}
                 onChange={(evento) =>
-                  campo("responsavelNome", evento.target.value)
+                  campo("responsavelId", evento.target.value)
                 }
-              />
+              >
+                <option value="">Selecione o responsável</option>
+                {responsaveis.map((responsavel) => (
+                  <option key={responsavel.id} value={responsavel.id}>
+                    {responsavel.nome}
+                    {responsavel.setor ? ` | ${responsavel.setor}` : ""}
+                    {responsavel.cargo ? ` | ${responsavel.cargo}` : ""}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Progresso da execução (%)
