@@ -8,6 +8,62 @@ function normalizarId(valor: unknown) {
   return Number.isFinite(numero) && numero > 0 ? numero : null;
 }
 
+function textoObrigatorio(valor: unknown) {
+  return String(valor || "").trim();
+}
+
+function parseListaJson<T>(valor: string | null | undefined): T[] {
+  try {
+    const lista = JSON.parse(valor || "[]");
+    return Array.isArray(lista) ? lista : [];
+  } catch {
+    return [];
+  }
+}
+
+type FatorRiscoPlano = {
+  id?: number | null;
+  codigo?: string | null;
+  nome: string;
+};
+
+async function fatorRiscoDaArc(req: AuthRequest) {
+  if (req.body.origemModulo !== "AnaliseRisco") {
+    return {
+      fatorRiscoId: null,
+      fatorRiscoCodigo: null,
+      fatorRiscoNome: null,
+    };
+  }
+
+  const origemId = normalizarId(req.body.origemId);
+  if (!origemId) throw new Error("Selecione a ARC da análise de risco.");
+
+  const fatorRiscoId = normalizarId(req.body.fatorRiscoId);
+  if (!fatorRiscoId) {
+    throw new Error("Selecione o fator de risco que será tratado no plano.");
+  }
+
+  const analise = await prisma.analiseRiscoCompleta.findFirst({
+    where: { id: origemId, unidade: req.unidadeAtiva },
+    select: { fatoresRiscoJson: true },
+  });
+  if (!analise) throw new Error("ARC da análise de risco não encontrada.");
+
+  const fator = parseListaJson<FatorRiscoPlano>(analise.fatoresRiscoJson).find(
+    (item) => normalizarId(item.id) === fatorRiscoId,
+  );
+  if (!fator) {
+    throw new Error("O fator de risco selecionado não pertence a esta ARC.");
+  }
+
+  return {
+    fatorRiscoId,
+    fatorRiscoCodigo: textoObrigatorio(fator.codigo),
+    fatorRiscoNome: textoObrigatorio(fator.nome),
+  };
+}
+
 export async function listarPlanosAcao(req: AuthRequest, res: Response) {
   try {
     const planos = await prisma.planoAcaoCorporativo.findMany({
@@ -44,14 +100,17 @@ export async function listarOrigensPlanoAcao(req: AuthRequest, res: Response) {
           orderBy: { createdAt: "desc" },
           select: { id: true, codigo: true, titulo: true, status: true },
         }),
-        prisma.analiseRisco.findMany({
+        prisma.analiseRiscoCompleta.findMany({
           where: { unidade },
           orderBy: { createdAt: "desc" },
           select: {
             id: true,
             codigo: true,
-            descricaoRisco: true,
-            nivelRisco: true,
+            riscoCodigo: true,
+            riscoNome: true,
+            setorNome: true,
+            classificacaoRisco: true,
+            fatoresRiscoJson: true,
             status: true,
           },
         }),
@@ -90,9 +149,10 @@ export async function listarOrigensPlanoAcao(req: AuthRequest, res: Response) {
       AnaliseRisco: riscos.map((item) => ({
         id: item.id,
         codigo: item.codigo,
-        titulo: item.descricaoRisco,
+        titulo: `${item.riscoCodigo} - ${item.riscoNome}`,
         status: item.status,
-        complemento: item.nivelRisco,
+        complemento: `${item.setorNome} | ${item.classificacaoRisco}`,
+        fatoresRisco: parseListaJson<FatorRiscoPlano>(item.fatoresRiscoJson),
       })),
       AnaliseEstrategica: analisesEstrategicas.map((item) => ({
         id: item.id,
@@ -127,6 +187,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     const numero = ultimo ? ultimo.numero + 1 : 1;
     const codigo = `PA${String(numero).padStart(4, "0")}/${ano}`;
     const status = req.body.status || "Pendente";
+    const fatorRisco = await fatorRiscoDaArc(req);
 
     const plano = await prisma.planoAcaoCorporativo.create({
       data: {
@@ -137,6 +198,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         unidade: req.unidadeAtiva || "GJA-T1",
         origemModulo: req.body.origemModulo,
         origemId: normalizarId(req.body.origemId),
+        ...fatorRisco,
         prioridade: req.body.prioridade || "Media",
         status,
         percentual: Number(req.body.percentual || 0),
@@ -165,7 +227,10 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     return res.status(201).json(plano);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao criar plano de acao" });
+    return res.status(500).json({
+      error:
+        error instanceof Error ? error.message : "Erro ao criar plano de acao",
+    });
   }
 }
 
@@ -179,12 +244,14 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
       return res.status(404).json({ error: "Plano de acao nao encontrado" });
 
     const status = req.body.status || anterior.status;
+    const fatorRisco = await fatorRiscoDaArc(req);
     const plano = await prisma.planoAcaoCorporativo.update({
       where: { id: Number(id) },
       data: {
         titulo: req.body.titulo,
         origemModulo: req.body.origemModulo,
         origemId: normalizarId(req.body.origemId),
+        ...fatorRisco,
         prioridade: req.body.prioridade,
         status,
         percentual: Number(req.body.percentual || 0),
@@ -214,6 +281,11 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
     return res.json(plano);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao atualizar plano de acao" });
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao atualizar plano de acao",
+    });
   }
 }

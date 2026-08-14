@@ -1072,32 +1072,37 @@ model AnaliseEstrategica {
 }
 
 model PlanoAcaoCorporativo {
-  id              Int       @id @default(autoincrement())
-  numero          Int
-  ano             Int
-  codigo          String
-  titulo          String
-  unidade         String
-  origemModulo    String?
-  origemId        Int?
-  prioridade      String    @default("Media")
-  status          String    @default("Pendente")
-  percentual      Int       @default(0)
-  descricao       String
-  acaoCorretiva   String?
-  acaoPreventiva  String?
-  responsavelId   Int?
-  responsavelNome String?
-  prazo           DateTime
-  concluidoEm     DateTime?
-  evidencia       String?
-  comentarios     String?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               Int       @id @default(autoincrement())
+  numero           Int
+  ano              Int
+  codigo           String
+  titulo           String
+  unidade          String
+  origemModulo     String?
+  origemId         Int?
+  fatorRiscoId     Int?
+  fatorRiscoCodigo String?
+  fatorRiscoNome   String?
+  prioridade       String    @default("Media")
+  status           String    @default("Pendente")
+  percentual       Int       @default(0)
+  descricao        String
+  acaoCorretiva    String?
+  acaoPreventiva   String?
+  responsavelId    Int?
+  responsavelNome  String?
+  prazo            DateTime
+  concluidoEm      DateTime?
+  evidencia        String?
+  comentarios      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   responsavel Usuario? @relation("PlanoAcaoResponsavel", fields: [responsavelId], references: [id])
 
   @@unique([codigo, unidade])
+  @@index([origemModulo, origemId])
+  @@index([fatorRiscoId])
 }
 
 model ChecklistInspecao {

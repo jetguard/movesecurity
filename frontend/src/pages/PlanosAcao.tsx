@@ -8,6 +8,9 @@ type Plano = {
   titulo: string;
   origemModulo?: string;
   origemId?: number;
+  fatorRiscoId?: number;
+  fatorRiscoCodigo?: string;
+  fatorRiscoNome?: string;
   prioridade: string;
   status: string;
   percentual: number;
@@ -26,6 +29,11 @@ type Origem = {
   titulo: string;
   status?: string;
   complemento?: string;
+  fatoresRisco?: {
+    id?: number | null;
+    codigo?: string | null;
+    nome: string;
+  }[];
 };
 
 type OrigensPorModulo = Record<string, Origem[]>;
@@ -51,6 +59,7 @@ const vazio = {
   titulo: "",
   origemModulo: "",
   origemId: "",
+  fatorRiscoId: "",
   prioridade: "",
   status: "",
   percentual: "0",
@@ -100,7 +109,8 @@ export default function PlanosAcao() {
     setForm((atual) => ({
       ...atual,
       [nome]: valor,
-      ...(nome === "origemModulo" ? { origemId: "" } : {}),
+      ...(nome === "origemModulo" ? { origemId: "", fatorRiscoId: "" } : {}),
+      ...(nome === "origemId" ? { fatorRiscoId: "" } : {}),
     }));
   }
 
@@ -117,6 +127,7 @@ export default function PlanosAcao() {
       ...plano,
       origemModulo: plano.origemModulo || "Independente",
       origemId: plano.origemId ? String(plano.origemId) : "",
+      fatorRiscoId: plano.fatorRiscoId ? String(plano.fatorRiscoId) : "",
       percentual: String(plano.percentual || 0),
       prazo: plano.prazo.slice(0, 16),
     });
@@ -130,6 +141,8 @@ export default function PlanosAcao() {
       origemModulo:
         form.origemModulo === "Independente" ? null : form.origemModulo,
       origemId: form.origemModulo === "Independente" ? null : form.origemId,
+      fatorRiscoId:
+        form.origemModulo === "AnaliseRisco" ? form.fatorRiscoId : null,
     };
 
     if (editando) await api.put(`/planos-acao/${editando.id}`, dados);
@@ -146,6 +159,10 @@ export default function PlanosAcao() {
   const origemSelecionada = registrosOrigem.find(
     (item) => String(item.id) === form.origemId,
   );
+  const fatoresDaArc =
+    form.origemModulo === "AnaliseRisco"
+      ? origemSelecionada?.fatoresRisco || []
+      : [];
   const classeCampo =
     "w-full rounded-lg border border-slate-300 bg-white p-3 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-950 dark:text-white";
   const classeCard =
@@ -307,7 +324,9 @@ export default function PlanosAcao() {
             </label>
             {form.origemModulo && form.origemModulo !== "Independente" && (
               <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-                Registro que originou o plano
+                {form.origemModulo === "AnaliseRisco"
+                  ? "ARC da análise de risco"
+                  : "Registro que originou o plano"}
                 <select
                   className={classeCampo}
                   value={form.origemId}
@@ -315,12 +334,40 @@ export default function PlanosAcao() {
                   required
                 >
                   <option value="" disabled>
-                    Selecione pelo protocolo ou título
+                    {form.origemModulo === "AnaliseRisco"
+                      ? "Selecione a ARC cadastrada"
+                      : "Selecione pelo protocolo ou título"}
                   </option>
                   {registrosOrigem.map((origem) => (
                     <option key={origem.id} value={origem.id}>
                       {origem.codigo} | {origem.titulo}
                       {origem.complemento ? ` | ${origem.complemento}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {form.origemModulo === "AnaliseRisco" && form.origemId && (
+              <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
+                Fator de risco tratado neste plano
+                <select
+                  className={classeCampo}
+                  value={form.fatorRiscoId}
+                  onChange={(evento) =>
+                    campo("fatorRiscoId", evento.target.value)
+                  }
+                  required
+                >
+                  <option value="" disabled>
+                    Selecione o fator de risco da ARC
+                  </option>
+                  {fatoresDaArc.map((fator) => (
+                    <option
+                      key={fator.id || fator.codigo}
+                      value={fator.id || ""}
+                    >
+                      {fator.codigo ? `${fator.codigo} | ` : ""}
+                      {fator.nome}
                     </option>
                   ))}
                 </select>
@@ -335,6 +382,9 @@ export default function PlanosAcao() {
                 <strong>{origemSelecionada.codigo}</strong> vinculado:{" "}
                 {origemSelecionada.titulo}. Status atual:{" "}
                 {origemSelecionada.status || "não informado"}.
+                {form.origemModulo === "AnaliseRisco"
+                  ? " Cada plano de ação deve tratar um fator de risco específico desta ARC."
+                  : ""}
               </span>
             </div>
           )}
@@ -405,6 +455,15 @@ export default function PlanosAcao() {
                   {rotuloModulo(plano.origemModulo)}
                   {plano.origemId ? " | registro vinculado" : ""}
                 </p>
+                {plano.fatorRiscoNome && (
+                  <p className="mt-2 inline-flex rounded-full border border-amber-300/60 bg-amber-100 px-3 py-1 text-xs font-bold text-amber-900 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-100">
+                    Fator tratado:{" "}
+                    {plano.fatorRiscoCodigo
+                      ? `${plano.fatorRiscoCodigo} - `
+                      : ""}
+                    {plano.fatorRiscoNome}
+                  </p>
+                )}
               </div>
               <button
                 onClick={() => editar(plano)}

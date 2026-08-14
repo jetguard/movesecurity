@@ -5,6 +5,9 @@ import { desenharCabecalhoPadrao, pdfTheme } from "./documentoPdfBase.service";
 type ItemNome = {
   codigo?: string | null;
   nome: string;
+  percentualTratativa?: number;
+  planosTratativa?: number;
+  planosConcluidos?: number;
 };
 
 type AnaliseCompletaPdf = {
@@ -76,6 +79,19 @@ function etiqueta(item: ItemNome) {
   return item.codigo ? `${item.codigo} - ${item.nome}` : item.nome;
 }
 
+function etiquetaFator(item: ItemNome) {
+  const base = etiqueta(item);
+  const percentual =
+    item.percentualTratativa === undefined
+      ? null
+      : `${item.percentualTratativa}% tratado`;
+  const planos =
+    item.planosTratativa === undefined
+      ? null
+      : `${item.planosConcluidos || 0}/${item.planosTratativa} plano(s) concluído(s)`;
+  return [base, percentual, planos].filter(Boolean).join(" | ");
+}
+
 function campo(
   doc: PDFKit.PDFDocument,
   rotulo: string,
@@ -120,11 +136,21 @@ function barra(
 ) {
   const numero = Number(valor || 0);
   const proporcao = Math.max(0, Math.min(numero / max, 1));
-  doc.fillColor(pdfTheme.primary).font("Helvetica-Bold").fontSize(8).text(rotulo, x, y, {
-    width,
-  });
-  doc.roundedRect(x, y + 15, width, 12, 6).fillColor("#e2e8f0").fill();
-  doc.roundedRect(x, y + 15, width * proporcao, 12, 6).fillColor(color).fill();
+  doc
+    .fillColor(pdfTheme.primary)
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text(rotulo, x, y, {
+      width,
+    });
+  doc
+    .roundedRect(x, y + 15, width, 12, 6)
+    .fillColor("#e2e8f0")
+    .fill();
+  doc
+    .roundedRect(x, y + 15, width * proporcao, 12, 6)
+    .fillColor(color)
+    .fill();
   doc
     .fillColor(pdfTheme.primary)
     .font("Helvetica-Bold")
@@ -148,19 +174,75 @@ function blocoLista(
     .strokeColor("#dbeafe")
     .lineWidth(0.8)
     .stroke();
-  doc.fillColor(pdfTheme.accent).font("Helvetica-Bold").fontSize(8).text(titulo.toUpperCase(), x + 12, y + 10, {
-    width: width - 24,
-  });
+  doc
+    .fillColor(pdfTheme.accent)
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text(titulo.toUpperCase(), x + 12, y + 10, {
+      width: width - 24,
+    });
   const lista = itens.length ? itens.map(etiqueta) : ["Nenhum item informado."];
   doc
     .fillColor(pdfTheme.primary)
     .font("Helvetica")
     .fontSize(8.4)
-    .text(lista.slice(0, 7).map((item) => `• ${item}`).join("\n"), x + 12, y + 28, {
+    .text(
+      lista
+        .slice(0, 7)
+        .map((item) => `• ${item}`)
+        .join("\n"),
+      x + 12,
+      y + 28,
+      {
+        width: width - 24,
+        height: height - 36,
+        ellipsis: true,
+      },
+    );
+}
+
+function blocoFatoresTratativa(
+  doc: PDFKit.PDFDocument,
+  itens: ItemNome[],
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  doc
+    .roundedRect(x, y, width, height, 8)
+    .fillColor("#ffffff")
+    .fill()
+    .strokeColor("#fcd34d")
+    .lineWidth(0.8)
+    .stroke();
+  doc
+    .fillColor("#92400e")
+    .font("Helvetica-Bold")
+    .fontSize(8)
+    .text("FATORES DE RISCO E TRATATIVAS 5W2H", x + 12, y + 10, {
       width: width - 24,
-      height: height - 36,
-      ellipsis: true,
     });
+  const lista = itens.length
+    ? itens.map(etiquetaFator)
+    : ["Nenhum fator de risco informado."];
+  doc
+    .fillColor(pdfTheme.primary)
+    .font("Helvetica")
+    .fontSize(8.2)
+    .text(
+      lista
+        .slice(0, 10)
+        .map((item) => `• ${item}`)
+        .join("\n"),
+      x + 12,
+      y + 28,
+      {
+        width: width - 24,
+        height: height - 36,
+        ellipsis: true,
+      },
+    );
 }
 
 function variacao(valor?: number | null) {
@@ -186,27 +268,106 @@ export function gerarAnaliseCompletaPdf(
 
   desenharCabecalhoPadrao(doc, {
     titulo: "Análise completa de riscos",
-    subtitulo: "Relatório executivo com avaliação inerente, residual e controles",
+    subtitulo:
+      "Relatório executivo com avaliação inerente, residual e controles",
     codigo: analise.codigo,
     unidade: analise.unidade,
   });
 
-  campo(doc, "Macro processo", `${analise.macroProcessoCodigo} - ${analise.macroProcessoNome}`, 42, 128, 270);
+  campo(
+    doc,
+    "Macro processo",
+    `${analise.macroProcessoCodigo} - ${analise.macroProcessoNome}`,
+    42,
+    128,
+    270,
+  );
   campo(doc, "Setor", analise.setorNome, 322, 128, 180);
-  campo(doc, "Risco", `${analise.riscoCodigo} - ${analise.riscoNome}`, 512, 128, 288);
+  campo(
+    doc,
+    "Risco",
+    `${analise.riscoCodigo} - ${analise.riscoNome}`,
+    512,
+    128,
+    288,
+  );
 
   const corInerente = corClassificacao(analise.classificacaoRisco);
   const corResidual = corClassificacao(analise.classificacaoResidual);
 
-  campo(doc, "Probabilidade inerente", `${analise.mediaProbabilidade} (${analise.nivelProbabilidade})`, 42, 190, 180, corInerente);
-  campo(doc, "Consequência inerente", `${analise.mediaConsequencia} (${analise.nivelConsequencia})`, 232, 190, 180, corInerente);
-  campo(doc, "Nível de risco inerente", analise.resultadoInerente, 422, 190, 150, corInerente);
-  campo(doc, "Classificação inerente", analise.classificacaoRisco, 582, 190, 218, corInerente);
+  campo(
+    doc,
+    "Probabilidade inerente",
+    `${analise.mediaProbabilidade} (${analise.nivelProbabilidade})`,
+    42,
+    190,
+    180,
+    corInerente,
+  );
+  campo(
+    doc,
+    "Consequência inerente",
+    `${analise.mediaConsequencia} (${analise.nivelConsequencia})`,
+    232,
+    190,
+    180,
+    corInerente,
+  );
+  campo(
+    doc,
+    "Nível de risco inerente",
+    analise.resultadoInerente,
+    422,
+    190,
+    150,
+    corInerente,
+  );
+  campo(
+    doc,
+    "Classificação inerente",
+    analise.classificacaoRisco,
+    582,
+    190,
+    218,
+    corInerente,
+  );
 
-  campo(doc, "Probabilidade residual", `${texto(analise.probabilidadeResidual)} (${texto(analise.nivelProbabilidadeResidual)})`, 42, 250, 180, corResidual);
-  campo(doc, "Consequência residual", `${texto(analise.consequenciaResidual)} (${texto(analise.nivelConsequenciaResidual)})`, 232, 250, 180, corResidual);
-  campo(doc, "Nível de risco residual", texto(analise.resultadoResidual), 422, 250, 150, corResidual);
-  campo(doc, "Classificação residual", texto(analise.classificacaoResidual), 582, 250, 218, corResidual);
+  campo(
+    doc,
+    "Probabilidade residual",
+    `${texto(analise.probabilidadeResidual)} (${texto(analise.nivelProbabilidadeResidual)})`,
+    42,
+    250,
+    180,
+    corResidual,
+  );
+  campo(
+    doc,
+    "Consequência residual",
+    `${texto(analise.consequenciaResidual)} (${texto(analise.nivelConsequenciaResidual)})`,
+    232,
+    250,
+    180,
+    corResidual,
+  );
+  campo(
+    doc,
+    "Nível de risco residual",
+    texto(analise.resultadoResidual),
+    422,
+    250,
+    150,
+    corResidual,
+  );
+  campo(
+    doc,
+    "Classificação residual",
+    texto(analise.classificacaoResidual),
+    582,
+    250,
+    218,
+    corResidual,
+  );
 
   doc
     .roundedRect(42, 322, larguraConteudo, 118, 10)
@@ -214,15 +375,76 @@ export function gerarAnaliseCompletaPdf(
     .fill()
     .strokeColor("#dbeafe")
     .stroke();
-  doc.fillColor(pdfTheme.primary).font("Helvetica-Bold").fontSize(11).text("Gráficos comparativos", 58, 338);
-  barra(doc, "Risco inerente", analise.resultadoInerente, 25, 58, 366, 300, corInerente);
-  barra(doc, "Risco residual", analise.resultadoResidual, 25, 58, 405, 300, corResidual);
-  barra(doc, "Probabilidade residual", analise.probabilidadeResidual, 5, 430, 366, 300, corResidual);
-  barra(doc, "Consequência residual", analise.consequenciaResidual, 5, 430, 405, 300, corResidual);
+  doc
+    .fillColor(pdfTheme.primary)
+    .font("Helvetica-Bold")
+    .fontSize(11)
+    .text("Gráficos comparativos", 58, 338);
+  barra(
+    doc,
+    "Risco inerente",
+    analise.resultadoInerente,
+    25,
+    58,
+    366,
+    300,
+    corInerente,
+  );
+  barra(
+    doc,
+    "Risco residual",
+    analise.resultadoResidual,
+    25,
+    58,
+    405,
+    300,
+    corResidual,
+  );
+  barra(
+    doc,
+    "Probabilidade residual",
+    analise.probabilidadeResidual,
+    5,
+    430,
+    366,
+    300,
+    corResidual,
+  );
+  barra(
+    doc,
+    "Consequência residual",
+    analise.consequenciaResidual,
+    5,
+    430,
+    405,
+    300,
+    corResidual,
+  );
 
-  campo(doc, "Desempenho probabilidade", variacao(analise.desempenhoProbabilidade), 42, 458, 180);
-  campo(doc, "Desempenho consequência", variacao(analise.desempenhoConsequencia), 232, 458, 180);
-  campo(doc, "Desempenho nível de risco", variacao(analise.desempenhoNivelRisco), 422, 458, 180);
+  campo(
+    doc,
+    "Desempenho probabilidade",
+    variacao(analise.desempenhoProbabilidade),
+    42,
+    458,
+    180,
+  );
+  campo(
+    doc,
+    "Desempenho consequência",
+    variacao(analise.desempenhoConsequencia),
+    232,
+    458,
+    180,
+  );
+  campo(
+    doc,
+    "Desempenho nível de risco",
+    variacao(analise.desempenhoNivelRisco),
+    422,
+    458,
+    180,
+  );
   campo(doc, "Periodicidade / ação", analise.periodicidadeAcao, 612, 458, 188);
 
   doc.addPage();
@@ -233,10 +455,26 @@ export function gerarAnaliseCompletaPdf(
     unidade: analise.unidade,
   });
 
-  blocoLista(doc, "Fatores de risco", analise.fatoresRisco, 42, 132, 370, 160);
-  blocoLista(doc, "Controles preventivos", analise.preventivos, 430, 132, 370, 160);
-  blocoLista(doc, "Controles detectivos", analise.detectivos, 42, 312, 370, 150);
-  blocoLista(doc, "Controles corretivos", analise.corretivos, 430, 312, 370, 150);
+  blocoFatoresTratativa(doc, analise.fatoresRisco, 42, 132, 758, 150);
+  blocoLista(
+    doc,
+    "Controles preventivos",
+    analise.preventivos,
+    42,
+    302,
+    370,
+    150,
+  );
+  blocoLista(
+    doc,
+    "Controles detectivos",
+    analise.detectivos,
+    430,
+    302,
+    370,
+    150,
+  );
+  blocoLista(doc, "Controles corretivos", analise.corretivos, 42, 470, 758, 55);
 
   doc
     .fillColor("#64748b")

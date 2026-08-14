@@ -50,6 +50,9 @@ type ControleSelecionado = {
   id?: number | null;
   codigo?: string;
   nome: string;
+  percentualTratativa?: number;
+  planosTratativa?: number;
+  planosConcluidos?: number;
 };
 
 type AnaliseCompleta = {
@@ -1552,9 +1555,31 @@ export default function RiscosAnaliseCompleta() {
                         {analise.fatoresRisco.map((fator) => (
                           <span
                             key={`${fator.codigo}-${fator.nome}`}
-                            className="rounded-lg border border-amber-300/35 bg-amber-400/15 px-2.5 py-1 text-xs font-bold leading-4 text-amber-100"
+                            className="min-w-[170px] rounded-lg border border-amber-300/35 bg-amber-400/15 px-2.5 py-1.5 text-xs font-bold leading-4 text-amber-100"
                           >
-                            {etiquetaControle(fator)}
+                            <span className="block truncate">
+                              {etiquetaControle(fator)}
+                            </span>
+                            <span className="mt-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.08em] text-amber-50">
+                              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-900/80">
+                                <span
+                                  className="block h-full rounded-full bg-emerald-300"
+                                  style={{
+                                    width: `${Math.max(
+                                      0,
+                                      Math.min(
+                                        100,
+                                        fator.percentualTratativa || 0,
+                                      ),
+                                    )}%`,
+                                  }}
+                                />
+                              </span>
+                              {fator.percentualTratativa || 0}%
+                            </span>
+                            <span className="mt-0.5 block text-[10px] font-bold text-amber-100/75">
+                              {fator.planosTratativa || 0} plano(s) 5W2H
+                            </span>
                           </span>
                         ))}
                         {!analise.fatoresRisco.length && (

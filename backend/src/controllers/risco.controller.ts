@@ -556,10 +556,7 @@ async function excluirCadastroSimples(
   }
 }
 
-export async function criarRiscoCadastroGeral(
-  req: AuthRequest,
-  res: Response,
-) {
+export async function criarRiscoCadastroGeral(req: AuthRequest, res: Response) {
   try {
     const dados = dadosCadastroRisco(req);
     if (!dados.nome)
@@ -1006,6 +1003,9 @@ type FatorAnaliseCompleta = {
   id?: number | null;
   codigo?: string;
   nome: string;
+  percentualTratativa?: number;
+  planosTratativa?: number;
+  planosConcluidos?: number;
 };
 
 type ControleAnaliseCompleta = {
@@ -1374,12 +1374,57 @@ function parseListaJson<T>(valor: string | null | undefined): T[] {
   }
 }
 
-function apresentarAnaliseCompleta(registro: any) {
+type PlanoFatorResumo = {
+  fatorRiscoId: number | null;
+  percentual: number;
+  status: string;
+};
+
+function resumirPlanosPorFator(planos: PlanoFatorResumo[]) {
+  const mapa = new Map<
+    number,
+    { total: number; soma: number; concluidos: number }
+  >();
+  for (const plano of planos) {
+    if (!plano.fatorRiscoId) continue;
+    const atual = mapa.get(plano.fatorRiscoId) || {
+      total: 0,
+      soma: 0,
+      concluidos: 0,
+    };
+    atual.total += 1;
+    atual.soma += Number(plano.percentual || 0);
+    if (plano.status === "Concluido" || plano.status === "Concluído") {
+      atual.concluidos += 1;
+    }
+    mapa.set(plano.fatorRiscoId, atual);
+  }
+  return mapa;
+}
+
+function apresentarAnaliseCompleta(
+  registro: any,
+  planos: PlanoFatorResumo[] = [],
+) {
+  const resumoFatores = resumirPlanosPorFator(planos);
+  const fatoresRisco = parseListaJson<FatorAnaliseCompleta>(
+    registro.fatoresRiscoJson,
+  ).map((fator) => {
+    const id = normalizarId(fator.id);
+    const resumo = id ? resumoFatores.get(id) : null;
+    return {
+      ...fator,
+      percentualTratativa: resumo
+        ? Math.round(resumo.soma / Math.max(1, resumo.total))
+        : 0,
+      planosTratativa: resumo?.total || 0,
+      planosConcluidos: resumo?.concluidos || 0,
+    };
+  });
+
   return {
     ...registro,
-    fatoresRisco: parseListaJson<FatorAnaliseCompleta>(
-      registro.fatoresRiscoJson,
-    ),
+    fatoresRisco,
     preventivos: parseListaJson<ControleAnaliseCompleta>(
       registro.preventivosJson,
     ),
@@ -1460,8 +1505,37 @@ export async function listarAnalisesCompletasRisco(
       where: { unidade: req.unidadeAtiva },
       orderBy: { createdAt: "desc" },
     });
+    const planos = registros.length
+      ? await prisma.planoAcaoCorporativo.findMany({
+          where: {
+            unidade: req.unidadeAtiva,
+            origemModulo: "AnaliseRisco",
+            origemId: { in: registros.map((item) => item.id) },
+          },
+          select: {
+            origemId: true,
+            fatorRiscoId: true,
+            percentual: true,
+            status: true,
+          },
+        })
+      : [];
+    const planosPorAnalise = new Map<number, PlanoFatorResumo[]>();
+    for (const plano of planos) {
+      if (!plano.origemId) continue;
+      const lista = planosPorAnalise.get(plano.origemId) || [];
+      lista.push(plano);
+      planosPorAnalise.set(plano.origemId, lista);
+    }
 
-    return res.json(registros.map(apresentarAnaliseCompleta));
+    return res.json(
+      registros.map((registro) =>
+        apresentarAnaliseCompleta(
+          registro,
+          planosPorAnalise.get(registro.id) || [],
+        ),
+      ),
+    );
   } catch (error) {
     console.error(error);
     return res
@@ -1479,8 +1553,37 @@ export async function listarTratativasAnaliseCompletaRisco(
       where: { unidade: req.unidadeAtiva },
       orderBy: [{ tratativaPrazo: "asc" }, { createdAt: "desc" }],
     });
+    const planos = registros.length
+      ? await prisma.planoAcaoCorporativo.findMany({
+          where: {
+            unidade: req.unidadeAtiva,
+            origemModulo: "AnaliseRisco",
+            origemId: { in: registros.map((item) => item.id) },
+          },
+          select: {
+            origemId: true,
+            fatorRiscoId: true,
+            percentual: true,
+            status: true,
+          },
+        })
+      : [];
+    const planosPorAnalise = new Map<number, PlanoFatorResumo[]>();
+    for (const plano of planos) {
+      if (!plano.origemId) continue;
+      const lista = planosPorAnalise.get(plano.origemId) || [];
+      lista.push(plano);
+      planosPorAnalise.set(plano.origemId, lista);
+    }
 
-    return res.json(registros.map(apresentarAnaliseCompleta));
+    return res.json(
+      registros.map((registro) =>
+        apresentarAnaliseCompleta(
+          registro,
+          planosPorAnalise.get(registro.id) || [],
+        ),
+      ),
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar tratativas." });
@@ -1775,8 +1878,23 @@ export async function gerarPdfAnaliseCompletaRisco(
         .status(404)
         .json({ error: "Análise completa não encontrada." });
     }
+    const planos = await prisma.planoAcaoCorporativo.findMany({
+      where: {
+        unidade: req.unidadeAtiva,
+        origemModulo: "AnaliseRisco",
+        origemId: registro.id,
+      },
+      select: {
+        fatorRiscoId: true,
+        percentual: true,
+        status: true,
+      },
+    });
 
-    return gerarAnaliseCompletaPdf(res, apresentarAnaliseCompleta(registro));
+    return gerarAnaliseCompletaPdf(
+      res,
+      apresentarAnaliseCompleta(registro, planos),
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao gerar PDF da análise." });
