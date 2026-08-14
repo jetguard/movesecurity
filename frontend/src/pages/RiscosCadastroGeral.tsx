@@ -1,7 +1,7 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import type { AxiosError } from "axios";
-import { Edit3, Plus, Trash2 } from "lucide-react";
+import { Edit3, ListChecks, Plus, Search, Trash2, X } from "lucide-react";
 import { api } from "../services/api";
 import { podeAnalisar } from "../utils/permissoes";
 
@@ -109,12 +109,26 @@ export default function RiscosCadastroGeral() {
   });
   const [simplesEditando, setSimplesEditando] =
     useState<CadastroSimples | null>(null);
+  const [riscoFatoresPopup, setRiscoFatoresPopup] =
+    useState<CadastroSimples | null>(null);
+  const [filtroFatoresPopup, setFiltroFatoresPopup] = useState("");
   const podeEditar = podeAnalisar();
 
   const abaAtual = useMemo(
     () => abas.find((item) => item.id === aba) || abas[0],
     [aba],
   );
+
+  const fatoresPopupFiltrados = useMemo(() => {
+    const fatores = riscoFatoresPopup?.fatoresRisco || [];
+    const termo = filtroFatoresPopup.trim().toLowerCase();
+    if (!termo) return fatores;
+    return fatores.filter((fator) =>
+      `${fator.codigo} ${fator.nome} ${fator.descricao || ""}`
+        .toLowerCase()
+        .includes(termo),
+    );
+  }, [filtroFatoresPopup, riscoFatoresPopup]);
 
   async function carregar() {
     setCarregando(true);
@@ -267,7 +281,7 @@ export default function RiscosCadastroGeral() {
               <th className="p-3">Código</th>
               <th className="p-3">Nome</th>
               <th className="p-3">Descrição</th>
-              {mostrarFatores && <th className="p-3">Fatores sugeridos</th>}
+              {mostrarFatores && <th className="p-3">Fatores</th>}
               <th className="p-3">Status</th>
               <th className="p-3 text-right">Ações</th>
             </tr>
@@ -283,21 +297,9 @@ export default function RiscosCadastroGeral() {
                 <td className="p-3 text-slate-300">{item.descricao || "-"}</td>
                 {mostrarFatores && (
                   <td className="p-3">
-                    <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
-                      {(item.fatoresRisco || []).map((fator) => (
-                        <span
-                          key={`${item.id}-${fator.id}`}
-                          className="rounded-lg border border-blue-400/30 bg-blue-500/10 px-2 py-1 text-[11px] font-black text-blue-100"
-                        >
-                          {fator.codigo} - {fator.nome}
-                        </span>
-                      ))}
-                      {!item.fatoresRisco?.length && (
-                        <span className="text-xs font-bold text-slate-400">
-                          Nenhum fator vinculado.
-                        </span>
-                      )}
-                    </div>
+                    <span className="inline-flex min-w-24 items-center justify-center rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1.5 text-xs font-black text-blue-100">
+                      {item.fatoresRisco?.length || 0} atribuído(s)
+                    </span>
                   </td>
                 )}
                 <td className="p-3">
@@ -308,8 +310,22 @@ export default function RiscosCadastroGeral() {
                   </span>
                 </td>
                 <td className="p-3">
-                  {podeEditar && (
-                    <div className="flex justify-end gap-2">
+                  <div className="flex justify-end gap-2">
+                    {mostrarFatores && (
+                      <button
+                        onClick={() => {
+                          setRiscoFatoresPopup(item);
+                          setFiltroFatoresPopup("");
+                        }}
+                        className="rounded-lg border border-cyan-700 px-3 py-2 text-cyan-200 hover:bg-cyan-950"
+                        title="Ver fatores de risco atribuídos"
+                        aria-label={`Ver fatores de risco de ${item.nome}`}
+                      >
+                        <ListChecks size={15} />
+                      </button>
+                    )}
+                    {podeEditar && (
+                      <>
                       <button
                         onClick={() => editarSimples(item)}
                         className="rounded-lg border border-blue-700 px-3 py-2 text-blue-200 hover:bg-blue-950"
@@ -322,8 +338,9 @@ export default function RiscosCadastroGeral() {
                       >
                         <Trash2 size={15} />
                       </button>
-                    </div>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -672,6 +689,75 @@ export default function RiscosCadastroGeral() {
       )}
       {aba === "controles" && (
         <TabelaSimples itens={dados.controles} rota={rotas.controles} />
+      )}
+
+      {riscoFatoresPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl shadow-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-300">
+                  Fatores de risco atribuídos
+                </p>
+                <h3 className="mt-2 text-xl font-black text-white">
+                  {riscoFatoresPopup.codigo} - {riscoFatoresPopup.nome}
+                </h3>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  {riscoFatoresPopup.fatoresRisco?.length || 0} fator(es)
+                  vinculado(s) a este risco.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRiscoFatoresPopup(null)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:bg-slate-800 hover:text-white"
+                aria-label="Fechar fatores de risco"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-800 p-5">
+              <label className="relative block">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  size={16}
+                />
+                <input
+                  className="h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 pl-10 text-sm font-bold text-white outline-none transition focus:border-blue-400"
+                  value={filtroFatoresPopup}
+                  onChange={(event) => setFiltroFatoresPopup(event.target.value)}
+                  placeholder="Filtrar por código ou nome do fator"
+                />
+              </label>
+            </div>
+
+            <div className="max-h-[420px] overflow-y-auto p-5">
+              <div className="grid gap-2">
+                {fatoresPopupFiltrados.map((fator) => (
+                  <div
+                    key={`${riscoFatoresPopup.id}-${fator.id}`}
+                    className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                  >
+                    <p className="text-sm font-black text-blue-100">
+                      {fator.codigo} - {fator.nome}
+                    </p>
+                    {fator.descricao && (
+                      <p className="mt-1 text-xs font-semibold text-slate-300">
+                        {fator.descricao}
+                      </p>
+                    )}
+                  </div>
+                ))}
+                {!fatoresPopupFiltrados.length && (
+                  <p className="rounded-xl border border-slate-800 bg-slate-950 p-5 text-center text-sm font-bold text-slate-400">
+                    Nenhum fator encontrado para este filtro.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
