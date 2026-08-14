@@ -94,6 +94,93 @@ function statusClass(status: string) {
     : "border-slate-600 bg-slate-800 text-slate-200";
 }
 
+const palavrasIgnoradasSimilaridade = new Set([
+  "a",
+  "ao",
+  "aos",
+  "as",
+  "com",
+  "da",
+  "das",
+  "de",
+  "do",
+  "dos",
+  "e",
+  "em",
+  "na",
+  "nas",
+  "no",
+  "nos",
+  "o",
+  "os",
+  "para",
+  "por",
+  "um",
+  "uma",
+]);
+
+function normalizarSimilaridade(valor: string) {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function tokensSimilaridade(valor: string) {
+  return normalizarSimilaridade(valor)
+    .split(/\s+/)
+    .map((token) =>
+      token.length > 4 && token.endsWith("s") ? token.slice(0, -1) : token,
+    )
+    .filter(
+      (token) => token.length > 2 && !palavrasIgnoradasSimilaridade.has(token),
+    );
+}
+
+function distanciaLevenshtein(a: string, b: string) {
+  if (a === b) return 0;
+  if (!a.length) return b.length;
+  if (!b.length) return a.length;
+  const anterior = Array.from({ length: b.length + 1 }, (_, index) => index);
+  const atual = Array.from({ length: b.length + 1 }, () => 0);
+
+  for (let i = 1; i <= a.length; i += 1) {
+    atual[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const custo = a[i - 1] === b[j - 1] ? 0 : 1;
+      atual[j] = Math.min(
+        atual[j - 1] + 1,
+        anterior[j] + 1,
+        anterior[j - 1] + custo,
+      );
+    }
+    for (let j = 0; j <= b.length; j += 1) anterior[j] = atual[j];
+  }
+  return anterior[b.length];
+}
+
+function pontuarSimilaridade(a: string, b: string) {
+  const textoA = normalizarSimilaridade(a);
+  const textoB = normalizarSimilaridade(b);
+  if (!textoA || !textoB) return 0;
+  if (textoA === textoB) return 1;
+  if (textoA.includes(textoB) || textoB.includes(textoA)) return 0.9;
+
+  const tokensA = new Set(tokensSimilaridade(textoA));
+  const tokensB = new Set(tokensSimilaridade(textoB));
+  const comuns = [...tokensA].filter((token) => tokensB.has(token)).length;
+  const dice =
+    tokensA.size + tokensB.size
+      ? (2 * comuns) / (tokensA.size + tokensB.size)
+      : 0;
+  const maxLen = Math.max(textoA.length, textoB.length);
+  const levenshtein =
+    maxLen <= 120 ? 1 - distanciaLevenshtein(textoA, textoB) / maxLen : 0;
+  return Math.max(dice, levenshtein * 0.85);
+}
+
 export default function RiscosCadastroGeral() {
   const [aba, setAba] = useState<Aba>("macro");
   const [dados, setDados] = useState<Dados>(dadosVazios);
@@ -203,6 +290,24 @@ export default function RiscosCadastroGeral() {
     e.preventDefault();
     const rota = rotas[aba as keyof typeof rotas];
     if (!rota) return;
+    if (aba === "riscos" || aba === "fatores") {
+      const lista = aba === "riscos" ? dados.riscos : dados.fatores;
+      const semelhante = encontrarCadastroSemelhante(
+        lista,
+        simples.nome,
+        simples.descricao,
+        simplesEditando?.id,
+      );
+      if (semelhante) {
+        const continuar = confirm(
+          `Atenção: este cadastro parece semelhante a um item já existente.\n\n` +
+            `Item encontrado: ${semelhante.item.codigo} - ${semelhante.item.nome}\n` +
+            `Similaridade aproximada: ${Math.round(semelhante.score * 100)}%\n\n` +
+            `Deseja continuar mesmo assim?`,
+        );
+        if (!continuar) return;
+      }
+    }
     const fatoresRisco =
       aba === "riscos"
         ? simples.fatoresIds
@@ -276,6 +381,27 @@ export default function RiscosCadastroGeral() {
     await executar(async () => {
       await api.delete(url);
     }, "Cadastro excluído.");
+  }
+
+  function encontrarCadastroSemelhante(
+    lista: CadastroSimples[],
+    nome: string,
+    descricao: string,
+    ignorarId?: number,
+  ) {
+    const textoNovo = `${nome} ${descricao || ""}`;
+    const candidatos = lista
+      .filter((item) => item.id !== ignorarId)
+      .map((item) => ({
+        item,
+        score: pontuarSimilaridade(
+          textoNovo,
+          `${item.nome} ${item.descricao || ""}`,
+        ),
+      }))
+      .sort((a, b) => b.score - a.score);
+    const melhor = candidatos[0];
+    return melhor && melhor.score >= 0.58 ? melhor : null;
   }
 
   function montarFatoresRiscoPayload() {
