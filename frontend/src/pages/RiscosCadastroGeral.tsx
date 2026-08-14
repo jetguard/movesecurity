@@ -113,6 +113,8 @@ export default function RiscosCadastroGeral() {
     useState<CadastroSimples | null>(null);
   const [filtroFatoresPopup, setFiltroFatoresPopup] = useState("");
   const [filtroRiscosTabela, setFiltroRiscosTabela] = useState("");
+  const [seletorFatoresAberto, setSeletorFatoresAberto] = useState(false);
+  const [filtroFatoresSelecao, setFiltroFatoresSelecao] = useState("");
   const podeEditar = podeAnalisar();
 
   const abaAtual = useMemo(
@@ -143,6 +145,24 @@ export default function RiscosCadastroGeral() {
         .includes(termo);
     });
   }, [dados.riscos, filtroRiscosTabela]);
+
+  const fatoresSelecaoFiltrados = useMemo(() => {
+    const termo = filtroFatoresSelecao.trim().toLowerCase();
+    if (!termo) return dados.fatores;
+    return dados.fatores.filter((fator) =>
+      `${fator.codigo} ${fator.nome} ${fator.descricao || ""}`
+        .toLowerCase()
+        .includes(termo),
+    );
+  }, [dados.fatores, filtroFatoresSelecao]);
+
+  const fatoresSelecionados = useMemo(
+    () =>
+      simples.fatoresIds
+        .map((id) => dados.fatores.find((fator) => String(fator.id) === id))
+        .filter(Boolean) as CadastroSimples[],
+    [dados.fatores, simples.fatoresIds],
+  );
 
   async function carregar() {
     setCarregando(true);
@@ -272,6 +292,22 @@ export default function RiscosCadastroGeral() {
     }, "Cadastro excluído.");
   }
 
+  function alternarFatorRisco(id: string) {
+    setSimples((atual) => ({
+      ...atual,
+      fatoresIds: atual.fatoresIds.includes(id)
+        ? atual.fatoresIds.filter((item) => item !== id)
+        : [...atual.fatoresIds, id],
+    }));
+  }
+
+  function removerFatorRisco(id: string) {
+    setSimples((atual) => ({
+      ...atual,
+      fatoresIds: atual.fatoresIds.filter((item) => item !== id),
+    }));
+  }
+
   function TabelaSimples({
     itens,
     rota,
@@ -340,18 +376,20 @@ export default function RiscosCadastroGeral() {
                     )}
                     {podeEditar && (
                       <>
-                      <button
-                        onClick={() => editarSimples(item)}
-                        className="rounded-lg border border-blue-700 px-3 py-2 text-blue-200 hover:bg-blue-950"
-                      >
-                        <Edit3 size={15} />
-                      </button>
-                      <button
-                        onClick={() => excluir(`${rota}/${item.id}`, item.nome)}
-                        className="rounded-lg border border-red-700 px-3 py-2 text-red-200 hover:bg-red-950"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                        <button
+                          onClick={() => editarSimples(item)}
+                          className="rounded-lg border border-blue-700 px-3 py-2 text-blue-200 hover:bg-blue-950"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() =>
+                            excluir(`${rota}/${item.id}`, item.nome)
+                          }
+                          className="rounded-lg border border-red-700 px-3 py-2 text-red-200 hover:bg-red-950"
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </>
                     )}
                   </div>
@@ -515,46 +553,49 @@ export default function RiscosCadastroGeral() {
             )}
             {aba === "riscos" && (
               <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 md:col-span-3">
-                <p className="text-sm font-black text-white">
-                  Fatores de risco sugeridos
-                </p>
-                <p className="mt-1 text-xs font-semibold text-slate-400">
-                  Esses fatores serão pré-selecionados quando este risco for
-                  escolhido na Análise Completa.
-                </p>
-                <div className="mt-3 grid max-h-56 gap-2 overflow-y-auto pr-2 md:grid-cols-2 xl:grid-cols-3">
-                  {dados.fatores.map((fator) => {
-                    const id = String(fator.id);
-                    const marcado = simples.fatoresIds.includes(id);
-                    return (
-                      <label
-                        key={fator.id}
-                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm font-bold transition ${
-                          marcado
-                            ? "border-blue-400 bg-blue-600 text-white"
-                            : "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-500"
-                        }`}
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-white">
+                      Fatores de risco atribuídos
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                      Use a busca detalhada para atribuir fatores ao risco. Eles
+                      serão pré-selecionados na Análise Completa.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSeletorFatoresAberto(true);
+                      setFiltroFatoresSelecao("");
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
+                  >
+                    <ListChecks size={16} />
+                    Buscar fatores
+                  </button>
+                </div>
+
+                <div className="mt-3 flex min-h-16 flex-wrap gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                  {fatoresSelecionados.map((fator) => (
+                    <span
+                      key={fator.id}
+                      className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100"
+                    >
+                      {fator.codigo} - {fator.nome}
+                      <button
+                        type="button"
+                        onClick={() => removerFatorRisco(String(fator.id))}
+                        className="rounded-lg border border-blue-300/20 p-1 text-blue-100 hover:border-red-300/50 hover:text-red-100"
+                        aria-label={`Remover ${fator.nome}`}
                       >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4"
-                          checked={marcado}
-                          onChange={() =>
-                            setSimples((atual) => ({
-                              ...atual,
-                              fatoresIds: marcado
-                                ? atual.fatoresIds.filter((item) => item !== id)
-                                : [...atual.fatoresIds, id],
-                            }))
-                          }
-                        />
-                        {fator.codigo} - {fator.nome}
-                      </label>
-                    );
-                  })}
-                  {!dados.fatores.length && (
-                    <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-400 md:col-span-2 xl:col-span-3">
-                      Cadastre fatores de risco antes de vincular ao risco.
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                  {!fatoresSelecionados.length && (
+                    <p className="text-sm font-bold text-slate-400">
+                      Nenhum fator atribuído ainda.
                     </p>
                   )}
                 </div>
@@ -789,6 +830,112 @@ export default function RiscosCadastroGeral() {
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {seletorFatoresAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl shadow-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-300">
+                  Atribuir fatores de risco
+                </p>
+                <h3 className="mt-2 text-xl font-black text-white">
+                  {simplesEditando
+                    ? `Editar ${simplesEditando.codigo}`
+                    : "Novo risco"}
+                </h3>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  {simples.fatoresIds.length} fator(es) selecionado(s).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSeletorFatoresAberto(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:bg-slate-800 hover:text-white"
+                aria-label="Fechar seleção de fatores"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-800 p-5">
+              <label className="relative block">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  size={16}
+                />
+                <input
+                  className="h-12 w-full rounded-xl border border-slate-700 bg-slate-950 px-4 pl-10 text-sm font-bold text-white outline-none transition focus:border-blue-400"
+                  value={filtroFatoresSelecao}
+                  onChange={(event) =>
+                    setFiltroFatoresSelecao(event.target.value)
+                  }
+                  placeholder="Buscar por FR001, código, nome ou descrição"
+                />
+              </label>
+            </div>
+
+            <div className="max-h-[52vh] overflow-y-auto p-5">
+              <div className="grid gap-2">
+                {fatoresSelecaoFiltrados.map((fator) => {
+                  const id = String(fator.id);
+                  const marcado = simples.fatoresIds.includes(id);
+                  return (
+                    <button
+                      key={fator.id}
+                      type="button"
+                      onClick={() => alternarFatorRisco(id)}
+                      className={`flex items-start justify-between gap-4 rounded-xl border p-3 text-left transition ${
+                        marcado
+                          ? "border-blue-400 bg-blue-600 text-white"
+                          : "border-slate-700 bg-slate-950 text-slate-200 hover:border-blue-400"
+                      }`}
+                    >
+                      <span className="min-w-0">
+                        <strong className="text-sm">{fator.codigo}</strong>
+                        <span className="ml-2 text-sm font-bold">
+                          {fator.nome}
+                        </span>
+                        {fator.descricao && (
+                          <span
+                            className={`mt-1 block text-xs font-semibold leading-5 ${
+                              marcado ? "text-blue-50" : "text-slate-400"
+                            }`}
+                          >
+                            {fator.descricao}
+                          </span>
+                        )}
+                      </span>
+                      <span
+                        className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border ${
+                          marcado
+                            ? "border-white bg-white shadow-inner"
+                            : "border-slate-600"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+                {!fatoresSelecaoFiltrados.length && (
+                  <p className="rounded-xl border border-slate-800 bg-slate-950 p-5 text-center text-sm font-bold text-slate-400">
+                    Nenhum fator encontrado para esta busca.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-800 p-5">
+              <button
+                type="button"
+                onClick={() => setSeletorFatoresAberto(false)}
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+              >
+                Concluir atribuição
+              </button>
             </div>
           </div>
         </div>
