@@ -735,7 +735,7 @@ export default function AdminLayout() {
                   </Link>
                   <Link to="/planos-acao" className={subItem}>
                     <ListChecks size={16} />
-                    Plano de ação 5W2H
+                    Plano de ação
                   </Link>
                   <Link to="/riscos/pontuacoes" className={subItem}>
                     <Gauge size={16} />
