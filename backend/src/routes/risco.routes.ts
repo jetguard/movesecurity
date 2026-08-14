@@ -6,6 +6,7 @@ import {
   atualizarCatalogoRisco,
   atualizarAnaliseCompletaRisco,
   atualizarControlesAnaliseCompletaRisco,
+  atualizarTratativaAnaliseCompletaRisco,
   atualizarControlePreventivoCadastro,
   atualizarFatorRiscoCadastro,
   atualizarMacroProcessoRisco,
@@ -33,7 +34,9 @@ import {
   listarCadastroGeralRiscos,
   listarCatalogoRiscos,
   listarLocaisRisco,
+  listarResponsaveisTratativaRisco,
   listarRiscos,
+  listarTratativasAnaliseCompletaRisco,
   removerCatalogoRisco,
 } from "../controllers/risco.controller";
 import {
@@ -85,6 +88,18 @@ router.get(
   autorizarPerfis(acessoAnalise),
   listarAnalisesCompletasRisco,
 );
+router.get(
+  "/tratativas",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  listarTratativasAnaliseCompletaRisco,
+);
+router.get(
+  "/responsaveis",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  listarResponsaveisTratativaRisco,
+);
 router.post(
   "/analise-completa",
   autenticarUsuario,
@@ -102,6 +117,12 @@ router.patch(
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   atualizarControlesAnaliseCompletaRisco,
+);
+router.patch(
+  "/analise-completa/:id/tratativa",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  atualizarTratativaAnaliseCompletaRisco,
 );
 router.get(
   "/analise-completa/:id/pdf",

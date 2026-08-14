@@ -1323,6 +1323,26 @@ function apresentarAnaliseCompleta(registro: any) {
   };
 }
 
+function normalizarStatusTratativa(status: unknown) {
+  const valor = textoObrigatorio(status) || "Aberta";
+  const permitidos = [
+    "Aberta",
+    "Em tratamento",
+    "Aguardando evidência",
+    "Em validação",
+    "Concluída",
+    "Reprovada / Reaberta",
+  ];
+  return permitidos.includes(valor) ? valor : "Aberta";
+}
+
+function normalizarDataPrazo(valor: unknown) {
+  const texto = textoObrigatorio(valor);
+  if (!texto) return null;
+  const data = new Date(texto);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
 async function dadosAnaliseCompleta(req: AuthRequest) {
   const macroProcessoId = normalizarId(req.body.macroProcessoId);
   const setorId = normalizarId(req.body.setorId);
@@ -1378,6 +1398,50 @@ export async function listarAnalisesCompletasRisco(
     return res
       .status(500)
       .json({ error: "Erro ao listar análises completas." });
+  }
+}
+
+export async function listarTratativasAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const registros = await prisma.analiseRiscoCompleta.findMany({
+      where: { unidade: req.unidadeAtiva },
+      orderBy: [{ tratativaPrazo: "asc" }, { createdAt: "desc" }],
+    });
+
+    return res.json(registros.map(apresentarAnaliseCompleta));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar tratativas." });
+  }
+}
+
+export async function listarResponsaveisTratativaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const usuarios = await prisma.usuario.findMany({
+      where: {
+        statusUsuario: "ATIVO",
+      },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        setor: true,
+        cargo: true,
+        unidade: true,
+      },
+      orderBy: { nome: "asc" },
+    });
+
+    return res.json(usuarios);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar responsáveis." });
   }
 }
 
@@ -1527,6 +1591,71 @@ export async function atualizarControlesAnaliseCompletaRisco(
   } catch (error: any) {
     const mensagem =
       error?.message || "Erro ao atualizar controles da análise completa.";
+    console.error(error);
+    return res.status(500).json({ error: mensagem });
+  }
+}
+
+export async function atualizarTratativaAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+
+    const tratativaStatus = normalizarStatusTratativa(req.body.tratativaStatus);
+    const responsavelId = normalizarId(req.body.tratativaResponsavelId);
+    const responsavel = responsavelId
+      ? await prisma.usuario.findUnique({
+          where: { id: responsavelId },
+          select: { id: true, nome: true },
+        })
+      : null;
+    const prazo = normalizarDataPrazo(req.body.tratativaPrazo);
+    const concluida =
+      tratativaStatus === "Concluída"
+        ? anterior.tratativaConcluidaEm || new Date()
+        : null;
+
+    const registro = await prisma.analiseRiscoCompleta.update({
+      where: { id },
+      data: {
+        tratativaStatus,
+        tratativaResponsavelId: responsavel?.id || null,
+        tratativaResponsavelNome:
+          responsavel?.nome ||
+          textoObrigatorio(req.body.tratativaResponsavelNome) ||
+          null,
+        tratativaPrazo: prazo,
+        tratativaAcao: textoObrigatorio(req.body.tratativaAcao) || null,
+        tratativaEvidencia:
+          textoObrigatorio(req.body.tratativaEvidencia) || null,
+        tratativaValidacao:
+          textoObrigatorio(req.body.tratativaValidacao) || null,
+        tratativaConcluidaEm: concluida,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Atualização de tratativa da análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(apresentarAnaliseCompleta(registro));
+  } catch (error: any) {
+    const mensagem =
+      error?.message || "Erro ao atualizar tratativa da análise completa.";
     console.error(error);
     return res.status(500).json({ error: mensagem });
   }

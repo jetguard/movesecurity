@@ -729,6 +729,10 @@ export default function AdminLayout() {
                     <FileBarChart size={16} />
                     Análise Completa
                   </Link>
+                  <Link to="/riscos/tratativas" className={subItem}>
+                    <FileCheck2 size={16} />
+                    Tratativas
+                  </Link>
                   <Link to="/riscos/analise-simplificada" className={subItem}>
                     <ShieldAlert size={16} />
                     Análise Simplificada

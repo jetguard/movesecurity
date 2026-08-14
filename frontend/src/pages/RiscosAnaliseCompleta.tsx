@@ -6,9 +6,11 @@ import {
   BrainCircuit,
   FileText,
   LayoutDashboard,
+  ListPlus,
   Pencil,
   Plus,
   Save,
+  Search,
   Settings,
   Trash2,
   X,
@@ -104,6 +106,14 @@ type AnaliseCompleta = {
   desempenhoProbabilidade?: number | null;
   desempenhoConsequencia?: number | null;
   desempenhoNivelRisco?: number | null;
+  tratativaStatus?: string | null;
+  tratativaResponsavelId?: number | null;
+  tratativaResponsavelNome?: string | null;
+  tratativaPrazo?: string | null;
+  tratativaAcao?: string | null;
+  tratativaEvidencia?: string | null;
+  tratativaValidacao?: string | null;
+  tratativaConcluidaEm?: string | null;
   createdAt: string;
 };
 
@@ -348,6 +358,7 @@ export default function RiscosAnaliseCompleta() {
   const [mensagemControles, setMensagemControles] = useState("");
   const [erroControles, setErroControles] = useState("");
   const [filtroFatores, setFiltroFatores] = useState("");
+  const [seletorFatoresAberto, setSeletorFatoresAberto] = useState(false);
   const [analisesSelecionadas, setAnalisesSelecionadas] = useState<number[]>(
     [],
   );
@@ -508,6 +519,13 @@ export default function RiscosAnaliseCompleta() {
       fatoresIds: atual.fatoresIds.includes(id)
         ? atual.fatoresIds.filter((item) => item !== id)
         : [...atual.fatoresIds, id],
+    }));
+  }
+
+  function removerFator(id: string) {
+    setForm((atual) => ({
+      ...atual,
+      fatoresIds: atual.fatoresIds.filter((item) => item !== id),
     }));
   }
 
@@ -1121,44 +1139,64 @@ export default function RiscosAnaliseCompleta() {
           </div>
 
           <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-            <p className="text-sm font-black text-white">Fatores de Risco</p>
-            <p className="mt-1 text-xs font-semibold text-slate-300">
-              Selecione quantos fatores forem necessários. O sistema não limita
-              a três fatores como a planilha.
-            </p>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <input
-                className={`${inputClass} w-full sm:max-w-md`}
-                value={filtroFatores}
-                onChange={(event) => setFiltroFatores(event.target.value)}
-                placeholder="Buscar por código, número ou palavra"
-              />
-              <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100">
-                {fatoresFiltrados.length} de {cadastro.fatores.length} fatores
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-sm font-black text-white">
+                  Fatores de Risco
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-300">
+                  Busque pelo código ou nome. A lista abaixo mostra somente os
+                  fatores selecionados para esta análise.
+                </p>
+              </div>
+              <span className="w-fit rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100">
+                {form.fatoresIds.length} fator(es) selecionado(s)
               </span>
             </div>
-            <div className="mt-3 grid max-h-[456px] gap-2 overflow-y-auto pr-2 md:grid-cols-2 xl:grid-cols-3">
-              {fatoresFiltrados.map((item) => (
-                <label
-                  key={item.id}
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm font-bold transition ${
-                    form.fatoresIds.includes(String(item.id))
-                      ? "border-blue-400 bg-blue-600 text-white"
-                      : "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-500"
-                  }`}
+
+            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+              <label className="relative min-w-0 flex-1">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  size={16}
+                />
+                <input
+                  className={`${inputClass} w-full pl-10`}
+                  value={filtroFatores}
+                  onChange={(event) => setFiltroFatores(event.target.value)}
+                  placeholder="Digite FR001, número ou palavra-chave"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setSeletorFatoresAberto(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
+              >
+                <ListPlus size={16} />
+                Busca detalhada
+              </button>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
+              {fatoresSelecionados().map((fator) => (
+                <span
+                  key={fator.id}
+                  className="inline-flex items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100"
                 >
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4"
-                    checked={form.fatoresIds.includes(String(item.id))}
-                    onChange={() => alternarFator(String(item.id))}
-                  />
-                  {item.codigo} - {item.nome}
-                </label>
+                  {etiquetaControle(fator)}
+                  <button
+                    type="button"
+                    onClick={() => removerFator(String(fator.id))}
+                    className="rounded-lg border border-blue-300/20 p-1 text-blue-100 hover:border-red-300/50 hover:text-red-100"
+                    aria-label={`Remover ${etiquetaControle(fator)}`}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
               ))}
-              {!fatoresFiltrados.length && (
-                <p className="rounded-xl border border-slate-800 bg-slate-900 p-3 text-sm font-bold text-slate-300 md:col-span-2 xl:col-span-3">
-                  Nenhum fator encontrado para o filtro informado.
+              {!form.fatoresIds.length && (
+                <p className="text-sm font-bold text-slate-400">
+                  Nenhum fator selecionado ainda.
                 </p>
               )}
             </div>
@@ -1772,6 +1810,113 @@ export default function RiscosAnaliseCompleta() {
               >
                 <Save size={16} />
                 Salvar avaliação residual
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {seletorFatoresAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
+          <div className="max-h-[86vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 p-5">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-300">
+                  Busca detalhada
+                </p>
+                <h3 className="mt-1 text-2xl font-black text-white">
+                  Selecionar fatores de risco
+                </h3>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  Marque quantos fatores forem necessários para compor a
+                  análise.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSeletorFatoresAberto(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="border-b border-slate-800 p-5">
+              <label className="relative block">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                  size={16}
+                />
+                <input
+                  className={`${inputClass} w-full pl-10`}
+                  value={filtroFatores}
+                  onChange={(event) => setFiltroFatores(event.target.value)}
+                  placeholder="Buscar por FR, código, número ou palavra"
+                />
+              </label>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs font-black text-slate-300">
+                <span>
+                  {fatoresFiltrados.length} resultado(s) ·{" "}
+                  {form.fatoresIds.length} selecionado(s)
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm((atual) => ({ ...atual, fatoresIds: [] }))
+                  }
+                  className="rounded-lg border border-slate-700 px-3 py-1.5 text-slate-300 hover:border-red-400 hover:text-red-100"
+                >
+                  Limpar seleção
+                </button>
+              </div>
+            </div>
+
+            <div className="max-h-[46vh] overflow-y-auto p-5">
+              <div className="grid gap-2">
+                {fatoresFiltrados.map((item) => {
+                  const marcado = form.fatoresIds.includes(String(item.id));
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => alternarFator(String(item.id))}
+                      className={`flex items-center justify-between gap-4 rounded-xl border p-3 text-left transition ${
+                        marcado
+                          ? "border-blue-400 bg-blue-600 text-white"
+                          : "border-slate-700 bg-slate-950 text-slate-200 hover:border-blue-400"
+                      }`}
+                    >
+                      <span>
+                        <strong className="text-sm">{item.codigo}</strong>
+                        <span className="ml-2 text-sm font-bold">
+                          {item.nome}
+                        </span>
+                      </span>
+                      <span
+                        className={`h-5 w-5 rounded-md border ${
+                          marcado
+                            ? "border-white bg-white shadow-inner"
+                            : "border-slate-600"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+                {!fatoresFiltrados.length && (
+                  <p className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm font-bold text-slate-300">
+                    Nenhum fator encontrado para a busca informada.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-800 p-5">
+              <button
+                type="button"
+                onClick={() => setSeletorFatoresAberto(false)}
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
+              >
+                Concluir seleção
               </button>
             </div>
           </div>
