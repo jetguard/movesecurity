@@ -1377,6 +1377,20 @@ function parseListaJson<T>(valor: string | null | undefined): T[] {
 type PlanoFatorResumo = {
   fatorRiscoId: number | null;
   status: string;
+  codigo?: string;
+  titulo?: string;
+  fatorRiscoCodigo?: string | null;
+  fatorRiscoNome?: string | null;
+  prioridade?: string;
+  percentual?: number;
+  descricao?: string;
+  acaoCorretiva?: string | null;
+  acaoPreventiva?: string | null;
+  responsavelNome?: string | null;
+  prazo?: Date;
+  concluidoEm?: Date | null;
+  evidencia?: string | null;
+  comentarios?: string | null;
 };
 
 function resumirPlanosPorFator(planos: PlanoFatorResumo[]) {
@@ -1428,6 +1442,24 @@ function apresentarAnaliseCompleta(
     corretivos: parseListaJson<ControleAnaliseCompleta>(
       registro.corretivosJson,
     ),
+    planosAcao: planos.map((plano) => ({
+      codigo: plano.codigo,
+      titulo: plano.titulo,
+      fatorRiscoId: plano.fatorRiscoId,
+      fatorRiscoCodigo: plano.fatorRiscoCodigo,
+      fatorRiscoNome: plano.fatorRiscoNome,
+      prioridade: plano.prioridade,
+      status: plano.status,
+      percentual: plano.percentual || 0,
+      descricao: plano.descricao,
+      acaoCorretiva: plano.acaoCorretiva,
+      acaoPreventiva: plano.acaoPreventiva,
+      responsavelNome: plano.responsavelNome,
+      prazo: plano.prazo,
+      concluidoEm: plano.concluidoEm,
+      evidencia: plano.evidencia,
+      comentarios: plano.comentarios,
+    })),
   };
 }
 
@@ -1878,8 +1910,23 @@ export async function gerarPdfAnaliseCompletaRisco(
       },
       select: {
         fatorRiscoId: true,
+        codigo: true,
+        titulo: true,
+        fatorRiscoCodigo: true,
+        fatorRiscoNome: true,
+        prioridade: true,
         status: true,
+        percentual: true,
+        descricao: true,
+        acaoCorretiva: true,
+        acaoPreventiva: true,
+        responsavelNome: true,
+        prazo: true,
+        concluidoEm: true,
+        evidencia: true,
+        comentarios: true,
       },
+      orderBy: [{ fatorRiscoCodigo: "asc" }, { createdAt: "asc" }],
     });
 
     return gerarAnaliseCompletaPdf(
