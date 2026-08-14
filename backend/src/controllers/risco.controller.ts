@@ -201,6 +201,14 @@ function dadosCadastroSimples(req: AuthRequest) {
   return { nome, descricao, status };
 }
 
+function dadosCadastroRisco(req: AuthRequest) {
+  const dados = dadosCadastroSimples(req);
+  return {
+    ...dados,
+    fatoresRiscoJson: JSON.stringify(normalizarFatores(req.body.fatoresRisco)),
+  };
+}
+
 function naturezaAnalise(req: AuthRequest) {
   return (
     textoObrigatorio(req.body.naturezaRisco) ||
@@ -226,7 +234,17 @@ export async function listarCadastroGeralRiscos(
       }),
     ]);
 
-    return res.json({ macroProcessos, riscos, fatores, controles });
+    return res.json({
+      macroProcessos,
+      riscos: riscos.map((risco) => ({
+        ...risco,
+        fatoresRisco: parseListaJson<FatorAnaliseCompleta>(
+          risco.fatoresRiscoJson,
+        ),
+      })),
+      fatores,
+      controles,
+    });
   } catch (error) {
     console.error(error);
     return res
@@ -538,23 +556,74 @@ async function excluirCadastroSimples(
   }
 }
 
-export const criarRiscoCadastroGeral = (req: AuthRequest, res: Response) =>
-  criarCadastroSequencial(
-    req,
-    res,
-    "riscoCadastroGeral",
-    "R",
-    "RiscoCadastroGeral",
-    "risco",
-  );
-export const atualizarRiscoCadastroGeral = (req: AuthRequest, res: Response) =>
-  atualizarCadastroSimples(
-    req,
-    res,
-    "riscoCadastroGeral",
-    "RiscoCadastroGeral",
-    "risco",
-  );
+export async function criarRiscoCadastroGeral(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const dados = dadosCadastroRisco(req);
+    if (!dados.nome)
+      return res.status(400).json({ error: "Informe o nome de risco." });
+    const registro = await prisma.$transaction(async (tx) => {
+      const sequencial = await proximoCodigoCadastro(
+        tx,
+        "riscoCadastroGeral",
+        "R",
+      );
+      return tx.riscoCadastroGeral.create({
+        data: { ...sequencial, ...dados },
+      });
+    });
+    await registrarLog({
+      req,
+      acao: "Criação de risco",
+      tipoRegistro: "RiscoCadastroGeral",
+      registroId: registro.id,
+      dadosNovos: registro,
+    });
+    return res.status(201).json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({ error: "risco já cadastrado." });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao cadastrar risco." });
+  }
+}
+
+export async function atualizarRiscoCadastroGeral(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const dados = dadosCadastroRisco(req);
+    if (!dados.nome)
+      return res.status(400).json({ error: "Informe o nome de risco." });
+    const anterior = await prisma.riscoCadastroGeral.findUnique({
+      where: { id },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "risco não encontrado." });
+    const registro = await prisma.riscoCadastroGeral.update({
+      where: { id },
+      data: { ...dados, status: dados.status || anterior.status },
+    });
+    await registrarLog({
+      req,
+      acao: "Atualização de risco",
+      tipoRegistro: "RiscoCadastroGeral",
+      registroId: id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+    return res.json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({ error: "risco já cadastrado." });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao atualizar risco." });
+  }
+}
 export const excluirRiscoCadastroGeral = (req: AuthRequest, res: Response) =>
   excluirCadastroSimples(
     req,

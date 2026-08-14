@@ -36,6 +36,7 @@ type Cadastro = {
   codigo: string;
   nome: string;
   descricao?: string | null;
+  fatoresRisco?: ControleSelecionado[];
 };
 
 type CadastroGeral = {
@@ -549,7 +550,17 @@ export default function RiscosAnaliseCompleta() {
   }
 
   function selecionarRisco(id: string) {
-    setForm((atual) => ({ ...atual, riscoId: id }));
+    const risco = cadastro.riscos.find((item) => String(item.id) === id);
+    const fatoresSugeridos = (risco?.fatoresRisco || [])
+      .map((fator) => String(fator.id || ""))
+      .filter(Boolean);
+    setForm((atual) => ({
+      ...atual,
+      riscoId: id,
+      fatoresIds: fatoresSugeridos.length
+        ? Array.from(new Set(fatoresSugeridos))
+        : atual.fatoresIds,
+    }));
   }
 
   function removerRisco() {
@@ -1201,6 +1212,12 @@ export default function RiscosAnaliseCompleta() {
                       {riscoSelecionado.descricao ||
                         "Sem descrição cadastrada."}
                     </p>
+                    {!!riscoSelecionado.fatoresRisco?.length && (
+                      <p className="mt-2 text-xs font-black text-blue-100">
+                        {riscoSelecionado.fatoresRisco.length} fator(es) de
+                        risco pré-selecionado(s).
+                      </p>
+                    )}
                   </div>
                   <button
                     type="button"
@@ -1978,6 +1995,17 @@ export default function RiscosAnaliseCompleta() {
                             }`}
                           >
                             {item.descricao}
+                          </span>
+                        )}
+                        {!!item.fatoresRisco?.length && (
+                          <span
+                            className={`mt-2 inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ${
+                              marcado
+                                ? "bg-white/15 text-white"
+                                : "bg-blue-500/10 text-blue-200"
+                            }`}
+                          >
+                            {item.fatoresRisco.length} fator(es) sugerido(s)
                           </span>
                         )}
                       </span>

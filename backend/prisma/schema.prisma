@@ -868,14 +868,15 @@ model RiscoSetor {
 }
 
 model RiscoCadastroGeral {
-  id        Int      @id @default(autoincrement())
-  numero    Int
-  codigo    String   @unique
-  nome      String   @unique
-  descricao String?
-  status    String   @default("Ativo")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  numero           Int
+  codigo           String   @unique
+  nome             String   @unique
+  descricao        String?
+  fatoresRiscoJson String   @default("[]")
+  status           String   @default("Ativo")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@index([status, numero])
 }

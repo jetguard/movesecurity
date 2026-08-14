@@ -29,6 +29,7 @@ type CadastroSimples = {
   codigo: string;
   nome: string;
   descricao?: string | null;
+  fatoresRisco?: CadastroSimples[];
   status: string;
 };
 
@@ -101,7 +102,13 @@ export default function RiscosCadastroGeral() {
   const [macroNome, setMacroNome] = useState("");
   const [setorNome, setSetorNome] = useState("");
   const [macroProcessoId, setMacroProcessoId] = useState("");
-  const [simples, setSimples] = useState({ nome: "", descricao: "" });
+  const [simples, setSimples] = useState({
+    nome: "",
+    descricao: "",
+    fatoresIds: [] as string[],
+  });
+  const [simplesEditando, setSimplesEditando] =
+    useState<CadastroSimples | null>(null);
   const podeEditar = podeAnalisar();
 
   const abaAtual = useMemo(
@@ -162,10 +169,34 @@ export default function RiscosCadastroGeral() {
     e.preventDefault();
     const rota = rotas[aba as keyof typeof rotas];
     if (!rota) return;
+    const fatoresRisco =
+      aba === "riscos"
+        ? simples.fatoresIds
+            .map((id) => dados.fatores.find((fator) => String(fator.id) === id))
+            .filter(Boolean)
+            .map((fator) => ({
+              id: fator!.id,
+              codigo: fator!.codigo,
+              nome: fator!.nome,
+            }))
+        : undefined;
+    const payload = {
+      nome: simples.nome,
+      descricao: simples.descricao,
+      ...(fatoresRisco ? { fatoresRisco } : {}),
+    };
     await executar(async () => {
-      await api.post(rota, simples);
-      setSimples({ nome: "", descricao: "" });
-    }, "Cadastro salvo.");
+      if (simplesEditando) {
+        await api.put(`${rota}/${simplesEditando.id}`, {
+          ...payload,
+          status: simplesEditando.status,
+        });
+      } else {
+        await api.post(rota, payload);
+      }
+      setSimples({ nome: "", descricao: "", fatoresIds: [] });
+      setSimplesEditando(null);
+    }, simplesEditando ? "Cadastro atualizado." : "Cadastro salvo.");
   }
 
   async function editarMacro(item: MacroProcesso) {
@@ -194,18 +225,16 @@ export default function RiscosCadastroGeral() {
     }, "Setor atualizado.");
   }
 
-  async function editarSimples(item: CadastroSimples, rota: string) {
-    const nome = prompt("Informe o novo nome:", item.nome)?.trim();
-    if (!nome || nome === item.nome) return;
-    const descricao =
-      prompt("Informe a descrição:", item.descricao || "")?.trim() || "";
-    await executar(async () => {
-      await api.put(`${rota}/${item.id}`, {
-        nome,
-        descricao,
-        status: item.status,
-      });
-    }, "Cadastro atualizado.");
+  async function editarSimples(item: CadastroSimples) {
+    setSimplesEditando(item);
+    setSimples({
+      nome: item.nome,
+      descricao: item.descricao || "",
+      fatoresIds: (item.fatoresRisco || [])
+        .map((fator) => String(fator.id || ""))
+        .filter(Boolean),
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function excluir(url: string, nome: string) {
@@ -219,10 +248,12 @@ export default function RiscosCadastroGeral() {
     itens,
     rota,
     limitarDezLinhas = false,
+    mostrarFatores = false,
   }: {
     itens: CadastroSimples[];
     rota: string;
     limitarDezLinhas?: boolean;
+    mostrarFatores?: boolean;
   }) {
     return (
       <div
@@ -236,6 +267,7 @@ export default function RiscosCadastroGeral() {
               <th className="p-3">Código</th>
               <th className="p-3">Nome</th>
               <th className="p-3">Descrição</th>
+              {mostrarFatores && <th className="p-3">Fatores sugeridos</th>}
               <th className="p-3">Status</th>
               <th className="p-3 text-right">Ações</th>
             </tr>
@@ -249,6 +281,25 @@ export default function RiscosCadastroGeral() {
                 <td className="p-3 font-black text-blue-200">{item.codigo}</td>
                 <td className="p-3 font-bold text-white">{item.nome}</td>
                 <td className="p-3 text-slate-300">{item.descricao || "-"}</td>
+                {mostrarFatores && (
+                  <td className="p-3">
+                    <div className="flex max-h-20 flex-wrap gap-1.5 overflow-y-auto">
+                      {(item.fatoresRisco || []).map((fator) => (
+                        <span
+                          key={`${item.id}-${fator.id}`}
+                          className="rounded-lg border border-blue-400/30 bg-blue-500/10 px-2 py-1 text-[11px] font-black text-blue-100"
+                        >
+                          {fator.codigo} - {fator.nome}
+                        </span>
+                      ))}
+                      {!item.fatoresRisco?.length && (
+                        <span className="text-xs font-bold text-slate-400">
+                          Nenhum fator vinculado.
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                )}
                 <td className="p-3">
                   <span
                     className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(item.status)}`}
@@ -260,7 +311,7 @@ export default function RiscosCadastroGeral() {
                   {podeEditar && (
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => editarSimples(item, rota)}
+                        onClick={() => editarSimples(item)}
                         className="rounded-lg border border-blue-700 px-3 py-2 text-blue-200 hover:bg-blue-950"
                       >
                         <Edit3 size={15} />
@@ -278,7 +329,10 @@ export default function RiscosCadastroGeral() {
             ))}
             {!itens.length && (
               <tr>
-                <td colSpan={5} className="p-8 text-center text-slate-400">
+                <td
+                  colSpan={mostrarFatores ? 6 : 5}
+                  className="p-8 text-center text-slate-400"
+                >
                   Nenhum cadastro encontrado.
                 </td>
               </tr>
@@ -306,7 +360,11 @@ export default function RiscosCadastroGeral() {
         {abas.map((item) => (
           <button
             key={item.id}
-            onClick={() => setAba(item.id)}
+            onClick={() => {
+              setAba(item.id);
+              setSimplesEditando(null);
+              setSimples({ nome: "", descricao: "", fatoresIds: [] });
+            }}
             className={`rounded-xl border p-4 text-left transition ${aba === item.id ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-950/40" : "border-slate-800 bg-slate-900 text-slate-300 hover:border-blue-800 hover:bg-slate-800"}`}
           >
             <span className="block text-sm font-black">{item.titulo}</span>
@@ -332,7 +390,7 @@ export default function RiscosCadastroGeral() {
         <div className="mb-4 flex items-center gap-2">
           <Plus className="text-blue-300" size={20} />
           <h2 className="text-lg font-black text-white">
-            Cadastrar {abaAtual.titulo}
+            {simplesEditando ? "Editar" : "Cadastrar"} {abaAtual.titulo}
           </h2>
         </div>
 
@@ -409,8 +467,67 @@ export default function RiscosCadastroGeral() {
               }
             />
             <button className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500">
-              Salvar Cadastro
+              {simplesEditando ? "Atualizar Cadastro" : "Salvar Cadastro"}
             </button>
+            {simplesEditando && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSimplesEditando(null);
+                  setSimples({ nome: "", descricao: "", fatoresIds: [] });
+                }}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 hover:bg-slate-800"
+              >
+                Cancelar edição
+              </button>
+            )}
+            {aba === "riscos" && (
+              <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 md:col-span-3">
+                <p className="text-sm font-black text-white">
+                  Fatores de risco sugeridos
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-400">
+                  Esses fatores serão pré-selecionados quando este risco for
+                  escolhido na Análise Completa.
+                </p>
+                <div className="mt-3 grid max-h-56 gap-2 overflow-y-auto pr-2 md:grid-cols-2 xl:grid-cols-3">
+                  {dados.fatores.map((fator) => {
+                    const id = String(fator.id);
+                    const marcado = simples.fatoresIds.includes(id);
+                    return (
+                      <label
+                        key={fator.id}
+                        className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm font-bold transition ${
+                          marcado
+                            ? "border-blue-400 bg-blue-600 text-white"
+                            : "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-500"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={marcado}
+                          onChange={() =>
+                            setSimples((atual) => ({
+                              ...atual,
+                              fatoresIds: marcado
+                                ? atual.fatoresIds.filter((item) => item !== id)
+                                : [...atual.fatoresIds, id],
+                            }))
+                          }
+                        />
+                        {fator.codigo} - {fator.nome}
+                      </label>
+                    );
+                  })}
+                  {!dados.fatores.length && (
+                    <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-400 md:col-span-2 xl:col-span-3">
+                      Cadastre fatores de risco antes de vincular ao risco.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </form>
         )}
       </section>
@@ -543,6 +660,7 @@ export default function RiscosCadastroGeral() {
           itens={dados.riscos}
           rota={rotas.riscos}
           limitarDezLinhas
+          mostrarFatores
         />
       )}
       {aba === "fatores" && (
