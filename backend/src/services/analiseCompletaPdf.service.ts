@@ -61,6 +61,7 @@ type AnaliseCompletaPdf = {
   resultadoInerente: number;
   classificacaoRisco: string;
   periodicidadeAcao: string;
+  estrategiaTratamento: string;
   notaProbabilidadeResidual?: number | null;
   probabilidadeResidual?: number | null;
   percentualProbabilidadeResidual?: number | null;
@@ -105,8 +106,16 @@ function corClassificacao(valor?: string | null) {
   return pdfTheme.accent;
 }
 
-function etiqueta(item: ItemNome) {
-  return item.codigo ? `${item.codigo} - ${item.nome}` : item.nome;
+function codigoControleUso(item: ItemNome, prefixo?: "CP" | "CD" | "CC") {
+  if (!prefixo) return item.codigo || "";
+  const numeros = String(item.codigo || "").match(/\d+/)?.[0];
+  if (!numeros) return item.codigo ? `${prefixo}-${item.codigo}` : prefixo;
+  return `${prefixo}${numeros.padStart(3, "0")}`;
+}
+
+function etiqueta(item: ItemNome, prefixo?: "CP" | "CD" | "CC") {
+  const codigo = codigoControleUso(item, prefixo) || item.codigo;
+  return codigo ? `${codigo} - ${item.nome}` : item.nome;
 }
 
 function etiquetaFator(item: ItemNome) {
@@ -196,6 +205,7 @@ function blocoLista(
   y: number,
   width: number,
   height: number,
+  prefixo?: "CP" | "CD" | "CC",
 ) {
   doc
     .roundedRect(x, y, width, height, 8)
@@ -211,7 +221,9 @@ function blocoLista(
     .text(titulo.toUpperCase(), x + 12, y + 10, {
       width: width - 24,
     });
-  const lista = itens.length ? itens.map(etiqueta) : ["Nenhum item informado."];
+  const lista = itens.length
+    ? itens.map((item) => etiqueta(item, prefixo))
+    : ["Nenhum item informado."];
   doc
     .fillColor(pdfTheme.primary)
     .font("Helvetica")
@@ -598,12 +610,21 @@ export function gerarAnaliseCompletaPdf(
     218,
     corInerente,
   );
+  campo(
+    doc,
+    "Estratégia",
+    analise.estrategiaTratamento || "Mitigar",
+    42,
+    250,
+    180,
+    pdfTheme.accent,
+  );
 
   campo(
     doc,
     "Probabilidade residual",
     `${texto(analise.probabilidadeResidual)} (${texto(analise.nivelProbabilidadeResidual)})`,
-    42,
+    232,
     250,
     180,
     corResidual,
@@ -612,27 +633,18 @@ export function gerarAnaliseCompletaPdf(
     doc,
     "Consequência residual",
     `${texto(analise.consequenciaResidual)} (${texto(analise.nivelConsequenciaResidual)})`,
-    232,
+    422,
     250,
     180,
     corResidual,
   );
   campo(
     doc,
-    "Nível de risco residual",
-    texto(analise.resultadoResidual),
-    422,
+    "Risco residual",
+    `${texto(analise.resultadoResidual)} (${texto(analise.classificacaoResidual)})`,
+    612,
     250,
-    150,
-    corResidual,
-  );
-  campo(
-    doc,
-    "Classificação residual",
-    texto(analise.classificacaoResidual),
-    582,
-    250,
-    218,
+    188,
     corResidual,
   );
 
@@ -731,6 +743,7 @@ export function gerarAnaliseCompletaPdf(
     302,
     370,
     150,
+    "CP",
   );
   blocoLista(
     doc,
@@ -740,8 +753,18 @@ export function gerarAnaliseCompletaPdf(
     302,
     370,
     150,
+    "CD",
   );
-  blocoLista(doc, "Controles corretivos", analise.corretivos, 42, 470, 758, 55);
+  blocoLista(
+    doc,
+    "Controles corretivos",
+    analise.corretivos,
+    42,
+    470,
+    758,
+    55,
+    "CC",
+  );
 
   doc
     .fillColor("#64748b")

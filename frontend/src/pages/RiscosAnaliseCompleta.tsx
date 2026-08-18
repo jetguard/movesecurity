@@ -85,6 +85,7 @@ type AnaliseCompleta = {
   nivelRiscoInerente: string;
   classificacaoRisco: string;
   periodicidadeAcao: string;
+  estrategiaTratamento: string;
   preventivos: ControleSelecionado[];
   detectivos: ControleSelecionado[];
   corretivos: ControleSelecionado[];
@@ -127,6 +128,7 @@ type Formulario = {
   setorId: string;
   riscoId: string;
   fatoresIds: string[];
+  estrategiaTratamento: string;
   sc: number;
   fe: number;
   intervalo: number;
@@ -169,6 +171,7 @@ const formularioInicial: Formulario = {
   setorId: "",
   riscoId: "",
   fatoresIds: [],
+  estrategiaTratamento: "Mitigar",
   sc: 1,
   fe: 1,
   intervalo: 1,
@@ -338,6 +341,22 @@ function MiniMetrica({
 
 function etiquetaControle(item: ControleSelecionado) {
   return item.codigo ? `${item.codigo} - ${item.nome}` : item.nome;
+}
+
+function codigoControleUso(
+  item: ControleSelecionado,
+  prefixo: "CP" | "CD" | "CC",
+) {
+  const numeros = String(item.codigo || "").match(/\d+/)?.[0];
+  if (!numeros) return item.codigo ? `${prefixo}-${item.codigo}` : prefixo;
+  return `${prefixo}${numeros.padStart(3, "0")}`;
+}
+
+function etiquetaControleUso(
+  item: ControleSelecionado,
+  prefixo: "CP" | "CD" | "CC",
+) {
+  return `${codigoControleUso(item, prefixo)} - ${item.nome}`;
 }
 
 export default function RiscosAnaliseCompleta() {
@@ -625,6 +644,7 @@ export default function RiscosAnaliseCompleta() {
       setorId: Number(form.setorId),
       riscoId: Number(form.riscoId),
       fatoresRisco: fatoresSelecionados(),
+      estrategiaTratamento: form.estrategiaTratamento,
       sc: form.sc,
       fe: form.fe,
       intervalo: form.intervalo,
@@ -670,6 +690,7 @@ export default function RiscosAnaliseCompleta() {
       fatoresIds: analise.fatoresRisco
         .map((item) => String(item.id || ""))
         .filter(Boolean),
+      estrategiaTratamento: analise.estrategiaTratamento || "Mitigar",
       sc: pontuacao(analise.sc),
       fe: pontuacao(analise.fe),
       intervalo: pontuacao(analise.intervalo),
@@ -913,6 +934,7 @@ export default function RiscosAnaliseCompleta() {
 
   function renderListaControles(
     titulo: string,
+    prefixo: "CP" | "CD" | "CC",
     selecionados: string[],
     setSelecionados: (ids: string[]) => void,
     busca: string,
@@ -972,7 +994,7 @@ export default function RiscosAnaliseCompleta() {
               key={controle.id}
               className="flex items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm font-bold text-slate-100"
             >
-              <span>{etiquetaControle(controle)}</span>
+              <span>{etiquetaControleUso(controle, prefixo)}</span>
               <button
                 type="button"
                 onClick={() =>
@@ -1113,7 +1135,7 @@ export default function RiscosAnaliseCompleta() {
             </span>
           </div>
 
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+          <div className="mt-5 grid gap-4 xl:grid-cols-3">
             <label className="text-sm font-black text-slate-200">
               Macro Processo
               <select
@@ -1158,6 +1180,29 @@ export default function RiscosAnaliseCompleta() {
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="text-sm font-black text-slate-200">
+              Estratégia de tratamento
+              <select
+                className={`${inputClass} mt-2 w-full`}
+                value={form.estrategiaTratamento}
+                onChange={(event) =>
+                  setForm((atual) => ({
+                    ...atual,
+                    estrategiaTratamento: event.target.value,
+                  }))
+                }
+                required
+              >
+                <option value="Mitigar">Mitigar o risco</option>
+                <option value="Aceitar">Aceitar o risco</option>
+                <option value="Transferir">Transferir o risco</option>
+                <option value="Evitar">Evitar o risco</option>
+                <option value="Monitorar">Monitorar o risco</option>
+              </select>
+              <span className="mt-1 block text-xs font-semibold text-slate-400">
+                Define a decisão de tratamento da ARC.
+              </span>
             </label>
           </div>
 
@@ -1616,6 +1661,9 @@ export default function RiscosAnaliseCompleta() {
                         valor={analise.resultadoInerente}
                         destaque={analise.classificacaoRisco}
                       />
+                      <p className="mt-1.5 inline-flex rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-1 text-[11px] font-black text-purple-100">
+                        {analise.estrategiaTratamento || "Mitigar"}
+                      </p>
                       <p className="mt-1.5 text-xs font-bold leading-5 text-slate-300">
                         {analise.periodicidadeAcao}
                       </p>
@@ -1756,6 +1804,7 @@ export default function RiscosAnaliseCompleta() {
                 <div className="mt-4 grid gap-4 lg:grid-cols-3">
                   {renderListaControles(
                     "Preventivo",
+                    "CP",
                     preventivos,
                     setPreventivos,
                     buscaPreventivo,
@@ -1763,6 +1812,7 @@ export default function RiscosAnaliseCompleta() {
                   )}
                   {renderListaControles(
                     "Detectivo",
+                    "CD",
                     detectivos,
                     setDetectivos,
                     buscaDetectivo,
@@ -1770,6 +1820,7 @@ export default function RiscosAnaliseCompleta() {
                   )}
                   {renderListaControles(
                     "Corretivo",
+                    "CC",
                     corretivos,
                     setCorretivos,
                     buscaCorretivo,

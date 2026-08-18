@@ -1476,6 +1476,18 @@ function normalizarStatusTratativa(status: unknown) {
   return permitidos.includes(valor) ? valor : "Aberta";
 }
 
+function normalizarEstrategiaTratamento(valor: unknown) {
+  const estrategia = textoObrigatorio(valor) || "Mitigar";
+  const permitidos = [
+    "Mitigar",
+    "Aceitar",
+    "Transferir",
+    "Evitar",
+    "Monitorar",
+  ];
+  return permitidos.includes(estrategia) ? estrategia : "Mitigar";
+}
+
 function normalizarDataPrazo(valor: unknown) {
   const texto = textoObrigatorio(valor);
   if (!texto) return null;
@@ -1518,6 +1530,9 @@ async function dadosAnaliseCompleta(req: AuthRequest) {
     riscoCodigo: risco.codigo,
     riscoNome: risco.nome,
     fatoresRiscoJson: JSON.stringify(fatores),
+    estrategiaTratamento: normalizarEstrategiaTratamento(
+      req.body.estrategiaTratamento,
+    ),
     ...calcularAnaliseCompleta(req.body),
   };
 }
