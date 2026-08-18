@@ -45,7 +45,6 @@ type AnaliseCompleta = {
 };
 
 const ordemClassificacao = ["BAIXO", "MENOR", "ALTO", "EXTREMO"];
-const prioridades = ["Diretoria", "Gerencial", "Rotina"];
 
 function normalizar(valor?: string | null) {
   return String(valor || "-").toUpperCase();
@@ -73,13 +72,6 @@ function corCalor(valor: number, maximo: number) {
   if (intensidade >= 0.32)
     return "bg-amber-100/80 text-amber-950 border-amber-50/80 shadow-amber-500/10";
   return "bg-teal-100/80 text-teal-950 border-teal-50/80 shadow-teal-500/10";
-}
-
-function prioridadePorClassificacao(classificacao: string) {
-  const valor = normalizar(classificacao);
-  if (valor === "EXTREMO") return "Diretoria";
-  if (valor === "ALTO") return "Gerencial";
-  return "Rotina";
 }
 
 function contarPor<T>(itens: T[], chave: (item: T) => string) {
@@ -307,11 +299,18 @@ export default function RiscosDashboard() {
 
   const mapaMacroPrioridade = useMemo(() => {
     const macros = new Map<string, number>();
+    const prioridades = new Set<string>();
     const matriz = new Map<string, number>();
     analises.forEach((analise) => {
-      const macro = analise.macroProcessoNome || "Sem macroprocesso";
-      const prioridade = prioridadePorClassificacao(analise.classificacaoRisco);
+      const macro = [
+        analise.macroProcessoCodigo,
+        analise.macroProcessoNome,
+      ]
+        .filter(Boolean)
+        .join(" - ") || "Sem macroprocesso";
+      const prioridade = normalizar(analise.classificacaoRisco);
       const valor = Number(analise.resultadoInerente || 0);
+      prioridades.add(prioridade);
       macros.set(macro, (macros.get(macro) || 0) + valor);
       matriz.set(
         `${macro}__${prioridade}`,
@@ -321,15 +320,23 @@ export default function RiscosDashboard() {
     const linhas = [...macros.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8);
+    const colunas = [...prioridades].sort((a, b) => {
+      const indiceA = ordemClassificacao.indexOf(a);
+      const indiceB = ordemClassificacao.indexOf(b);
+      return (
+        (indiceB === -1 ? -1 : indiceB) - (indiceA === -1 ? -1 : indiceA) ||
+        a.localeCompare(b)
+      );
+    });
     const maximo = Math.max(
       1,
       ...linhas.flatMap(([macro]) =>
-        prioridades.map(
+        colunas.map(
           (prioridade) => matriz.get(`${macro}__${prioridade}`) || 0,
         ),
       ),
     );
-    return { linhas, matriz, maximo };
+    return { linhas, colunas, matriz, maximo };
   }, [analises]);
 
   return (
@@ -731,7 +738,7 @@ export default function RiscosDashboard() {
                 </h2>
               </div>
               <p className="text-xs font-bold text-slate-400">
-                Soma do NRI por faixa executiva
+                Soma do NRI por macroprocesso e classificação do risco
               </p>
             </div>
             <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.035] p-3">
@@ -741,7 +748,7 @@ export default function RiscosDashboard() {
                     <th className="sticky left-0 z-10 min-w-[260px] rounded-xl border border-white/10 bg-[#07101d] px-4 py-3">
                       Macroprocesso
                     </th>
-                    {prioridades.map((prioridade) => (
+                    {mapaMacroPrioridade.colunas.map((prioridade) => (
                       <th
                         key={prioridade}
                         className="min-w-[180px] rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 text-center"
@@ -757,7 +764,7 @@ export default function RiscosDashboard() {
                       <td className="sticky left-0 z-10 rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 text-sm font-black text-white shadow-lg shadow-black/10">
                         {macro}
                       </td>
-                      {prioridades.map((prioridade) => {
+                      {mapaMacroPrioridade.colunas.map((prioridade) => {
                         const valor =
                           mapaMacroPrioridade.matriz.get(
                             `${macro}__${prioridade}`,
@@ -777,7 +784,10 @@ export default function RiscosDashboard() {
                     <tr>
                       <td
                         className="rounded-xl bg-slate-950 px-3 py-8 text-center text-sm font-bold text-slate-400"
-                        colSpan={4}
+                        colSpan={Math.max(
+                          2,
+                          mapaMacroPrioridade.colunas.length + 1,
+                        )}
                       >
                         Sem dados para o mapa de macroprocesso x prioridade.
                       </td>
