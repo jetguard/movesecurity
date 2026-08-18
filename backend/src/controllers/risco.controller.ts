@@ -194,7 +194,9 @@ async function proximoCodigoCadastro(
   return { numero, codigo: codigoCadastro(prefixo, numero) };
 }
 
-function normalizarTipoControle(valor: unknown) {
+type TipoControle = "CP" | "CD" | "CC";
+
+function normalizarTipoControle(valor: unknown): TipoControle {
   const tipo = textoObrigatorio(valor).toUpperCase();
   if (["CD", "DETECTIVO"].includes(tipo)) return "CD";
   if (["CC", "CORRETIVO"].includes(tipo)) return "CC";
@@ -207,7 +209,7 @@ function nomeTipoControle(tipo: string) {
   return "preventivo";
 }
 
-async function proximoCodigoControle(tx: any, tipoControle: string) {
+async function proximoCodigoControle(tx: any, tipoControle: TipoControle) {
   await tx.$executeRawUnsafe(
     `SELECT pg_advisory_xact_lock(hashtext('jetguard_controle_${tipoControle}'))`,
   );
@@ -735,6 +737,19 @@ export async function atualizarControlePreventivoCadastro(
     const id = Number(req.params.id);
     const dados = dadosCadastroSimples(req);
     const tipoControle = normalizarTipoControle(req.body.tipoControle);
+    const replicarTiposRecebidos: unknown[] = Array.isArray(
+      req.body.replicarTipos,
+    )
+      ? req.body.replicarTipos
+      : [];
+    const replicarTipos: TipoControle[] = replicarTiposRecebidos.map(
+      normalizarTipoControle,
+    );
+    const tiposReplicar: TipoControle[] = Array.from(
+      new Set(replicarTipos),
+    ).filter(
+      (tipo) => tipo !== tipoControle,
+    );
     if (!dados.nome)
       return res.status(400).json({ error: "Informe o nome do controle." });
     const anterior = await prisma.controlePreventivoCadastro.findUnique({
@@ -742,13 +757,34 @@ export async function atualizarControlePreventivoCadastro(
     });
     if (!anterior)
       return res.status(404).json({ error: "Controle não encontrado." });
-    const registro = await prisma.controlePreventivoCadastro.update({
-      where: { id },
-      data: {
-        ...dados,
-        tipoControle,
-        status: dados.status || anterior.status,
-      },
+    const { registro, replicas } = await prisma.$transaction(async (tx) => {
+      const sequencial =
+        tipoControle !== anterior.tipoControle
+          ? await proximoCodigoControle(tx, tipoControle)
+          : { numero: anterior.numero, codigo: anterior.codigo };
+      const atualizado = await tx.controlePreventivoCadastro.update({
+        where: { id },
+        data: {
+          ...sequencial,
+          ...dados,
+          tipoControle,
+          status: dados.status || anterior.status,
+        },
+      });
+      const criados = [];
+      for (const tipo of tiposReplicar) {
+        const replicaSequencial = await proximoCodigoControle(tx, tipo);
+        const replica = await tx.controlePreventivoCadastro.create({
+          data: {
+            ...replicaSequencial,
+            ...dados,
+            tipoControle: tipo,
+            status: dados.status || anterior.status,
+          },
+        });
+        criados.push(replica);
+      }
+      return { registro: atualizado, replicas: criados };
     });
     await registrarLog({
       req,
@@ -756,7 +792,7 @@ export async function atualizarControlePreventivoCadastro(
       tipoRegistro: "ControlePreventivoCadastro",
       registroId: id,
       dadosAnteriores: anterior,
-      dadosNovos: registro,
+      dadosNovos: { registro, replicas },
     });
     return res.json(registro);
   } catch (error: any) {

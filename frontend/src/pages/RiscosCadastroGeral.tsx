@@ -213,6 +213,8 @@ export default function RiscosCadastroGeral() {
   const [simples, setSimples] = useState(simplesInicial);
   const [simplesEditando, setSimplesEditando] =
     useState<CadastroSimples | null>(null);
+  const [tipoControleAtivo, setTipoControleAtivo] =
+    useState<(typeof tiposControle)[number]["valor"]>("CP");
   const [filtroRiscosTabela, setFiltroRiscosTabela] = useState("");
   const [seletorFatoresAberto, setSeletorFatoresAberto] = useState(false);
   const [filtroFatoresSelecao, setFiltroFatoresSelecao] = useState("");
@@ -235,6 +237,14 @@ export default function RiscosCadastroGeral() {
         .includes(termo);
     });
   }, [dados.riscos, filtroRiscosTabela]);
+
+  const controlesTabelaFiltrados = useMemo(
+    () =>
+      dados.controles.filter(
+        (controle) => (controle.tipoControle || "CP") === tipoControleAtivo,
+      ),
+    [dados.controles, tipoControleAtivo],
+  );
 
   const fatoresSelecaoFiltrados = useMemo(() => {
     const termo = filtroFatoresSelecao.trim().toLowerCase();
@@ -356,7 +366,10 @@ export default function RiscosCadastroGeral() {
       } else {
         await api.post(rota, payload);
       }
-      setSimples(simplesInicial);
+      setSimples({
+        ...simplesInicial,
+        tipoControle: aba === "controles" ? tipoControleAtivo : "CP",
+      });
       setSimplesEditando(null);
     }, simplesEditando ? "Cadastro atualizado." : "Cadastro salvo.");
   }
@@ -388,6 +401,9 @@ export default function RiscosCadastroGeral() {
   }
 
   async function editarSimples(item: CadastroSimples) {
+    if (aba === "controles") {
+      setTipoControleAtivo(item.tipoControle || "CP");
+    }
     setSimplesEditando(item);
     setSimples({
       nome: item.nome,
@@ -623,7 +639,11 @@ export default function RiscosCadastroGeral() {
             onClick={() => {
               setAba(item.id);
               setSimplesEditando(null);
-              setSimples(simplesInicial);
+              setSimples({
+                ...simplesInicial,
+                tipoControle:
+                  item.id === "controles" ? tipoControleAtivo : "CP",
+              });
               setFiltroRiscosTabela("");
             }}
             className={`rounded-xl border p-4 text-left transition ${aba === item.id ? "border-blue-500 bg-blue-600 text-white shadow-lg shadow-blue-950/40" : "border-slate-800 bg-slate-900 text-slate-300 hover:border-blue-800 hover:bg-slate-800"}`}
@@ -754,13 +774,16 @@ export default function RiscosCadastroGeral() {
                             value={tipo.valor}
                             checked={simples.tipoControle === tipo.valor}
                             onChange={() =>
-                              setSimples((atual) => ({
-                                ...atual,
-                                tipoControle: tipo.valor,
-                                replicarTipos: atual.replicarTipos.filter(
-                                  (item) => item !== tipo.valor,
-                                ),
-                              }))
+                              {
+                                setTipoControleAtivo(tipo.valor);
+                                setSimples((atual) => ({
+                                  ...atual,
+                                  tipoControle: tipo.valor,
+                                  replicarTipos: atual.replicarTipos.filter(
+                                    (item) => item !== tipo.valor,
+                                  ),
+                                }));
+                              }
                             }
                           />
                           <span className="block text-sm font-black">
@@ -774,49 +797,45 @@ export default function RiscosCadastroGeral() {
                     </div>
                   </div>
 
-                  {!simplesEditando && (
-                    <div>
-                      <p className="text-sm font-black text-white">
-                        Replicar cadastro
-                      </p>
-                      <p className="mt-1 text-xs font-semibold text-slate-400">
-                        Cria o mesmo controle nos tipos selecionados, mantendo
-                        sequências próprias CP, CD e CC.
-                      </p>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {tiposControle
-                          .filter(
-                            (tipo) => tipo.valor !== simples.tipoControle,
-                          )
-                          .map((tipo) => (
-                            <label
-                              key={tipo.valor}
-                              className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-100 transition hover:border-blue-400/60"
-                            >
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 accent-blue-500"
-                                checked={simples.replicarTipos.includes(
-                                  tipo.valor,
-                                )}
-                                onChange={() =>
-                                  setSimples((atual) => ({
-                                    ...atual,
-                                    replicarTipos:
-                                      atual.replicarTipos.includes(tipo.valor)
-                                        ? atual.replicarTipos.filter(
-                                            (item) => item !== tipo.valor,
-                                          )
-                                        : [...atual.replicarTipos, tipo.valor],
-                                  }))
-                                }
-                              />
-                              Replicar para {tipo.valor} - {tipo.titulo}
-                            </label>
-                          ))}
-                      </div>
+                  <div>
+                    <p className="text-sm font-black text-white">
+                      Replicar cadastro
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                      Cria o mesmo controle nos tipos selecionados, mantendo
+                      sequências próprias CP, CD e CC.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {tiposControle
+                        .filter((tipo) => tipo.valor !== simples.tipoControle)
+                        .map((tipo) => (
+                          <label
+                            key={tipo.valor}
+                            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-bold text-slate-100 transition hover:border-blue-400/60"
+                          >
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-blue-500"
+                              checked={simples.replicarTipos.includes(
+                                tipo.valor,
+                              )}
+                              onChange={() =>
+                                setSimples((atual) => ({
+                                  ...atual,
+                                  replicarTipos:
+                                    atual.replicarTipos.includes(tipo.valor)
+                                      ? atual.replicarTipos.filter(
+                                          (item) => item !== tipo.valor,
+                                        )
+                                      : [...atual.replicarTipos, tipo.valor],
+                                }))
+                              }
+                            />
+                            Replicar para {tipo.valor} - {tipo.titulo}
+                          </label>
+                        ))}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             )}
@@ -825,7 +844,11 @@ export default function RiscosCadastroGeral() {
                 type="button"
                 onClick={() => {
                   setSimplesEditando(null);
-                  setSimples(simplesInicial);
+                  setSimples({
+                    ...simplesInicial,
+                    tipoControle:
+                      aba === "controles" ? tipoControleAtivo : "CP",
+                  });
                 }}
                 className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 hover:bg-slate-800"
               >
@@ -1044,11 +1067,51 @@ export default function RiscosCadastroGeral() {
         />
       )}
       {aba === "controles" && (
-        <TabelaSimples
-          itens={dados.controles}
-          rota={rotas.controles}
-          mostrarTipoControle
-        />
+        <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4 shadow-lg">
+          <div className="mb-4 grid gap-2 sm:grid-cols-3">
+            {tiposControle.map((tipo) => {
+              const total = dados.controles.filter(
+                (controle) => (controle.tipoControle || "CP") === tipo.valor,
+              ).length;
+              return (
+                <button
+                  key={tipo.valor}
+                  type="button"
+                  onClick={() => {
+                    setTipoControleAtivo(tipo.valor);
+                    setSimplesEditando(null);
+                    setSimples({
+                      ...simplesInicial,
+                      tipoControle: tipo.valor,
+                    });
+                  }}
+                  className={`rounded-xl border p-4 text-left transition ${
+                    tipoControleAtivo === tipo.valor
+                      ? "border-blue-400 bg-blue-600 text-white shadow-lg shadow-blue-950/40"
+                      : "border-slate-800 bg-slate-950 text-slate-300 hover:border-blue-700 hover:bg-slate-900"
+                  }`}
+                >
+                  <span className="flex items-center justify-between gap-3">
+                    <strong className="text-sm">
+                      {tipo.valor} - {tipo.titulo}
+                    </strong>
+                    <span className="rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-black">
+                      {total}
+                    </span>
+                  </span>
+                  <span className="mt-1 block text-xs font-semibold opacity-80">
+                    {tipo.descricao}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <TabelaSimples
+            itens={controlesTabelaFiltrados}
+            rota={rotas.controles}
+            mostrarTipoControle
+          />
+        </section>
       )}
 
       {seletorFatoresAberto && (
