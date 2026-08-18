@@ -36,6 +36,7 @@ type Cadastro = {
   codigo: string;
   nome: string;
   descricao?: string | null;
+  tipoControle?: "CP" | "CD" | "CC";
   fatoresRisco?: ControleSelecionado[];
 };
 
@@ -641,11 +642,18 @@ export default function RiscosAnaliseCompleta() {
       }));
   }
 
-  function localizarControle(valor: string) {
+  function controlesPorTipo(tipo: "CP" | "CD" | "CC") {
+    return cadastro.controles
+      .filter((item) => (item.tipoControle || "CP") === tipo)
+      .sort((a, b) => a.codigo.localeCompare(b.codigo, "pt-BR"));
+  }
+
+  function localizarControle(valor: string, tipo: "CP" | "CD" | "CC") {
     const termo = valor.trim().toLowerCase();
     if (!termo) return null;
+    const controles = controlesPorTipo(tipo);
     return (
-      cadastro.controles.find((item) => {
+      controles.find((item) => {
         const etiqueta = `${item.codigo} - ${item.nome}`.toLowerCase();
         return (
           etiqueta === termo ||
@@ -653,7 +661,7 @@ export default function RiscosAnaliseCompleta() {
           item.nome.toLowerCase() === termo
         );
       }) ||
-      cadastro.controles.find((item) =>
+      controles.find((item) =>
         `${item.codigo} ${item.nome}`.toLowerCase().includes(termo),
       ) ||
       null
@@ -812,11 +820,12 @@ export default function RiscosAnaliseCompleta() {
 
   function adicionarControle(
     busca: string,
+    prefixo: "CP" | "CD" | "CC",
     setBusca: (valor: string) => void,
     selecionados: string[],
     setSelecionados: (ids: string[]) => void,
   ) {
-    const controle = localizarControle(busca);
+    const controle = localizarControle(busca, prefixo);
     if (!controle) return;
     const id = String(controle.id);
     if (!selecionados.includes(id)) {
@@ -982,6 +991,7 @@ export default function RiscosAnaliseCompleta() {
     setBusca: (valor: string) => void,
   ) {
     const controlesSelecionados = itensSelecionados(selecionados);
+    const controlesDisponiveis = controlesPorTipo(prefixo);
     const datalistId = `controles-${titulo.toLowerCase()}`;
 
     return (
@@ -1003,16 +1013,17 @@ export default function RiscosAnaliseCompleta() {
                 event.preventDefault();
                 adicionarControle(
                   busca,
+                  prefixo,
                   setBusca,
                   selecionados,
                   setSelecionados,
                 );
               }
             }}
-            placeholder="Digite CP001 ou o nome"
+            placeholder={`Digite ${prefixo}001 ou o nome`}
           />
           <datalist id={datalistId}>
-            {cadastro.controles.map((controle) => (
+            {controlesDisponiveis.map((controle) => (
               <option
                 key={controle.id}
                 value={`${controle.codigo} - ${controle.nome}`}
@@ -1022,7 +1033,13 @@ export default function RiscosAnaliseCompleta() {
           <button
             type="button"
             onClick={() =>
-              adicionarControle(busca, setBusca, selecionados, setSelecionados)
+              adicionarControle(
+                busca,
+                prefixo,
+                setBusca,
+                selecionados,
+                setSelecionados,
+              )
             }
             className="rounded-xl bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-500"
           >
@@ -1051,12 +1068,12 @@ export default function RiscosAnaliseCompleta() {
               </button>
             </div>
           ))}
-          {!cadastro.controles.length && (
+          {!controlesDisponiveis.length && (
             <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-300">
-              Nenhum CP cadastrado em Cadastro Geral.
+              Nenhum controle {prefixo} cadastrado em Cadastro Geral.
             </p>
           )}
-          {cadastro.controles.length > 0 && !controlesSelecionados.length && (
+          {controlesDisponiveis.length > 0 && !controlesSelecionados.length && (
             <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-300">
               Nenhum controle selecionado.
             </p>
@@ -1114,7 +1131,7 @@ export default function RiscosAnaliseCompleta() {
                 resumoAnalises.residuais,
                 "Avaliação preenchida",
               ],
-              ["Com controles", resumoAnalises.comControles, "CPs vinculados"],
+              ["Com controles", resumoAnalises.comControles, "Controles vinculados"],
             ].map(([titulo, valor, detalhe]) => (
               <div
                 key={String(titulo)}

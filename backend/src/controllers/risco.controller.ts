@@ -194,6 +194,31 @@ async function proximoCodigoCadastro(
   return { numero, codigo: codigoCadastro(prefixo, numero) };
 }
 
+function normalizarTipoControle(valor: unknown) {
+  const tipo = textoObrigatorio(valor).toUpperCase();
+  if (["CD", "DETECTIVO"].includes(tipo)) return "CD";
+  if (["CC", "CORRETIVO"].includes(tipo)) return "CC";
+  return "CP";
+}
+
+function nomeTipoControle(tipo: string) {
+  if (tipo === "CD") return "detectivo";
+  if (tipo === "CC") return "corretivo";
+  return "preventivo";
+}
+
+async function proximoCodigoControle(tx: any, tipoControle: string) {
+  await tx.$executeRawUnsafe(
+    `SELECT pg_advisory_xact_lock(hashtext('jetguard_controle_${tipoControle}'))`,
+  );
+  const ultimo = await tx.controlePreventivoCadastro.findFirst({
+    where: { tipoControle },
+    orderBy: { numero: "desc" },
+  });
+  const numero = Number(ultimo?.numero || 0) + 1;
+  return { numero, codigo: codigoCadastro(tipoControle, numero) };
+}
+
 function dadosCadastroSimples(req: AuthRequest) {
   const nome = textoObrigatorio(req.body.nome);
   const descricao = textoObrigatorio(req.body.descricao) || null;
@@ -230,7 +255,7 @@ export async function listarCadastroGeralRiscos(
       prisma.riscoCadastroGeral.findMany({ orderBy: { numero: "asc" } }),
       prisma.fatorRiscoCadastro.findMany({ orderBy: { numero: "asc" } }),
       prisma.controlePreventivoCadastro.findMany({
-        orderBy: { numero: "asc" },
+        orderBy: [{ tipoControle: "asc" }, { numero: "asc" }],
       }),
     ]);
 
@@ -656,29 +681,93 @@ export const excluirFatorRiscoCadastro = (req: AuthRequest, res: Response) =>
     "fator de risco",
   );
 
-export const criarControlePreventivoCadastro = (
+export async function criarControlePreventivoCadastro(
   req: AuthRequest,
   res: Response,
-) =>
-  criarCadastroSequencial(
-    req,
-    res,
-    "controlePreventivoCadastro",
-    "CP",
-    "ControlePreventivoCadastro",
-    "controle preventivo",
-  );
-export const atualizarControlePreventivoCadastro = (
+) {
+  try {
+    const dados = dadosCadastroSimples(req);
+    if (!dados.nome)
+      return res.status(400).json({ error: "Informe o nome do controle." });
+
+    const tipoControle = normalizarTipoControle(req.body.tipoControle);
+    const replicarTipos = Array.isArray(req.body.replicarTipos)
+      ? req.body.replicarTipos.map(normalizarTipoControle)
+      : [];
+    const tipos = Array.from(new Set([tipoControle, ...replicarTipos]));
+
+    const registros = await prisma.$transaction(async (tx) => {
+      const criados = [];
+      for (const tipo of tipos) {
+        const sequencial = await proximoCodigoControle(tx, tipo);
+        const registro = await tx.controlePreventivoCadastro.create({
+          data: { ...sequencial, ...dados, tipoControle: tipo },
+        });
+        criados.push(registro);
+      }
+      return criados;
+    });
+
+    await registrarLog({
+      req,
+      acao: `Criação de controle ${tipos.join("/")}`,
+      tipoRegistro: "ControlePreventivoCadastro",
+      registroId: registros[0]?.id,
+      dadosNovos: registros,
+    });
+    return res.status(201).json(registros[0]);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({
+        error:
+          "Já existe controle com este nome para um dos tipos selecionados.",
+      });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao cadastrar controle." });
+  }
+}
+
+export async function atualizarControlePreventivoCadastro(
   req: AuthRequest,
   res: Response,
-) =>
-  atualizarCadastroSimples(
-    req,
-    res,
-    "controlePreventivoCadastro",
-    "ControlePreventivoCadastro",
-    "controle preventivo",
-  );
+) {
+  try {
+    const id = Number(req.params.id);
+    const dados = dadosCadastroSimples(req);
+    const tipoControle = normalizarTipoControle(req.body.tipoControle);
+    if (!dados.nome)
+      return res.status(400).json({ error: "Informe o nome do controle." });
+    const anterior = await prisma.controlePreventivoCadastro.findUnique({
+      where: { id },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Controle não encontrado." });
+    const registro = await prisma.controlePreventivoCadastro.update({
+      where: { id },
+      data: {
+        ...dados,
+        tipoControle,
+        status: dados.status || anterior.status,
+      },
+    });
+    await registrarLog({
+      req,
+      acao: `Atualização de controle ${nomeTipoControle(tipoControle)}`,
+      tipoRegistro: "ControlePreventivoCadastro",
+      registroId: id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+    return res.json(registro);
+  } catch (error: any) {
+    if (error?.code === "P2002")
+      return res.status(400).json({
+        error: "Já existe controle com este nome para este tipo.",
+      });
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao atualizar controle." });
+  }
+}
 export const excluirControlePreventivoCadastro = (
   req: AuthRequest,
   res: Response,

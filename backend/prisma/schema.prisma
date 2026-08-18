@@ -895,16 +895,19 @@ model FatorRiscoCadastro {
 }
 
 model ControlePreventivoCadastro {
-  id        Int      @id @default(autoincrement())
-  numero    Int
-  codigo    String   @unique
-  nome      String   @unique
-  descricao String?
-  status    String   @default("Ativo")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  numero       Int
+  codigo       String   @unique
+  tipoControle String   @default("CP")
+  nome         String
+  descricao    String?
+  status       String   @default("Ativo")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   @@index([status, numero])
+  @@index([tipoControle, status, numero])
+  @@unique([tipoControle, nome])
 }
 
 model AnaliseRiscoCompleta {
