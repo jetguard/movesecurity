@@ -906,7 +906,8 @@ export default function RiscosDashboard() {
                 </h2>
               </div>
               <p className="text-xs font-bold text-slate-400">
-                R por código cruzado com FR por código
+                Quadrante 10 x 10 com Top riscos por código e Top fatores por
+                código
               </p>
             </div>
             <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.035] p-3">
