@@ -1476,6 +1476,7 @@ type PlanoFatorResumo = {
   acaoCorretiva?: string | null;
   acaoPreventiva?: string | null;
   responsavelNome?: string | null;
+  mediadoresJson?: string | null;
   prazo?: Date;
   concluidoEm?: Date | null;
   evidencia?: string | null;
@@ -1554,6 +1555,7 @@ function apresentarAnaliseCompleta(
       acaoCorretiva: plano.acaoCorretiva,
       acaoPreventiva: plano.acaoPreventiva,
       responsavelNome: plano.responsavelNome,
+      mediadores: parseListaJson(plano.mediadoresJson),
       prazo: plano.prazo,
       concluidoEm: plano.concluidoEm,
       evidencia: plano.evidencia,
@@ -2035,6 +2037,7 @@ export async function gerarPdfAnaliseCompletaRisco(
         acaoCorretiva: true,
         acaoPreventiva: true,
         responsavelNome: true,
+        mediadoresJson: true,
         prazo: true,
         concluidoEm: true,
         evidencia: true,

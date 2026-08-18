@@ -3,8 +3,12 @@ import PDFDocument from "pdfkit";
 import { desenharCabecalhoPadrao, pdfTheme } from "./documentoPdfBase.service";
 
 type ItemNome = {
+  id?: number | null;
   codigo?: string | null;
   nome: string;
+  email?: string | null;
+  setor?: string | null;
+  cargo?: string | null;
   percentualTratativa?: number;
   planosTratativa?: number;
   planosConcluidos?: number;
@@ -22,6 +26,7 @@ type PlanoAcaoPdf = {
   acaoCorretiva?: string | null;
   acaoPreventiva?: string | null;
   responsavelNome?: string | null;
+  mediadores?: ItemNome[];
   prazo?: Date | string | null;
   concluidoEm?: Date | string | null;
   evidencia?: string | null;
@@ -362,6 +367,13 @@ function desenharBarraProgresso(
     .text(`${valor}%`, x + width + 8, y - 1, { width: 38 });
 }
 
+function nomesMediadores(plano: PlanoAcaoPdf) {
+  const nomes = (plano.mediadores || [])
+    .map((mediador) => texto(mediador.nome))
+    .filter((nome) => nome !== "-");
+  return nomes.length ? nomes.join(", ") : "Sem mediadores";
+}
+
 function desenharPlanoAcao(
   doc: PDFKit.PDFDocument,
   analise: AnaliseCompletaPdf,
@@ -444,6 +456,15 @@ function desenharPlanoAcao(
       y + 55,
       { width: 600 },
     );
+  doc
+    .fillColor("#475569")
+    .font("Helvetica")
+    .fontSize(8.2)
+    .text(`Mediadores: ${nomesMediadores(plano)}`, margemX + 18, y + 68, {
+      width: 600,
+      lineBreak: false,
+      ellipsis: true,
+    });
   desenharBarraProgresso(
     doc,
     Number(plano.percentual || 0),
@@ -453,7 +474,7 @@ function desenharPlanoAcao(
     cor,
   );
 
-  let cursorY = y + 80;
+  let cursorY = y + 92;
   campos.forEach(([rotulo, valor]) => {
     const conteudo = `${rotulo}: ${textoPreenchido(valor)}`;
     doc

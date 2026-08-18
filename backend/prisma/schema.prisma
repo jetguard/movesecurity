@@ -1095,6 +1095,7 @@ model PlanoAcaoCorporativo {
   acaoPreventiva   String?
   responsavelId    Int?
   responsavelNome  String?
+  mediadoresJson   String    @default("[]")
   prazo            DateTime
   concluidoEm      DateTime?
   evidencia        String?

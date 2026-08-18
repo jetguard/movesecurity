@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 
-function normalizarId(valor: unknown) {
+function normalizarId(valor: unknown): number | null {
   const numero = Number(valor);
   return Number.isFinite(numero) && numero > 0 ? numero : null;
 }
@@ -35,6 +35,14 @@ type FatorRiscoPlano = {
   id?: number | null;
   codigo?: string | null;
   nome: string;
+};
+
+type MediadorPlano = {
+  id: number;
+  nome: string;
+  email?: string | null;
+  setor?: string | null;
+  cargo?: string | null;
 };
 
 async function fatorRiscoDaArc(req: AuthRequest) {
@@ -133,6 +141,53 @@ async function responsavelDoPlano(req: AuthRequest) {
   };
 }
 
+async function mediadoresDoPlano(req: AuthRequest) {
+  const mediadoresIdsRecebidos: unknown[] = Array.isArray(
+    req.body.mediadoresIds,
+  )
+    ? req.body.mediadoresIds
+    : [];
+  const ids: number[] = mediadoresIdsRecebidos
+    .map(normalizarId)
+    .filter((id): id is number => Boolean(id));
+  const unicos = Array.from(new Set(ids));
+  if (!unicos.length) return [];
+
+  const mediadores = await prisma.usuario.findMany({
+    where: {
+      id: { in: unicos },
+      statusUsuario: "ATIVO",
+      OR: [
+        { unidade: req.unidadeAtiva },
+        { unidade: null },
+        { unidadesPermitidas: { contains: req.unidadeAtiva || "" } },
+      ],
+    },
+    orderBy: { nome: "asc" },
+    select: {
+      id: true,
+      nome: true,
+      email: true,
+      setor: true,
+      cargo: true,
+    },
+  });
+
+  if (mediadores.length !== unicos.length) {
+    throw new Error("Um ou mais mediadores selecionados não foram encontrados.");
+  }
+
+  return mediadores;
+}
+
+function apresentarPlano(plano: any) {
+  return {
+    ...plano,
+    status: normalizarStatusPlano(plano.status),
+    mediadores: parseListaJson<MediadorPlano>(plano.mediadoresJson),
+  };
+}
+
 export async function listarPlanosAcao(req: AuthRequest, res: Response) {
   try {
     const planos = await prisma.planoAcaoCorporativo.findMany({
@@ -142,12 +197,7 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
         responsavel: { select: { id: true, nome: true, apelido: true } },
       },
     });
-    return res.json(
-      planos.map((plano) => ({
-        ...plano,
-        status: normalizarStatusPlano(plano.status),
-      })),
-    );
+    return res.json(planos.map(apresentarPlano));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar planos de acao" });
@@ -296,6 +346,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     const fatorRisco = await fatorRiscoDaArc(req);
     await validarFatorAindaDisponivel(req, fatorRisco.fatorRiscoId);
     const responsavel = await responsavelDoPlano(req);
+    const mediadores = await mediadoresDoPlano(req);
     const percentual =
       status === "Concluido" || status === "Concluído"
         ? 100
@@ -318,6 +369,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
         ...responsavel,
+        mediadoresJson: JSON.stringify(mediadores),
         prazo: new Date(prazo),
         concluidoEm: status === "Concluido" ? new Date() : null,
         evidencia: req.body.evidencia,
@@ -335,7 +387,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
       registroId: plano.id,
       dadosNovos: plano,
     });
-    return res.status(201).json(plano);
+    return res.status(201).json(apresentarPlano(plano));
   } catch (error) {
     console.error(error);
     return res.status(500).json({
@@ -362,6 +414,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
       anterior.id,
     );
     const responsavel = await responsavelDoPlano(req);
+    const mediadores = await mediadoresDoPlano(req);
     const percentual =
       status === "Concluido" || status === "Concluído"
         ? 100
@@ -380,6 +433,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
         ...responsavel,
+        mediadoresJson: JSON.stringify(mediadores),
         prazo: req.body.prazo ? new Date(req.body.prazo) : anterior.prazo,
         concluidoEm: status === "Concluido" ? new Date() : null,
         evidencia: req.body.evidencia,
@@ -398,7 +452,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
       dadosAnteriores: anterior,
       dadosNovos: plano,
     });
-    return res.json(plano);
+    return res.json(apresentarPlano(plano));
   } catch (error) {
     console.error(error);
     return res.status(500).json({

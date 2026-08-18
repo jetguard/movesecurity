@@ -1,5 +1,13 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { ClipboardList, Edit3, Link2, Plus, Trash2 } from "lucide-react";
+import {
+  ClipboardList,
+  Edit3,
+  Link2,
+  Plus,
+  Search,
+  Trash2,
+  X,
+} from "lucide-react";
 import { api } from "../services/api";
 
 type Plano = {
@@ -19,6 +27,7 @@ type Plano = {
   acaoCorretiva?: string;
   acaoPreventiva?: string;
   responsavelNome?: string;
+  mediadores?: Responsavel[];
   prazo: string;
   evidencia?: string;
   comentarios?: string;
@@ -113,6 +122,7 @@ const vazio = {
   acaoPreventiva: "",
   responsavelId: "",
   responsavelNome: "",
+  mediadoresIds: [] as string[],
   prazo: "",
   evidencia: "",
   comentarios: "",
@@ -123,6 +133,7 @@ export default function PlanosAcao() {
   const [origens, setOrigens] = useState<OrigensPorModulo>({});
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [form, setForm] = useState({ ...vazio });
+  const [filtroMediadores, setFiltroMediadores] = useState("");
   const [editando, setEditando] = useState<Plano | null>(null);
   const [abrir, setAbrir] = useState(false);
 
@@ -165,6 +176,13 @@ export default function PlanosAcao() {
       ...(nome === "status"
         ? { percentual: valor === "Concluido" ? "100" : "0" }
         : {}),
+      ...(nome === "responsavelId"
+        ? {
+            mediadoresIds: atual.mediadoresIds.filter(
+              (mediadorId) => mediadorId !== valor,
+            ),
+          }
+        : {}),
     }));
   }
 
@@ -183,6 +201,9 @@ export default function PlanosAcao() {
       origemId: plano.origemId ? String(plano.origemId) : "",
       fatorRiscoId: plano.fatorRiscoId ? String(plano.fatorRiscoId) : "",
       responsavelId: plano.responsavelId ? String(plano.responsavelId) : "",
+      mediadoresIds: (plano.mediadores || []).map((mediador) =>
+        String(mediador.id),
+      ),
       status: normalizarStatusManual(plano.status),
       percentual: String(plano.percentual || 0),
       prazo: plano.prazo.slice(0, 16),
@@ -200,6 +221,7 @@ export default function PlanosAcao() {
       fatorRiscoId:
         form.origemModulo === "AnaliseRisco" ? form.fatorRiscoId : null,
       responsavelNome: form.responsavelId ? "" : form.responsavelNome,
+      mediadoresIds: form.mediadoresIds,
     };
 
     if (editando) await api.put(`/planos-acao/${editando.id}`, dados);
@@ -243,6 +265,40 @@ export default function PlanosAcao() {
   const fatoresDisponiveisDaArc = fatoresDaArc.filter(
     (fator) => !fatoresUsadosNaArc.has(String(fator.id || "")),
   );
+  const mediadoresSelecionados = responsaveis.filter((responsavel) =>
+    form.mediadoresIds.includes(String(responsavel.id)),
+  );
+  const mediadoresDisponiveis = responsaveis.filter(
+    (responsavel) => String(responsavel.id) !== form.responsavelId,
+  );
+  const mediadoresFiltrados = mediadoresDisponiveis.filter((responsavel) => {
+    const termo = filtroMediadores.trim().toLowerCase();
+    if (!termo) return true;
+    return [responsavel.nome, responsavel.email, responsavel.setor, responsavel.cargo]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase()
+      .includes(termo);
+  });
+
+  function alternarMediador(id: number) {
+    const valor = String(id);
+    setForm((atual) => ({
+      ...atual,
+      mediadoresIds: atual.mediadoresIds.includes(valor)
+        ? atual.mediadoresIds.filter((item) => item !== valor)
+        : [...atual.mediadoresIds, valor],
+    }));
+  }
+
+  function removerMediador(id: number) {
+    const valor = String(id);
+    setForm((atual) => ({
+      ...atual,
+      mediadoresIds: atual.mediadoresIds.filter((item) => item !== valor),
+    }));
+  }
+
   function origemDoPlano(plano: Plano) {
     if (!plano.origemModulo || !plano.origemId) return null;
     return (
@@ -391,6 +447,103 @@ export default function PlanosAcao() {
                 ))}
               </select>
             </label>
+            <div className="space-y-3 rounded-xl border border-blue-200 bg-blue-50/60 p-4 md:col-span-2 dark:border-blue-900/70 dark:bg-blue-950/20">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white">
+                    Mediadores do plano
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    Selecione um ou mais usuários para acompanhar, orientar ou
+                    validar a execução do plano de ação.
+                  </p>
+                </div>
+                <span className="rounded-full border border-blue-300 bg-white px-3 py-1 text-xs font-bold text-blue-700 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-100">
+                  {mediadoresSelecionados.length} selecionado(s)
+                </span>
+              </div>
+
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={17}
+                />
+                <input
+                  className={`${classeCampo} pl-10`}
+                  placeholder="Buscar mediador por nome, email, setor ou cargo"
+                  value={filtroMediadores}
+                  onChange={(evento) => setFiltroMediadores(evento.target.value)}
+                />
+              </div>
+
+              {mediadoresSelecionados.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {mediadoresSelecionados.map((mediador) => (
+                    <span
+                      key={mediador.id}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-white px-3 py-1 text-xs font-bold text-emerald-700 shadow-sm dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-100"
+                    >
+                      {mediador.nome}
+                      <button
+                        type="button"
+                        onClick={() => removerMediador(mediador.id)}
+                        className="rounded-full p-0.5 text-emerald-700 transition hover:bg-emerald-100 dark:text-emerald-100 dark:hover:bg-emerald-400/20"
+                        aria-label={`Remover mediador ${mediador.nome}`}
+                      >
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <div className="max-h-44 overflow-y-auto rounded-lg border border-slate-200 bg-white p-2 dark:border-slate-800 dark:bg-slate-950">
+                {mediadoresFiltrados.map((mediador) => {
+                  const selecionado = form.mediadoresIds.includes(
+                    String(mediador.id),
+                  );
+                  return (
+                    <button
+                      key={mediador.id}
+                      type="button"
+                      onClick={() => alternarMediador(mediador.id)}
+                      className={`mb-2 flex w-full items-center justify-between gap-3 rounded-lg border px-3 py-2 text-left text-sm transition last:mb-0 ${
+                        selecionado
+                          ? "border-blue-500 bg-blue-600 text-white shadow-sm"
+                          : "border-slate-200 bg-slate-50 text-slate-800 hover:border-blue-300 hover:bg-blue-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-blue-500/60 dark:hover:bg-blue-500/10"
+                      }`}
+                    >
+                      <span>
+                        <strong>{mediador.nome}</strong>
+                        <small
+                          className={`block ${
+                            selecionado
+                              ? "text-blue-50"
+                              : "text-slate-500 dark:text-slate-400"
+                          }`}
+                        >
+                          {[mediador.email, mediador.setor, mediador.cargo]
+                            .filter(Boolean)
+                            .join(" | ")}
+                        </small>
+                      </span>
+                      <span
+                        className={`h-4 w-4 rounded-full border ${
+                          selecionado
+                            ? "border-white bg-white"
+                            : "border-slate-400"
+                        }`}
+                      />
+                    </button>
+                  );
+                })}
+                {!mediadoresFiltrados.length && (
+                  <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                    Nenhum usuário encontrado para este filtro.
+                  </p>
+                )}
+              </div>
+            </div>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Origem do plano de ação
               <select
@@ -559,6 +712,14 @@ export default function PlanosAcao() {
                     Status: {statusExibicaoPlano(plano)}
                   </span>
                 </div>
+                {plano.mediadores?.length ? (
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                    Mediadores:{" "}
+                    {plano.mediadores
+                      .map((mediador) => mediador.nome)
+                      .join(", ")}
+                  </p>
+                ) : null}
                 <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
                   <ClipboardList size={14} /> Origem:{" "}
                   {rotuloModulo(plano.origemModulo)}
