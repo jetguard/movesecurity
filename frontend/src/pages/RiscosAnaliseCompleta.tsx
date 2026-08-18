@@ -5,6 +5,7 @@ import {
   BarChart3,
   BrainCircuit,
   ChevronDown,
+  ClipboardList,
   FileText,
   LayoutDashboard,
   ListPlus,
@@ -1840,6 +1841,14 @@ export default function RiscosAnaliseCompleta() {
                           <Settings size={14} />
                           Controles
                         </button>
+                        <Link
+                          to={`/planos-acao?arcId=${analise.id}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-100 hover:bg-amber-400/20"
+                        >
+                          <ClipboardList size={14} />
+                          Plano de ação
+                        </Link>
                         <button
                           type="button"
                           onClick={(event) => {
@@ -1858,7 +1867,7 @@ export default function RiscosAnaliseCompleta() {
                 {!analises.length && (
                   <tr>
                     <td
-                      colSpan={10}
+                      colSpan={11}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
                       Nenhuma análise completa cadastrada.
