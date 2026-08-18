@@ -53,25 +53,26 @@ function normalizar(valor?: string | null) {
 
 function corClassificacao(valor?: string | null) {
   const texto = normalizar(valor);
-  if (texto === "EXTREMO") return "bg-red-500 text-white border-red-300/40";
-  if (texto === "ALTO") return "bg-orange-500 text-white border-orange-300/40";
+  if (texto === "EXTREMO") return "bg-red-500/90 text-white border-red-200/50";
+  if (texto === "ALTO") return "bg-orange-400/90 text-slate-950 border-orange-100/60";
   if (texto === "MENOR")
-    return "bg-yellow-300 text-slate-950 border-yellow-100/60";
+    return "bg-amber-200/95 text-slate-950 border-amber-100/70";
   if (texto === "BAIXO")
-    return "bg-emerald-400 text-slate-950 border-emerald-100/60";
-  return "bg-slate-700 text-slate-100 border-slate-600";
+    return "bg-teal-200/95 text-slate-950 border-teal-100/70";
+  return "bg-slate-700/80 text-slate-100 border-slate-500/60";
 }
 
 function corCalor(valor: number, maximo: number) {
-  if (!valor) return "bg-slate-900/70 text-slate-500 border-slate-800/80";
+  if (!valor)
+    return "bg-slate-100/10 text-slate-300 border-white/10 shadow-none";
   const intensidade = maximo ? valor / maximo : 0;
   if (intensidade >= 0.78)
-    return "bg-red-400/85 text-slate-950 border-red-200/70 shadow-red-500/10";
+    return "bg-red-300/80 text-red-950 border-red-100/70 shadow-red-500/10";
   if (intensidade >= 0.55)
-    return "bg-orange-300/85 text-slate-950 border-orange-100/70 shadow-orange-500/10";
+    return "bg-orange-200/80 text-orange-950 border-orange-100/70 shadow-orange-500/10";
   if (intensidade >= 0.32)
-    return "bg-amber-200/85 text-slate-950 border-amber-100/80 shadow-amber-500/10";
-  return "bg-emerald-200/85 text-slate-950 border-emerald-100/80 shadow-emerald-500/10";
+    return "bg-amber-100/80 text-amber-950 border-amber-50/80 shadow-amber-500/10";
+  return "bg-teal-100/80 text-teal-950 border-teal-50/80 shadow-teal-500/10";
 }
 
 function prioridadePorClassificacao(classificacao: string) {
@@ -115,10 +116,10 @@ function CardIndicador({
   tom: string;
 }) {
   return (
-    <div className="group overflow-hidden rounded-2xl border border-slate-800 bg-[linear-gradient(145deg,rgba(30,41,59,0.92),rgba(15,23,42,0.95))] p-5 shadow-2xl shadow-black/20">
+    <div className="group overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(30,41,59,0.72),rgba(15,23,42,0.88))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-200">
             {titulo}
           </p>
           <p className={`mt-3 text-4xl font-black ${tom}`}>{valor}</p>
@@ -129,7 +130,7 @@ function CardIndicador({
           <Icon size={24} />
         </span>
       </div>
-      <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">
+      <p className="mt-3 text-sm font-semibold leading-6 text-slate-300/90">
         {detalhe}
       </p>
     </div>
@@ -147,14 +148,14 @@ function Barra({
 }) {
   const percentual = total ? Math.round((valor / total) * 100) : 0;
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+    <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
       <div className="flex items-center justify-between gap-3 text-sm font-black">
         <span className="truncate text-slate-100">{nome}</span>
         <span className="text-blue-100">{valor}</span>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
         <div
-          className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-300"
+          className="h-full rounded-full bg-gradient-to-r from-sky-400 to-teal-300"
           style={{ width: `${percentual}%` }}
         />
       </div>
@@ -332,20 +333,20 @@ export default function RiscosDashboard() {
   }, [analises]);
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-[#050b16] px-4 py-6 text-white sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100vh-5rem)] bg-[linear-gradient(180deg,#07101d,#050914)] px-4 py-6 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1900px]">
-        <header className="overflow-hidden rounded-3xl border border-slate-800 bg-[radial-gradient(circle_at_top_left,rgba(124,58,237,0.22),transparent_30%),radial-gradient(circle_at_top_right,rgba(14,165,233,0.16),transparent_28%),linear-gradient(135deg,#101827,#060b16)] p-6 shadow-2xl shadow-black/30 sm:p-8">
+        <header className="overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_30%),radial-gradient(circle_at_top_right,rgba(45,212,191,0.12),transparent_28%),linear-gradient(135deg,rgba(15,23,42,0.88),rgba(2,6,23,0.94))] p-6 shadow-xl shadow-black/20 ring-1 ring-white/5 sm:p-8">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-5">
-              <span className="rounded-3xl border border-violet-400/30 bg-violet-500/10 p-4 text-violet-300">
+              <span className="rounded-3xl border border-sky-300/25 bg-sky-400/10 p-4 text-sky-200">
                 <ShieldAlert size={34} />
               </span>
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.34em] text-violet-200">
+                <p className="text-xs font-black uppercase tracking-[0.34em] text-sky-200">
                   Risk Analytics
                 </p>
                 <h1 className="mt-2 flex items-center gap-3 text-3xl font-black text-white sm:text-4xl">
-                  <Grid2X2 className="text-slate-400" size={30} />
+                  <Grid2X2 className="text-slate-300" size={30} />
                   Dashboard
                 </h1>
                 <p className="mt-2 text-sm font-semibold text-slate-300">
@@ -355,13 +356,13 @@ export default function RiscosDashboard() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <div className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950/50 px-4 py-3 text-sm font-bold text-slate-200">
+              <div className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-bold text-slate-200">
                 <CalendarDays size={16} />
                 Base atual
               </div>
               <Link
                 to="/riscos/analise-completa"
-                className="inline-flex items-center gap-2 rounded-xl border border-violet-400/40 bg-violet-500/10 px-4 py-3 text-sm font-black text-violet-100 hover:bg-violet-500/20"
+                className="inline-flex items-center gap-2 rounded-xl border border-sky-300/30 bg-sky-400/10 px-4 py-3 text-sm font-black text-sky-100 hover:bg-sky-400/20"
               >
                 <Download size={16} />
                 Ver análises
@@ -420,7 +421,7 @@ export default function RiscosDashboard() {
         </section>
 
         <section className="mt-6 grid gap-5 2xl:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-2xl border border-slate-800 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-5 shadow-2xl shadow-black/20">
+          <div className="rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(2,6,23,0.92))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
@@ -438,20 +439,20 @@ export default function RiscosDashboard() {
                 {[1, 2, 3, 4, 5].map((prob) => (
                   <div
                     key={prob}
-                    className="text-center text-xs font-black text-slate-300"
+                    className="text-center text-xs font-black text-slate-200"
                   >
                     Prob. {prob}
                   </div>
                 ))}
                 {matrizProbabilidadeImpacto.map((linha) => (
                   <div key={`linha-${linha[0].impacto}`} className="contents">
-                    <div className="flex items-center justify-center rounded-xl border border-slate-800 bg-slate-950/80 text-xs font-black text-slate-300">
+                    <div className="flex items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-xs font-black text-slate-200">
                       Cons. {linha[0].impacto}
                     </div>
                     {linha.map((celula) => (
                       <div
                         key={`${celula.impacto}-${celula.probabilidade}`}
-                        className={`flex h-20 flex-col items-center justify-center rounded-xl border text-center font-black ${corCalor(celula.total, Math.max(1, dados.total / 5))}`}
+                        className={`flex h-20 flex-col items-center justify-center rounded-xl border text-center font-black backdrop-blur ${corCalor(celula.total, Math.max(1, dados.total / 5))}`}
                       >
                         <span className="text-2xl">{celula.total}</span>
                         <span className="mt-1 text-[10px] uppercase opacity-80">
@@ -465,8 +466,8 @@ export default function RiscosDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-[linear-gradient(145deg,rgba(15,23,42,0.96),rgba(2,6,23,0.98))] p-5 shadow-2xl shadow-black/20">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(2,6,23,0.92))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
                   Riscos mais críticos
@@ -494,7 +495,7 @@ export default function RiscosDashboard() {
                   {dados.criticos.map((item) => (
                     <tr
                       key={item.id}
-                      className="border-t border-slate-800 text-sm font-semibold text-slate-200"
+                      className="border-t border-white/10 text-sm font-semibold text-slate-200 hover:bg-white/[0.03]"
                     >
                       <td className="px-3 py-4">
                         <p className="font-black text-white">
@@ -555,7 +556,7 @@ export default function RiscosDashboard() {
         </section>
 
         <section className="mt-6 grid gap-5 xl:grid-cols-[0.8fr_1.2fr_0.9fr]">
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
               Distribuição por nível
             </p>
@@ -563,7 +564,7 @@ export default function RiscosDashboard() {
               {ordemClassificacao.map((nome) => (
                 <div
                   key={nome}
-                  className="rounded-xl border border-slate-800 bg-slate-950/70 p-3"
+                    className="rounded-xl border border-white/10 bg-slate-950/45 p-3"
                 >
                   <div className="flex items-center justify-between">
                     <span
@@ -575,9 +576,9 @@ export default function RiscosDashboard() {
                       {dados.porClassificacao[nome] || 0}
                     </span>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
                     <div
-                      className="h-full rounded-full bg-blue-500"
+                      className="h-full rounded-full bg-gradient-to-r from-sky-400 to-teal-300"
                       style={{
                         width: `${dados.total ? ((dados.porClassificacao[nome] || 0) / dados.total) * 100 : 0}%`,
                       }}
@@ -588,7 +589,7 @@ export default function RiscosDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
               Macroprocessos
             </p>
@@ -602,19 +603,19 @@ export default function RiscosDashboard() {
                 />
               ))}
               {!dados.porMacro.length && (
-                <p className="rounded-xl border border-slate-800 bg-slate-950/70 p-4 text-sm font-bold text-slate-400">
+                <p className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-sm font-bold text-slate-300">
                   Nenhum macroprocesso encontrado.
                 </p>
               )}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5">
+          <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
               Indicadores
             </p>
             <div className="mt-5 grid gap-3">
-              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+              <div className="rounded-xl border border-white/10 bg-slate-950/45 p-4">
                 <p className="text-xs font-black uppercase text-slate-400">
                   Média inerente
                 </p>
@@ -622,7 +623,7 @@ export default function RiscosDashboard() {
                   {formatarNumero(dados.mediaInerente)}
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+              <div className="rounded-xl border border-white/10 bg-slate-950/45 p-4">
                 <p className="text-xs font-black uppercase text-slate-400">
                   Média residual
                 </p>
@@ -630,7 +631,7 @@ export default function RiscosDashboard() {
                   {formatarNumero(dados.mediaResidual)}
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+              <div className="rounded-xl border border-white/10 bg-slate-950/45 p-4">
                 <p className="text-xs font-black uppercase text-slate-400">
                   Variação média
                 </p>
@@ -640,7 +641,7 @@ export default function RiscosDashboard() {
                   {dados.reducaoMedia}%
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
+              <div className="rounded-xl border border-white/10 bg-slate-950/45 p-4">
                 <p className="text-xs font-black uppercase text-slate-400">
                   Com controles
                 </p>
@@ -653,8 +654,8 @@ export default function RiscosDashboard() {
         </section>
 
         <section className="mt-6 space-y-5">
-          <div className="rounded-2xl border border-slate-800 bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(2,6,23,0.98))] p-5 shadow-2xl shadow-black/20">
-            <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.78),rgba(2,6,23,0.92))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
+            <div className="flex flex-col gap-2 border-b border-white/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
                   Mapa de calor
@@ -667,17 +668,17 @@ export default function RiscosDashboard() {
                 R por código cruzado com FR por código
               </p>
             </div>
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.035] p-3">
               <table className="w-full min-w-[1280px] border-separate border-spacing-1.5">
                 <thead>
                   <tr className="text-left text-xs font-black uppercase tracking-[0.14em] text-slate-300">
-                    <th className="sticky left-0 z-10 min-w-[160px] rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
+                    <th className="sticky left-0 z-10 min-w-[160px] rounded-xl border border-white/10 bg-[#07101d] px-4 py-3">
                       Risco x fator
                     </th>
                     {mapaRiscoFator.colunas.map(([fator]) => (
                       <th
                         key={fator}
-                        className="min-w-[96px] rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-center"
+                        className="min-w-[96px] rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 text-center"
                       >
                         {fator}
                       </th>
@@ -687,7 +688,7 @@ export default function RiscosDashboard() {
                 <tbody>
                   {mapaRiscoFator.linhas.map(([risco]) => (
                     <tr key={risco}>
-                      <td className="sticky left-0 z-10 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-xl shadow-black/20">
+                      <td className="sticky left-0 z-10 rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 text-sm font-black text-white shadow-lg shadow-black/10">
                         {risco}
                       </td>
                       {mapaRiscoFator.colunas.map(([fator]) => {
@@ -696,7 +697,7 @@ export default function RiscosDashboard() {
                         return (
                           <td
                             key={`${risco}-${fator}`}
-                            className={`rounded-xl border px-4 py-3 text-center text-sm font-black shadow-sm ${corCalor(valor, mapaRiscoFator.maximo)}`}
+                            className={`rounded-xl border px-4 py-3 text-center text-sm font-black shadow-sm backdrop-blur ${corCalor(valor, mapaRiscoFator.maximo)}`}
                           >
                             {valor}
                           </td>
@@ -719,8 +720,8 @@ export default function RiscosDashboard() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-[linear-gradient(145deg,rgba(15,23,42,0.94),rgba(2,6,23,0.98))] p-5 shadow-2xl shadow-black/20">
-            <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.78),rgba(2,6,23,0.92))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
+            <div className="flex flex-col gap-2 border-b border-white/10 pb-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
                   Mapa de calor
@@ -733,17 +734,17 @@ export default function RiscosDashboard() {
                 Soma do NRI por faixa executiva
               </p>
             </div>
-            <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40 p-3">
+            <div className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-white/[0.035] p-3">
               <table className="w-full min-w-[980px] border-separate border-spacing-1.5">
                 <thead>
                   <tr className="text-left text-xs font-black uppercase tracking-[0.14em] text-slate-300">
-                    <th className="sticky left-0 z-10 min-w-[260px] rounded-xl border border-slate-800 bg-slate-950 px-4 py-3">
+                    <th className="sticky left-0 z-10 min-w-[260px] rounded-xl border border-white/10 bg-[#07101d] px-4 py-3">
                       Macroprocesso
                     </th>
                     {prioridades.map((prioridade) => (
                       <th
                         key={prioridade}
-                        className="min-w-[180px] rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-center"
+                        className="min-w-[180px] rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 text-center"
                       >
                         {prioridade}
                       </th>
@@ -753,7 +754,7 @@ export default function RiscosDashboard() {
                 <tbody>
                   {mapaMacroPrioridade.linhas.map(([macro]) => (
                     <tr key={macro}>
-                      <td className="sticky left-0 z-10 rounded-xl border border-slate-800 bg-slate-950 px-4 py-3 text-sm font-black text-white shadow-xl shadow-black/20">
+                      <td className="sticky left-0 z-10 rounded-xl border border-white/10 bg-[#07101d] px-4 py-3 text-sm font-black text-white shadow-lg shadow-black/10">
                         {macro}
                       </td>
                       {prioridades.map((prioridade) => {
@@ -764,7 +765,7 @@ export default function RiscosDashboard() {
                         return (
                           <td
                             key={`${macro}-${prioridade}`}
-                            className={`rounded-xl border px-4 py-3 text-center text-sm font-black shadow-sm ${corCalor(valor, mapaMacroPrioridade.maximo)}`}
+                            className={`rounded-xl border px-4 py-3 text-center text-sm font-black shadow-sm backdrop-blur ${corCalor(valor, mapaMacroPrioridade.maximo)}`}
                           >
                             {formatarNumero(valor)}
                           </td>
