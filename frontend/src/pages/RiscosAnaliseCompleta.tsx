@@ -89,6 +89,9 @@ type AnaliseCompleta = {
   preventivos: ControleSelecionado[];
   detectivos: ControleSelecionado[];
   corretivos: ControleSelecionado[];
+  totalFatoresTratativa?: number;
+  fatoresConcluidosTratativa?: number;
+  percentualConclusaoTratativa?: number;
   scResidual?: number | null;
   feResidual?: number | null;
   intervaloResidual?: number | null;
@@ -334,6 +337,44 @@ function MiniMetrica({
       <div className="mt-1 flex min-h-6 items-center gap-2">
         <span className="text-base font-black text-white">{valor}</span>
         {destaque && <BadgeNivel>{destaque}</BadgeNivel>}
+      </div>
+    </div>
+  );
+}
+
+function RoscaConclusao({
+  percentual,
+  concluidos,
+  total,
+}: {
+  percentual?: number;
+  concluidos?: number;
+  total?: number;
+}) {
+  const valor = Math.max(0, Math.min(100, Math.round(percentual || 0)));
+  const cor =
+    valor >= 100 ? "#34d399" : valor >= 50 ? "#60a5fa" : "#fbbf24";
+
+  return (
+    <div className="flex items-center gap-3">
+      <div
+        className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-slate-700 shadow-inner shadow-black/25"
+        style={{
+          background: `conic-gradient(${cor} ${valor * 3.6}deg, rgba(30,41,59,0.92) 0deg)`,
+        }}
+        aria-label={`Conclusão ${valor}%`}
+      >
+        <div className="grid h-9 w-9 place-items-center rounded-full bg-slate-950 text-[11px] font-black text-white">
+          {valor}%
+        </div>
+      </div>
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-300">
+          Conclusão
+        </p>
+        <p className="mt-1 text-xs font-bold text-slate-400">
+          {concluidos || 0} de {total || 0} fator(es)
+        </p>
       </div>
     </div>
   );
@@ -1524,12 +1565,13 @@ export default function RiscosAnaliseCompleta() {
           </div>
 
           <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
-            <table className="w-full min-w-[2160px] table-fixed border-separate border-spacing-y-2 p-2">
+            <table className="w-full min-w-[2480px] table-fixed border-separate border-spacing-y-2 p-2">
               <colgroup>
                 <col className="w-12" />
                 <col className="w-32" />
                 <col className="w-72" />
                 <col className="w-[420px]" />
+                <col className="w-56" />
                 <col className="w-52" />
                 <col className="w-52" />
                 <col className="w-56" />
@@ -1554,6 +1596,7 @@ export default function RiscosAnaliseCompleta() {
                   <th className="px-3 py-2">Código</th>
                   <th className="px-3 py-2">Identificação</th>
                   <th className="px-3 py-2">Fatores</th>
+                  <th className="px-3 py-2">Conclusão</th>
                   <th className="px-3 py-2">Probabilidade</th>
                   <th className="px-3 py-2">Consequência</th>
                   <th className="px-3 py-2">Risco inerente</th>
@@ -1633,6 +1676,13 @@ export default function RiscosAnaliseCompleta() {
                           </span>
                         )}
                       </div>
+                    </td>
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                      <RoscaConclusao
+                        percentual={analise.percentualConclusaoTratativa}
+                        concluidos={analise.fatoresConcluidosTratativa}
+                        total={analise.totalFatoresTratativa}
+                      />
                     </td>
                     <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
                       <MiniMetrica

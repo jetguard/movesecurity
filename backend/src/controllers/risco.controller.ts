@@ -1429,10 +1429,20 @@ function apresentarAnaliseCompleta(
       planosConcluidos: resumo?.concluidos || 0,
     };
   });
+  const totalFatoresTratativa = fatoresRisco.length;
+  const fatoresConcluidosTratativa = fatoresRisco.filter(
+    (fator) => (fator.percentualTratativa || 0) >= 100,
+  ).length;
+  const percentualConclusaoTratativa = totalFatoresTratativa
+    ? Math.round((fatoresConcluidosTratativa / totalFatoresTratativa) * 100)
+    : 0;
 
   return {
     ...registro,
     fatoresRisco,
+    totalFatoresTratativa,
+    fatoresConcluidosTratativa,
+    percentualConclusaoTratativa,
     preventivos: parseListaJson<ControleAnaliseCompleta>(
       registro.preventivosJson,
     ),
