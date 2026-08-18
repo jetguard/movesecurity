@@ -36,6 +36,7 @@ type AnaliseCompleta = {
   nivelConsequencia: string;
   classificacaoRisco: string;
   periodicidadeAcao: string;
+  estrategiaTratamento?: string | null;
   preventivos: unknown[];
   detectivos: unknown[];
   corretivos: unknown[];
@@ -155,6 +156,104 @@ function Barra({
   );
 }
 
+const coresRosca = [
+  "#38bdf8",
+  "#2dd4bf",
+  "#facc15",
+  "#fb923c",
+  "#f87171",
+  "#a78bfa",
+];
+
+function corEstrategia(nome: string, indice: number) {
+  const valor = normalizar(nome);
+  if (valor.includes("MITIG")) return "#38bdf8";
+  if (valor.includes("ACEIT")) return "#2dd4bf";
+  if (valor.includes("TRANSFER")) return "#a78bfa";
+  if (valor.includes("EVIT")) return "#f87171";
+  if (valor.includes("MONITOR")) return "#facc15";
+  return coresRosca[indice % coresRosca.length];
+}
+
+function RoscaEstrategias({
+  itens,
+  total,
+}: {
+  itens: Array<[string, number]>;
+  total: number;
+}) {
+  let acumulado = 0;
+  const segmentos = itens.length
+    ? itens.map(([nome, valor], indice) => {
+        const inicio = total ? (acumulado / total) * 360 : 0;
+        acumulado += valor;
+        const fim = total ? (acumulado / total) * 360 : 0;
+        return `${corEstrategia(nome, indice)} ${inicio}deg ${fim}deg`;
+      })
+    : ["rgba(148,163,184,0.24) 0deg 360deg"];
+
+  return (
+    <div className="flex flex-col items-center gap-4 lg:flex-row">
+      <div className="relative grid h-44 w-44 shrink-0 place-items-center rounded-full border border-white/10 bg-slate-950/70 shadow-2xl shadow-black/20">
+        <div
+          className="absolute inset-3 rounded-full transition-all duration-700"
+          style={{
+            background: `conic-gradient(${segmentos.join(", ")})`,
+            animation: "riskChartIn 900ms ease-out both",
+          }}
+        />
+        <div className="absolute inset-12 rounded-full border border-white/10 bg-[#07101d]" />
+        <div className="relative text-center">
+          <p className="text-4xl font-black text-white">{total}</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+            ARCs
+          </p>
+        </div>
+      </div>
+
+      <div className="grid w-full gap-2">
+        {itens.map(([nome, valor], indice) => {
+          const percentual = total ? Math.round((valor / total) * 100) : 0;
+          return (
+            <div
+              key={nome}
+              className="rounded-xl border border-white/10 bg-slate-950/45 p-3"
+              style={{ animation: `riskChartIn ${500 + indice * 90}ms ease-out both` }}
+            >
+              <div className="flex items-center justify-between gap-3 text-sm font-black">
+                <span className="flex min-w-0 items-center gap-2 text-slate-100">
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: corEstrategia(nome, indice) }}
+                  />
+                  <span className="truncate">{nome}</span>
+                </span>
+                <span className="text-slate-200">
+                  {valor} · {percentual}%
+                </span>
+              </div>
+              <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{
+                    width: `${percentual}%`,
+                    backgroundColor: corEstrategia(nome, indice),
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+        {!itens.length && (
+          <p className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-sm font-bold text-slate-300">
+            Nenhuma estratégia cadastrada.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function RiscosDashboard() {
   const [analises, setAnalises] = useState<AnaliseCompleta[]>([]);
   const [carregando, setCarregando] = useState(true);
@@ -216,6 +315,9 @@ export default function RiscosDashboard() {
     const porResidual = contarPor(comResidual, (item) =>
       normalizar(item.classificacaoResidual),
     );
+    const porEstrategia = Object.entries(
+      contarPor(analises, (item) => item.estrategiaTratamento || "Não definido"),
+    ).sort((a, b) => b[1] - a[1]);
     const porMacro = Object.entries(
       contarPor(analises, (item) => item.macroProcessoNome),
     )
@@ -241,6 +343,7 @@ export default function RiscosDashboard() {
       reducaoMedia,
       porClassificacao,
       porResidual,
+      porEstrategia,
       porMacro,
       criticos,
     };
@@ -341,6 +444,14 @@ export default function RiscosDashboard() {
 
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-[linear-gradient(180deg,#07101d,#050914)] px-4 py-6 text-white sm:px-6 lg:px-8">
+      <style>
+        {`
+          @keyframes riskChartIn {
+            from { opacity: 0; transform: translateY(12px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+          }
+        `}
+      </style>
       <div className="mx-auto max-w-[1900px]">
         <header className="overflow-hidden rounded-3xl border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(14,165,233,0.16),transparent_30%),radial-gradient(circle_at_top_right,rgba(45,212,191,0.12),transparent_28%),linear-gradient(135deg,rgba(15,23,42,0.88),rgba(2,6,23,0.94))] p-6 shadow-xl shadow-black/20 ring-1 ring-white/5 sm:p-8">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -425,6 +536,129 @@ export default function RiscosDashboard() {
             icon={FileText}
             tom="text-sky-300"
           />
+        </section>
+
+        <section className="mt-6 grid gap-5 xl:grid-cols-[1.05fr_0.95fr_0.9fr]">
+          <div className="rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(2,6,23,0.92))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
+            <div className="mb-5 flex items-start justify-between gap-3 border-b border-white/10 pb-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
+                  Tratamento dos riscos
+                </p>
+                <h2 className="mt-2 text-xl font-black text-white">
+                  Estratégia por ARC
+                </h2>
+              </div>
+              <Activity className="text-teal-300" />
+            </div>
+            <RoscaEstrategias
+              itens={dados.porEstrategia}
+              total={dados.total}
+            />
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(2,6,23,0.92))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
+            <div className="mb-5 border-b border-white/10 pb-4">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
+                Residual
+              </p>
+              <h2 className="mt-2 text-xl font-black text-white">
+                Resultado após controles
+              </h2>
+            </div>
+            <div className="grid gap-3">
+              {ordemClassificacao.map((nome, indice) => (
+                <div
+                  key={nome}
+                  className="rounded-xl border border-white/10 bg-slate-950/45 p-3"
+                  style={{
+                    animation: `riskChartIn ${520 + indice * 80}ms ease-out both`,
+                  }}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-black ${corClassificacao(nome)}`}
+                    >
+                      {nome}
+                    </span>
+                    <span className="text-xl font-black text-white">
+                      {dados.porResidual[nome] || 0}
+                    </span>
+                  </div>
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-teal-300 to-sky-400 transition-all duration-700"
+                      style={{
+                        width: `${dados.comResidual ? ((dados.porResidual[nome] || 0) / dados.comResidual) * 100 : 0}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              {!dados.comResidual && (
+                <p className="rounded-xl border border-white/10 bg-slate-950/45 p-4 text-sm font-bold text-slate-300">
+                  Nenhuma avaliação residual preenchida ainda.
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-white/10 bg-[linear-gradient(145deg,rgba(15,23,42,0.82),rgba(2,6,23,0.92))] p-5 shadow-xl shadow-black/10 ring-1 ring-white/5">
+            <div className="mb-5 border-b border-white/10 pb-4">
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
+                Inerente x residual
+              </p>
+              <h2 className="mt-2 text-xl font-black text-white">
+                Efeito dos controles
+              </h2>
+            </div>
+            <div className="grid gap-4">
+              {[
+                ["Média inerente", dados.mediaInerente, "from-red-400 to-orange-300"],
+                ["Média residual", dados.mediaResidual, "from-sky-400 to-teal-300"],
+              ].map(([nome, valor, cor], indice) => {
+                const numero = Number(valor);
+                const largura = Math.min(100, (numero / 25) * 100);
+                return (
+                  <div
+                    key={String(nome)}
+                    className="rounded-xl border border-white/10 bg-slate-950/45 p-4"
+                    style={{
+                      animation: `riskChartIn ${560 + indice * 100}ms ease-out both`,
+                    }}
+                  >
+                    <div className="flex items-center justify-between text-sm font-black">
+                      <span className="text-slate-300">{nome}</span>
+                      <span className="text-2xl text-white">
+                        {formatarNumero(numero)}
+                      </span>
+                    </div>
+                    <div className="mt-3 h-3 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${cor} transition-all duration-700`}
+                        style={{ width: `${largura}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="rounded-xl border border-white/10 bg-slate-950/45 p-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  Variação média
+                </p>
+                <p
+                  className={`mt-2 text-4xl font-black ${
+                    dados.reducaoMedia <= 0 ? "text-emerald-300" : "text-red-300"
+                  }`}
+                >
+                  {dados.reducaoMedia}%
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-300">
+                  Valores negativos indicam redução do risco após controles.
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section className="mt-6 grid gap-5 2xl:grid-cols-[0.9fr_1.1fr]">
