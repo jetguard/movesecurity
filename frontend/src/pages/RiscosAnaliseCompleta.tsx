@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import {
   BarChart3,
   BrainCircuit,
+  ChevronDown,
   FileText,
   LayoutDashboard,
   ListPlus,
@@ -405,6 +406,8 @@ export default function RiscosAnaliseCompleta() {
   const [cadastro, setCadastro] = useState<CadastroGeral>(cadastroVazio);
   const [analises, setAnalises] = useState<AnaliseCompleta[]>([]);
   const [form, setForm] = useState<Formulario>(formularioInicial);
+  const [formularioAnaliseAberto, setFormularioAnaliseAberto] =
+    useState(false);
   const [analiseEditando, setAnaliseEditando] =
     useState<AnaliseCompleta | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -715,6 +718,7 @@ export default function RiscosAnaliseCompleta() {
       }
       setForm(formularioInicial);
       setAnaliseEditando(null);
+      setFormularioAnaliseAberto(false);
       setMensagem(
         analiseEditando
           ? "Análise completa atualizada com sucesso."
@@ -732,6 +736,7 @@ export default function RiscosAnaliseCompleta() {
 
   function iniciarEdicaoAnalise(analise: AnaliseCompleta) {
     setAnaliseEditando(analise);
+    setFormularioAnaliseAberto(true);
     setForm({
       macroProcessoId: String(analise.macroProcessoId || ""),
       setorId: String(analise.setorId || ""),
@@ -756,6 +761,7 @@ export default function RiscosAnaliseCompleta() {
   function cancelarEdicaoAnalise() {
     setAnaliseEditando(null);
     setForm(formularioInicial);
+    setFormularioAnaliseAberto(false);
   }
 
   async function abrirPdfAnalise(analise: AnaliseCompleta) {
@@ -1166,10 +1172,51 @@ export default function RiscosAnaliseCompleta() {
           </div>
         )}
 
-        <form
-          onSubmit={salvarAnalise}
-          className="mt-6 rounded-3xl border border-slate-800 bg-slate-900/90 p-4 shadow-2xl shadow-black/20 sm:p-5"
-        >
+        <section className="mt-6 overflow-hidden rounded-3xl border border-slate-800 bg-slate-900/90 shadow-2xl shadow-black/20">
+          <button
+            type="button"
+            onClick={() => setFormularioAnaliseAberto((aberto) => !aberto)}
+            className="flex w-full flex-col gap-3 p-4 text-left transition hover:bg-slate-800/45 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+          >
+            <div className="flex items-center gap-3">
+              <span className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3 text-blue-200">
+                <BrainCircuit size={22} />
+              </span>
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-blue-200">
+                  Cadastro de ARC
+                </p>
+                <h2 className="mt-1 text-xl font-black text-white">
+                  {analiseEditando
+                    ? `Editando ${analiseEditando.codigo}`
+                    : "Cadastrar nova análise completa"}
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  Abra para preencher macro processo, risco, fatores e
+                  avaliação inerente.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
+              >
+                Prévia: {previa.nivel} / NRI {previa.resultado}
+              </span>
+              <ChevronDown
+                className={`text-blue-200 transition-transform duration-200 ${
+                  formularioAnaliseAberto ? "rotate-180" : ""
+                }`}
+                size={22}
+              />
+            </div>
+          </button>
+
+          {formularioAnaliseAberto && (
+            <form
+              onSubmit={salvarAnalise}
+              className="border-t border-slate-800 p-4 sm:p-5"
+            >
           <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <span className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3 text-blue-200">
@@ -1542,7 +1589,9 @@ export default function RiscosAnaliseCompleta() {
               </button>
             )}
           </div>
-        </form>
+            </form>
+          )}
+        </section>
 
         <section className="mt-6 rounded-3xl border border-slate-800 bg-slate-900/90 p-5 shadow-2xl shadow-black/20">
           <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
