@@ -1614,7 +1614,8 @@ function normalizarStatusTratativa(status: unknown) {
 }
 
 function normalizarEstrategiaTratamento(valor: unknown) {
-  const estrategia = textoObrigatorio(valor) || "Mitigar";
+  const estrategia = textoObrigatorio(valor);
+  if (!estrategia) return null;
   const permitidos = [
     "Mitigar",
     "Aceitar",
@@ -1622,7 +1623,7 @@ function normalizarEstrategiaTratamento(valor: unknown) {
     "Evitar",
     "Monitorar",
   ];
-  return permitidos.includes(estrategia) ? estrategia : "Mitigar";
+  return permitidos.includes(estrategia) ? estrategia : null;
 }
 
 function normalizarDataPrazo(valor: unknown) {

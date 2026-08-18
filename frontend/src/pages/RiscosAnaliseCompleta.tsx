@@ -88,7 +88,7 @@ type AnaliseCompleta = {
   nivelRiscoInerente: string;
   classificacaoRisco: string;
   periodicidadeAcao: string;
-  estrategiaTratamento: string;
+  estrategiaTratamento?: string | null;
   preventivos: ControleSelecionado[];
   detectivos: ControleSelecionado[];
   corretivos: ControleSelecionado[];
@@ -177,7 +177,7 @@ const formularioInicial: Formulario = {
   setorId: "",
   riscoId: "",
   fatoresIds: [],
-  estrategiaTratamento: "Mitigar",
+  estrategiaTratamento: "",
   sc: 1,
   fe: 1,
   intervalo: 1,
@@ -697,7 +697,7 @@ export default function RiscosAnaliseCompleta() {
       setorId: Number(form.setorId),
       riscoId: Number(form.riscoId),
       fatoresRisco: fatoresSelecionados(),
-      estrategiaTratamento: form.estrategiaTratamento,
+      estrategiaTratamento: form.estrategiaTratamento || null,
       sc: form.sc,
       fe: form.fe,
       intervalo: form.intervalo,
@@ -745,7 +745,7 @@ export default function RiscosAnaliseCompleta() {
       fatoresIds: analise.fatoresRisco
         .map((item) => String(item.id || ""))
         .filter(Boolean),
-      estrategiaTratamento: analise.estrategiaTratamento || "Mitigar",
+      estrategiaTratamento: analise.estrategiaTratamento || "",
       sc: pontuacao(analise.sc),
       fe: pontuacao(analise.fe),
       intervalo: pontuacao(analise.intervalo),
@@ -1287,29 +1287,6 @@ export default function RiscosAnaliseCompleta() {
                 ))}
               </select>
             </label>
-            <label className="text-sm font-black text-slate-200">
-              Estratégia de tratamento
-              <select
-                className={`${inputClass} mt-2 w-full`}
-                value={form.estrategiaTratamento}
-                onChange={(event) =>
-                  setForm((atual) => ({
-                    ...atual,
-                    estrategiaTratamento: event.target.value,
-                  }))
-                }
-                required
-              >
-                <option value="Mitigar">Mitigar o risco</option>
-                <option value="Aceitar">Aceitar o risco</option>
-                <option value="Transferir">Transferir o risco</option>
-                <option value="Evitar">Evitar o risco</option>
-                <option value="Monitorar">Monitorar o risco</option>
-              </select>
-              <span className="mt-1 block text-xs font-semibold text-slate-400">
-                Define a decisão de tratamento da ARC.
-              </span>
-            </label>
           </div>
 
           <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
@@ -1779,7 +1756,7 @@ export default function RiscosAnaliseCompleta() {
                         destaque={analise.classificacaoRisco}
                       />
                       <p className="mt-1.5 inline-flex rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-1 text-[11px] font-black text-purple-100">
-                        {analise.estrategiaTratamento || "Mitigar"}
+                        {analise.estrategiaTratamento || "Não definida"}
                       </p>
                       <p className="mt-1.5 text-xs font-bold leading-5 text-slate-300">
                         {analise.periodicidadeAcao}

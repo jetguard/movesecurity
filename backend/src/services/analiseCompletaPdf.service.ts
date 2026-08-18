@@ -66,7 +66,7 @@ type AnaliseCompletaPdf = {
   resultadoInerente: number;
   classificacaoRisco: string;
   periodicidadeAcao: string;
-  estrategiaTratamento: string;
+  estrategiaTratamento?: string | null;
   notaProbabilidadeResidual?: number | null;
   probabilidadeResidual?: number | null;
   percentualProbabilidadeResidual?: number | null;
@@ -634,7 +634,7 @@ export function gerarAnaliseCompletaPdf(
   campo(
     doc,
     "Estratégia",
-    analise.estrategiaTratamento || "Mitigar",
+    analise.estrategiaTratamento || "Não definida",
     42,
     250,
     180,

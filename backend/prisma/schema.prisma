@@ -945,7 +945,7 @@ model AnaliseRiscoCompleta {
   nivelRiscoInerente              String
   classificacaoRisco              String
   periodicidadeAcao               String
-  estrategiaTratamento            String    @default("Mitigar")
+  estrategiaTratamento            String?
   preventivosJson                 String    @default("[]")
   detectivosJson                  String    @default("[]")
   corretivosJson                  String    @default("[]")
