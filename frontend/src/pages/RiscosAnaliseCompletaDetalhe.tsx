@@ -6,16 +6,23 @@ import {
   CheckCircle2,
   ClipboardList,
   FileText,
+  LockKeyholeOpen,
+  Pencil,
+  Save,
+  Settings,
   ShieldCheck,
   Target,
+  X,
 } from "lucide-react";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
+import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type Controle = {
   id?: number | null;
   codigo?: string | null;
   nome: string;
+  tipoControle?: "CP" | "CD" | "CC";
 };
 
 type Fator = Controle & {
@@ -42,9 +49,12 @@ type Arc = {
   id: number;
   codigo: string;
   unidade: string;
+  macroProcessoId?: number | null;
   macroProcessoCodigo: string;
   macroProcessoNome: string;
+  setorId?: number | null;
   setorNome: string;
+  riscoId?: number | null;
   riscoCodigo: string;
   riscoNome: string;
   fatoresRisco: Fator[];
@@ -52,6 +62,15 @@ type Arc = {
   detectivos: Controle[];
   corretivos: Controle[];
   planosAcao: Plano[];
+  sc: number;
+  fe: number;
+  intervalo: number;
+  sse: number;
+  ope: number;
+  fin: number;
+  adm: number;
+  img: number;
+  lc: number;
   mediaProbabilidade: number;
   nivelProbabilidade: string;
   percentualProbabilidade: number;
@@ -77,6 +96,51 @@ type Arc = {
   fatoresConcluidosTratativa?: number;
   percentualConclusaoTratativa?: number;
 };
+
+type CadastroGeral = {
+  controles: Controle[];
+};
+
+type FormularioArc = Pick<
+  Arc,
+  "sc" | "fe" | "intervalo" | "sse" | "ope" | "fin" | "adm" | "img" | "lc"
+> & {
+  estrategiaTratamento: string;
+};
+
+type FinalizacaoFormulario = {
+  finalizacaoStatus: string;
+  finalizacaoDecisao: string;
+  finalizacaoJustificativa: string;
+  finalizacaoObservacoes: string;
+};
+
+const camposProbabilidade: Array<{
+  campo: keyof Pick<FormularioArc, "sc" | "fe" | "intervalo">;
+  label: string;
+}> = [
+  { campo: "sc", label: "Severidade da consequência" },
+  { campo: "fe", label: "Frequência / Exposição" },
+  { campo: "intervalo", label: "Intensidade" },
+];
+
+const camposConsequencia: Array<{
+  campo: keyof Pick<
+    FormularioArc,
+    "sse" | "ope" | "fin" | "adm" | "img" | "lc"
+  >;
+  label: string;
+}> = [
+  { campo: "sse", label: "Segurança / Saúde / Meio ambiente" },
+  { campo: "ope", label: "Operação" },
+  { campo: "fin", label: "Financeiro" },
+  { campo: "adm", label: "Ambiental" },
+  { campo: "img", label: "Imagem da empresa" },
+  { campo: "lc", label: "Legal e Compliance" },
+];
+
+const inputClass =
+  "h-11 rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none transition focus:border-blue-400";
 
 function etiqueta(item: Controle) {
   return `${item.codigo ? `${item.codigo} - ` : ""}${item.nome}`;
@@ -133,29 +197,54 @@ export default function RiscosAnaliseCompletaDetalhe() {
   const { id } = useParams();
   const [arc, setArc] = useState<Arc | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState("");
+  const [mensagem, setMensagem] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [cadastro, setCadastro] = useState<CadastroGeral>({ controles: [] });
+  const [modalEdicao, setModalEdicao] = useState(false);
+  const [modalControles, setModalControles] = useState(false);
+  const [modalFinalizacao, setModalFinalizacao] = useState(false);
+  const [form, setForm] = useState<FormularioArc>({
+    sc: 1,
+    fe: 1,
+    intervalo: 1,
+    sse: 1,
+    ope: 1,
+    fin: 1,
+    adm: 1,
+    img: 1,
+    lc: 1,
+    estrategiaTratamento: "",
+  });
+  const [preventivos, setPreventivos] = useState<string[]>([]);
+  const [detectivos, setDetectivos] = useState<string[]>([]);
+  const [corretivos, setCorretivos] = useState<string[]>([]);
+  const [finalizacao, setFinalizacao] = useState<FinalizacaoFormulario>({
+    finalizacaoStatus: "Finalizada",
+    finalizacaoDecisao: "",
+    finalizacaoJustificativa: "",
+    finalizacaoObservacoes: "",
+  });
+
+  async function carregarArc() {
+    setCarregando(true);
+    setErro("");
+    try {
+      const response = await api.get(`/riscos/analise-completa/${id}`);
+      setArc(response.data);
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error || "Não foi possível carregar a ARC.",
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }
 
   useEffect(() => {
-    let ativo = true;
-    setCarregando(true);
-    api
-      .get(`/riscos/analise-completa/${id}`)
-      .then((response) => {
-        if (ativo) setArc(response.data);
-      })
-      .catch((error) => {
-        if (ativo)
-          setErro(
-            error?.response?.data?.error || "Não foi possível carregar a ARC.",
-          );
-      })
-      .finally(() => {
-        if (ativo) setCarregando(false);
-      });
-    return () => {
-      ativo = false;
-    };
+    carregarArc();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const status = useMemo(() => {
@@ -163,6 +252,197 @@ export default function RiscosAnaliseCompletaDetalhe() {
     if (arc.finalizadaEm) return "Finalizada";
     return arc.finalizacaoStatus || "Aberta";
   }, [arc]);
+
+  function pontuacao(valor: number) {
+    return Math.min(Math.max(Math.trunc(Number(valor) || 1), 1), 5);
+  }
+
+  function controlesPorTipo(tipo: "CP" | "CD" | "CC") {
+    return cadastro.controles
+      .filter((item) => (item.tipoControle || "CP") === tipo)
+      .sort((a, b) =>
+        String(a.codigo || "").localeCompare(String(b.codigo || ""), "pt-BR"),
+      );
+  }
+
+  function itensSelecionados(ids: string[]) {
+    return ids
+      .map((controleId) =>
+        cadastro.controles.find((item) => String(item.id) === controleId),
+      )
+      .filter(Boolean)
+      .map((item) => ({
+        id: item!.id,
+        codigo: item!.codigo || undefined,
+        nome: item!.nome,
+      }));
+  }
+
+  async function carregarCadastro() {
+    if (cadastro.controles.length) return;
+    const response = await api.get("/riscos/cadastro-geral");
+    setCadastro({ controles: response.data.controles || [] });
+  }
+
+  async function abrirEdicao() {
+    if (!arc) return;
+    setErro("");
+    setMensagem("");
+    setForm({
+      sc: pontuacao(arc.sc),
+      fe: pontuacao(arc.fe),
+      intervalo: pontuacao(arc.intervalo),
+      sse: pontuacao(arc.sse),
+      ope: pontuacao(arc.ope),
+      fin: pontuacao(arc.fin),
+      adm: pontuacao(arc.adm),
+      img: pontuacao(arc.img),
+      lc: pontuacao(arc.lc),
+      estrategiaTratamento: arc.estrategiaTratamento || "",
+    });
+    setModalEdicao(true);
+  }
+
+  async function abrirControles() {
+    if (!arc) return;
+    setErro("");
+    setMensagem("");
+    try {
+      await carregarCadastro();
+      setPreventivos(arc.preventivos.map((item) => String(item.id || "")));
+      setDetectivos(arc.detectivos.map((item) => String(item.id || "")));
+      setCorretivos(arc.corretivos.map((item) => String(item.id || "")));
+      setModalControles(true);
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error ||
+          "Não foi possível carregar os controles.",
+      );
+    }
+  }
+
+  function abrirFinalizacao() {
+    if (!arc) return;
+    setErro("");
+    setMensagem("");
+    setFinalizacao({
+      finalizacaoStatus: arc.finalizacaoStatus || "Finalizada",
+      finalizacaoDecisao:
+        arc.finalizacaoDecisao || arc.estrategiaTratamento || "",
+      finalizacaoJustificativa: arc.finalizacaoJustificativa || "",
+      finalizacaoObservacoes: arc.finalizacaoObservacoes || "",
+    });
+    setModalFinalizacao(true);
+  }
+
+  async function salvarEdicao() {
+    if (!arc) return;
+    setSalvando(true);
+    setErro("");
+    setMensagem("");
+    try {
+      const response = await api.put(`/riscos/analise-completa/${arc.id}`, {
+        macroProcessoId: arc.macroProcessoId,
+        setorId: arc.setorId,
+        riscoId: arc.riscoId,
+        fatoresRisco: arc.fatoresRisco.map((fator) => ({
+          id: fator.id,
+          codigo: fator.codigo,
+          nome: fator.nome,
+        })),
+        estrategiaTratamento: form.estrategiaTratamento || null,
+        sc: form.sc,
+        fe: form.fe,
+        intervalo: form.intervalo,
+        sse: form.sse,
+        ope: form.ope,
+        fin: form.fin,
+        adm: form.adm,
+        img: form.img,
+        lc: form.lc,
+      });
+      setArc(response.data);
+      setModalEdicao(false);
+      setMensagem("ARC atualizada com sucesso.");
+    } catch (error: any) {
+      setErro(error?.response?.data?.error || "Não foi possível editar a ARC.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarControles() {
+    if (!arc) return;
+    setSalvando(true);
+    setErro("");
+    setMensagem("");
+    try {
+      const response = await api.patch(
+        `/riscos/analise-completa/${arc.id}/controles`,
+        {
+          preventivos: itensSelecionados(preventivos),
+          detectivos: itensSelecionados(detectivos),
+          corretivos: itensSelecionados(corretivos),
+        },
+      );
+      setArc(response.data);
+      setModalControles(false);
+      setMensagem("Controles salvos com sucesso.");
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error || "Não foi possível salvar os controles.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarFinalizacao() {
+    if (!arc) return;
+    setSalvando(true);
+    setErro("");
+    setMensagem("");
+    try {
+      const response = await api.patch(
+        `/riscos/analise-completa/${arc.id}/finalizacao`,
+        finalizacao,
+      );
+      setArc(response.data);
+      setModalFinalizacao(false);
+      setMensagem("ARC finalizada com sucesso.");
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error || "Não foi possível finalizar a ARC.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function reabrirArc() {
+    if (!arc) return;
+    const pinOperacional = await solicitarPinOperacional(
+      `Informe seu PIN operacional para reabrir a ${arc.codigo}.`,
+    );
+    if (!pinOperacional) return;
+    setSalvando(true);
+    setErro("");
+    setMensagem("");
+    try {
+      const response = await api.patch(
+        `/riscos/analise-completa/${arc.id}/reabrir`,
+        { pinOperacional },
+      );
+      setArc(response.data);
+      setMensagem("ARC reaberta com sucesso.");
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error || "Não foi possível reabrir a ARC.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
 
   async function abrirPdf() {
     if (!arc) return;
@@ -180,6 +460,81 @@ export default function RiscosAnaliseCompletaDetalhe() {
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Não foi possível gerar o PDF.");
     }
+  }
+
+  function renderCampoNota(campo: keyof FormularioArc, label: string) {
+    return (
+      <label className="rounded-2xl border border-slate-800 bg-slate-950/70 p-3">
+        <span className="block min-h-9 text-xs font-black leading-4 text-slate-100">
+          {label}
+        </span>
+        <select
+          className={`${inputClass} mt-2 w-full text-center`}
+          value={form[campo]}
+          onChange={(event) =>
+            setForm((atual) => ({
+              ...atual,
+              [campo]: pontuacao(Number(event.target.value)),
+            }))
+          }
+        >
+          {[1, 2, 3, 4, 5].map((valor) => (
+            <option key={valor} value={valor}>
+              {valor}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  function renderSelecaoControles(
+    titulo: string,
+    tipo: "CP" | "CD" | "CC",
+    selecionados: string[],
+    setSelecionados: (ids: string[]) => void,
+  ) {
+    const controles = controlesPorTipo(tipo);
+    return (
+      <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-black text-white">{titulo}</h3>
+          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-2 py-1 text-[11px] font-black text-blue-100">
+            {selecionados.length}
+          </span>
+        </div>
+        <div className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
+          {controles.map((controle) => {
+            const idControle = String(controle.id || "");
+            return (
+              <label
+                key={`${tipo}-${idControle}`}
+                className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm font-bold text-slate-100 transition hover:border-blue-400/50"
+              >
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4"
+                  checked={selecionados.includes(idControle)}
+                  onChange={(event) => {
+                    setSelecionados(
+                      event.target.checked
+                        ? [...selecionados, idControle]
+                        : selecionados.filter((item) => item !== idControle),
+                    );
+                  }}
+                />
+                <span>{etiqueta(controle)}</span>
+              </label>
+            );
+          })}
+          {!controles.length && (
+            <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-300">
+              Nenhum controle {tipo} cadastrado em Cadastro Geral.
+            </p>
+          )}
+        </div>
+      </div>
+    );
   }
 
   if (carregando) {
@@ -220,10 +575,7 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 <ArrowLeft size={16} />
                 Voltar para análises
               </Link>
-              <p className="mt-5 text-xs font-black uppercase tracking-[0.35em] text-blue-300">
-                Página da ARC
-              </p>
-              <h1 className="mt-2 text-3xl font-black sm:text-4xl">
+              <h1 className="mt-5 text-3xl font-black sm:text-4xl">
                 {arc.codigo}
               </h1>
               <p className="mt-3 max-w-4xl text-sm font-semibold leading-6 text-slate-300">
@@ -240,6 +592,50 @@ export default function RiscosAnaliseCompletaDetalhe() {
               </span>
               <button
                 type="button"
+                onClick={abrirEdicao}
+                className="inline-flex items-center gap-2 rounded-2xl border border-blue-300/35 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 hover:bg-blue-500/20"
+              >
+                <Pencil size={18} />
+                Editar
+              </button>
+              <button
+                type="button"
+                onClick={abrirControles}
+                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/35 bg-emerald-500/10 px-4 py-3 text-sm font-black text-emerald-100 hover:bg-emerald-500/20"
+              >
+                <Settings size={18} />
+                Controles
+              </button>
+              <Link
+                to={`/planos-acao?arcId=${arc.id}`}
+                className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-sm font-black text-amber-100 hover:bg-amber-400/20"
+              >
+                <ClipboardList size={18} />
+                Plano de ação
+              </Link>
+              {arc.finalizadaEm ? (
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={reabrirArc}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-sm font-black text-amber-100 hover:bg-amber-400/20 disabled:opacity-60"
+                >
+                  <LockKeyholeOpen size={18} />
+                  Reabrir ARC
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={abrirFinalizacao}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 text-sm font-black text-cyan-100 hover:bg-cyan-400/20 disabled:opacity-60"
+                >
+                  <CheckCircle2 size={18} />
+                  Finalizar ARC
+                </button>
+              )}
+              <button
+                type="button"
                 onClick={abrirPdf}
                 className="inline-flex items-center gap-2 rounded-2xl border border-red-300/35 bg-red-500/10 px-4 py-3 text-sm font-black text-red-100 hover:bg-red-500/20"
               >
@@ -253,6 +649,11 @@ export default function RiscosAnaliseCompletaDetalhe() {
         {erro && (
           <p className="rounded-2xl border border-red-400/30 bg-red-500/10 p-4 text-sm font-black text-red-100">
             {erro}
+          </p>
+        )}
+        {mensagem && (
+          <p className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-4 text-sm font-black text-emerald-100">
+            {mensagem}
           </p>
         )}
 
@@ -483,6 +884,292 @@ export default function RiscosAnaliseCompletaDetalhe() {
           </div>
         </section>
       </div>
+
+      {modalEdicao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
+          <div className="max-h-[92vh] w-full max-w-5xl overflow-auto rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-300">
+                  Editar análise
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  {arc.codigo}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalEdicao(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.6fr]">
+              <section className="rounded-2xl border border-blue-400/20 bg-blue-500/5 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-blue-200">
+                  Probabilidade
+                </h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                  {camposProbabilidade.map((campo) =>
+                    renderCampoNota(campo.campo, campo.label),
+                  )}
+                </div>
+              </section>
+              <section className="rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-200">
+                  Consequência
+                </h3>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                  {camposConsequencia.map((campo) =>
+                    renderCampoNota(campo.campo, campo.label),
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <label className="mt-4 block rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                Estratégia de tratamento
+              </span>
+              <select
+                className={`${inputClass} mt-2 w-full`}
+                value={form.estrategiaTratamento}
+                onChange={(event) =>
+                  setForm((atual) => ({
+                    ...atual,
+                    estrategiaTratamento: event.target.value,
+                  }))
+                }
+              >
+                <option value="">Não definida</option>
+                <option value="Mitigar">Mitigar</option>
+                <option value="Aceitar">Aceitar</option>
+                <option value="Transferir">Transferir</option>
+                <option value="Evitar">Evitar</option>
+                <option value="Monitorar">Monitorar</option>
+              </select>
+            </label>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setModalEdicao(false)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 hover:border-slate-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={salvarEdicao}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500 disabled:opacity-60"
+              >
+                <Save size={16} />
+                Salvar análise
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalControles && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
+          <div className="max-h-[92vh] w-full max-w-6xl overflow-auto rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-emerald-300">
+                  Controles
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  {arc.codigo}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalControles(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              {renderSelecaoControles(
+                "Preventivo",
+                "CP",
+                preventivos,
+                setPreventivos,
+              )}
+              {renderSelecaoControles(
+                "Detectivo",
+                "CD",
+                detectivos,
+                setDetectivos,
+              )}
+              {renderSelecaoControles(
+                "Corretivo",
+                "CC",
+                corretivos,
+                setCorretivos,
+              )}
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setModalControles(false)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 hover:border-slate-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={salvarControles}
+                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:opacity-60"
+              >
+                <Save size={16} />
+                Salvar controles
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalFinalizacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-cyan-300">
+                  Finalizar ARC
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  {arc.codigo}
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalFinalizacao(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {(arc.totalFatoresTratativa || 0) > 0 &&
+              (arc.percentualConclusaoTratativa || 0) < 100 && (
+                <p className="mt-5 rounded-2xl border border-amber-300/35 bg-amber-400/10 p-4 text-sm font-black text-amber-100">
+                  Ainda existem planos de ação em aberto. A ARC só pode ser
+                  finalizada quando todos os fatores estiverem concluídos.
+                </p>
+              )}
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+              <label>
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                  Status
+                </span>
+                <select
+                  className={`${inputClass} mt-2 w-full`}
+                  value={finalizacao.finalizacaoStatus}
+                  onChange={(event) =>
+                    setFinalizacao((atual) => ({
+                      ...atual,
+                      finalizacaoStatus: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="Finalizada">Finalizada</option>
+                  <option value="Finalizada com risco aceito">
+                    Finalizada com risco aceito
+                  </option>
+                  <option value="Finalizada com monitoramento">
+                    Finalizada com monitoramento
+                  </option>
+                </select>
+              </label>
+              <label>
+                <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                  Decisão
+                </span>
+                <select
+                  className={`${inputClass} mt-2 w-full`}
+                  value={finalizacao.finalizacaoDecisao}
+                  onChange={(event) =>
+                    setFinalizacao((atual) => ({
+                      ...atual,
+                      finalizacaoDecisao: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="">Selecione</option>
+                  <option value="Mitigar">Mitigar</option>
+                  <option value="Aceitar">Aceitar</option>
+                  <option value="Transferir">Transferir</option>
+                  <option value="Evitar">Evitar</option>
+                  <option value="Monitorar">Monitorar</option>
+                </select>
+              </label>
+            </div>
+
+            <label className="mt-4 block">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                Justificativa
+              </span>
+              <textarea
+                className="mt-2 min-h-28 w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 text-sm font-bold text-white outline-none transition focus:border-blue-400"
+                value={finalizacao.finalizacaoJustificativa}
+                onChange={(event) =>
+                  setFinalizacao((atual) => ({
+                    ...atual,
+                    finalizacaoJustificativa: event.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <label className="mt-4 block">
+              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
+                Observações
+              </span>
+              <textarea
+                className="mt-2 min-h-20 w-full rounded-2xl border border-slate-700 bg-slate-950 p-4 text-sm font-bold text-white outline-none transition focus:border-blue-400"
+                value={finalizacao.finalizacaoObservacoes}
+                onChange={(event) =>
+                  setFinalizacao((atual) => ({
+                    ...atual,
+                    finalizacaoObservacoes: event.target.value,
+                  }))
+                }
+              />
+            </label>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setModalFinalizacao(false)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 hover:border-slate-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={
+                  salvando ||
+                  ((arc.totalFatoresTratativa || 0) > 0 &&
+                    (arc.percentualConclusaoTratativa || 0) < 100)
+                }
+                onClick={salvarFinalizacao}
+                className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 px-5 py-3 text-sm font-black text-white hover:bg-cyan-500 disabled:opacity-60"
+              >
+                <CheckCircle2 size={16} />
+                Finalizar ARC
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {pdfUrl && (
         <PdfLightbox

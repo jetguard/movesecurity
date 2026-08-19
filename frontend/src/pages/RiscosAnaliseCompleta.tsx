@@ -1,28 +1,21 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   BarChart3,
   BrainCircuit,
   CheckCircle2,
   ChevronDown,
-  ClipboardList,
-  Eye,
-  FileText,
   LayoutDashboard,
   ListPlus,
-  LockKeyholeOpen,
-  Pencil,
   Plus,
   Save,
   Search,
   Settings,
-  Trash2,
   X,
 } from "lucide-react";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
-import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type Setor = {
   id: number;
@@ -369,43 +362,6 @@ function MiniMetrica({
   );
 }
 
-function RoscaConclusao({
-  percentual,
-  concluidos,
-  total,
-}: {
-  percentual?: number;
-  concluidos?: number;
-  total?: number;
-}) {
-  const valor = Math.max(0, Math.min(100, Math.round(percentual || 0)));
-  const cor = valor >= 100 ? "#34d399" : valor >= 50 ? "#60a5fa" : "#fbbf24";
-
-  return (
-    <div className="flex items-center gap-3">
-      <div
-        className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-slate-700 shadow-inner shadow-black/25"
-        style={{
-          background: `conic-gradient(${cor} ${valor * 3.6}deg, rgba(30,41,59,0.92) 0deg)`,
-        }}
-        aria-label={`Conclusão ${valor}%`}
-      >
-        <div className="grid h-9 w-9 place-items-center rounded-full bg-slate-950 text-[11px] font-black text-white">
-          {valor}%
-        </div>
-      </div>
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-300">
-          Conclusão
-        </p>
-        <p className="mt-1 text-xs font-bold text-slate-400">
-          {concluidos || 0} de {total || 0} fator(es)
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function etiquetaControle(item: ControleSelecionado) {
   return item.codigo ? `${item.codigo} - ${item.nome}` : item.nome;
 }
@@ -427,6 +383,7 @@ function etiquetaControleUso(
 }
 
 export default function RiscosAnaliseCompleta() {
+  const navigate = useNavigate();
   const [cadastro, setCadastro] = useState<CadastroGeral>(cadastroVazio);
   const [analises, setAnalises] = useState<AnaliseCompleta[]>([]);
   const [form, setForm] = useState<Formulario>(formularioInicial);
@@ -459,9 +416,6 @@ export default function RiscosAnaliseCompleta() {
   const [seletorRiscoAberto, setSeletorRiscoAberto] = useState(false);
   const [filtroFatores, setFiltroFatores] = useState("");
   const [seletorFatoresAberto, setSeletorFatoresAberto] = useState(false);
-  const [analisesSelecionadas, setAnalisesSelecionadas] = useState<number[]>(
-    [],
-  );
 
   useEffect(() => {
     carregar();
@@ -475,7 +429,6 @@ export default function RiscosAnaliseCompleta() {
     ]);
     setCadastro(cadastroResponse.data);
     setAnalises(analisesResponse.data);
-    setAnalisesSelecionadas([]);
     setCarregando(false);
   }
 
@@ -763,107 +716,15 @@ export default function RiscosAnaliseCompleta() {
     }
   }
 
-  function iniciarEdicaoAnalise(analise: AnaliseCompleta) {
-    setAnaliseEditando(analise);
-    setFormularioAnaliseAberto(true);
-    setForm({
-      macroProcessoId: String(analise.macroProcessoId || ""),
-      setorId: String(analise.setorId || ""),
-      riscoId: String(analise.riscoId || ""),
-      fatoresIds: analise.fatoresRisco
-        .map((item) => String(item.id || ""))
-        .filter(Boolean),
-      estrategiaTratamento: analise.estrategiaTratamento || "",
-      sc: pontuacao(analise.sc),
-      fe: pontuacao(analise.fe),
-      intervalo: pontuacao(analise.intervalo),
-      sse: pontuacao(analise.sse),
-      ope: pontuacao(analise.ope),
-      fin: pontuacao(analise.fin),
-      adm: pontuacao(analise.adm),
-      img: pontuacao(analise.img),
-      lc: pontuacao(analise.lc),
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
   function cancelarEdicaoAnalise() {
     setAnaliseEditando(null);
     setForm(formularioInicial);
     setFormularioAnaliseAberto(false);
   }
 
-  async function abrirPdfAnalise(analise: AnaliseCompleta) {
-    setErro("");
-    try {
-      const response = await api.get(
-        `/riscos/analise-completa/${analise.id}/pdf`,
-        {
-          responseType: "blob",
-        },
-      );
-      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
-      setPdfUrl(
-        URL.createObjectURL(
-          new Blob([response.data], { type: "application/pdf" }),
-        ),
-      );
-    } catch (error: any) {
-      setErro(error?.response?.data?.error || "Não foi possível gerar o PDF.");
-    }
-  }
-
   function fecharPdfAnalise() {
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     setPdfUrl(null);
-  }
-
-  function abrirControles(analise: AnaliseCompleta) {
-    setControlesEditando(analise);
-    setMensagemControles("");
-    setErroControles("");
-    setPreventivos(analise.preventivos.map((item) => String(item.id || "")));
-    setDetectivos(analise.detectivos.map((item) => String(item.id || "")));
-    setCorretivos(analise.corretivos.map((item) => String(item.id || "")));
-    setBuscaPreventivo("");
-    setBuscaDetectivo("");
-    setBuscaCorretivo("");
-    setResidual({
-      scResidual: pontuacao(analise.scResidual || residualInicial.scResidual),
-      feResidual: pontuacao(analise.feResidual || residualInicial.feResidual),
-      intervaloResidual: pontuacao(
-        analise.intervaloResidual || residualInicial.intervaloResidual,
-      ),
-      sseResidual: pontuacao(
-        analise.sseResidual || residualInicial.sseResidual,
-      ),
-      opeResidual: pontuacao(
-        analise.opeResidual || residualInicial.opeResidual,
-      ),
-      finResidual: pontuacao(
-        analise.finResidual || residualInicial.finResidual,
-      ),
-      admResidual: pontuacao(
-        analise.admResidual || residualInicial.admResidual,
-      ),
-      imgResidual: pontuacao(
-        analise.imgResidual || residualInicial.imgResidual,
-      ),
-      lcResidual: pontuacao(analise.lcResidual || residualInicial.lcResidual),
-    });
-  }
-
-  function abrirFinalizacao(analise: AnaliseCompleta) {
-    setFinalizacaoEditando(analise);
-    setMensagemFinalizacao("");
-    setErroFinalizacao("");
-    setFinalizacao({
-      finalizacaoStatus: analise.finalizacaoStatus || "Finalizada",
-      finalizacaoDecisao:
-        analise.finalizacaoDecisao || analise.estrategiaTratamento || "",
-      finalizacaoJustificativa: analise.finalizacaoJustificativa || "",
-      finalizacaoObservacoes: analise.finalizacaoObservacoes || "",
-    });
   }
 
   function adicionarControle(
@@ -963,71 +824,6 @@ export default function RiscosAnaliseCompleta() {
     } catch (error: any) {
       setErroFinalizacao(
         error?.response?.data?.error || "Não foi possível finalizar a ARC.",
-      );
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function reabrirAnalise(analise: AnaliseCompleta) {
-    const pinOperacional = await solicitarPinOperacional(
-      `Informe seu PIN operacional para reabrir a ${analise.codigo}.`,
-    );
-    if (!pinOperacional) return;
-    setSalvando(true);
-    setMensagem("");
-    setErro("");
-    try {
-      await api.patch(`/riscos/analise-completa/${analise.id}/reabrir`, {
-        pinOperacional,
-      });
-      setMensagem(`${analise.codigo} reaberta com sucesso.`);
-      await carregar();
-    } catch (error: any) {
-      setErro(
-        error?.response?.data?.error || "Não foi possível reabrir a ARC.",
-      );
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  function alternarAnaliseSelecionada(id: number) {
-    setAnalisesSelecionadas((atuais) =>
-      atuais.includes(id)
-        ? atuais.filter((item) => item !== id)
-        : [...atuais, id],
-    );
-  }
-
-  function alternarTodasAnalises() {
-    setAnalisesSelecionadas((atuais) =>
-      atuais.length === analises.length ? [] : analises.map((item) => item.id),
-    );
-  }
-
-  async function excluirAnalisesSelecionadas() {
-    if (!analisesSelecionadas.length) return;
-    const confirmar = window.confirm(
-      `Excluir definitivamente ${analisesSelecionadas.length} análise(s) selecionada(s)? Esta ação não poderá ser desfeita.`,
-    );
-    if (!confirmar) return;
-
-    setErro("");
-    setMensagem("");
-    setSalvando(true);
-    try {
-      await Promise.all(
-        analisesSelecionadas.map((id) =>
-          api.delete(`/riscos/analise-completa/${id}`),
-        ),
-      );
-      setMensagem("Análises selecionadas excluídas com sucesso.");
-      await carregar();
-    } catch (error: any) {
-      setErro(
-        error?.response?.data?.error ||
-          "Não foi possível excluir as análises selecionadas.",
       );
     } finally {
       setSalvando(false);
@@ -1702,89 +1498,47 @@ export default function RiscosAnaliseCompleta() {
 
           <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/50 p-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-bold text-slate-300">
-              Use os botões de ação para editar a análise, ajustar controles ou
-              emitir o PDF.
+              Clique em uma linha para abrir a página detalhada da ARC.
             </p>
-            {analisesSelecionadas.length > 0 && (
-              <button
-                type="button"
-                disabled={salvando}
-                onClick={excluirAnalisesSelecionadas}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-2 text-sm font-black text-red-100 transition hover:bg-red-500/20 disabled:opacity-60"
-              >
-                <Trash2 size={16} />
-                Excluir selecionadas ({analisesSelecionadas.length})
-              </button>
-            )}
           </div>
 
           <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950/40">
-            <table className="w-full min-w-[2480px] table-fixed border-separate border-spacing-y-2 p-2">
+            <table className="w-full min-w-[1320px] table-fixed border-separate border-spacing-y-2 p-2">
               <colgroup>
-                <col className="w-12" />
-                <col className="w-32" />
-                <col className="w-72" />
-                <col className="w-[420px]" />
-                <col className="w-56" />
-                <col className="w-52" />
-                <col className="w-52" />
-                <col className="w-56" />
-                <col className="w-72" />
                 <col className="w-36" />
+                <col className="w-56" />
+                <col className="w-[430px]" />
+                <col className="w-52" />
+                <col className="w-44" />
+                <col className="w-44" />
                 <col className="w-56" />
               </colgroup>
               <thead>
                 <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
-                  <th className="px-3 py-2 text-center">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={
-                        analises.length > 0 &&
-                        analisesSelecionadas.length === analises.length
-                      }
-                      onChange={alternarTodasAnalises}
-                      aria-label="Selecionar todas as análises"
-                    />
-                  </th>
                   <th className="px-3 py-2">Código</th>
                   <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2">Identificação</th>
-                  <th className="px-3 py-2">Fatores</th>
                   <th className="px-3 py-2">Conclusão</th>
                   <th className="px-3 py-2">Probabilidade</th>
                   <th className="px-3 py-2">Consequência</th>
                   <th className="px-3 py-2">Risco inerente</th>
-                  <th className="px-3 py-2">Residual</th>
-                  <th className="px-3 py-2">Controles</th>
-                  <th className="px-3 py-2 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {analises.map((analise) => (
                   <tr
                     key={analise.id}
-                    className="cursor-pointer align-top text-sm font-semibold text-slate-100 transition"
-                    onClick={() => abrirControles(analise)}
+                    className="group cursor-pointer align-top text-sm font-semibold text-slate-100 transition hover:-translate-y-0.5"
+                    onClick={() =>
+                      navigate(`/riscos/analise-completa/${analise.id}`)
+                    }
                   >
-                    <td
-                      className="rounded-l-2xl border-y border-l border-slate-800 bg-slate-950/90 px-3 py-3 text-center"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <input
-                        type="checkbox"
-                        className="h-4 w-4"
-                        checked={analisesSelecionadas.includes(analise.id)}
-                        onChange={() => alternarAnaliseSelecionada(analise.id)}
-                        aria-label={`Selecionar ${analise.codigo}`}
-                      />
-                    </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                    <td className="rounded-l-2xl border-y border-l border-slate-800 bg-slate-950/90 px-3 py-3 transition group-hover:border-blue-400/40 group-hover:bg-slate-900">
                       <span className="inline-flex rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-1.5 text-sm font-black text-blue-100">
                         {analise.codigo}
                       </span>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3 transition group-hover:border-blue-400/40 group-hover:bg-slate-900">
                       <span
                         className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-black ${
                           analise.finalizadaEm
@@ -1807,7 +1561,7 @@ export default function RiscosAnaliseCompleta() {
                         </p>
                       )}
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3 transition group-hover:border-blue-400/40 group-hover:bg-slate-900">
                       <p className="line-clamp-2 text-sm font-black leading-5 text-white">
                         {analise.riscoCodigo} - {analise.riscoNome}
                       </p>
@@ -1816,53 +1570,35 @@ export default function RiscosAnaliseCompleta() {
                         {analise.macroProcessoNome} / {analise.setorNome}
                       </p>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
-                      <div className="flex max-h-[76px] flex-wrap gap-1.5 overflow-y-auto pr-1">
-                        {analise.fatoresRisco.map((fator) => (
-                          <span
-                            key={`${fator.codigo}-${fator.nome}`}
-                            className="min-w-[170px] rounded-lg border border-amber-300/35 bg-amber-400/15 px-2.5 py-1.5 text-xs font-bold leading-4 text-amber-100"
-                          >
-                            <span className="block truncate">
-                              {etiquetaControle(fator)}
-                            </span>
-                            <span className="mt-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.08em] text-amber-50">
-                              <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-900/80">
-                                <span
-                                  className="block h-full rounded-full bg-emerald-300"
-                                  style={{
-                                    width: `${Math.max(
-                                      0,
-                                      Math.min(
-                                        100,
-                                        fator.percentualTratativa || 0,
-                                      ),
-                                    )}%`,
-                                  }}
-                                />
-                              </span>
-                              {fator.percentualTratativa || 0}%
-                            </span>
-                            <span className="mt-0.5 block text-[10px] font-bold text-amber-100/75">
-                              {fator.planosTratativa || 0} plano(s) 5W2H
-                            </span>
-                          </span>
-                        ))}
-                        {!analise.fatoresRisco.length && (
-                          <span className="text-xs font-bold text-slate-400">
-                            Nenhum fator informado
-                          </span>
-                        )}
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3 transition group-hover:border-blue-400/40 group-hover:bg-slate-900">
+                      <div className="flex items-center justify-between gap-3 text-xs font-black text-slate-200">
+                        <span>
+                          {analise.percentualConclusaoTratativa || 0}%
+                        </span>
+                        <span className="text-slate-400">
+                          {analise.fatoresConcluidosTratativa || 0} de{" "}
+                          {analise.totalFatoresTratativa || 0}
+                        </span>
                       </div>
+                      <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-800">
+                        <span
+                          className="block h-full rounded-full bg-gradient-to-r from-cyan-300 to-emerald-300"
+                          style={{
+                            width: `${Math.max(
+                              0,
+                              Math.min(
+                                100,
+                                analise.percentualConclusaoTratativa || 0,
+                              ),
+                            )}%`,
+                          }}
+                        />
+                      </div>
+                      <p className="mt-2 text-[11px] font-bold text-slate-400">
+                        fatores concluídos
+                      </p>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
-                      <RoscaConclusao
-                        percentual={analise.percentualConclusaoTratativa}
-                        concluidos={analise.fatoresConcluidosTratativa}
-                        total={analise.totalFatoresTratativa}
-                      />
-                    </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3 transition group-hover:border-blue-400/40 group-hover:bg-slate-900">
                       <MiniMetrica
                         rotulo="MPP"
                         valor={analise.mediaProbabilidade}
@@ -1876,14 +1612,14 @@ export default function RiscosAnaliseCompleta() {
                         %
                       </p>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3 transition group-hover:border-blue-400/40 group-hover:bg-slate-900">
                       <MiniMetrica
                         rotulo="MPI"
                         valor={analise.mediaConsequencia}
                         destaque={analise.nivelConsequencia}
                       />
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                    <td className="rounded-r-2xl border-y border-r border-slate-800 bg-slate-950/90 px-3 py-3 transition group-hover:border-blue-400/40 group-hover:bg-slate-900">
                       <MiniMetrica
                         rotulo="NRI"
                         valor={analise.resultadoInerente}
@@ -1896,122 +1632,12 @@ export default function RiscosAnaliseCompleta() {
                         {analise.periodicidadeAcao}
                       </p>
                     </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
-                      <div className="grid gap-1.5">
-                        <MiniMetrica
-                          rotulo="Prob."
-                          valor={analise.probabilidadeResidual ?? "-"}
-                          destaque={analise.nivelProbabilidadeResidual || "-"}
-                        />
-                        <MiniMetrica
-                          rotulo="Cons."
-                          valor={analise.consequenciaResidual ?? "-"}
-                          destaque={analise.nivelConsequenciaResidual || "-"}
-                        />
-                        <MiniMetrica
-                          rotulo="Class."
-                          valor={analise.resultadoResidual ?? "-"}
-                          destaque={analise.classificacaoResidual || "-"}
-                        />
-                      </div>
-                    </td>
-                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
-                      <div className="grid gap-1.5 text-xs font-black text-slate-200">
-                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5">
-                          Preventivo: {analise.preventivos.length}
-                        </span>
-                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5">
-                          Detectivo: {analise.detectivos.length}
-                        </span>
-                        <span className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5">
-                          Corretivo: {analise.corretivos.length}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="sticky right-0 rounded-r-2xl border-y border-r border-slate-800 bg-slate-950 px-3 py-3 shadow-[-16px_0_22px_rgba(2,6,23,0.75)]">
-                      <div className="grid gap-1.5">
-                        <Link
-                          to={`/riscos/analise-completa/${analise.id}`}
-                          onClick={(event) => event.stopPropagation()}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-xs font-black text-white hover:bg-slate-700"
-                        >
-                          <Eye size={14} />
-                          Ver ARC
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            iniciarEdicaoAnalise(analise);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-1.5 text-xs font-black text-blue-100 hover:bg-blue-500/20"
-                        >
-                          <Pencil size={14} />
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            abrirControles(analise);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-1.5 text-xs font-black text-emerald-100 hover:bg-emerald-500/20"
-                        >
-                          <Settings size={14} />
-                          Controles
-                        </button>
-                        <Link
-                          to={`/planos-acao?arcId=${analise.id}`}
-                          onClick={(event) => event.stopPropagation()}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-100 hover:bg-amber-400/20"
-                        >
-                          <ClipboardList size={14} />
-                          Plano de ação
-                        </Link>
-                        {analise.finalizadaEm ? (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              reabrirAnalise(analise);
-                            }}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-100 hover:bg-amber-400/20"
-                          >
-                            <LockKeyholeOpen size={14} />
-                            Reabrir ARC
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              abrirFinalizacao(analise);
-                            }}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs font-black text-cyan-100 hover:bg-cyan-400/20"
-                          >
-                            <CheckCircle2 size={14} />
-                            Finalizar ARC
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            abrirPdfAnalise(analise);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-xs font-black text-red-100 hover:bg-red-500/20"
-                        >
-                          <FileText size={14} />
-                          PDF
-                        </button>
-                      </div>
-                    </td>
                   </tr>
                 ))}
                 {!analises.length && (
                   <tr>
                     <td
-                      colSpan={12}
+                      colSpan={7}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
                       Nenhuma análise completa cadastrada.
