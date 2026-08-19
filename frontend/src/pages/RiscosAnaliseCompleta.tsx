@@ -7,9 +7,11 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  Eye,
   FileText,
   LayoutDashboard,
   ListPlus,
+  LockKeyholeOpen,
   Pencil,
   Plus,
   Save,
@@ -20,6 +22,7 @@ import {
 } from "lucide-react";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
+import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type Setor = {
   id: number;
@@ -966,6 +969,29 @@ export default function RiscosAnaliseCompleta() {
     }
   }
 
+  async function reabrirAnalise(analise: AnaliseCompleta) {
+    const pinOperacional = await solicitarPinOperacional(
+      `Informe seu PIN operacional para reabrir a ${analise.codigo}.`,
+    );
+    if (!pinOperacional) return;
+    setSalvando(true);
+    setMensagem("");
+    setErro("");
+    try {
+      await api.patch(`/riscos/analise-completa/${analise.id}/reabrir`, {
+        pinOperacional,
+      });
+      setMensagem(`${analise.codigo} reaberta com sucesso.`);
+      await carregar();
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error || "Não foi possível reabrir a ARC.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   function alternarAnaliseSelecionada(id: number) {
     setAnalisesSelecionadas((atuais) =>
       atuais.includes(id)
@@ -1722,6 +1748,7 @@ export default function RiscosAnaliseCompleta() {
                     />
                   </th>
                   <th className="px-3 py-2">Código</th>
+                  <th className="px-3 py-2">Status</th>
                   <th className="px-3 py-2">Identificação</th>
                   <th className="px-3 py-2">Fatores</th>
                   <th className="px-3 py-2">Conclusão</th>
@@ -1756,6 +1783,29 @@ export default function RiscosAnaliseCompleta() {
                       <span className="inline-flex rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 py-1.5 text-sm font-black text-blue-100">
                         {analise.codigo}
                       </span>
+                    </td>
+                    <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
+                      <span
+                        className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-black ${
+                          analise.finalizadaEm
+                            ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100"
+                            : analise.finalizacaoStatus ===
+                                "Reaberta para novo tratamento"
+                              ? "border-amber-300/45 bg-amber-400/15 text-amber-100"
+                              : "border-blue-300/30 bg-blue-500/10 text-blue-100"
+                        }`}
+                      >
+                        {analise.finalizadaEm
+                          ? "Finalizada"
+                          : analise.finalizacaoStatus || "Aberta"}
+                      </span>
+                      {analise.finalizadaEm && (
+                        <p className="mt-2 text-[11px] font-bold text-slate-400">
+                          {new Date(analise.finalizadaEm).toLocaleDateString(
+                            "pt-BR",
+                          )}
+                        </p>
+                      )}
                     </td>
                     <td className="border-y border-slate-800 bg-slate-950/90 px-3 py-3">
                       <p className="line-clamp-2 text-sm font-black leading-5 text-white">
@@ -1842,15 +1892,6 @@ export default function RiscosAnaliseCompleta() {
                       <p className="mt-1.5 inline-flex rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-1 text-[11px] font-black text-purple-100">
                         {analise.estrategiaTratamento || "Não definida"}
                       </p>
-                      <p
-                        className={`mt-1.5 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-black ${
-                          analise.finalizadaEm
-                            ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100"
-                            : "border-slate-600 bg-slate-800/80 text-slate-300"
-                        }`}
-                      >
-                        {analise.finalizacaoStatus || "Aberta"}
-                      </p>
                       <p className="mt-1.5 text-xs font-bold leading-5 text-slate-300">
                         {analise.periodicidadeAcao}
                       </p>
@@ -1889,6 +1930,14 @@ export default function RiscosAnaliseCompleta() {
                     </td>
                     <td className="sticky right-0 rounded-r-2xl border-y border-r border-slate-800 bg-slate-950 px-3 py-3 shadow-[-16px_0_22px_rgba(2,6,23,0.75)]">
                       <div className="grid gap-1.5">
+                        <Link
+                          to={`/riscos/analise-completa/${analise.id}`}
+                          onClick={(event) => event.stopPropagation()}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-600 bg-slate-800/80 px-3 py-1.5 text-xs font-black text-white hover:bg-slate-700"
+                        >
+                          <Eye size={14} />
+                          Ver ARC
+                        </Link>
                         <button
                           type="button"
                           onClick={(event) => {
@@ -1919,17 +1968,31 @@ export default function RiscosAnaliseCompleta() {
                           <ClipboardList size={14} />
                           Plano de ação
                         </Link>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            abrirFinalizacao(analise);
-                          }}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs font-black text-cyan-100 hover:bg-cyan-400/20"
-                        >
-                          <CheckCircle2 size={14} />
-                          Finalizar ARC
-                        </button>
+                        {analise.finalizadaEm ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              reabrirAnalise(analise);
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300/35 bg-amber-400/10 px-3 py-1.5 text-xs font-black text-amber-100 hover:bg-amber-400/20"
+                          >
+                            <LockKeyholeOpen size={14} />
+                            Reabrir ARC
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              abrirFinalizacao(analise);
+                            }}
+                            className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs font-black text-cyan-100 hover:bg-cyan-400/20"
+                          >
+                            <CheckCircle2 size={14} />
+                            Finalizar ARC
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={(event) => {
@@ -1948,7 +2011,7 @@ export default function RiscosAnaliseCompleta() {
                 {!analises.length && (
                   <tr>
                     <td
-                      colSpan={11}
+                      colSpan={12}
                       className="rounded-xl bg-slate-950/70 p-8 text-center text-sm font-bold text-slate-300"
                     >
                       Nenhuma análise completa cadastrada.

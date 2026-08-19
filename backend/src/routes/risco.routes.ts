@@ -38,6 +38,8 @@ import {
   listarResponsaveisTratativaRisco,
   listarRiscos,
   listarTratativasAnaliseCompletaRisco,
+  obterAnaliseCompletaRisco,
+  reabrirAnaliseCompletaRisco,
   removerCatalogoRisco,
 } from "../controllers/risco.controller";
 import {
@@ -131,11 +133,23 @@ router.patch(
   autorizarPerfis(acessoAnalise),
   finalizarAnaliseCompletaRisco,
 );
+router.patch(
+  "/analise-completa/:id/reabrir",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  reabrirAnaliseCompletaRisco,
+);
 router.get(
   "/analise-completa/:id/pdf",
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   gerarPdfAnaliseCompletaRisco,
+);
+router.get(
+  "/analise-completa/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  obterAnaliseCompletaRisco,
 );
 router.delete(
   "/analise-completa/:id",

@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { gerarAnaliseCompletaPdf } from "../services/analiseCompletaPdf.service";
 import { registrarLog } from "../services/auditoria.service";
+import { validarPinOperacional } from "../services/pinOperacional.service";
 import { gerarRiscoPdf } from "../services/riscoPdf.service";
 
 const valores = {
@@ -1611,6 +1612,40 @@ function apresentarAnaliseCompleta(
   };
 }
 
+async function listarPlanosDaAnaliseCompleta(
+  unidade: string | undefined,
+  analiseId: number,
+) {
+  return prisma.planoAcaoCorporativo.findMany({
+    where: {
+      unidade,
+      origemModulo: "AnaliseRisco",
+      origemId: analiseId,
+    },
+    select: {
+      origemId: true,
+      fatorRiscoId: true,
+      codigo: true,
+      titulo: true,
+      fatorRiscoCodigo: true,
+      fatorRiscoNome: true,
+      prioridade: true,
+      status: true,
+      percentual: true,
+      descricao: true,
+      acaoCorretiva: true,
+      acaoPreventiva: true,
+      responsavelNome: true,
+      mediadoresJson: true,
+      prazo: true,
+      concluidoEm: true,
+      evidencia: true,
+      comentarios: true,
+    },
+    orderBy: [{ fatorRiscoCodigo: "asc" }, { createdAt: "asc" }],
+  });
+}
+
 function normalizarStatusTratativa(status: unknown) {
   const valor = textoObrigatorio(status) || "Aberta";
   const permitidos = [
@@ -1755,6 +1790,30 @@ export async function listarAnalisesCompletasRisco(
     return res
       .status(500)
       .json({ error: "Erro ao listar análises completas." });
+  }
+}
+
+export async function obterAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const registro = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+
+    if (!registro) {
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+    }
+
+    const planos = await listarPlanosDaAnaliseCompleta(req.unidadeAtiva, id);
+    return res.json(apresentarAnaliseCompleta(registro, planos));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao carregar análise." });
   }
 }
 
@@ -2182,6 +2241,68 @@ export async function finalizarAnaliseCompletaRisco(
       error?.message || "Erro ao finalizar análise completa de risco.";
     console.error(error);
     return res.status(500).json({ error: mensagem });
+  }
+}
+
+export async function reabrirAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+
+    if (!anterior.finalizadaEm) {
+      return res.status(400).json({ error: "Esta ARC ainda está aberta." });
+    }
+
+    if (!req.usuarioId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+
+    await validarPinOperacional(
+      req.usuarioId,
+      String(req.body?.pinOperacional || ""),
+    );
+
+    const observacao = textoObrigatorio(req.body?.observacao);
+    const registro = await prisma.analiseRiscoCompleta.update({
+      where: { id },
+      data: {
+        finalizacaoStatus: "Reaberta para novo tratamento",
+        finalizacaoObservacoes:
+          observacao ||
+          textoObrigatorio(anterior.finalizacaoObservacoes) ||
+          "ARC reaberta mediante confirmação por PIN operacional.",
+        finalizadaEm: null,
+        tratativaStatus: "Reprovada / Reaberta",
+        tratativaConcluidaEm: null,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Reabertura da análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    const planos = await listarPlanosDaAnaliseCompleta(req.unidadeAtiva, id);
+    return res.json(apresentarAnaliseCompleta(registro, planos));
+  } catch (error: any) {
+    const status = error?.status || 500;
+    const mensagem =
+      error?.message || "Erro ao reabrir análise completa de risco.";
+    console.error(error);
+    return res.status(status).json({ error: mensagem });
   }
 }
 
