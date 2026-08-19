@@ -1657,6 +1657,9 @@ async function dadosAnaliseCompleta(req: AuthRequest) {
 
   const fatores = normalizarFatores(req.body.fatoresRisco);
   if (!fatores.length) throw new Error("Selecione ao menos um fator de risco.");
+  const estrategiaTratamento = normalizarEstrategiaTratamento(
+    req.body.estrategiaTratamento,
+  );
 
   return {
     macroProcessoId: macroProcesso.id,
@@ -1668,9 +1671,7 @@ async function dadosAnaliseCompleta(req: AuthRequest) {
     riscoCodigo: risco.codigo,
     riscoNome: risco.nome,
     fatoresRiscoJson: JSON.stringify(fatores),
-    estrategiaTratamento: normalizarEstrategiaTratamento(
-      req.body.estrategiaTratamento,
-    ),
+    ...(estrategiaTratamento ? { estrategiaTratamento } : {}),
     ...calcularAnaliseCompleta(req.body),
   };
 }
