@@ -23,6 +23,8 @@ type Controle = {
   codigo?: string | null;
   nome: string;
   tipoControle?: "CP" | "CD" | "CC";
+  descricao?: string | null;
+  fatoresRisco?: Fator[];
 };
 
 type Fator = Controle & {
@@ -71,6 +73,18 @@ type Arc = {
   adm: number;
   img: number;
   lc: number;
+  scResidual?: number | null;
+  feResidual?: number | null;
+  intervaloResidual?: number | null;
+  sseResidual?: number | null;
+  opeResidual?: number | null;
+  finResidual?: number | null;
+  admResidual?: number | null;
+  imgResidual?: number | null;
+  lcResidual?: number | null;
+  notaProbabilidadeResidual?: number | null;
+  percentualProbabilidadeResidual?: number | null;
+  notaConsequenciaResidual?: number | null;
   mediaProbabilidade: number;
   nivelProbabilidade: string;
   percentualProbabilidade: number;
@@ -98,6 +112,8 @@ type Arc = {
 };
 
 type CadastroGeral = {
+  riscos: Controle[];
+  fatores: Fator[];
   controles: Controle[];
 };
 
@@ -105,7 +121,20 @@ type FormularioArc = Pick<
   Arc,
   "sc" | "fe" | "intervalo" | "sse" | "ope" | "fin" | "adm" | "img" | "lc"
 > & {
-  estrategiaTratamento: string;
+  riscoId: string;
+  fatoresIds: string[];
+};
+
+type ResidualFormulario = {
+  scResidual: number;
+  feResidual: number;
+  intervaloResidual: number;
+  sseResidual: number;
+  opeResidual: number;
+  finResidual: number;
+  admResidual: number;
+  imgResidual: number;
+  lcResidual: number;
 };
 
 type FinalizacaoFormulario = {
@@ -141,6 +170,18 @@ const camposConsequencia: Array<{
 
 const inputClass =
   "h-11 rounded-xl border border-slate-700 bg-slate-950 px-3 text-sm font-bold text-white outline-none transition focus:border-blue-400";
+
+const residualInicial: ResidualFormulario = {
+  scResidual: 1,
+  feResidual: 1,
+  intervaloResidual: 1,
+  sseResidual: 1,
+  opeResidual: 1,
+  finResidual: 1,
+  admResidual: 1,
+  imgResidual: 1,
+  lcResidual: 1,
+};
 
 function etiqueta(item: Controle) {
   return `${item.codigo ? `${item.codigo} - ` : ""}${item.nome}`;
@@ -201,7 +242,11 @@ export default function RiscosAnaliseCompletaDetalhe() {
   const [erro, setErro] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-  const [cadastro, setCadastro] = useState<CadastroGeral>({ controles: [] });
+  const [cadastro, setCadastro] = useState<CadastroGeral>({
+    riscos: [],
+    fatores: [],
+    controles: [],
+  });
   const [modalEdicao, setModalEdicao] = useState(false);
   const [modalControles, setModalControles] = useState(false);
   const [modalFinalizacao, setModalFinalizacao] = useState(false);
@@ -215,11 +260,15 @@ export default function RiscosAnaliseCompletaDetalhe() {
     adm: 1,
     img: 1,
     lc: 1,
-    estrategiaTratamento: "",
+    riscoId: "",
+    fatoresIds: [],
   });
+  const [filtroRiscos, setFiltroRiscos] = useState("");
+  const [filtroFatores, setFiltroFatores] = useState("");
   const [preventivos, setPreventivos] = useState<string[]>([]);
   const [detectivos, setDetectivos] = useState<string[]>([]);
   const [corretivos, setCorretivos] = useState<string[]>([]);
+  const [residual, setResidual] = useState<ResidualFormulario>(residualInicial);
   const [finalizacao, setFinalizacao] = useState<FinalizacaoFormulario>({
     finalizacaoStatus: "Finalizada",
     finalizacaoDecisao: "",
@@ -257,6 +306,40 @@ export default function RiscosAnaliseCompletaDetalhe() {
     return Math.min(Math.max(Math.trunc(Number(valor) || 1), 1), 5);
   }
 
+  function arredondar(valor: number) {
+    return Math.round(valor * 100) / 100;
+  }
+
+  function nivelProbabilidade(media: number) {
+    if (media >= 4.51) return "FREQUENTE";
+    if (media >= 3.51) return "PROVÁVEL";
+    if (media >= 2.51) return "POSSÍVEL";
+    if (media >= 1.51) return "IMPROVÁVEL";
+    if (media >= 1) return "REMOTO";
+    return "-";
+  }
+
+  function nivelConsequencia(media: number) {
+    if (media >= 4.51) return "CRÍTICO";
+    if (media >= 3.51) return "SEVERO";
+    if (media >= 2.51) return "MAIOR";
+    if (media >= 1.51) return "MODERADO";
+    if (media >= 1) return "MENOR";
+    return "-";
+  }
+
+  function classificar(resultado: number) {
+    if (resultado <= 5) return "BAIXO";
+    if (resultado <= 10) return "MENOR";
+    if (resultado <= 15) return "ALTO";
+    return "EXTREMO";
+  }
+
+  function formatarVariacao(valor: number | null) {
+    if (valor === null || !Number.isFinite(valor)) return "-";
+    return `${Math.round(valor * 100)}%`;
+  }
+
   function controlesPorTipo(tipo: "CP" | "CD" | "CC") {
     return cadastro.controles
       .filter((item) => (item.tipoControle || "CP") === tipo)
@@ -264,6 +347,64 @@ export default function RiscosAnaliseCompletaDetalhe() {
         String(a.codigo || "").localeCompare(String(b.codigo || ""), "pt-BR"),
       );
   }
+
+  const riscosFiltrados = useMemo(() => {
+    const termo = filtroRiscos.trim().toLowerCase();
+    if (!termo) return cadastro.riscos;
+    return cadastro.riscos.filter((item) =>
+      `${item.codigo || ""} ${item.nome} ${item.descricao || ""}`
+        .toLowerCase()
+        .includes(termo),
+    );
+  }, [cadastro.riscos, filtroRiscos]);
+
+  const fatoresFiltrados = useMemo(() => {
+    const termo = filtroFatores.trim().toLowerCase();
+    if (!termo) return cadastro.fatores;
+    return cadastro.fatores.filter((item) =>
+      `${item.codigo || ""} ${item.nome} ${item.descricao || ""}`
+        .toLowerCase()
+        .includes(termo),
+    );
+  }, [cadastro.fatores, filtroFatores]);
+
+  const previaResidual = useMemo(() => {
+    const sc = pontuacao(residual.scResidual);
+    const fe = pontuacao(residual.feResidual);
+    const intervalo = pontuacao(residual.intervaloResidual);
+    const sse = pontuacao(residual.sseResidual);
+    const ope = pontuacao(residual.opeResidual);
+    const fin = pontuacao(residual.finResidual);
+    const adm = pontuacao(residual.admResidual);
+    const img = pontuacao(residual.imgResidual);
+    const lc = pontuacao(residual.lcResidual);
+    const notaProbabilidade = sc * 5 + fe * 4 + intervalo * 3;
+    const probabilidade = arredondar(notaProbabilidade / 12);
+    const percentualProbabilidade = arredondar(probabilidade / 5);
+    const notaConsequencia =
+      sse * 3 + ope * 5 + fin * 3 + adm * 1 + img * 2 + lc * 3;
+    const consequencia = arredondar(notaConsequencia / 17);
+    const resultado = arredondar(probabilidade * consequencia);
+    const desempenho = (atual: number, base?: number | null) =>
+      base ? arredondar((atual - Number(base)) / Number(base)) : null;
+
+    return {
+      notaProbabilidade,
+      probabilidade,
+      percentualProbabilidade,
+      nivelProbabilidade: nivelProbabilidade(probabilidade),
+      notaConsequencia,
+      consequencia,
+      nivelConsequencia: nivelConsequencia(consequencia),
+      resultado,
+      classificacao: classificar(resultado),
+      desempenhoProbabilidade: desempenho(
+        percentualProbabilidade,
+        arc?.percentualProbabilidade,
+      ),
+      desempenhoNivelRisco: desempenho(resultado, arc?.resultadoInerente),
+    };
+  }, [arc, residual]);
 
   function itensSelecionados(ids: string[]) {
     return ids
@@ -279,16 +420,38 @@ export default function RiscosAnaliseCompletaDetalhe() {
   }
 
   async function carregarCadastro() {
-    if (cadastro.controles.length) return;
+    if (
+      cadastro.controles.length ||
+      cadastro.riscos.length ||
+      cadastro.fatores.length
+    )
+      return;
     const response = await api.get("/riscos/cadastro-geral");
-    setCadastro({ controles: response.data.controles || [] });
+    setCadastro({
+      riscos: response.data.riscos || [],
+      fatores: response.data.fatores || [],
+      controles: response.data.controles || [],
+    });
   }
 
   async function abrirEdicao() {
     if (!arc) return;
     setErro("");
     setMensagem("");
+    try {
+      await carregarCadastro();
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error ||
+          "Não foi possível carregar o cadastro geral.",
+      );
+      return;
+    }
     setForm({
+      riscoId: String(arc.riscoId || ""),
+      fatoresIds: arc.fatoresRisco
+        .map((fator) => String(fator.id || ""))
+        .filter(Boolean),
       sc: pontuacao(arc.sc),
       fe: pontuacao(arc.fe),
       intervalo: pontuacao(arc.intervalo),
@@ -298,7 +461,6 @@ export default function RiscosAnaliseCompletaDetalhe() {
       adm: pontuacao(arc.adm),
       img: pontuacao(arc.img),
       lc: pontuacao(arc.lc),
-      estrategiaTratamento: arc.estrategiaTratamento || "",
     });
     setModalEdicao(true);
   }
@@ -312,6 +474,19 @@ export default function RiscosAnaliseCompletaDetalhe() {
       setPreventivos(arc.preventivos.map((item) => String(item.id || "")));
       setDetectivos(arc.detectivos.map((item) => String(item.id || "")));
       setCorretivos(arc.corretivos.map((item) => String(item.id || "")));
+      setResidual({
+        scResidual: pontuacao(arc.scResidual || residualInicial.scResidual),
+        feResidual: pontuacao(arc.feResidual || residualInicial.feResidual),
+        intervaloResidual: pontuacao(
+          arc.intervaloResidual || residualInicial.intervaloResidual,
+        ),
+        sseResidual: pontuacao(arc.sseResidual || residualInicial.sseResidual),
+        opeResidual: pontuacao(arc.opeResidual || residualInicial.opeResidual),
+        finResidual: pontuacao(arc.finResidual || residualInicial.finResidual),
+        admResidual: pontuacao(arc.admResidual || residualInicial.admResidual),
+        imgResidual: pontuacao(arc.imgResidual || residualInicial.imgResidual),
+        lcResidual: pontuacao(arc.lcResidual || residualInicial.lcResidual),
+      });
       setModalControles(true);
     } catch (error: any) {
       setErro(
@@ -344,13 +519,20 @@ export default function RiscosAnaliseCompletaDetalhe() {
       const response = await api.put(`/riscos/analise-completa/${arc.id}`, {
         macroProcessoId: arc.macroProcessoId,
         setorId: arc.setorId,
-        riscoId: arc.riscoId,
-        fatoresRisco: arc.fatoresRisco.map((fator) => ({
-          id: fator.id,
-          codigo: fator.codigo,
-          nome: fator.nome,
-        })),
-        estrategiaTratamento: form.estrategiaTratamento || null,
+        riscoId: Number(form.riscoId || arc.riscoId),
+        fatoresRisco: form.fatoresIds
+          .map((fatorId) => {
+            const fator = cadastro.fatores.find(
+              (item) => String(item.id) === fatorId,
+            );
+            return {
+              id: fator?.id || Number(fatorId),
+              codigo: fator?.codigo || undefined,
+              nome: fator?.nome || "",
+            };
+          })
+          .filter((fator) => fator.nome),
+        estrategiaTratamento: arc.estrategiaTratamento || null,
         sc: form.sc,
         fe: form.fe,
         intervalo: form.intervalo,
@@ -386,11 +568,38 @@ export default function RiscosAnaliseCompletaDetalhe() {
         },
       );
       setArc(response.data);
-      setModalControles(false);
       setMensagem("Controles salvos com sucesso.");
     } catch (error: any) {
       setErro(
         error?.response?.data?.error || "Não foi possível salvar os controles.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarAvaliacaoResidual() {
+    if (!arc) return;
+    setSalvando(true);
+    setErro("");
+    setMensagem("");
+    try {
+      const response = await api.patch(
+        `/riscos/analise-completa/${arc.id}/controles`,
+        {
+          preventivos: itensSelecionados(preventivos),
+          detectivos: itensSelecionados(detectivos),
+          corretivos: itensSelecionados(corretivos),
+          ...residual,
+        },
+      );
+      setArc(response.data);
+      setModalControles(false);
+      setMensagem("Avaliação residual salva com sucesso.");
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error ||
+          "Não foi possível salvar a avaliação residual.",
       );
     } finally {
       setSalvando(false);
@@ -473,6 +682,41 @@ export default function RiscosAnaliseCompletaDetalhe() {
           value={form[campo]}
           onChange={(event) =>
             setForm((atual) => ({
+              ...atual,
+              [campo]: pontuacao(Number(event.target.value)),
+            }))
+          }
+        >
+          {[1, 2, 3, 4, 5].map((valor) => (
+            <option key={valor} value={valor}>
+              {valor}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
+  }
+
+  function alternarFator(fatorId: string) {
+    setForm((atual) => ({
+      ...atual,
+      fatoresIds: atual.fatoresIds.includes(fatorId)
+        ? atual.fatoresIds.filter((item) => item !== fatorId)
+        : [...atual.fatoresIds, fatorId],
+    }));
+  }
+
+  function renderCampoResidual(campo: keyof ResidualFormulario, label: string) {
+    return (
+      <label className="rounded-2xl border border-slate-800 bg-slate-950/70 p-3">
+        <span className="block min-h-9 text-xs font-black leading-4 text-slate-100">
+          {label}
+        </span>
+        <select
+          className={`${inputClass} mt-2 w-full text-center`}
+          value={residual[campo]}
+          onChange={(event) =>
+            setResidual((atual) => ({
               ...atual,
               [campo]: pontuacao(Number(event.target.value)),
             }))
@@ -906,7 +1150,81 @@ export default function RiscosAnaliseCompletaDetalhe() {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.6fr]">
+            <div className="mt-5 grid gap-4 lg:grid-cols-[0.9fr_1.1fr]">
+              <section className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-blue-200">
+                  Risco
+                </h3>
+                <input
+                  className={`${inputClass} mt-3 w-full`}
+                  value={filtroRiscos}
+                  onChange={(event) => setFiltroRiscos(event.target.value)}
+                  placeholder="Buscar risco por código ou nome"
+                />
+                <div className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
+                  {riscosFiltrados.map((risco) => (
+                    <button
+                      key={risco.id}
+                      type="button"
+                      onClick={() => {
+                        const fatoresSugeridos = (risco.fatoresRisco || [])
+                          .map((fator) => String(fator.id || ""))
+                          .filter(Boolean);
+                        setForm((atual) => ({
+                          ...atual,
+                          riscoId: String(risco.id),
+                          fatoresIds: fatoresSugeridos.length
+                            ? Array.from(new Set(fatoresSugeridos))
+                            : atual.fatoresIds,
+                        }));
+                      }}
+                      className={`w-full rounded-xl border p-3 text-left text-sm font-bold transition ${
+                        form.riscoId === String(risco.id)
+                          ? "border-blue-300 bg-blue-600 text-white"
+                          : "border-slate-700 bg-slate-900 text-slate-200 hover:border-blue-400/60"
+                      }`}
+                    >
+                      <span className="font-black">{risco.codigo}</span>
+                      <span className="ml-2">{risco.nome}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.2em] text-amber-100">
+                  Fatores de risco
+                </h3>
+                <input
+                  className={`${inputClass} mt-3 w-full`}
+                  value={filtroFatores}
+                  onChange={(event) => setFiltroFatores(event.target.value)}
+                  placeholder="Buscar fator por código ou nome"
+                />
+                <div className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
+                  {fatoresFiltrados.map((fator) => {
+                    const marcado = form.fatoresIds.includes(String(fator.id));
+                    return (
+                      <button
+                        key={fator.id}
+                        type="button"
+                        onClick={() => alternarFator(String(fator.id))}
+                        className={`w-full rounded-xl border p-3 text-left text-sm font-bold transition ${
+                          marcado
+                            ? "border-amber-200 bg-amber-300 text-slate-950"
+                            : "border-slate-700 bg-slate-900 text-slate-200 hover:border-amber-300/60"
+                        }`}
+                      >
+                        <span className="font-black">{fator.codigo}</span>
+                        <span className="ml-2">{fator.nome}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1.6fr]">
               <section className="rounded-2xl border border-blue-400/20 bg-blue-500/5 p-4">
                 <h3 className="text-sm font-black uppercase tracking-[0.2em] text-blue-200">
                   Probabilidade
@@ -928,29 +1246,6 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 </div>
               </section>
             </div>
-
-            <label className="mt-4 block rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
-              <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-300">
-                Estratégia de tratamento
-              </span>
-              <select
-                className={`${inputClass} mt-2 w-full`}
-                value={form.estrategiaTratamento}
-                onChange={(event) =>
-                  setForm((atual) => ({
-                    ...atual,
-                    estrategiaTratamento: event.target.value,
-                  }))
-                }
-              >
-                <option value="">Não definida</option>
-                <option value="Mitigar">Mitigar</option>
-                <option value="Aceitar">Aceitar</option>
-                <option value="Transferir">Transferir</option>
-                <option value="Evitar">Evitar</option>
-                <option value="Monitorar">Monitorar</option>
-              </select>
-            </label>
 
             <div className="mt-6 flex justify-end gap-3">
               <button
@@ -1014,6 +1309,87 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 setCorretivos,
               )}
             </div>
+
+            <section className="mt-5 rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.05] p-4">
+              <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.24em] text-cyan-200">
+                    Avaliação residual
+                  </p>
+                  <h3 className="mt-1 text-xl font-black text-white">
+                    Probabilidade, consequência e desempenho residual
+                  </h3>
+                </div>
+                <span
+                  className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${classeRisco(
+                    previaResidual.classificacao,
+                  )}`}
+                >
+                  {previaResidual.classificacao}
+                </span>
+              </div>
+
+              <div className="mt-4 grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
+                <div className="rounded-2xl border border-blue-400/20 bg-blue-500/5 p-4">
+                  <h4 className="text-sm font-black uppercase tracking-[0.2em] text-blue-200">
+                    Probabilidade
+                  </h4>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                    {renderCampoResidual(
+                      "scResidual",
+                      "Severidade da consequência",
+                    )}
+                    {renderCampoResidual(
+                      "feResidual",
+                      "Frequência / Exposição",
+                    )}
+                    {renderCampoResidual("intervaloResidual", "Intensidade")}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-cyan-400/20 bg-cyan-500/5 p-4">
+                  <h4 className="text-sm font-black uppercase tracking-[0.2em] text-cyan-200">
+                    Consequência
+                  </h4>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {renderCampoResidual(
+                      "sseResidual",
+                      "Segurança / Saúde / Meio ambiente",
+                    )}
+                    {renderCampoResidual("opeResidual", "Operação")}
+                    {renderCampoResidual("finResidual", "Financeiro")}
+                    {renderCampoResidual("admResidual", "Ambiental")}
+                    {renderCampoResidual("imgResidual", "Imagem da empresa")}
+                    {renderCampoResidual("lcResidual", "Legal e Compliance")}
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <CardMetrica
+                  titulo="Nota / MPP / %P"
+                  valor={`${previaResidual.notaProbabilidade} / ${previaResidual.probabilidade} / ${Math.round(
+                    previaResidual.percentualProbabilidade * 100,
+                  )}%`}
+                  destaque={previaResidual.nivelProbabilidade}
+                />
+                <CardMetrica
+                  titulo="Nota Conseq. / MPI"
+                  valor={`${previaResidual.notaConsequencia} / ${previaResidual.consequencia}`}
+                  destaque={previaResidual.nivelConsequencia}
+                />
+                <CardMetrica
+                  titulo="Desemp. Prob."
+                  valor={formatarVariacao(
+                    previaResidual.desempenhoProbabilidade,
+                  )}
+                />
+                <CardMetrica
+                  titulo="Desemp. Risco"
+                  valor={formatarVariacao(previaResidual.desempenhoNivelRisco)}
+                />
+              </div>
+            </section>
             <div className="mt-6 flex justify-end gap-3">
               <button
                 type="button"
@@ -1030,6 +1406,15 @@ export default function RiscosAnaliseCompletaDetalhe() {
               >
                 <Save size={16} />
                 Salvar controles
+              </button>
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={salvarAvaliacaoResidual}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500 disabled:opacity-60"
+              >
+                <Save size={16} />
+                Salvar avaliação residual
               </button>
             </div>
           </div>
