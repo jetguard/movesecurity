@@ -46,6 +46,9 @@ const RiscosPontuacoes = lazyWithReload(
   () => import("./pages/RiscosPontuacoes"),
 );
 const PlanosAcao = lazyWithReload(() => import("./pages/PlanosAcao"));
+const PlanoAcaoTratamento = lazyWithReload(
+  () => import("./pages/PlanoAcaoTratamento"),
+);
 const APRs = lazyWithReload(() => import("./pages/APRs"));
 const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
 const Pendencias = lazyWithReload(() => import("./pages/Pendencias"));
@@ -379,6 +382,20 @@ export default function App() {
                   ]}
                 >
                   <PlanosAcao />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="planos-acao/:id"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <PlanoAcaoTratamento />
                 </ProtectedRoute>
               }
             />

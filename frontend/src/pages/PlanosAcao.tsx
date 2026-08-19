@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Edit3, Link2, Plus, Trash2, X } from "lucide-react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 
 type Plano = {
@@ -122,6 +122,7 @@ const vazio = {
 };
 
 export default function PlanosAcao() {
+  const navigate = useNavigate();
   const [planos, setPlanos] = useState<Plano[]>([]);
   const [origens, setOrigens] = useState<OrigensPorModulo>({});
   const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
@@ -227,6 +228,10 @@ export default function PlanosAcao() {
     evento.preventDefault();
     const dados = {
       ...form,
+      descricao: form.comentarios || form.titulo,
+      acaoCorretiva: "",
+      acaoPreventiva: "",
+      evidencia: "",
       origemModulo:
         form.origemModulo === "Independente" ? null : form.origemModulo,
       origemId: form.origemModulo === "Independente" ? null : form.origemId,
@@ -589,33 +594,8 @@ export default function PlanosAcao() {
           )}
 
           <textarea
-            className={`${classeCampo} min-h-24`}
-            placeholder="Descreva o problema, risco ou necessidade que será tratado"
-            value={form.descricao}
-            onChange={(evento) => campo("descricao", evento.target.value)}
-            required
-          />
-          <textarea
-            className={`${classeCampo} min-h-24`}
-            placeholder="Descreva a ação corretiva para resolver o problema identificado"
-            value={form.acaoCorretiva}
-            onChange={(evento) => campo("acaoCorretiva", evento.target.value)}
-          />
-          <textarea
-            className={`${classeCampo} min-h-24`}
-            placeholder="Descreva a ação preventiva para evitar recorrência"
-            value={form.acaoPreventiva}
-            onChange={(evento) => campo("acaoPreventiva", evento.target.value)}
-          />
-          <input
-            className={classeCampo}
-            placeholder="Informe o link ou descreva a evidência de conclusão"
-            value={form.evidencia}
-            onChange={(evento) => campo("evidencia", evento.target.value)}
-          />
-          <textarea
             className={`${classeCampo} min-h-20`}
-            placeholder="Comentários complementares sobre a execução do plano"
+            placeholder="Observações complementares"
             value={form.comentarios}
             onChange={(evento) => campo("comentarios", evento.target.value)}
           />
@@ -639,7 +619,18 @@ export default function PlanosAcao() {
           const origemPlano = origemDoPlano(plano);
 
           return (
-            <div key={plano.id} className={`${classeCard} p-5`}>
+            <div
+              key={plano.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => navigate(`/planos-acao/${plano.id}`)}
+              onKeyDown={(evento) => {
+                if (evento.key === "Enter" || evento.key === " ") {
+                  navigate(`/planos-acao/${plano.id}`);
+                }
+              }}
+              className={`${classeCard} cursor-pointer p-5 transition hover:border-blue-300 hover:shadow-lg hover:shadow-blue-950/10 dark:hover:border-blue-500/50`}
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-blue-600">
@@ -699,13 +690,19 @@ export default function PlanosAcao() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => editar(plano)}
+                    onClick={(evento) => {
+                      evento.stopPropagation();
+                      editar(plano);
+                    }}
                     className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500"
                   >
                     <Edit3 size={16} /> Editar
                   </button>
                   <button
-                    onClick={() => excluir(plano)}
+                    onClick={(evento) => {
+                      evento.stopPropagation();
+                      excluir(plano);
+                    }}
                     className="flex items-center gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-500 hover:text-white dark:text-red-200"
                   >
                     <Trash2 size={16} /> Excluir
@@ -718,9 +715,11 @@ export default function PlanosAcao() {
                   style={{ width: `${plano.percentual}%` }}
                 />
               </div>
-              <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">
-                {plano.descricao}
-              </p>
+              {plano.comentarios && (
+                <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">
+                  {plano.comentarios}
+                </p>
+              )}
             </div>
           );
         })}

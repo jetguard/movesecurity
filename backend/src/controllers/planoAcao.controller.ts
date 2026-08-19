@@ -187,7 +187,38 @@ function apresentarPlano(plano: any) {
     ...plano,
     status: normalizarStatusPlano(plano.status),
     mediadores: parseListaJson<MediadorPlano>(plano.mediadoresJson),
+    anexosTratamento: parseListaJson<AnexoTratamentoPlano>(plano.evidencia),
   };
+}
+
+type AnexoTratamentoPlano = {
+  nomeOriginal: string;
+  nomeArquivo: string;
+  caminho: string;
+  tipo: string;
+  tamanho: number;
+  criadoEm: string;
+};
+
+function anexosDoRequest(req: AuthRequest): AnexoTratamentoPlano[] {
+  const arquivos = (req.files || []) as Express.Multer.File[];
+  return arquivos.map((arquivo) => ({
+    nomeOriginal: arquivo.originalname,
+    nomeArquivo: arquivo.filename,
+    caminho: arquivo.path.replace(/\\/g, "/"),
+    tipo: arquivo.mimetype,
+    tamanho: arquivo.size,
+    criadoEm: new Date().toISOString(),
+  }));
+}
+
+function evidenciaComAnexos(
+  anterior: string | null | undefined,
+  novos: AnexoTratamentoPlano[],
+) {
+  const anexosAtuais = parseListaJson<AnexoTratamentoPlano>(anterior);
+  if (!novos.length) return JSON.stringify(anexosAtuais);
+  return JSON.stringify([...anexosAtuais, ...novos]);
 }
 
 export async function listarPlanosAcao(req: AuthRequest, res: Response) {
@@ -203,6 +234,32 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao listar planos de acao" });
+  }
+}
+
+export async function buscarPlanoAcao(req: AuthRequest, res: Response) {
+  try {
+    const plano = await prisma.planoAcaoCorporativo.findFirst({
+      where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+      },
+    });
+    if (!plano) {
+      return res.status(404).json({ error: "Plano de acao nao encontrado" });
+    }
+
+    let arc: any = null;
+    if (plano.origemModulo === "AnaliseRisco" && plano.origemId) {
+      arc = await prisma.analiseRiscoCompleta.findFirst({
+        where: { id: plano.origemId, unidade: req.unidadeAtiva },
+      });
+    }
+
+    return res.json({ plano: apresentarPlano(plano), arc });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao buscar plano de acao" });
   }
 }
 
@@ -330,12 +387,13 @@ export async function listarOrigensPlanoAcao(req: AuthRequest, res: Response) {
 
 export async function criarPlanoAcao(req: AuthRequest, res: Response) {
   try {
-    const { titulo, descricao, prazo } = req.body;
-    if (!titulo || !descricao || !prazo) {
-      return res
-        .status(400)
-        .json({ error: "Informe titulo, descricao e prazo." });
+    const { titulo, prazo } = req.body;
+    if (!titulo || !prazo) {
+      return res.status(400).json({ error: "Informe titulo e prazo." });
     }
+    const comentarios = textoObrigatorio(req.body.comentarios);
+    const descricao =
+      textoObrigatorio(req.body.descricao) || comentarios || titulo;
 
     const ano = new Date().getFullYear();
     const ultimo = await prisma.planoAcaoCorporativo.findFirst({
@@ -375,7 +433,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         prazo: new Date(prazo),
         concluidoEm: status === "Concluido" ? new Date() : null,
         evidencia: req.body.evidencia,
-        comentarios: req.body.comentarios,
+        comentarios,
       },
       include: {
         responsavel: { select: { id: true, nome: true, apelido: true } },
@@ -447,7 +505,10 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         prioridade: req.body.prioridade,
         status,
         percentual,
-        descricao: req.body.descricao,
+        descricao:
+          textoObrigatorio(req.body.descricao) ||
+          textoObrigatorio(req.body.comentarios) ||
+          anterior.descricao,
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
         ...responsavel,
@@ -455,7 +516,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         prazo: req.body.prazo ? new Date(req.body.prazo) : anterior.prazo,
         concluidoEm: status === "Concluido" ? new Date() : null,
         evidencia: req.body.evidencia,
-        comentarios: req.body.comentarios,
+        comentarios: textoObrigatorio(req.body.comentarios),
       },
       include: {
         responsavel: { select: { id: true, nome: true, apelido: true } },
@@ -478,6 +539,63 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         error instanceof Error
           ? error.message
           : "Erro ao atualizar plano de acao",
+    });
+  }
+}
+
+export async function tratarPlanoAcao(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.planoAcaoCorporativo.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior) {
+      return res.status(404).json({ error: "Plano de acao nao encontrado" });
+    }
+
+    const status = normalizarStatusPlano(req.body.status || anterior.status);
+    const percentual =
+      status === "Concluido"
+        ? 100
+        : Math.max(
+            0,
+            Math.min(
+              100,
+              Number(req.body.percentual || anterior.percentual || 0),
+            ),
+          );
+    const comentarios = textoObrigatorio(req.body.comentarios);
+    const anexos = anexosDoRequest(req);
+
+    const plano = await prisma.planoAcaoCorporativo.update({
+      where: { id },
+      data: {
+        status,
+        percentual,
+        comentarios: comentarios || anterior.comentarios,
+        evidencia: evidenciaComAnexos(anterior.evidencia, anexos),
+        concluidoEm: status === "Concluido" ? new Date() : null,
+      },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: `Tratamento de plano de acao ${plano.codigo}`,
+      tipoRegistro: "PlanoAcao",
+      registroId: plano.id,
+      dadosAnteriores: anterior,
+      dadosNovos: plano,
+    });
+
+    return res.json(apresentarPlano(plano));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error:
+        error instanceof Error ? error.message : "Erro ao tratar plano de acao",
     });
   }
 }
