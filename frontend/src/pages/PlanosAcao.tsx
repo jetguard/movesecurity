@@ -186,9 +186,6 @@ export default function PlanosAcao() {
       [nome]: valor,
       ...(nome === "origemModulo" ? { origemId: "", fatorRiscoId: "" } : {}),
       ...(nome === "origemId" ? { fatorRiscoId: "" } : {}),
-      ...(nome === "status"
-        ? { percentual: valor === "Concluido" ? "100" : "0" }
-        : {}),
       ...(nome === "responsavelId"
         ? {
             mediadoresIds: atual.mediadoresIds.filter(
@@ -708,12 +705,6 @@ export default function PlanosAcao() {
                     <Trash2 size={16} /> Excluir
                   </button>
                 </div>
-              </div>
-              <div className="mt-4 h-2 rounded bg-slate-100 dark:bg-slate-800">
-                <div
-                  className="h-2 rounded bg-emerald-600"
-                  style={{ width: `${plano.percentual}%` }}
-                />
               </div>
               {plano.comentarios && (
                 <p className="mt-3 text-sm text-slate-700 dark:text-slate-300">

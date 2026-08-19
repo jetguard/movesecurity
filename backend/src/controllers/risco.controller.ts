@@ -1524,11 +1524,7 @@ function planoAcaoConcluido(plano: PlanoFatorResumo) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-  return (
-    status === "concluido" ||
-    (plano.percentual || 0) >= 100 ||
-    !!plano.concluidoEm
-  );
+  return status === "concluido" || !!plano.concluidoEm;
 }
 
 function resumirPlanosPorFator(planos: PlanoFatorResumo[]) {

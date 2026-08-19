@@ -47,6 +47,9 @@ type AnaliseCompletaPdf = {
   detectivos: ItemNome[];
   corretivos: ItemNome[];
   planosAcao?: PlanoAcaoPdf[];
+  totalFatoresTratativa?: number;
+  fatoresConcluidosTratativa?: number;
+  percentualConclusaoTratativa?: number;
   sc: number;
   fe: number;
   intervalo: number;
@@ -352,27 +355,6 @@ function novaPaginaPlanos(
   return 152;
 }
 
-function desenharBarraProgresso(
-  doc: PDFKit.PDFDocument,
-  percentual: number,
-  x: number,
-  y: number,
-  width: number,
-  color: string,
-) {
-  const valor = Math.max(0, Math.min(Number(percentual || 0), 100));
-  doc.roundedRect(x, y, width, 9, 4.5).fillColor("#e2e8f0").fill();
-  doc
-    .roundedRect(x, y, (width * valor) / 100, 9, 4.5)
-    .fillColor(color)
-    .fill();
-  doc
-    .fillColor(pdfTheme.primary)
-    .font("Helvetica-Bold")
-    .fontSize(8)
-    .text(`${valor}%`, x + width + 8, y - 1, { width: 38 });
-}
-
 function nomesMediadores(plano: PlanoAcaoPdf) {
   const nomes = (plano.mediadores || [])
     .map((mediador) => texto(mediador.nome))
@@ -387,11 +369,7 @@ function desenharPlanoAcao(
   yInicial: number,
 ) {
   const campos = [
-    ["Descrição", plano.descricao],
-    ["Ação corretiva", plano.acaoCorretiva],
-    ["Ação preventiva", plano.acaoPreventiva],
-    ["Evidência", plano.evidencia],
-    ["Comentários", plano.comentarios],
+    ["Observações / tratamento registrado", plano.comentarios],
   ].filter(([, valor]) => textoPreenchido(valor));
 
   const larguraTexto = larguraConteudo - 34;
@@ -471,15 +449,6 @@ function desenharPlanoAcao(
       lineBreak: false,
       ellipsis: true,
     });
-  desenharBarraProgresso(
-    doc,
-    Number(plano.percentual || 0),
-    margemX + 588,
-    y + 56,
-    104,
-    cor,
-  );
-
   let cursorY = y + 92;
   campos.forEach(([rotulo, valor]) => {
     const conteudo = `${rotulo}: ${textoPreenchido(valor)}`;
@@ -540,15 +509,20 @@ function secaoPlanosAcao(doc: PDFKit.PDFDocument, analise: AnaliseCompletaPdf) {
   const atrasados = planos.filter(
     (plano) => statusPlano(plano) === "Em atraso",
   ).length;
-  const progressoMedio = Math.round(
-    planos.reduce((soma, plano) => soma + Number(plano.percentual || 0), 0) /
-      Math.max(1, total),
-  );
+  const progressoArc = Number(analise.percentualConclusaoTratativa || 0);
 
   campo(doc, "Planos cadastrados", total, 42, y, 170, pdfTheme.primary);
   campo(doc, "Concluídos", concluidos, 222, y, 170, "#10b981");
   campo(doc, "Em atraso", atrasados, 402, y, 170, "#dc2626");
-  campo(doc, "Progresso médio", `${progressoMedio}%`, 582, y, 218, "#2563eb");
+  campo(
+    doc,
+    "Conclusão da ARC",
+    `${progressoArc}% (${analise.fatoresConcluidosTratativa || 0}/${analise.totalFatoresTratativa || 0} fatores)`,
+    582,
+    y,
+    218,
+    "#2563eb",
+  );
   y += 70;
 
   planos.forEach((plano) => {
@@ -694,23 +668,43 @@ export function gerarAnaliseCompletaPdf(
       .fillColor("#0f172a")
       .font("Helvetica-Bold")
       .fontSize(9)
-      .text(`Decisão: ${analise.finalizacaoDecisao || "Não definida"}`, 58, yFinalizacao + 30, {
-        width: 210,
-      })
-      .text(`Aprovador: ${analise.finalizacaoAprovadorNome || "Não informado"}`, 282, yFinalizacao + 30, {
-        width: 230,
-      })
-      .text(`Data: ${analise.finalizadaEm ? formatarData(analise.finalizadaEm) : "Pendente"}`, 530, yFinalizacao + 30, {
-        width: 130,
-      });
+      .text(
+        `Decisão: ${analise.finalizacaoDecisao || "Não definida"}`,
+        58,
+        yFinalizacao + 30,
+        {
+          width: 210,
+        },
+      )
+      .text(
+        `Aprovador: ${analise.finalizacaoAprovadorNome || "Não informado"}`,
+        282,
+        yFinalizacao + 30,
+        {
+          width: 230,
+        },
+      )
+      .text(
+        `Data: ${analise.finalizadaEm ? formatarData(analise.finalizadaEm) : "Pendente"}`,
+        530,
+        yFinalizacao + 30,
+        {
+          width: 130,
+        },
+      );
     doc
       .fillColor("#475569")
       .font("Helvetica")
       .fontSize(8)
-      .text(`Justificativa: ${analise.finalizacaoJustificativa || "-"}`, 58, yFinalizacao + 48, {
-        width: larguraConteudo - 32,
-        lineGap: 1,
-      });
+      .text(
+        `Justificativa: ${analise.finalizacaoJustificativa || "-"}`,
+        58,
+        yFinalizacao + 48,
+        {
+          width: larguraConteudo - 32,
+          lineGap: 1,
+        },
+      );
   }
 
   const yGraficos = temFinalizacao ? 380 : 322;

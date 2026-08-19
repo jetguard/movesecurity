@@ -408,9 +408,7 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     const responsavel = await responsavelDoPlano(req);
     const mediadores = await mediadoresDoPlano(req);
     const percentual =
-      status === "Concluido" || status === "Concluído"
-        ? 100
-        : Number(req.body.percentual || 0);
+      status === "Concluido" || status === "Concluído" ? 100 : 0;
 
     const plano = await prisma.planoAcaoCorporativo.create({
       data: {
@@ -492,9 +490,7 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
     const responsavel = await responsavelDoPlano(req);
     const mediadores = await mediadoresDoPlano(req);
     const percentual =
-      status === "Concluido" || status === "Concluído"
-        ? 100
-        : Number(req.body.percentual || 0);
+      status === "Concluido" || status === "Concluído" ? 100 : 0;
     const plano = await prisma.planoAcaoCorporativo.update({
       where: { id: Number(id) },
       data: {
@@ -554,16 +550,7 @@ export async function tratarPlanoAcao(req: AuthRequest, res: Response) {
     }
 
     const status = normalizarStatusPlano(req.body.status || anterior.status);
-    const percentual =
-      status === "Concluido"
-        ? 100
-        : Math.max(
-            0,
-            Math.min(
-              100,
-              Number(req.body.percentual || anterior.percentual || 0),
-            ),
-          );
+    const percentual = status === "Concluido" ? 100 : 0;
     const comentarios = textoObrigatorio(req.body.comentarios);
     const anexos = anexosDoRequest(req);
 

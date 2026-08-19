@@ -85,7 +85,6 @@ export default function PlanoAcaoTratamento() {
   const [popupAberto, setPopupAberto] = useState(false);
   const [form, setForm] = useState({
     status: "Pendente",
-    percentual: "0",
     comentarios: "",
   });
   const [arquivos, setArquivos] = useState<File[]>([]);
@@ -100,7 +99,6 @@ export default function PlanoAcaoTratamento() {
       setArc(resposta.data.arc);
       setForm({
         status: normalizarStatus(resposta.data.plano.status),
-        percentual: String(resposta.data.plano.percentual || 0),
         comentarios: resposta.data.plano.comentarios || "",
       });
     } catch (error: any) {
@@ -125,7 +123,6 @@ export default function PlanoAcaoTratamento() {
     setForm((atual) => ({
       ...atual,
       status,
-      percentual: status === "Concluido" ? "100" : atual.percentual,
     }));
   }
 
@@ -138,7 +135,6 @@ export default function PlanoAcaoTratamento() {
     try {
       const dados = new FormData();
       dados.append("status", form.status);
-      dados.append("percentual", form.percentual);
       dados.append("comentarios", form.comentarios);
       arquivos.forEach((arquivo) => dados.append("anexos", arquivo));
       const resposta = await api.post(`/planos-acao/${id}/tratamento`, dados, {
@@ -147,7 +143,6 @@ export default function PlanoAcaoTratamento() {
       setPlano(resposta.data);
       setForm({
         status: normalizarStatus(resposta.data.status),
-        percentual: String(resposta.data.percentual || 0),
         comentarios: resposta.data.comentarios || "",
       });
       setArquivos([]);
@@ -275,18 +270,6 @@ export default function PlanoAcaoTratamento() {
                 </p>
               </div>
             </div>
-            <div className="mt-5">
-              <div className="flex items-center justify-between text-xs font-black text-slate-300">
-                <span>Progresso do tratamento</span>
-                <span>{plano.percentual || 0}%</span>
-              </div>
-              <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-800">
-                <div
-                  className="h-full rounded-full bg-emerald-400"
-                  style={{ width: `${plano.percentual || 0}%` }}
-                />
-              </div>
-            </div>
             <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
               <p className="text-xs font-black uppercase text-slate-400">
                 Observações registradas
@@ -407,7 +390,7 @@ export default function PlanoAcaoTratamento() {
               </button>
             </div>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="mt-5">
               <label className="space-y-1 text-sm font-bold text-slate-200">
                 Status
                 <select
@@ -419,22 +402,6 @@ export default function PlanoAcaoTratamento() {
                   <option value="Em andamento">Em andamento</option>
                   <option value="Concluido">Concluído</option>
                 </select>
-              </label>
-              <label className="space-y-1 text-sm font-bold text-slate-200">
-                Percentual
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-400"
-                  value={form.percentual}
-                  onChange={(evento) =>
-                    setForm((atual) => ({
-                      ...atual,
-                      percentual: evento.target.value,
-                    }))
-                  }
-                />
               </label>
             </div>
 
