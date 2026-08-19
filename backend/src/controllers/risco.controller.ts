@@ -1626,6 +1626,30 @@ function normalizarEstrategiaTratamento(valor: unknown) {
   return permitidos.includes(estrategia) ? estrategia : null;
 }
 
+function normalizarStatusFinalizacao(valor: unknown) {
+  const status = textoObrigatorio(valor) || "Finalizada";
+  const permitidos = [
+    "Aberta",
+    "Finalizada",
+    "Finalizada com risco aceito",
+    "Finalizada com monitoramento",
+    "Reaberta para novo tratamento",
+  ];
+  return permitidos.includes(status) ? status : "Finalizada";
+}
+
+function normalizarDecisaoFinal(valor: unknown) {
+  const decisao = textoObrigatorio(valor);
+  const permitidos = [
+    "Mitigar",
+    "Aceitar",
+    "Transferir",
+    "Evitar",
+    "Monitorar",
+  ];
+  return permitidos.includes(decisao) ? decisao : null;
+}
+
 function normalizarDataPrazo(valor: unknown) {
   const texto = textoObrigatorio(valor);
   if (!texto) return null;
@@ -2006,6 +2030,87 @@ export async function atualizarTratativaAnaliseCompletaRisco(
   } catch (error: any) {
     const mensagem =
       error?.message || "Erro ao atualizar tratativa da análise completa.";
+    console.error(error);
+    return res.status(500).json({ error: mensagem });
+  }
+}
+
+export async function finalizarAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+
+    const decisao = normalizarDecisaoFinal(req.body.finalizacaoDecisao);
+    if (!decisao) {
+      return res.status(400).json({ error: "Selecione a decisão final." });
+    }
+
+    const justificativa = textoObrigatorio(req.body.finalizacaoJustificativa);
+    if (!justificativa) {
+      return res
+        .status(400)
+        .json({ error: "Informe a justificativa da decisão final." });
+    }
+
+    const statusFinalizacao = normalizarStatusFinalizacao(
+      req.body.finalizacaoStatus,
+    );
+    const aprovadorId =
+      normalizarId(req.body.finalizacaoAprovadorId) || req.usuarioId || null;
+    const aprovador = aprovadorId
+      ? await prisma.usuario.findUnique({
+          where: { id: aprovadorId },
+          select: { id: true, nome: true },
+        })
+      : null;
+    const finalizada =
+      statusFinalizacao === "Reaberta para novo tratamento" ? null : new Date();
+
+    const registro = await prisma.analiseRiscoCompleta.update({
+      where: { id },
+      data: {
+        estrategiaTratamento: decisao,
+        finalizacaoStatus: statusFinalizacao,
+        finalizacaoDecisao: decisao,
+        finalizacaoJustificativa: justificativa,
+        finalizacaoAprovadorId: aprovador?.id || aprovadorId,
+        finalizacaoAprovadorNome:
+          aprovador?.nome ||
+          textoObrigatorio(req.body.finalizacaoAprovadorNome) ||
+          null,
+        finalizacaoObservacoes:
+          textoObrigatorio(req.body.finalizacaoObservacoes) || null,
+        finalizadaEm: finalizada,
+        tratativaStatus:
+          statusFinalizacao === "Reaberta para novo tratamento"
+            ? "Reprovada / Reaberta"
+            : "Concluída",
+        tratativaConcluidaEm: finalizada,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Finalização da análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(apresentarAnaliseCompleta(registro));
+  } catch (error: any) {
+    const mensagem =
+      error?.message || "Erro ao finalizar análise completa de risco.";
     console.error(error);
     return res.status(500).json({ error: mensagem });
   }

@@ -14,6 +14,7 @@ import {
   FileBarChart,
   FolderOpen,
   Gauge,
+  GitBranch,
   LayoutDashboard,
   LogOut,
   ScrollText,
@@ -720,6 +721,10 @@ export default function AdminLayout() {
                   <Link to="/riscos/dashboard" className={subItem}>
                     <LayoutDashboard size={16} />
                     Dashboard
+                  </Link>
+                  <Link to="/riscos/fluxograma" className={subItem}>
+                    <GitBranch size={16} />
+                    Fluxograma
                   </Link>
                   <Link to="/riscos/cadastro-geral" className={subItem}>
                     <Columns3 size={16} />

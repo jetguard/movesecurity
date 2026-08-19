@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import {
   BarChart3,
   BrainCircuit,
+  CheckCircle2,
   ChevronDown,
   ClipboardList,
   FileText,
@@ -126,6 +127,12 @@ type AnaliseCompleta = {
   tratativaEvidencia?: string | null;
   tratativaValidacao?: string | null;
   tratativaConcluidaEm?: string | null;
+  finalizacaoStatus?: string | null;
+  finalizacaoDecisao?: string | null;
+  finalizacaoJustificativa?: string | null;
+  finalizacaoAprovadorNome?: string | null;
+  finalizacaoObservacoes?: string | null;
+  finalizadaEm?: string | null;
   createdAt: string;
 };
 
@@ -165,6 +172,13 @@ type ResidualFormulario = {
 
 type CampoResidual = keyof ResidualFormulario;
 
+type FinalizacaoFormulario = {
+  finalizacaoStatus: string;
+  finalizacaoDecisao: string;
+  finalizacaoJustificativa: string;
+  finalizacaoObservacoes: string;
+};
+
 const cadastroVazio: CadastroGeral = {
   macroProcessos: [],
   riscos: [],
@@ -199,6 +213,13 @@ const residualInicial: ResidualFormulario = {
   admResidual: 1,
   imgResidual: 1,
   lcResidual: 1,
+};
+
+const finalizacaoInicial: FinalizacaoFormulario = {
+  finalizacaoStatus: "Finalizada",
+  finalizacaoDecisao: "",
+  finalizacaoJustificativa: "",
+  finalizacaoObservacoes: "",
 };
 
 const camposProbabilidade: Array<{
@@ -418,6 +439,12 @@ export default function RiscosAnaliseCompleta() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [controlesEditando, setControlesEditando] =
     useState<AnaliseCompleta | null>(null);
+  const [finalizacaoEditando, setFinalizacaoEditando] =
+    useState<AnaliseCompleta | null>(null);
+  const [finalizacao, setFinalizacao] =
+    useState<FinalizacaoFormulario>(finalizacaoInicial);
+  const [mensagemFinalizacao, setMensagemFinalizacao] = useState("");
+  const [erroFinalizacao, setErroFinalizacao] = useState("");
   const [preventivos, setPreventivos] = useState<string[]>([]);
   const [detectivos, setDetectivos] = useState<string[]>([]);
   const [corretivos, setCorretivos] = useState<string[]>([]);
@@ -825,6 +852,19 @@ export default function RiscosAnaliseCompleta() {
     });
   }
 
+  function abrirFinalizacao(analise: AnaliseCompleta) {
+    setFinalizacaoEditando(analise);
+    setMensagemFinalizacao("");
+    setErroFinalizacao("");
+    setFinalizacao({
+      finalizacaoStatus: analise.finalizacaoStatus || "Finalizada",
+      finalizacaoDecisao:
+        analise.finalizacaoDecisao || analise.estrategiaTratamento || "",
+      finalizacaoJustificativa: analise.finalizacaoJustificativa || "",
+      finalizacaoObservacoes: analise.finalizacaoObservacoes || "",
+    });
+  }
+
   function adicionarControle(
     busca: string,
     prefixo: "CP" | "CD" | "CC",
@@ -899,6 +939,29 @@ export default function RiscosAnaliseCompleta() {
       setErroControles(
         error?.response?.data?.error ||
           "Não foi possível salvar a avaliação residual.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarFinalizacao() {
+    if (!finalizacaoEditando) return;
+    setSalvando(true);
+    setMensagemFinalizacao("");
+    setErroFinalizacao("");
+    try {
+      const response = await api.patch(
+        `/riscos/analise-completa/${finalizacaoEditando.id}/finalizacao`,
+        finalizacao,
+      );
+      setFinalizacaoEditando(response.data);
+      setMensagemFinalizacao("ARC finalizada com sucesso.");
+      setMensagem("ARC finalizada com sucesso.");
+      carregar().catch(() => undefined);
+    } catch (error: any) {
+      setErroFinalizacao(
+        error?.response?.data?.error || "Não foi possível finalizar a ARC.",
       );
     } finally {
       setSalvando(false);
@@ -1758,6 +1821,15 @@ export default function RiscosAnaliseCompleta() {
                       <p className="mt-1.5 inline-flex rounded-full border border-purple-400/25 bg-purple-500/10 px-2.5 py-1 text-[11px] font-black text-purple-100">
                         {analise.estrategiaTratamento || "Não definida"}
                       </p>
+                      <p
+                        className={`mt-1.5 inline-flex rounded-full border px-2.5 py-1 text-[11px] font-black ${
+                          analise.finalizadaEm
+                            ? "border-emerald-300/35 bg-emerald-400/10 text-emerald-100"
+                            : "border-slate-600 bg-slate-800/80 text-slate-300"
+                        }`}
+                      >
+                        {analise.finalizacaoStatus || "Aberta"}
+                      </p>
                       <p className="mt-1.5 text-xs font-bold leading-5 text-slate-300">
                         {analise.periodicidadeAcao}
                       </p>
@@ -1826,6 +1898,17 @@ export default function RiscosAnaliseCompleta() {
                           <ClipboardList size={14} />
                           Plano de ação
                         </Link>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            abrirFinalizacao(analise);
+                          }}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-cyan-400/10 px-3 py-1.5 text-xs font-black text-cyan-100 hover:bg-cyan-400/20"
+                        >
+                          <CheckCircle2 size={14} />
+                          Finalizar ARC
+                        </button>
                         <button
                           type="button"
                           onClick={(event) => {
@@ -2319,6 +2402,146 @@ export default function RiscosAnaliseCompleta() {
                 className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500"
               >
                 Concluir seleção
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {finalizacaoEditando && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-2xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.3em] text-cyan-300">
+                  Finalização da ARC
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  {finalizacaoEditando.codigo}
+                </h2>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  {finalizacaoEditando.riscoCodigo} -{" "}
+                  {finalizacaoEditando.riscoNome}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFinalizacaoEditando(null)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {(mensagemFinalizacao || erroFinalizacao) && (
+              <div
+                className={`mt-5 rounded-xl border px-4 py-3 text-sm font-black shadow-lg ${
+                  erroFinalizacao
+                    ? "border-red-400/50 bg-red-500/15 text-red-100"
+                    : "border-emerald-400/50 bg-emerald-500/15 text-emerald-100"
+                }`}
+              >
+                {erroFinalizacao || mensagemFinalizacao}
+              </div>
+            )}
+
+            <div className="mt-5 grid gap-4 rounded-2xl border border-slate-800 bg-slate-950/70 p-4 sm:grid-cols-2">
+              <label className="text-sm font-black text-slate-200">
+                Decisão final
+                <select
+                  className={`${inputClass} mt-2 w-full`}
+                  value={finalizacao.finalizacaoDecisao}
+                  onChange={(event) =>
+                    setFinalizacao((atual) => ({
+                      ...atual,
+                      finalizacaoDecisao: event.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="">Selecione</option>
+                  <option value="Mitigar">Mitigar</option>
+                  <option value="Aceitar">Aceitar</option>
+                  <option value="Transferir">Transferir</option>
+                  <option value="Evitar">Evitar</option>
+                  <option value="Monitorar">Monitorar</option>
+                </select>
+              </label>
+              <label className="text-sm font-black text-slate-200">
+                Status final
+                <select
+                  className={`${inputClass} mt-2 w-full`}
+                  value={finalizacao.finalizacaoStatus}
+                  onChange={(event) =>
+                    setFinalizacao((atual) => ({
+                      ...atual,
+                      finalizacaoStatus: event.target.value,
+                    }))
+                  }
+                >
+                  <option value="Finalizada">Finalizada</option>
+                  <option value="Finalizada com risco aceito">
+                    Finalizada com risco aceito
+                  </option>
+                  <option value="Finalizada com monitoramento">
+                    Finalizada com monitoramento
+                  </option>
+                  <option value="Reaberta para novo tratamento">
+                    Reaberta para novo tratamento
+                  </option>
+                </select>
+              </label>
+              <label className="sm:col-span-2 text-sm font-black text-slate-200">
+                Justificativa da decisão
+                <textarea
+                  className={`${inputClass} mt-2 min-h-28 w-full`}
+                  value={finalizacao.finalizacaoJustificativa}
+                  onChange={(event) =>
+                    setFinalizacao((atual) => ({
+                      ...atual,
+                      finalizacaoJustificativa: event.target.value,
+                    }))
+                  }
+                  placeholder="Ex.: Risco residual classificado como menor após controles e planos concluídos."
+                />
+              </label>
+              <label className="sm:col-span-2 text-sm font-black text-slate-200">
+                Observações finais
+                <textarea
+                  className={`${inputClass} mt-2 min-h-20 w-full`}
+                  value={finalizacao.finalizacaoObservacoes}
+                  onChange={(event) =>
+                    setFinalizacao((atual) => ({
+                      ...atual,
+                      finalizacaoObservacoes: event.target.value,
+                    }))
+                  }
+                  placeholder="Observações complementares, ressalvas ou monitoramentos."
+                />
+              </label>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-blue-400/20 bg-blue-500/10 p-4 text-sm font-bold leading-6 text-blue-100">
+              A aprovação será registrada com o usuário logado. A estratégia da
+              ARC será gravada somente nesta finalização.
+            </div>
+
+            <div className="mt-5 flex flex-col justify-end gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setFinalizacaoEditando(null)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 hover:text-white"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={salvarFinalizacao}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:opacity-60"
+              >
+                <CheckCircle2 size={16} />
+                Confirmar finalização
               </button>
             </div>
           </div>

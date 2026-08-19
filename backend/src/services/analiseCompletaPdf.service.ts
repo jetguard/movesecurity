@@ -67,6 +67,12 @@ type AnaliseCompletaPdf = {
   classificacaoRisco: string;
   periodicidadeAcao: string;
   estrategiaTratamento?: string | null;
+  finalizacaoStatus?: string | null;
+  finalizacaoDecisao?: string | null;
+  finalizacaoJustificativa?: string | null;
+  finalizacaoAprovadorNome?: string | null;
+  finalizacaoObservacoes?: string | null;
+  finalizadaEm?: Date | string | null;
   notaProbabilidadeResidual?: number | null;
   probabilidadeResidual?: number | null;
   percentualProbabilidadeResidual?: number | null;
@@ -669,8 +675,52 @@ export function gerarAnaliseCompletaPdf(
     corResidual,
   );
 
+  const temFinalizacao =
+    !!analise.finalizacaoDecisao || !!analise.finalizacaoJustificativa;
+  if (temFinalizacao) {
+    const yFinalizacao = 292;
+    doc
+      .roundedRect(42, yFinalizacao, larguraConteudo, 72, 10)
+      .fillColor("#f8fafc")
+      .fill()
+      .strokeColor("#dbeafe")
+      .stroke();
+    doc
+      .fillColor(pdfTheme.primary)
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .text("Decisão final da ARC", 58, yFinalizacao + 12);
+    doc
+      .fillColor("#0f172a")
+      .font("Helvetica-Bold")
+      .fontSize(9)
+      .text(`Decisão: ${analise.finalizacaoDecisao || "Não definida"}`, 58, yFinalizacao + 30, {
+        width: 210,
+      })
+      .text(`Aprovador: ${analise.finalizacaoAprovadorNome || "Não informado"}`, 282, yFinalizacao + 30, {
+        width: 230,
+      })
+      .text(`Data: ${analise.finalizadaEm ? formatarData(analise.finalizadaEm) : "Pendente"}`, 530, yFinalizacao + 30, {
+        width: 130,
+      });
+    doc
+      .fillColor("#475569")
+      .font("Helvetica")
+      .fontSize(8)
+      .text(`Justificativa: ${analise.finalizacaoJustificativa || "-"}`, 58, yFinalizacao + 48, {
+        width: larguraConteudo - 32,
+        lineGap: 1,
+      });
+  }
+
+  const yGraficos = temFinalizacao ? 380 : 322;
+  const yTituloGraficos = yGraficos + 16;
+  const yBarra1 = yGraficos + 44;
+  const yBarra2 = yGraficos + 83;
+  const yDesempenho = yGraficos + 136;
+
   doc
-    .roundedRect(42, 322, larguraConteudo, 118, 10)
+    .roundedRect(42, yGraficos, larguraConteudo, 118, 10)
     .fillColor("#ffffff")
     .fill()
     .strokeColor("#dbeafe")
@@ -679,14 +729,14 @@ export function gerarAnaliseCompletaPdf(
     .fillColor(pdfTheme.primary)
     .font("Helvetica-Bold")
     .fontSize(11)
-    .text("Gráficos comparativos", 58, 338);
+    .text("Gráficos comparativos", 58, yTituloGraficos);
   barra(
     doc,
     "Risco inerente",
     analise.resultadoInerente,
     25,
     58,
-    366,
+    yBarra1,
     300,
     corInerente,
   );
@@ -696,7 +746,7 @@ export function gerarAnaliseCompletaPdf(
     analise.resultadoResidual,
     25,
     58,
-    405,
+    yBarra2,
     300,
     corResidual,
   );
@@ -706,7 +756,7 @@ export function gerarAnaliseCompletaPdf(
     analise.probabilidadeResidual,
     5,
     430,
-    366,
+    yBarra1,
     300,
     corResidual,
   );
@@ -716,7 +766,7 @@ export function gerarAnaliseCompletaPdf(
     analise.consequenciaResidual,
     5,
     430,
-    405,
+    yBarra2,
     300,
     corResidual,
   );
@@ -726,7 +776,7 @@ export function gerarAnaliseCompletaPdf(
     "Desempenho probabilidade",
     variacao(analise.desempenhoProbabilidade),
     42,
-    458,
+    yDesempenho,
     180,
   );
   campo(
@@ -734,7 +784,7 @@ export function gerarAnaliseCompletaPdf(
     "Desempenho consequência",
     variacao(analise.desempenhoConsequencia),
     232,
-    458,
+    yDesempenho,
     180,
   );
   campo(
@@ -742,10 +792,17 @@ export function gerarAnaliseCompletaPdf(
     "Desempenho nível de risco",
     variacao(analise.desempenhoNivelRisco),
     422,
-    458,
+    yDesempenho,
     180,
   );
-  campo(doc, "Periodicidade / ação", analise.periodicidadeAcao, 612, 458, 188);
+  campo(
+    doc,
+    "Periodicidade / ação",
+    analise.periodicidadeAcao,
+    612,
+    yDesempenho,
+    188,
+  );
 
   doc.addPage();
   desenharCabecalhoPadrao(doc, {

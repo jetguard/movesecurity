@@ -28,6 +28,7 @@ import {
   excluirMacroProcessoRisco,
   excluirRiscoCadastroGeral,
   excluirSetorRisco,
+  finalizarAnaliseCompletaRisco,
   gerarPdfAnaliseCompletaRisco,
   gerarPdfRisco,
   listarAnalisesCompletasRisco,
@@ -123,6 +124,12 @@ router.patch(
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   atualizarTratativaAnaliseCompletaRisco,
+);
+router.patch(
+  "/analise-completa/:id/finalizacao",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  finalizarAnaliseCompletaRisco,
 );
 router.get(
   "/analise-completa/:id/pdf",

@@ -33,6 +33,9 @@ const RiscosCadastroGeral = lazyWithReload(
   () => import("./pages/RiscosCadastroGeral"),
 );
 const RiscosDashboard = lazyWithReload(() => import("./pages/RiscosDashboard"));
+const RiscosFluxograma = lazyWithReload(
+  () => import("./pages/RiscosFluxograma"),
+);
 const RiscosAnaliseCompleta = lazyWithReload(
   () => import("./pages/RiscosAnaliseCompleta"),
 );
@@ -412,6 +415,20 @@ export default function App() {
                   ]}
                 >
                   <RiscosDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="riscos/fluxograma"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                  ]}
+                >
+                  <RiscosFluxograma />
                 </ProtectedRoute>
               }
             />

@@ -981,6 +981,13 @@ model AnaliseRiscoCompleta {
   tratativaEvidencia              String?
   tratativaValidacao              String?
   tratativaConcluidaEm            DateTime?
+  finalizacaoStatus               String    @default("Aberta")
+  finalizacaoDecisao              String?
+  finalizacaoJustificativa        String?
+  finalizacaoAprovadorId          Int?
+  finalizacaoAprovadorNome        String?
+  finalizacaoObservacoes          String?
+  finalizadaEm                    DateTime?
   status                          String    @default("Ativo")
   createdAt                       DateTime  @default(now())
   updatedAt                       DateTime  @updatedAt
