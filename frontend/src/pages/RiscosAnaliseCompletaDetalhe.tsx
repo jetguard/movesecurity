@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
+  Ban,
   BarChart3,
   CheckCircle2,
   ClipboardList,
@@ -12,11 +13,13 @@ import {
   Settings,
   ShieldCheck,
   Target,
+  Trash2,
   X,
 } from "lucide-react";
 import { PdfLightbox } from "../components/ui/PdfLightbox";
 import { api } from "../services/api";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
+import { podeAdministrar, podeSuperAdmin } from "../utils/permissoes";
 
 type Controle = {
   id?: number | null;
@@ -106,6 +109,7 @@ type Arc = {
   finalizacaoAprovadorNome?: string | null;
   finalizacaoObservacoes?: string | null;
   finalizadaEm?: string | null;
+  status?: string | null;
   totalFatoresTratativa?: number;
   fatoresConcluidosTratativa?: number;
   percentualConclusaoTratativa?: number;
@@ -189,6 +193,7 @@ function etiqueta(item: Controle) {
 
 function classeRisco(valor?: string | null) {
   const texto = String(valor || "").toUpperCase();
+  if (texto.includes("ANUL")) return "bg-red-600 text-white";
   if (texto.includes("EXTREMO")) return "bg-red-500 text-white";
   if (texto.includes("ALTO") || texto.includes("SEVERO"))
     return "bg-orange-500 text-white";
@@ -236,6 +241,7 @@ function CardMetrica({
 
 export default function RiscosAnaliseCompletaDetalhe() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [arc, setArc] = useState<Arc | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -250,6 +256,8 @@ export default function RiscosAnaliseCompletaDetalhe() {
   const [modalEdicao, setModalEdicao] = useState(false);
   const [modalControles, setModalControles] = useState(false);
   const [modalFinalizacao, setModalFinalizacao] = useState(false);
+  const [modalAnulacao, setModalAnulacao] = useState(false);
+  const [justificativaAnulacao, setJustificativaAnulacao] = useState("");
   const [form, setForm] = useState<FormularioArc>({
     sc: 1,
     fe: 1,
@@ -301,9 +309,18 @@ export default function RiscosAnaliseCompletaDetalhe() {
 
   const status = useMemo(() => {
     if (!arc) return "Carregando";
+    if (
+      String(arc.finalizacaoStatus || arc.status || "")
+        .toUpperCase()
+        .includes("ANUL")
+    )
+      return "Anulada";
     if (arc.finalizadaEm) return "Finalizada";
     return arc.finalizacaoStatus || "Aberta";
   }, [arc]);
+
+  const usuarioPodeExcluirArc = podeSuperAdmin();
+  const usuarioPodeAnularArc = podeAdministrar();
 
   function pontuacao(valor: number) {
     return Math.min(Math.max(Math.trunc(Number(valor) || 1), 1), 5);
@@ -634,6 +651,68 @@ export default function RiscosAnaliseCompletaDetalhe() {
     }
   }
 
+  async function anularArc() {
+    if (!arc) return;
+    const justificativa = justificativaAnulacao.trim();
+    if (!justificativa) {
+      setErro("Informe a justificativa da anulação.");
+      return;
+    }
+
+    const pinOperacional = await solicitarPinOperacional(
+      "Confirme seu PIN operacional para anular esta ARC.",
+    );
+    if (!pinOperacional) return;
+
+    setSalvando(true);
+    setErro("");
+    setMensagem("");
+    try {
+      const response = await api.patch(
+        `/riscos/analise-completa/${arc.id}/anular`,
+        {
+          justificativa,
+          pinOperacional,
+        },
+      );
+      setArc(response.data);
+      setModalAnulacao(false);
+      setJustificativaAnulacao("");
+      setMensagem(
+        "ARC anulada com sucesso. Planos de ação vinculados foram anulados.",
+      );
+    } catch (error: any) {
+      setErro(error?.response?.data?.error || "Não foi possível anular a ARC.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function excluirArc() {
+    if (!arc) return;
+    const confirmar = window.confirm(
+      `Excluir definitivamente a ${arc.codigo}? Esta ação também exclui os planos de ação vinculados.`,
+    );
+    if (!confirmar) return;
+
+    setSalvando(true);
+    setErro("");
+    setMensagem("");
+    try {
+      await api.delete(`/riscos/analise-completa/${arc.id}`);
+      navigate("/riscos/analise-completa", {
+        replace: true,
+        state: { mensagem: "ARC excluída com sucesso." },
+      });
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error || "Não foi possível excluir a ARC.",
+      );
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function abrirPdf() {
     if (!arc) return;
     setErro("");
@@ -915,27 +994,28 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 <ClipboardList size={18} />
                 Plano de ação
               </Link>
-              {arc.finalizadaEm ? (
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={reabrirArc}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-sm font-black text-amber-100 hover:bg-amber-400/20 disabled:opacity-60"
-                >
-                  <LockKeyholeOpen size={18} />
-                  Reabrir ARC
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={salvando}
-                  onClick={abrirFinalizacao}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 text-sm font-black text-cyan-100 hover:bg-cyan-400/20 disabled:opacity-60"
-                >
-                  <CheckCircle2 size={18} />
-                  Finalizar ARC
-                </button>
-              )}
+              {status !== "Anulada" &&
+                (arc.finalizadaEm ? (
+                  <button
+                    type="button"
+                    disabled={salvando}
+                    onClick={reabrirArc}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-sm font-black text-amber-100 hover:bg-amber-400/20 disabled:opacity-60"
+                  >
+                    <LockKeyholeOpen size={18} />
+                    Reabrir ARC
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={salvando}
+                    onClick={abrirFinalizacao}
+                    className="inline-flex items-center gap-2 rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 text-sm font-black text-cyan-100 hover:bg-cyan-400/20 disabled:opacity-60"
+                  >
+                    <CheckCircle2 size={18} />
+                    Finalizar ARC
+                  </button>
+                ))}
               <button
                 type="button"
                 onClick={abrirPdf}
@@ -944,6 +1024,33 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 <FileText size={18} />
                 PDF
               </button>
+              {usuarioPodeAnularArc && status !== "Anulada" && (
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={() => {
+                    setErro("");
+                    setMensagem("");
+                    setJustificativaAnulacao("");
+                    setModalAnulacao(true);
+                  }}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-orange-300/35 bg-orange-500/10 px-4 py-3 text-sm font-black text-orange-100 hover:bg-orange-500/20 disabled:opacity-60"
+                >
+                  <Ban size={18} />
+                  Anular ARC
+                </button>
+              )}
+              {usuarioPodeExcluirArc && (
+                <button
+                  type="button"
+                  disabled={salvando}
+                  onClick={excluirArc}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-red-300/35 bg-red-600/10 px-4 py-3 text-sm font-black text-red-100 hover:bg-red-600/20 disabled:opacity-60"
+                >
+                  <Trash2 size={18} />
+                  Excluir ARC
+                </button>
+              )}
             </div>
           </div>
         </header>
@@ -1605,6 +1712,65 @@ export default function RiscosAnaliseCompletaDetalhe() {
               >
                 <CheckCircle2 size={16} />
                 Finalizar ARC
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalAnulacao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur">
+          <div className="w-full max-w-2xl rounded-3xl border border-orange-300/25 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.28em] text-orange-300">
+                  Anular ARC
+                </p>
+                <h2 className="mt-2 text-2xl font-black text-white">
+                  {arc.codigo}
+                </h2>
+                <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+                  A anulação também marcará os planos de ação vinculados como
+                  anulados. Esta ação exige justificativa e confirmação por PIN.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalAnulacao(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 hover:text-white"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <label className="mt-5 block text-sm font-black text-slate-100">
+              Justificativa da anulação
+              <textarea
+                className={`${inputClass} mt-2 min-h-36 w-full py-3 leading-6`}
+                value={justificativaAnulacao}
+                onChange={(event) =>
+                  setJustificativaAnulacao(event.target.value)
+                }
+                placeholder="Descreva o motivo da anulação da ARC."
+              />
+            </label>
+
+            <div className="mt-6 flex flex-col justify-end gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setModalAnulacao(false)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-100 hover:border-slate-500"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={salvando}
+                onClick={anularArc}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-500 disabled:opacity-60"
+              >
+                <Ban size={16} />
+                Confirmar anulação
               </button>
             </div>
           </div>

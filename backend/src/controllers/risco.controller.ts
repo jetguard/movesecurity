@@ -1,6 +1,6 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
-import { AuthRequest } from "../middlewares/auth";
+import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { gerarAnaliseCompletaPdf } from "../services/analiseCompletaPdf.service";
 import { registrarLog } from "../services/auditoria.service";
 import { validarPinOperacional } from "../services/pinOperacional.service";
@@ -2306,7 +2306,7 @@ export async function reabrirAnaliseCompletaRisco(
   }
 }
 
-export async function excluirAnaliseCompletaRisco(
+export async function anularAnaliseCompletaRisco(
   req: AuthRequest,
   res: Response,
 ) {
@@ -2320,14 +2320,137 @@ export async function excluirAnaliseCompletaRisco(
         .status(404)
         .json({ error: "Análise completa não encontrada." });
 
-    await prisma.analiseRiscoCompleta.delete({ where: { id } });
+    if (
+      ![PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(
+        req.usuarioPerfil || "",
+      )
+    ) {
+      return res
+        .status(403)
+        .json({ error: "Somente administradores podem anular ARC." });
+    }
+
+    if (!req.usuarioId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+
+    await validarPinOperacional(
+      req.usuarioId,
+      String(req.body?.pinOperacional || ""),
+    );
+
+    const justificativa = textoObrigatorio(req.body?.justificativa);
+    if (!justificativa) {
+      return res
+        .status(400)
+        .json({ error: "Informe a justificativa da anulação." });
+    }
+
+    const usuario = req.usuarioId
+      ? await prisma.usuario.findUnique({
+          where: { id: req.usuarioId },
+          select: { id: true, nome: true },
+        })
+      : null;
+    const agora = new Date();
+
+    const [registro, planosAtualizados] = await prisma.$transaction([
+      prisma.analiseRiscoCompleta.update({
+        where: { id },
+        data: {
+          status: "Anulado",
+          finalizacaoStatus: "Anulada",
+          finalizacaoDecisao: "Anulada",
+          finalizacaoJustificativa: justificativa,
+          finalizacaoAprovadorId: usuario?.id || req.usuarioId || null,
+          finalizacaoAprovadorNome: usuario?.nome || null,
+          finalizacaoObservacoes: `ARC anulada em ${agora.toISOString()}. Justificativa: ${justificativa}`,
+          finalizadaEm: agora,
+          tratativaStatus: "Anulada",
+          tratativaConcluidaEm: agora,
+        },
+      }),
+      prisma.planoAcaoCorporativo.updateMany({
+        where: {
+          unidade: req.unidadeAtiva,
+          origemModulo: "AnaliseRisco",
+          origemId: id,
+        },
+        data: {
+          status: "Anulado",
+          comentarios: `Plano de ação anulado junto com a ARC ${anterior.codigo}. Justificativa: ${justificativa}`,
+        },
+      }),
+    ]);
+
+    await registrarLog({
+      req,
+      acao: "Anulação de análise completa de risco",
+      tipoRegistro: "AnaliseRiscoCompleta",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: {
+        ...registro,
+        planosAcaoAnulados: planosAtualizados.count,
+      },
+    });
+
+    const planos = await listarPlanosDaAnaliseCompleta(req.unidadeAtiva, id);
+    return res.json(apresentarAnaliseCompleta(registro, planos));
+  } catch (error: any) {
+    const status = error?.status || 500;
+    const mensagem =
+      error?.message || "Erro ao anular análise completa de risco.";
+    console.error(error);
+    return res.status(status).json({ error: mensagem });
+  }
+}
+
+export async function excluirAnaliseCompletaRisco(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    if (req.usuarioPerfil !== PERFIS.SUPER_ADMIN) {
+      return res
+        .status(403)
+        .json({ error: "Somente super_admin pode excluir ARC." });
+    }
+
+    const id = Number(req.params.id);
+    const anterior = await prisma.analiseRiscoCompleta.findFirst({
+      where: { id, unidade: req.unidadeAtiva },
+    });
+    if (!anterior)
+      return res
+        .status(404)
+        .json({ error: "Análise completa não encontrada." });
+
+    const planosVinculados = await prisma.planoAcaoCorporativo.findMany({
+      where: {
+        unidade: req.unidadeAtiva,
+        origemModulo: "AnaliseRisco",
+        origemId: id,
+      },
+    });
+
+    await prisma.$transaction([
+      prisma.planoAcaoCorporativo.deleteMany({
+        where: {
+          unidade: req.unidadeAtiva,
+          origemModulo: "AnaliseRisco",
+          origemId: id,
+        },
+      }),
+      prisma.analiseRiscoCompleta.delete({ where: { id } }),
+    ]);
 
     await registrarLog({
       req,
       acao: "Exclusão de análise completa de risco",
       tipoRegistro: "AnaliseRiscoCompleta",
       registroId: id,
-      dadosAnteriores: anterior,
+      dadosAnteriores: { ...anterior, planosAcaoVinculados: planosVinculados },
     });
 
     return res.status(204).send();

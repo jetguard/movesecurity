@@ -12,6 +12,7 @@ import {
   atualizarMacroProcessoRisco,
   atualizarRiscoCadastroGeral,
   atualizarSetorRisco,
+  anularAnaliseCompletaRisco,
   buscarVinculoRisco,
   criarCatalogoRisco,
   criarAnaliseCompletaRisco,
@@ -138,6 +139,12 @@ router.patch(
   autenticarUsuario,
   autorizarPerfis(acessoAnalise),
   reabrirAnaliseCompletaRisco,
+);
+router.patch(
+  "/analise-completa/:id/anular",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  anularAnaliseCompletaRisco,
 );
 router.get(
   "/analise-completa/:id/pdf",
