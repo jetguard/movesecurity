@@ -1096,13 +1096,13 @@ export default function RiscosAnaliseCompletaDetalhe() {
           />
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-2">
+        <section className="grid gap-4 xl:grid-cols-[0.75fr_1.25fr]">
           <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5">
             <div className="flex items-center gap-3">
               <BarChart3 className="text-blue-200" size={22} />
               <h2 className="text-xl font-black">Avaliação inerente</h2>
             </div>
-            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <CardMetrica
                 titulo="Probabilidade"
                 valor={arc.mediaProbabilidade}
@@ -1114,17 +1114,13 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 valor={arc.mediaConsequencia}
                 destaque={arc.nivelConsequencia}
               />
-              <CardMetrica
-                titulo="Estratégia"
-                valor={arc.estrategiaTratamento || "Não definida"}
-              />
             </div>
           </div>
 
           <div className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5">
             <div className="flex items-center gap-3">
               <ShieldCheck className="text-emerald-200" size={22} />
-              <h2 className="text-xl font-black">Controles vinculados</h2>
+              <h2 className="text-xl font-black">Controles</h2>
             </div>
             <div className="mt-4 grid gap-3 md:grid-cols-3">
               {[

@@ -174,7 +174,9 @@ async function mediadoresDoPlano(req: AuthRequest) {
   });
 
   if (mediadores.length !== unicos.length) {
-    throw new Error("Um ou mais mediadores selecionados não foram encontrados.");
+    throw new Error(
+      "Um ou mais mediadores selecionados não foram encontrados.",
+    );
   }
 
   return mediadores;
@@ -379,6 +381,22 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         responsavel: { select: { id: true, nome: true, apelido: true } },
       },
     });
+
+    const origemId = normalizarId(req.body.origemId);
+    if (req.body.origemModulo === "AnaliseRisco" && origemId) {
+      await prisma.analiseRiscoCompleta.updateMany({
+        where: {
+          id: origemId,
+          unidade: req.unidadeAtiva,
+          finalizadaEm: null,
+          finalizacaoStatus: { not: "Anulada" },
+        },
+        data: {
+          finalizacaoStatus: "Em Andamento",
+          tratativaStatus: "Em andamento",
+        },
+      });
+    }
 
     await registrarLog({
       req,
