@@ -268,6 +268,9 @@ export default function RiscosAnaliseCompletaDetalhe() {
   const [preventivos, setPreventivos] = useState<string[]>([]);
   const [detectivos, setDetectivos] = useState<string[]>([]);
   const [corretivos, setCorretivos] = useState<string[]>([]);
+  const [buscaPreventivo, setBuscaPreventivo] = useState("");
+  const [buscaDetectivo, setBuscaDetectivo] = useState("");
+  const [buscaCorretivo, setBuscaCorretivo] = useState("");
   const [residual, setResidual] = useState<ResidualFormulario>(residualInicial);
   const [finalizacao, setFinalizacao] = useState<FinalizacaoFormulario>({
     finalizacaoStatus: "Finalizada",
@@ -474,6 +477,9 @@ export default function RiscosAnaliseCompletaDetalhe() {
       setPreventivos(arc.preventivos.map((item) => String(item.id || "")));
       setDetectivos(arc.detectivos.map((item) => String(item.id || "")));
       setCorretivos(arc.corretivos.map((item) => String(item.id || "")));
+      setBuscaPreventivo("");
+      setBuscaDetectivo("");
+      setBuscaCorretivo("");
       setResidual({
         scResidual: pontuacao(arc.scResidual || residualInicial.scResidual),
         feResidual: pontuacao(arc.feResidual || residualInicial.feResidual),
@@ -565,41 +571,16 @@ export default function RiscosAnaliseCompletaDetalhe() {
           preventivos: itensSelecionados(preventivos),
           detectivos: itensSelecionados(detectivos),
           corretivos: itensSelecionados(corretivos),
-        },
-      );
-      setArc(response.data);
-      setMensagem("Controles salvos com sucesso.");
-    } catch (error: any) {
-      setErro(
-        error?.response?.data?.error || "Não foi possível salvar os controles.",
-      );
-    } finally {
-      setSalvando(false);
-    }
-  }
-
-  async function salvarAvaliacaoResidual() {
-    if (!arc) return;
-    setSalvando(true);
-    setErro("");
-    setMensagem("");
-    try {
-      const response = await api.patch(
-        `/riscos/analise-completa/${arc.id}/controles`,
-        {
-          preventivos: itensSelecionados(preventivos),
-          detectivos: itensSelecionados(detectivos),
-          corretivos: itensSelecionados(corretivos),
           ...residual,
         },
       );
       setArc(response.data);
       setModalControles(false);
-      setMensagem("Avaliação residual salva com sucesso.");
+      setMensagem("Controles e avaliação residual salvos com sucesso.");
     } catch (error: any) {
       setErro(
         error?.response?.data?.error ||
-          "Não foi possível salvar a avaliação residual.",
+          "Não foi possível salvar os controles e a avaliação residual.",
       );
     } finally {
       setSalvando(false);
@@ -737,8 +718,51 @@ export default function RiscosAnaliseCompletaDetalhe() {
     tipo: "CP" | "CD" | "CC",
     selecionados: string[],
     setSelecionados: (ids: string[]) => void,
+    busca: string,
+    setBusca: (valor: string) => void,
   ) {
     const controles = controlesPorTipo(tipo);
+    const selecionadosDetalhe = itensSelecionados(selecionados);
+    const datalistId = `controles-${tipo.toLowerCase()}-${titulo
+      .toLowerCase()
+      .replace(/\s+/g, "-")}`;
+    const termo = busca.trim().toLowerCase();
+    const sugestoes = controles
+      .filter((controle) =>
+        `${controle.codigo || ""} ${controle.nome} ${controle.descricao || ""}`
+          .toLowerCase()
+          .includes(termo),
+      )
+      .slice(0, 12);
+
+    function localizarControle() {
+      if (!termo) return null;
+      return (
+        controles.find((controle) => {
+          const codigo = String(controle.codigo || "").toLowerCase();
+          const nome = controle.nome.toLowerCase();
+          const texto = etiqueta(controle).toLowerCase();
+          return codigo === termo || nome === termo || texto === termo;
+        }) ||
+        controles.find((controle) =>
+          `${controle.codigo || ""} ${controle.nome}`
+            .toLowerCase()
+            .includes(termo),
+        ) ||
+        null
+      );
+    }
+
+    function adicionarControle() {
+      const controle = localizarControle();
+      const idControle = String(controle?.id || "");
+      if (!idControle) return;
+      if (!selecionados.includes(idControle)) {
+        setSelecionados([...selecionados, idControle]);
+      }
+      setBusca("");
+    }
+
     return (
       <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
         <div className="flex items-center justify-between">
@@ -747,33 +771,67 @@ export default function RiscosAnaliseCompletaDetalhe() {
             {selecionados.length}
           </span>
         </div>
-        <div className="mt-3 max-h-64 space-y-2 overflow-auto pr-1">
-          {controles.map((controle) => {
+
+        <div className="mt-3 flex gap-2">
+          <input
+            className={`${inputClass} min-w-0 flex-1`}
+            list={datalistId}
+            value={busca}
+            onChange={(event) => setBusca(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                adicionarControle();
+              }
+            }}
+            placeholder={`Digite ${tipo}001 ou o nome`}
+          />
+          <datalist id={datalistId}>
+            {sugestoes.map((controle) => (
+              <option key={controle.id} value={etiqueta(controle)} />
+            ))}
+          </datalist>
+          <button
+            type="button"
+            onClick={adicionarControle}
+            className="rounded-xl bg-blue-600 px-4 text-sm font-black text-white transition hover:bg-blue-500"
+          >
+            Adicionar
+          </button>
+        </div>
+
+        <div className="mt-3 grid max-h-44 gap-2 overflow-auto pr-1">
+          {selecionadosDetalhe.map((controle) => {
             const idControle = String(controle.id || "");
             return (
-              <label
+              <div
                 key={`${tipo}-${idControle}`}
-                className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm font-bold text-slate-100 transition hover:border-blue-400/50"
+                className="flex items-center justify-between gap-3 rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm font-bold text-slate-100"
               >
-                <input
-                  type="checkbox"
-                  className="mt-1 h-4 w-4"
-                  checked={selecionados.includes(idControle)}
-                  onChange={(event) => {
+                <span className="min-w-0 truncate">{etiqueta(controle)}</span>
+                <button
+                  type="button"
+                  onClick={() =>
                     setSelecionados(
-                      event.target.checked
-                        ? [...selecionados, idControle]
-                        : selecionados.filter((item) => item !== idControle),
-                    );
-                  }}
-                />
-                <span>{etiqueta(controle)}</span>
-              </label>
+                      selecionados.filter((item) => item !== idControle),
+                    )
+                  }
+                  className="shrink-0 rounded-lg border border-slate-700 p-1 text-slate-300 transition hover:border-red-400 hover:text-red-200"
+                  aria-label={`Remover ${etiqueta(controle)}`}
+                >
+                  <X size={14} />
+                </button>
+              </div>
             );
           })}
           {!controles.length && (
             <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-300">
               Nenhum controle {tipo} cadastrado em Cadastro Geral.
+            </p>
+          )}
+          {controles.length > 0 && !selecionadosDetalhe.length && (
+            <p className="rounded-xl bg-slate-900 p-3 text-sm font-bold text-slate-300">
+              Nenhum controle selecionado.
             </p>
           )}
         </div>
@@ -1295,18 +1353,24 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 "CP",
                 preventivos,
                 setPreventivos,
+                buscaPreventivo,
+                setBuscaPreventivo,
               )}
               {renderSelecaoControles(
                 "Detectivo",
                 "CD",
                 detectivos,
                 setDetectivos,
+                buscaDetectivo,
+                setBuscaDetectivo,
               )}
               {renderSelecaoControles(
                 "Corretivo",
                 "CC",
                 corretivos,
                 setCorretivos,
+                buscaCorretivo,
+                setBuscaCorretivo,
               )}
             </div>
 
@@ -1402,19 +1466,10 @@ export default function RiscosAnaliseCompletaDetalhe() {
                 type="button"
                 disabled={salvando}
                 onClick={salvarControles}
-                className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:opacity-60"
-              >
-                <Save size={16} />
-                Salvar controles
-              </button>
-              <button
-                type="button"
-                disabled={salvando}
-                onClick={salvarAvaliacaoResidual}
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white hover:bg-blue-500 disabled:opacity-60"
               >
                 <Save size={16} />
-                Salvar avaliação residual
+                Salvar
               </button>
             </div>
           </div>
