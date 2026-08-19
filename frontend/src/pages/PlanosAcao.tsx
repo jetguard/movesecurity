@@ -1,6 +1,6 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import { ClipboardList, Edit3, Link2, Plus, Trash2, X } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
 
 type Plano = {
@@ -329,12 +329,20 @@ export default function PlanosAcao() {
             registro que originou o plano.
           </p>
         </div>
-        <button
-          onClick={novo}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-500 sm:w-auto"
-        >
-          <Plus size={18} /> Novo Plano
-        </button>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <Link
+            to="/riscos/analise-completa"
+            className="flex items-center justify-center gap-2 rounded-lg border border-blue-300/50 bg-blue-50 px-4 py-2 font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/30 dark:bg-blue-500/10 dark:text-blue-100 dark:hover:bg-blue-500/20"
+          >
+            Ver análises
+          </Link>
+          <button
+            onClick={novo}
+            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-500"
+          >
+            <Plus size={18} /> Novo Plano
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
