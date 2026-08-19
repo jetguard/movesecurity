@@ -747,9 +747,7 @@ export async function atualizarControlePreventivoCadastro(
     );
     const tiposReplicar: TipoControle[] = Array.from(
       new Set(replicarTipos),
-    ).filter(
-      (tipo) => tipo !== tipoControle,
-    );
+    ).filter((tipo) => tipo !== tipoControle);
     if (!dados.nome)
       return res.status(400).json({ error: "Informe o nome do controle." });
     const anterior = await prisma.controlePreventivoCadastro.findUnique({
@@ -1519,6 +1517,19 @@ type PlanoFatorResumo = {
   comentarios?: string | null;
 };
 
+function planoAcaoConcluido(plano: PlanoFatorResumo) {
+  const status = String(plano.status || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  return (
+    status === "concluido" ||
+    (plano.percentual || 0) >= 100 ||
+    !!plano.concluidoEm
+  );
+}
+
 function resumirPlanosPorFator(planos: PlanoFatorResumo[]) {
   const mapa = new Map<number, { total: number; concluidos: number }>();
   for (const plano of planos) {
@@ -1528,7 +1539,7 @@ function resumirPlanosPorFator(planos: PlanoFatorResumo[]) {
       concluidos: 0,
     };
     atual.total += 1;
-    if (plano.status === "Concluido" || plano.status === "Concluído") {
+    if (planoAcaoConcluido(plano)) {
       atual.concluidos += 1;
     }
     mapa.set(plano.fatorRiscoId, atual);
@@ -2064,6 +2075,64 @@ export async function finalizarAnaliseCompletaRisco(
     const statusFinalizacao = normalizarStatusFinalizacao(
       req.body.finalizacaoStatus,
     );
+    if (statusFinalizacao !== "Reaberta para novo tratamento") {
+      const planos = await prisma.planoAcaoCorporativo.findMany({
+        where: {
+          unidade: req.unidadeAtiva,
+          origemModulo: "AnaliseRisco",
+          origemId: id,
+        },
+        select: {
+          codigo: true,
+          titulo: true,
+          fatorRiscoId: true,
+          fatorRiscoCodigo: true,
+          fatorRiscoNome: true,
+          status: true,
+          percentual: true,
+          concluidoEm: true,
+        },
+      });
+      const planosAbertos = planos.filter(
+        (plano) => !planoAcaoConcluido(plano),
+      );
+      if (planosAbertos.length) {
+        const exemplos = planosAbertos
+          .slice(0, 4)
+          .map(
+            (plano) =>
+              `${plano.codigo} (${plano.status || "sem status"} - ${
+                plano.percentual || 0
+              }%)`,
+          )
+          .join(", ");
+        return res.status(400).json({
+          error: `Não é possível finalizar a ARC. Existem planos de ação ainda em aberto: ${exemplos}.`,
+        });
+      }
+
+      const fatores = parseListaJson<FatorAnaliseCompleta>(
+        anterior.fatoresRiscoJson,
+      );
+      const fatoresComPlanoConcluido = new Set(
+        planos
+          .filter((plano) => planoAcaoConcluido(plano) && plano.fatorRiscoId)
+          .map((plano) => plano.fatorRiscoId),
+      );
+      const fatoresSemPlanoConcluido = fatores.filter((fator) => {
+        const fatorId = normalizarId(fator.id);
+        return fatorId && !fatoresComPlanoConcluido.has(fatorId);
+      });
+      if (fatoresSemPlanoConcluido.length) {
+        const exemplos = fatoresSemPlanoConcluido
+          .slice(0, 4)
+          .map((fator) => fator.codigo || fator.nome)
+          .join(", ");
+        return res.status(400).json({
+          error: `Não é possível finalizar a ARC. Existem fatores de risco sem plano de ação concluído: ${exemplos}.`,
+        });
+      }
+    }
     const aprovadorId =
       normalizarId(req.body.finalizacaoAprovadorId) || req.usuarioId || null;
     const aprovador = aprovadorId

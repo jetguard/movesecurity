@@ -376,8 +376,7 @@ function RoscaConclusao({
   total?: number;
 }) {
   const valor = Math.max(0, Math.min(100, Math.round(percentual || 0)));
-  const cor =
-    valor >= 100 ? "#34d399" : valor >= 50 ? "#60a5fa" : "#fbbf24";
+  const cor = valor >= 100 ? "#34d399" : valor >= 50 ? "#60a5fa" : "#fbbf24";
 
   return (
     <div className="flex items-center gap-3">
@@ -428,8 +427,7 @@ export default function RiscosAnaliseCompleta() {
   const [cadastro, setCadastro] = useState<CadastroGeral>(cadastroVazio);
   const [analises, setAnalises] = useState<AnaliseCompleta[]>([]);
   const [form, setForm] = useState<Formulario>(formularioInicial);
-  const [formularioAnaliseAberto, setFormularioAnaliseAberto] =
-    useState(false);
+  const [formularioAnaliseAberto, setFormularioAnaliseAberto] = useState(false);
   const [analiseEditando, setAnaliseEditando] =
     useState<AnaliseCompleta | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -1153,6 +1151,12 @@ export default function RiscosAnaliseCompleta() {
     );
   }
 
+  const finalizacaoBloqueada =
+    !!finalizacaoEditando &&
+    finalizacao.finalizacaoStatus !== "Reaberta para novo tratamento" &&
+    (finalizacaoEditando.totalFatoresTratativa || 0) > 0 &&
+    (finalizacaoEditando.percentualConclusaoTratativa || 0) < 100;
+
   return (
     <div className="min-h-[calc(100vh-5rem)] bg-slate-950 px-4 py-6 text-white sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1800px]">
@@ -1201,7 +1205,11 @@ export default function RiscosAnaliseCompleta() {
                 resumoAnalises.residuais,
                 "Avaliação preenchida",
               ],
-              ["Com controles", resumoAnalises.comControles, "Controles vinculados"],
+              [
+                "Com controles",
+                resumoAnalises.comControles,
+                "Controles vinculados",
+              ],
             ].map(([titulo, valor, detalhe]) => (
               <div
                 key={String(titulo)}
@@ -1256,8 +1264,8 @@ export default function RiscosAnaliseCompleta() {
                     : "Cadastrar nova análise completa"}
                 </h2>
                 <p className="mt-1 text-sm font-semibold text-slate-300">
-                  Abra para preencher macro processo, risco, fatores e
-                  avaliação inerente.
+                  Abra para preencher macro processo, risco, fatores e avaliação
+                  inerente.
                 </p>
               </div>
             </div>
@@ -1281,355 +1289,368 @@ export default function RiscosAnaliseCompleta() {
               onSubmit={salvarAnalise}
               className="border-t border-slate-800 p-4 sm:p-5"
             >
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <span className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3 text-blue-200">
-                <BrainCircuit size={22} />
-              </span>
-              <div>
-                <h2 className="text-xl font-black text-white">
-                  {analiseEditando
-                    ? `Editando ${analiseEditando.codigo}`
-                    : "Nova análise completa"}
-                </h2>
-                <p className="mt-1 text-sm font-semibold text-slate-300">
-                  Identificação, fatores e pontuação inerente em um fluxo único.
-                </p>
-              </div>
-            </div>
-            <span
-              className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
-            >
-              Prévia: {previa.nivel} / NRI {previa.resultado}
-            </span>
-          </div>
-
-          <div className="mt-5 grid gap-4 xl:grid-cols-3">
-            <label className="text-sm font-black text-slate-200">
-              Macro Processo
-              <select
-                className={`${inputClass} mt-2 w-full`}
-                value={form.macroProcessoId}
-                onChange={(event) =>
-                  setForm((atual) => ({
-                    ...atual,
-                    macroProcessoId: event.target.value,
-                    setorId: "",
-                  }))
-                }
-                required
-              >
-                <option value="">Selecione</option>
-                {cadastro.macroProcessos.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.codigo} - {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="text-sm font-black text-slate-200">
-              Setor
-              <select
-                className={`${inputClass} mt-2 w-full`}
-                value={form.setorId}
-                onChange={(event) =>
-                  setForm((atual) => ({
-                    ...atual,
-                    setorId: event.target.value,
-                  }))
-                }
-                required
-                disabled={!form.macroProcessoId}
-              >
-                <option value="">Selecione</option>
-                {setoresDisponiveis.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nome}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-sm font-black text-white">Risco</p>
-                <p className="mt-1 text-xs font-semibold text-slate-300">
-                  Busque pelo código ou nome. Esta análise permite selecionar
-                  somente um risco principal.
-                </p>
-              </div>
-              <span
-                className={`w-fit rounded-full border px-3 py-2 text-xs font-black ${
-                  riscoSelecionado
-                    ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
-                    : "border-amber-400/30 bg-amber-500/10 text-amber-100"
-                }`}
-              >
-                {riscoSelecionado ? "1 risco selecionado" : "Seleção pendente"}
-              </span>
-            </div>
-
-            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-              <label className="relative min-w-0 flex-1">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-                  size={16}
-                />
-                <input
-                  className={`${inputClass} w-full pl-10`}
-                  value={filtroRiscos}
-                  onChange={(event) => setFiltroRiscos(event.target.value)}
-                  placeholder="Digite R001, número ou palavra-chave"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => setSeletorRiscoAberto(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
-              >
-                <ListPlus size={16} />
-                Busca detalhada
-              </button>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-              {riscoSelecionado ? (
-                <div className="flex flex-col gap-3 rounded-xl border border-blue-400/30 bg-blue-500/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 rounded-2xl border border-slate-800 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="rounded-2xl border border-blue-400/30 bg-blue-500/10 p-3 text-blue-200">
+                    <BrainCircuit size={22} />
+                  </span>
                   <div>
-                    <p className="text-sm font-black text-blue-100">
-                      {riscoSelecionado.codigo} - {riscoSelecionado.nome}
+                    <h2 className="text-xl font-black text-white">
+                      {analiseEditando
+                        ? `Editando ${analiseEditando.codigo}`
+                        : "Nova análise completa"}
+                    </h2>
+                    <p className="mt-1 text-sm font-semibold text-slate-300">
+                      Identificação, fatores e pontuação inerente em um fluxo
+                      único.
+                    </p>
+                  </div>
+                </div>
+                <span
+                  className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
+                >
+                  Prévia: {previa.nivel} / NRI {previa.resultado}
+                </span>
+              </div>
+
+              <div className="mt-5 grid gap-4 xl:grid-cols-3">
+                <label className="text-sm font-black text-slate-200">
+                  Macro Processo
+                  <select
+                    className={`${inputClass} mt-2 w-full`}
+                    value={form.macroProcessoId}
+                    onChange={(event) =>
+                      setForm((atual) => ({
+                        ...atual,
+                        macroProcessoId: event.target.value,
+                        setorId: "",
+                      }))
+                    }
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    {cadastro.macroProcessos.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.codigo} - {item.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="text-sm font-black text-slate-200">
+                  Setor
+                  <select
+                    className={`${inputClass} mt-2 w-full`}
+                    value={form.setorId}
+                    onChange={(event) =>
+                      setForm((atual) => ({
+                        ...atual,
+                        setorId: event.target.value,
+                      }))
+                    }
+                    required
+                    disabled={!form.macroProcessoId}
+                  >
+                    <option value="">Selecione</option>
+                    {setoresDisponiveis.map((item) => (
+                      <option key={item.id} value={item.id}>
+                        {item.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-white">Risco</p>
+                    <p className="mt-1 text-xs font-semibold text-slate-300">
+                      Busque pelo código ou nome. Esta análise permite
+                      selecionar somente um risco principal.
+                    </p>
+                  </div>
+                  <span
+                    className={`w-fit rounded-full border px-3 py-2 text-xs font-black ${
+                      riscoSelecionado
+                        ? "border-emerald-400/30 bg-emerald-500/10 text-emerald-100"
+                        : "border-amber-400/30 bg-amber-500/10 text-amber-100"
+                    }`}
+                  >
+                    {riscoSelecionado
+                      ? "1 risco selecionado"
+                      : "Seleção pendente"}
+                  </span>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                  <label className="relative min-w-0 flex-1">
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                      size={16}
+                    />
+                    <input
+                      className={`${inputClass} w-full pl-10`}
+                      value={filtroRiscos}
+                      onChange={(event) => setFiltroRiscos(event.target.value)}
+                      placeholder="Digite R001, número ou palavra-chave"
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSeletorRiscoAberto(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
+                  >
+                    <ListPlus size={16} />
+                    Busca detalhada
+                  </button>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
+                  {riscoSelecionado ? (
+                    <div className="flex flex-col gap-3 rounded-xl border border-blue-400/30 bg-blue-500/10 p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm font-black text-blue-100">
+                          {riscoSelecionado.codigo} - {riscoSelecionado.nome}
+                        </p>
+                        <p className="mt-1 text-xs font-semibold text-slate-300">
+                          {riscoSelecionado.descricao ||
+                            "Sem descrição cadastrada."}
+                        </p>
+                        {!!riscoSelecionado.fatoresRisco?.length && (
+                          <p className="mt-2 text-xs font-black text-blue-100">
+                            {riscoSelecionado.fatoresRisco.length} fator(es) de
+                            risco pré-selecionado(s).
+                          </p>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removerRisco}
+                        className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-300/30 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/10"
+                      >
+                        <X size={13} />
+                        Remover
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-bold text-slate-400">
+                      Nenhum risco selecionado ainda.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div>
+                    <p className="text-sm font-black text-white">
+                      Fatores de Risco
                     </p>
                     <p className="mt-1 text-xs font-semibold text-slate-300">
-                      {riscoSelecionado.descricao ||
-                        "Sem descrição cadastrada."}
+                      Busque pelo código ou nome. A lista abaixo mostra somente
+                      os fatores selecionados para esta análise.
                     </p>
-                    {!!riscoSelecionado.fatoresRisco?.length && (
-                      <p className="mt-2 text-xs font-black text-blue-100">
-                        {riscoSelecionado.fatoresRisco.length} fator(es) de
-                        risco pré-selecionado(s).
-                      </p>
-                    )}
                   </div>
+                  <span className="w-fit rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100">
+                    {form.fatoresIds.length} fator(es) selecionado(s)
+                  </span>
+                </div>
+
+                <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
+                  <label className="relative min-w-0 flex-1">
+                    <Search
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
+                      size={16}
+                    />
+                    <input
+                      className={`${inputClass} w-full pl-10`}
+                      value={filtroFatores}
+                      onChange={(event) => setFiltroFatores(event.target.value)}
+                      placeholder="Digite FR001, número ou palavra-chave"
+                    />
+                  </label>
                   <button
                     type="button"
-                    onClick={removerRisco}
-                    className="inline-flex w-fit items-center gap-2 rounded-xl border border-red-300/30 px-3 py-2 text-xs font-black text-red-100 hover:bg-red-500/10"
+                    onClick={() => setSeletorFatoresAberto(true)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
                   >
-                    <X size={13} />
-                    Remover
+                    <ListPlus size={16} />
+                    Busca detalhada
                   </button>
                 </div>
-              ) : (
-                <p className="text-sm font-bold text-slate-400">
-                  Nenhum risco selecionado ainda.
-                </p>
-              )}
-            </div>
-          </div>
 
-          <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <p className="text-sm font-black text-white">
-                  Fatores de Risco
-                </p>
-                <p className="mt-1 text-xs font-semibold text-slate-300">
-                  Busque pelo código ou nome. A lista abaixo mostra somente os
-                  fatores selecionados para esta análise.
-                </p>
+                <div className="mt-4 flex flex-wrap gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
+                  {fatoresSelecionados().map((fator) => (
+                    <span
+                      key={fator.id}
+                      className="inline-flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-400/15 px-3 py-2 text-xs font-black text-amber-100"
+                    >
+                      {etiquetaControle(fator)}
+                      <button
+                        type="button"
+                        onClick={() => removerFator(String(fator.id))}
+                        className="rounded-lg border border-amber-200/30 p-1 text-amber-100 hover:border-red-300/50 hover:text-red-100"
+                        aria-label={`Remover ${etiquetaControle(fator)}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                  {!form.fatoresIds.length && (
+                    <p className="text-sm font-bold text-slate-400">
+                      Nenhum fator selecionado ainda.
+                    </p>
+                  )}
+                </div>
               </div>
-              <span className="w-fit rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-2 text-xs font-black text-blue-100">
-                {form.fatoresIds.length} fator(es) selecionado(s)
-              </span>
-            </div>
 
-            <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center">
-              <label className="relative min-w-0 flex-1">
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
-                  size={16}
-                />
-                <input
-                  className={`${inputClass} w-full pl-10`}
-                  value={filtroFatores}
-                  onChange={(event) => setFiltroFatores(event.target.value)}
-                  placeholder="Digite FR001, número ou palavra-chave"
-                />
-              </label>
-              <button
-                type="button"
-                onClick={() => setSeletorFatoresAberto(true)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/10 px-4 py-3 text-sm font-black text-blue-100 transition hover:bg-blue-500/20"
-              >
-                <ListPlus size={16} />
-                Busca detalhada
-              </button>
-            </div>
+              <section className="mt-5 rounded-2xl border border-slate-800 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(15,23,42,0.72))] p-4 shadow-xl shadow-slate-950/20">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-[0.28em] text-blue-100">
+                      Análise e Avaliação Inerente
+                    </h3>
+                    <p className="mt-1 text-xs font-semibold text-slate-400">
+                      Preencha os critérios de probabilidade e consequência para
+                      o cálculo automático do risco.
+                    </p>
+                  </div>
+                  <span
+                    className={`rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
+                  >
+                    {previa.nivel}
+                  </span>
+                </div>
 
-            <div className="mt-4 flex flex-wrap gap-2 rounded-2xl border border-slate-800 bg-slate-900/70 p-3">
-              {fatoresSelecionados().map((fator) => (
-                <span
-                  key={fator.id}
-                  className="inline-flex items-center gap-2 rounded-xl border border-amber-300/40 bg-amber-400/15 px-3 py-2 text-xs font-black text-amber-100"
+                <div className="mt-4 grid gap-3 xl:grid-cols-[0.78fr_1.22fr]">
+                  <section className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-3">
+                    <div className="flex items-center justify-between gap-3 border-b border-blue-400/15 pb-2">
+                      <h4 className="text-xs font-black uppercase tracking-[0.22em] text-blue-100">
+                        Probabilidade
+                      </h4>
+                      <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-blue-100">
+                        MPP {previa.mediaProbabilidade}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                      {camposProbabilidade.map((item) =>
+                        renderCampoNota(item.campo, item.label),
+                      )}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.05] p-3">
+                    <div className="flex items-center justify-between gap-3 border-b border-cyan-400/15 pb-2">
+                      <h4 className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">
+                        Consequência
+                      </h4>
+                      <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-cyan-100">
+                        MPI {previa.mediaConsequencia}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+                      {camposConsequencia.map((item) =>
+                        renderCampoNota(item.campo, item.label),
+                      )}
+                    </div>
+                  </section>
+                </div>
+              </section>
+
+              <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-[linear-gradient(135deg,rgba(37,99,235,0.14),rgba(15,23,42,0.7))] p-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    Nota
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {form.sc * 5 + form.fe * 4 + form.intervalo * 3}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    MPP
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {previa.mediaProbabilidade}
+                  </p>
+                  <p className="text-xs font-bold text-blue-100">
+                    {previa.nivelProbabilidade}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    %P
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {Math.round(previa.percentualProbabilidade * 100)}%
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    Nota Conseq.
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {previa.notaConsequencia}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    MPI
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {previa.mediaConsequencia}
+                  </p>
+                  <p className="text-xs font-bold text-blue-100">
+                    {previa.nivelConsequencia}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    NRI
+                  </p>
+                  <p className="mt-1 text-xl font-black text-white">
+                    {previa.resultado}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    Classificação
+                  </p>
+                  <span
+                    className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
+                  >
+                    {previa.nivel}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-black uppercase text-blue-200">
+                    Periodicidade
+                  </p>
+                  <p className="mt-1 text-sm font-black text-white">
+                    {previa.periodicidade}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  disabled={salvando}
+                  className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:opacity-60"
                 >
-                  {etiquetaControle(fator)}
+                  <Plus size={16} />
+                  {analiseEditando ? "Atualizar análise" : "Cadastrar análise"}
+                </button>
+                {analiseEditando && (
                   <button
                     type="button"
-                    onClick={() => removerFator(String(fator.id))}
-                    className="rounded-lg border border-amber-200/30 p-1 text-amber-100 hover:border-red-300/50 hover:text-red-100"
-                    aria-label={`Remover ${etiquetaControle(fator)}`}
+                    onClick={cancelarEdicaoAnalise}
+                    className="ml-3 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 hover:text-white"
                   >
-                    <X size={12} />
+                    Cancelar edição
                   </button>
-                </span>
-              ))}
-              {!form.fatoresIds.length && (
-                <p className="text-sm font-bold text-slate-400">
-                  Nenhum fator selecionado ainda.
-                </p>
-              )}
-            </div>
-          </div>
-
-          <section className="mt-5 rounded-2xl border border-slate-800 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(15,23,42,0.72))] p-4 shadow-xl shadow-slate-950/20">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-black uppercase tracking-[0.28em] text-blue-100">
-                  Análise e Avaliação Inerente
-                </h3>
-                <p className="mt-1 text-xs font-semibold text-slate-400">
-                  Preencha os critérios de probabilidade e consequência para o
-                  cálculo automático do risco.
-                </p>
+                )}
               </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
-              >
-                {previa.nivel}
-              </span>
-            </div>
-
-            <div className="mt-4 grid gap-3 xl:grid-cols-[0.78fr_1.22fr]">
-              <section className="rounded-2xl border border-blue-400/20 bg-blue-500/[0.06] p-3">
-                <div className="flex items-center justify-between gap-3 border-b border-blue-400/15 pb-2">
-                  <h4 className="text-xs font-black uppercase tracking-[0.22em] text-blue-100">
-                    Probabilidade
-                  </h4>
-                  <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-blue-100">
-                    MPP {previa.mediaProbabilidade}
-                  </span>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  {camposProbabilidade.map((item) =>
-                    renderCampoNota(item.campo, item.label),
-                  )}
-                </div>
-              </section>
-
-              <section className="rounded-2xl border border-cyan-400/20 bg-cyan-500/[0.05] p-3">
-                <div className="flex items-center justify-between gap-3 border-b border-cyan-400/15 pb-2">
-                  <h4 className="text-xs font-black uppercase tracking-[0.22em] text-cyan-100">
-                    Consequência
-                  </h4>
-                  <span className="rounded-full bg-slate-950/80 px-2.5 py-1 text-[11px] font-black text-cyan-100">
-                    MPI {previa.mediaConsequencia}
-                  </span>
-                </div>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-                  {camposConsequencia.map((item) =>
-                    renderCampoNota(item.campo, item.label),
-                  )}
-                </div>
-              </section>
-            </div>
-          </section>
-
-          <div className="mt-5 grid gap-3 rounded-2xl border border-blue-400/30 bg-[linear-gradient(135deg,rgba(37,99,235,0.14),rgba(15,23,42,0.7))] p-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-8">
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">Nota</p>
-              <p className="mt-1 text-xl font-black text-white">
-                {form.sc * 5 + form.fe * 4 + form.intervalo * 3}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">MPP</p>
-              <p className="mt-1 text-xl font-black text-white">
-                {previa.mediaProbabilidade}
-              </p>
-              <p className="text-xs font-bold text-blue-100">
-                {previa.nivelProbabilidade}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">%P</p>
-              <p className="mt-1 text-xl font-black text-white">
-                {Math.round(previa.percentualProbabilidade * 100)}%
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">
-                Nota Conseq.
-              </p>
-              <p className="mt-1 text-xl font-black text-white">
-                {previa.notaConsequencia}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">MPI</p>
-              <p className="mt-1 text-xl font-black text-white">
-                {previa.mediaConsequencia}
-              </p>
-              <p className="text-xs font-bold text-blue-100">
-                {previa.nivelConsequencia}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">NRI</p>
-              <p className="mt-1 text-xl font-black text-white">
-                {previa.resultado}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">
-                Classificação
-              </p>
-              <span
-                className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
-              >
-                {previa.nivel}
-              </span>
-            </div>
-            <div>
-              <p className="text-xs font-black uppercase text-blue-200">
-                Periodicidade
-              </p>
-              <p className="mt-1 text-sm font-black text-white">
-                {previa.periodicidade}
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 flex justify-end">
-            <button
-              disabled={salvando}
-              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/30 hover:bg-blue-500 disabled:opacity-60"
-            >
-              <Plus size={16} />
-              {analiseEditando ? "Atualizar análise" : "Cadastrar análise"}
-            </button>
-            {analiseEditando && (
-              <button
-                type="button"
-                onClick={cancelarEdicaoAnalise}
-                className="ml-3 rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 hover:text-white"
-              >
-                Cancelar edição
-              </button>
-            )}
-          </div>
             </form>
           )}
         </section>
@@ -2525,6 +2546,14 @@ export default function RiscosAnaliseCompleta() {
               A aprovação será registrada com o usuário logado. A estratégia da
               ARC será gravada somente nesta finalização.
             </div>
+            {finalizacaoBloqueada && (
+              <div className="mt-4 rounded-2xl border border-amber-300/45 bg-amber-400/15 p-4 text-sm font-black leading-6 text-amber-100">
+                Esta ARC ainda não pode ser finalizada. Conclua todos os planos
+                de ação dos fatores de risco antes de registrar a decisão final.
+                Progresso atual:{" "}
+                {finalizacaoEditando.percentualConclusaoTratativa || 0}%.
+              </div>
+            )}
 
             <div className="mt-5 flex flex-col justify-end gap-3 sm:flex-row">
               <button
@@ -2536,7 +2565,7 @@ export default function RiscosAnaliseCompleta() {
               </button>
               <button
                 type="button"
-                disabled={salvando}
+                disabled={salvando || finalizacaoBloqueada}
                 onClick={salvarFinalizacao}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white hover:bg-emerald-500 disabled:opacity-60"
               >
