@@ -155,7 +155,7 @@ function campo(
   color = pdfTheme.primary,
 ) {
   doc
-    .roundedRect(x, y, width, 48, 8)
+    .roundedRect(x, y, width, 44, 8)
     .fillColor("#f8fafc")
     .fill()
     .strokeColor("#dbeafe")
@@ -165,13 +165,45 @@ function campo(
     .fillColor("#64748b")
     .font("Helvetica-Bold")
     .fontSize(7.5)
-    .text(rotulo.toUpperCase(), x + 10, y + 9, { width: width - 20 });
+    .text(rotulo.toUpperCase(), x + 10, y + 8, { width: width - 20 });
   doc
     .fillColor(color)
     .font("Helvetica-Bold")
-    .fontSize(13)
-    .text(texto(valor), x + 10, y + 25, {
+    .fontSize(12.5)
+    .text(texto(valor), x + 10, y + 23, {
       width: width - 20,
+      lineBreak: false,
+      ellipsis: true,
+    });
+}
+
+function campoCompacto(
+  doc: PDFKit.PDFDocument,
+  rotulo: string,
+  valor: unknown,
+  x: number,
+  y: number,
+  width: number,
+  color = pdfTheme.primary,
+) {
+  doc
+    .roundedRect(x, y, width, 38, 8)
+    .fillColor("#f8fafc")
+    .fill()
+    .strokeColor("#dbeafe")
+    .lineWidth(0.8)
+    .stroke();
+  doc
+    .fillColor("#64748b")
+    .font("Helvetica-Bold")
+    .fontSize(6.8)
+    .text(rotulo.toUpperCase(), x + 9, y + 7, { width: width - 18 });
+  doc
+    .fillColor(color)
+    .font("Helvetica-Bold")
+    .fontSize(10.5)
+    .text(texto(valor), x + 9, y + 21, {
+      width: width - 18,
       lineBreak: false,
       ellipsis: true,
     });
@@ -654,7 +686,7 @@ export function gerarAnaliseCompletaPdf(
   if (temFinalizacao) {
     const yFinalizacao = 292;
     doc
-      .roundedRect(42, yFinalizacao, larguraConteudo, 72, 10)
+      .roundedRect(42, yFinalizacao, larguraConteudo, 62, 10)
       .fillColor("#f8fafc")
       .fill()
       .strokeColor("#dbeafe")
@@ -702,19 +734,21 @@ export function gerarAnaliseCompletaPdf(
         yFinalizacao + 48,
         {
           width: larguraConteudo - 32,
+          height: 10,
           lineGap: 1,
+          ellipsis: true,
         },
       );
   }
 
-  const yGraficos = temFinalizacao ? 380 : 322;
-  const yTituloGraficos = yGraficos + 16;
-  const yBarra1 = yGraficos + 44;
-  const yBarra2 = yGraficos + 83;
-  const yDesempenho = yGraficos + 136;
+  const yGraficos = temFinalizacao ? 362 : 318;
+  const yTituloGraficos = yGraficos + 14;
+  const yBarra1 = yGraficos + 38;
+  const yBarra2 = yGraficos + 72;
+  const yDesempenho = yGraficos + 122;
 
   doc
-    .roundedRect(42, yGraficos, larguraConteudo, 118, 10)
+    .roundedRect(42, yGraficos, larguraConteudo, 106, 10)
     .fillColor("#ffffff")
     .fill()
     .strokeColor("#dbeafe")
@@ -765,7 +799,7 @@ export function gerarAnaliseCompletaPdf(
     corResidual,
   );
 
-  campo(
+  campoCompacto(
     doc,
     "Desempenho probabilidade",
     variacao(analise.desempenhoProbabilidade),
@@ -773,7 +807,7 @@ export function gerarAnaliseCompletaPdf(
     yDesempenho,
     180,
   );
-  campo(
+  campoCompacto(
     doc,
     "Desempenho consequência",
     variacao(analise.desempenhoConsequencia),
@@ -781,7 +815,7 @@ export function gerarAnaliseCompletaPdf(
     yDesempenho,
     180,
   );
-  campo(
+  campoCompacto(
     doc,
     "Desempenho nível de risco",
     variacao(analise.desempenhoNivelRisco),
@@ -789,7 +823,7 @@ export function gerarAnaliseCompletaPdf(
     yDesempenho,
     180,
   );
-  campo(
+  campoCompacto(
     doc,
     "Periodicidade / ação",
     analise.periodicidadeAcao,

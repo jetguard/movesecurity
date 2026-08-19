@@ -568,6 +568,21 @@ export async function tratarPlanoAcao(req: AuthRequest, res: Response) {
       },
     });
 
+    if (plano.origemModulo === "AnaliseRisco" && plano.origemId) {
+      await prisma.analiseRiscoCompleta.updateMany({
+        where: {
+          id: plano.origemId,
+          unidade: req.unidadeAtiva,
+          finalizadaEm: null,
+          finalizacaoStatus: { not: "Anulada" },
+        },
+        data: {
+          finalizacaoStatus: "Em Andamento",
+          tratativaStatus: "Em andamento",
+        },
+      });
+    }
+
     await registrarLog({
       req,
       acao: `Tratamento de plano de acao ${plano.codigo}`,
