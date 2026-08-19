@@ -42,9 +42,6 @@ const RiscosAnaliseCompleta = lazyWithReload(
 const RiscosAnaliseCompletaDetalhe = lazyWithReload(
   () => import("./pages/RiscosAnaliseCompletaDetalhe"),
 );
-const RiscosModuloEmConstrucao = lazyWithReload(
-  () => import("./pages/RiscosModuloEmConstrucao"),
-);
 const RiscosPontuacoes = lazyWithReload(
   () => import("./pages/RiscosPontuacoes"),
 );
@@ -480,20 +477,6 @@ export default function App() {
             <Route
               path="riscos/tratativas"
               element={<Navigate to="/planos-acao" replace />}
-            />
-            <Route
-              path="riscos/analise-simplificada"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <RiscosModuloEmConstrucao />
-                </ProtectedRoute>
-              }
             />
             <Route
               path="riscos/pontuacoes"

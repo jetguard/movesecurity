@@ -280,9 +280,9 @@ function BotaoEditar({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-9 items-center gap-2 rounded-xl border border-blue-400/30 bg-blue-500/10 px-3 text-xs font-black text-blue-200 transition hover:border-blue-300 hover:bg-blue-500/20"
+      className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-blue-400/30 bg-blue-500/10 px-2 text-[11px] font-black text-blue-200 transition hover:border-blue-300 hover:bg-blue-500/20"
     >
-      <Edit3 size={14} />
+      <Edit3 size={12} />
       Editar
     </button>
   );
@@ -353,43 +353,43 @@ export default function RiscosPontuacoes() {
     linhas: LinhaPontuacao[],
   ) {
     return (
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-xl shadow-black/20">
-        <div className="flex flex-col gap-2 border-b border-slate-800 pb-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3 shadow-lg shadow-black/15">
+        <div className="flex flex-col gap-1 border-b border-slate-800 pb-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-black text-white">{titulo}</h2>
-            <p className="text-sm font-semibold text-slate-300">{subtitulo}</p>
+            <h2 className="text-base font-black text-white">{titulo}</h2>
+            <p className="text-xs font-semibold text-slate-400">{subtitulo}</p>
           </div>
-          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-xs font-black text-blue-200">
+          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-2.5 py-1 text-[11px] font-black text-blue-200">
             {linhas.length} critérios
           </span>
         </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[720px] border-separate border-spacing-y-2">
+        <div className="mt-3">
+          <table className="w-full table-fixed border-separate border-spacing-y-1.5">
             <thead>
-              <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
-                <th className="px-3 py-2">Critério</th>
-                <th className="px-3 py-2">Descrição</th>
-                <th className="px-3 py-2 text-center">Pontuação</th>
-                <th className="px-3 py-2 text-right">Ações</th>
+              <tr className="text-left text-[10px] font-black uppercase tracking-[0.12em] text-blue-200">
+                <th className="w-[28%] px-2 py-1.5">Critério</th>
+                <th className="px-2 py-1.5">Descrição</th>
+                <th className="w-20 px-2 py-1.5 text-center">Pontos</th>
+                <th className="w-20 px-2 py-1.5 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {linhas.map((linha) => (
                 <tr
                   key={linha.id}
-                  className="bg-slate-950/70 text-sm font-semibold text-slate-100"
+                  className="bg-slate-950/70 text-xs font-semibold leading-4 text-slate-100"
                 >
-                  <td className="rounded-l-xl px-3 py-3 text-blue-100">
+                  <td className="rounded-l-xl px-2 py-2 text-blue-100">
                     {linha.criterio}
                   </td>
-                  <td className="px-3 py-3">{linha.descricao}</td>
-                  <td className="px-3 py-3 text-center">
-                    <span className="inline-flex h-8 min-w-8 items-center justify-center rounded-full bg-lime-400 px-3 text-sm font-black text-slate-950">
+                  <td className="break-words px-2 py-2">{linha.descricao}</td>
+                  <td className="px-2 py-2 text-center">
+                    <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-lime-400 px-2 text-xs font-black text-slate-950">
                       {linha.pontuacao}
                     </span>
                   </td>
-                  <td className="rounded-r-xl px-3 py-3 text-right">
+                  <td className="rounded-r-xl px-2 py-2 text-right">
                     <BotaoEditar
                       onClick={() =>
                         setEditando({ tipo, id: linha.id, dados: { ...linha } })
@@ -406,15 +406,17 @@ export default function RiscosPontuacoes() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-5rem)] bg-slate-950 px-4 py-6 text-white sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
-        <div className="flex flex-col gap-4 border-b border-slate-800 pb-6 lg:flex-row lg:items-end lg:justify-between">
+    <div className="min-h-[calc(100vh-5rem)] bg-slate-950 px-4 py-5 text-white sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1800px]">
+        <div className="flex flex-col gap-3 border-b border-slate-800 pb-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.35em] text-blue-300">
               Análise de Riscos
             </p>
-            <h1 className="mt-2 text-3xl font-black text-white">Pontuações</h1>
-            <p className="mt-2 max-w-3xl text-sm font-semibold leading-6 text-slate-300">
+            <h1 className="mt-1 text-2xl font-black text-white sm:text-3xl">
+              Pontuações
+            </h1>
+            <p className="mt-1 max-w-4xl text-sm font-semibold leading-5 text-slate-300">
               Critérios de probabilidade, impacto e classificação usados como
               base para a pontuação automática das análises.
             </p>
@@ -422,22 +424,22 @@ export default function RiscosPontuacoes() {
           <button
             type="button"
             onClick={resetarPadrao}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-3 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-white"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700 px-4 py-2.5 text-sm font-black text-slate-100 transition hover:border-blue-400 hover:text-white"
           >
             <RotateCcw size={16} />
             Restaurar padrão
           </button>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-4 text-amber-100">
+        <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3 text-amber-100">
           <div className="flex gap-3">
             <AlertTriangle
               className="mt-0.5 shrink-0 text-amber-300"
-              size={22}
+              size={18}
             />
             <div>
-              <p className="font-black">Atenção antes de editar</p>
-              <p className="mt-1 text-sm font-semibold leading-6 text-amber-50">
+              <p className="text-sm font-black">Atenção antes de editar</p>
+              <p className="mt-0.5 text-xs font-semibold leading-5 text-amber-50">
                 Qualquer alteração em pontuação, faixa ou periodicidade poderá
                 impactar registros de análise de riscos já efetuados quando a
                 persistência e os cálculos automáticos forem ativados.
@@ -452,7 +454,7 @@ export default function RiscosPontuacoes() {
           </div>
         )}
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
           {[
             ["Critérios de Probabilidade", totais.probabilidade],
             ["Critérios de Impacto", totais.impacto],
@@ -460,18 +462,18 @@ export default function RiscosPontuacoes() {
           ].map(([titulo, total]) => (
             <div
               key={titulo}
-              className="rounded-2xl border border-slate-800 bg-slate-900/80 p-5"
+              className="rounded-2xl border border-slate-800 bg-slate-900/80 p-3"
             >
-              <Gauge className="text-blue-300" size={22} />
-              <p className="mt-3 text-xs font-black uppercase tracking-[0.25em] text-slate-400">
+              <Gauge className="text-blue-300" size={18} />
+              <p className="mt-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">
                 {titulo}
               </p>
-              <p className="mt-2 text-3xl font-black text-white">{total}</p>
+              <p className="mt-1 text-2xl font-black text-white">{total}</p>
             </div>
           ))}
         </div>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-2">
+        <div className="mt-4 grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
           {renderTabelaPontuacao(
             "Critério de Probabilidade",
             "Controle, frequência/exposição e intervalo de revisão.",
@@ -486,42 +488,44 @@ export default function RiscosPontuacoes() {
           )}
         </div>
 
-        <section className="mt-6 rounded-2xl border border-slate-800 bg-slate-900/80 p-5 shadow-xl shadow-black/20">
-          <div className="border-b border-slate-800 pb-4">
-            <h2 className="text-xl font-black text-white">
+        <section className="mt-4 rounded-2xl border border-slate-800 bg-slate-900/80 p-3 shadow-lg shadow-black/15">
+          <div className="border-b border-slate-800 pb-3">
+            <h2 className="text-base font-black text-white">
               Faixa e Classificação
             </h2>
-            <p className="text-sm font-semibold text-slate-300">
+            <p className="text-xs font-semibold text-slate-400">
               Periodicidade e ação conforme a faixa de resultado.
             </p>
           </div>
 
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[760px] border-separate border-spacing-y-2">
+          <div className="mt-3">
+            <table className="w-full table-fixed border-separate border-spacing-y-1.5">
               <thead>
-                <tr className="text-left text-xs font-black uppercase tracking-[0.18em] text-blue-200">
-                  <th className="px-3 py-2">Faixa</th>
-                  <th className="px-3 py-2">Classificação</th>
-                  <th className="px-3 py-2">Periodicidade / Ação</th>
-                  <th className="px-3 py-2 text-right">Ações</th>
+                <tr className="text-left text-[10px] font-black uppercase tracking-[0.12em] text-blue-200">
+                  <th className="w-[22%] px-2 py-1.5">Faixa</th>
+                  <th className="w-[22%] px-2 py-1.5">Classificação</th>
+                  <th className="px-2 py-1.5">Periodicidade / Ação</th>
+                  <th className="w-20 px-2 py-1.5 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {faixas.map((linha) => (
                   <tr
                     key={linha.id}
-                    className="bg-slate-950/70 text-sm font-semibold text-slate-100"
+                    className="bg-slate-950/70 text-xs font-semibold leading-4 text-slate-100"
                   >
-                    <td className="rounded-l-xl px-3 py-3 text-blue-100">
+                    <td className="rounded-l-xl px-2 py-2 text-blue-100">
                       {linha.faixa}
                     </td>
-                    <td className="px-3 py-3">
-                      <span className="rounded-full bg-blue-500/15 px-3 py-1 text-xs font-black text-blue-100">
+                    <td className="px-2 py-2">
+                      <span className="rounded-full bg-blue-500/15 px-2.5 py-1 text-[11px] font-black text-blue-100">
                         {linha.classificacao}
                       </span>
                     </td>
-                    <td className="px-3 py-3">{linha.periodicidade}</td>
-                    <td className="rounded-r-xl px-3 py-3 text-right">
+                    <td className="break-words px-2 py-2">
+                      {linha.periodicidade}
+                    </td>
+                    <td className="rounded-r-xl px-2 py-2 text-right">
                       <BotaoEditar
                         onClick={() =>
                           setEditando({
