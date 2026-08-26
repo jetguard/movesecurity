@@ -1014,7 +1014,7 @@ export default function Usuarios() {
       )}
 
       {aba === "perfis" && superAdmin && (
-        <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
+        <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(360px,420px)_minmax(0,1fr)]">
           <form
             onSubmit={salvarPerfil}
             className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
@@ -1084,7 +1084,14 @@ export default function Usuarios() {
                 </p>
               </div>
               <div className="overflow-x-auto">
-                <table className="min-w-[620px] text-left text-xs">
+                <table className="w-full min-w-[620px] table-fixed text-left text-xs">
+                  <colgroup>
+                    <col className="w-[52%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                  </colgroup>
                   <thead className="bg-white text-[10px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-300">
                     <tr>
                       <th className="px-4 py-3">Módulo</th>
@@ -1153,7 +1160,13 @@ export default function Usuarios() {
               </p>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-[880px] text-left text-xs">
+              <table className="w-full min-w-[1120px] table-fixed text-left text-xs">
+                <colgroup>
+                  <col className="w-[28%]" />
+                  <col className="w-[52%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[10%]" />
+                </colgroup>
                 <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950 dark:text-slate-300">
                   <tr>
                     <th className="px-4 py-3">Perfil</th>
@@ -1175,7 +1188,7 @@ export default function Usuarios() {
                         <p className="mt-1 font-mono text-[11px] font-black text-blue-600">
                           {perfil.codigo}
                         </p>
-                        <p className="mt-1 max-w-sm text-xs font-semibold text-slate-500 dark:text-slate-300">
+                        <p className="mt-1 max-w-full text-xs font-semibold text-slate-500 dark:text-slate-300">
                           {perfil.descricao || "Sem descrição"}
                         </p>
                         {perfil.sistema && (
@@ -1185,7 +1198,7 @@ export default function Usuarios() {
                         )}
                       </td>
                       <td className="px-3 py-3">
-                        <div className="flex max-w-xl flex-wrap gap-1.5">
+                        <div className="flex max-w-full flex-wrap gap-1.5">
                           {(perfil.permissoesDetalhadas || []).map((permissao) => (
                             <span
                               key={permissao.modulo}
@@ -1268,7 +1281,19 @@ export default function Usuarios() {
           </div>
         </div>
         <div className="overflow-x-auto">
-          <table className="min-w-[1320px] text-left text-xs">
+          <table className="w-full min-w-[1580px] table-fixed text-left text-xs">
+            <colgroup>
+              <col className="w-[16%]" />
+              <col className="w-[9%]" />
+              <col className="w-[13%]" />
+              <col className="w-[10%]" />
+              <col className="w-[8%]" />
+              <col className="w-[7%]" />
+              <col className="w-[6%]" />
+              <col className="w-[6%]" />
+              <col className="w-[11%]" />
+              <col className="w-[14%]" />
+            </colgroup>
             <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950 dark:text-slate-300">
               <tr>
                 <th className="px-4 py-3">Usuário</th>
@@ -1320,7 +1345,7 @@ export default function Usuarios() {
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="max-w-[180px] space-y-1">
+                    <div className="max-w-full space-y-1">
                       <p className="font-black text-slate-900 dark:text-white">
                         {usuario.setor || "-"}
                       </p>
@@ -1333,7 +1358,7 @@ export default function Usuarios() {
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="flex max-w-[170px] flex-wrap gap-1.5">
+                    <div className="flex max-w-full flex-wrap gap-1.5">
                       {(usuario.unidadesPermitidas?.length
                         ? usuario.unidadesPermitidas
                         : [usuario.unidade || "-"]
@@ -1348,7 +1373,7 @@ export default function Usuarios() {
                     </div>
                   </td>
                   <td className="px-3 py-3">
-                    <div className="flex max-w-[190px] flex-wrap gap-1.5">
+                    <div className="flex max-w-full flex-wrap gap-1.5">
                       {usuario.gruposTreinamento?.length ? (
                         usuario.gruposTreinamento.map((grupo) => (
                           <span
