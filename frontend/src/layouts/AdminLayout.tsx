@@ -40,12 +40,12 @@ import {
 import { api } from "../services/api";
 import {
   podeAdministrar,
-  podeAnalisar,
   podeGerenciarRiscos,
   podeTrocarAmbiente,
   podeVerNaturezas,
   podeVerLogs,
   somenteTecnicoManutencao,
+  temModulo,
   unidadesPermitidasUsuario,
   usuarioAtual,
   PERFIS,
@@ -90,6 +90,17 @@ export default function AdminLayout() {
   const portaria = usuario?.perfilAcesso === PERFIS.PORTARIA;
   const cadastro = usuario?.perfilAcesso === PERFIS.CADASTRO;
   const tecnicoManutencao = somenteTecnicoManutencao();
+  const podeVerDashboard = temModulo("dashboard");
+  const podeVerRelatoriosMenu = temModulo("relatorios") || temModulo("documentos");
+  const podeVerTreinamentosMenu = temModulo("treinamentos");
+  const podeVerOperacaoMenu =
+    temModulo("operacao") || temModulo("cftv") || temModulo("quadra_seguranca");
+  const podeVerAdministracaoMenu =
+    temModulo("usuarios") ||
+    temModulo("cadastros") ||
+    temModulo("configuracoes");
+  const podeVerSistemaMenu =
+    temModulo("sistema") || temModulo("logs") || temModulo("configuracoes");
   const podeVerPainelTreinamentos = [
     PERFIS.SUPER_ADMIN,
     PERFIS.ADMINISTRADOR,
@@ -448,14 +459,14 @@ export default function AdminLayout() {
           onClick={fecharMenuMobileAoNavegar}
           className="mt-6 flex flex-col gap-2 px-2 pb-6 sm:px-3"
         >
-          {!tecnicoManutencao && !portaria && !cadastro && (
+          {!tecnicoManutencao && !portaria && !cadastro && podeVerDashboard && (
             <Link to="/" className={item}>
               <LayoutDashboard size={20} className="shrink-0" />
               <span className={menuText}>Dashboard</span>
             </Link>
           )}
 
-          {!tecnicoManutencao && !portaria && !cadastro && (
+          {!tecnicoManutencao && !portaria && !cadastro && podeVerRelatoriosMenu && (
             <>
               <button
                 onClick={() => setRelatoriosOpen(!relatoriosOpen)}
@@ -470,36 +481,36 @@ export default function AdminLayout() {
 
               {relatoriosOpen && (
                 <div className={submenuClass}>
-                  <Link to="/ocorrencias" className={subItem}>
+                  {temModulo("relatorios") && <Link to="/ocorrencias" className={subItem}>
                     <FileText size={16} />
                     Ocorrências
-                  </Link>
-                  <Link to="/investigacao" className={subItem}>
+                  </Link>}
+                  {temModulo("relatorios") && <Link to="/investigacao" className={subItem}>
                     <Search size={16} />
                     Investigação
-                  </Link>
-                  <Link to="/eventos" className={subItem}>
+                  </Link>}
+                  {temModulo("relatorios") && <Link to="/eventos" className={subItem}>
                     <CalendarDays size={16} />
                     Eventos
-                  </Link>
-                  <Link to="/documentos" className={subItem}>
+                  </Link>}
+                  {temModulo("documentos") && <Link to="/documentos" className={subItem}>
                     <FolderOpen size={16} />
                     Central de Documentos
-                  </Link>
-                  <Link to="/operacao-soc" className={subItem}>
+                  </Link>}
+                  {temModulo("relatorios") && <Link to="/operacao-soc" className={subItem}>
                     <Activity size={16} />
                     Relatório CCOS
-                  </Link>
+                  </Link>}
                   {podeAdministrar() && (
                     <Link to="/relatorio-diario" className={subItem}>
                       <FileBarChart size={16} />
                       Relatório Diário Executivo
                     </Link>
                   )}
-                  <Link to="/relatos-campo" className={subItem}>
+                  {temModulo("relatorios") && <Link to="/relatos-campo" className={subItem}>
                     <FileText size={16} />
                     Relatos de Campo
-                  </Link>
+                  </Link>}
                 </div>
               )}
             </>
@@ -585,7 +596,7 @@ export default function AdminLayout() {
             </>
           ) : (
             <>
-              {!tecnicoManutencao && (
+              {!tecnicoManutencao && podeVerTreinamentosMenu && (
                 <>
                   <button
                     onClick={() => setTreinamentosOpen(!treinamentosOpen)}
@@ -639,7 +650,7 @@ export default function AdminLayout() {
                 </>
               )}
 
-              <button
+              {podeVerOperacaoMenu && <button
                 onClick={() => setOperacaoOpen(!operacaoOpen)}
                 className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
               >
@@ -648,52 +659,52 @@ export default function AdminLayout() {
                   <span className={menuText}>Operação</span>
                 </div>
                 <span className={menuToggle}>{operacaoOpen ? "-" : "+"}</span>
-              </button>
+              </button>}
 
-              {operacaoOpen && (
+              {podeVerOperacaoMenu && operacaoOpen && (
                 <div className={submenuClass}>
-                  <Link to="/cameras" className={subItem}>
+                  {temModulo("cftv") && <Link to="/cameras" className={subItem}>
                     <Video size={16} />
                     Câmeras CFTV
-                  </Link>
-                  <Link to="/ordens-servico" className={subItem}>
+                  </Link>}
+                  {temModulo("cftv") && <Link to="/ordens-servico" className={subItem}>
                     <Wrench size={16} />
                     Ordens de Serviço
-                  </Link>
+                  </Link>}
                   {!tecnicoManutencao && (
                     <>
-                      <Link to="/planejamento" className={subItem}>
+                      {temModulo("operacao") && <Link to="/planejamento" className={subItem}>
                         <Columns3 size={16} />
                         Quadro de Tarefas
-                      </Link>
-                      <Link to="/tarefas" className={subItem}>
+                      </Link>}
+                      {temModulo("operacao") && <Link to="/tarefas" className={subItem}>
                         <CheckCircle2 size={16} />
                         Minhas Tarefas
-                      </Link>
-                      <Link to="/quadra-seguranca" className={subItem}>
+                      </Link>}
+                      {temModulo("quadra_seguranca") && <Link to="/quadra-seguranca" className={subItem}>
                         <PackageSearch size={16} />
                         Quadra de Segurança
-                      </Link>
-                      <Link to="/mapa-operacional" className={subItem}>
+                      </Link>}
+                      {temModulo("operacao") && <Link to="/mapa-operacional" className={subItem}>
                         <MapPinned size={16} />
                         Mapa Operacional
-                      </Link>
-                      <Link to="/notificacoes" className={subItem}>
+                      </Link>}
+                      {temModulo("operacao") && <Link to="/notificacoes" className={subItem}>
                         <Bell size={16} />
                         Notificações
-                      </Link>
-                      <Link to="/alertas-operacionais" className={subItem}>
+                      </Link>}
+                      {temModulo("operacao") && <Link to="/alertas-operacionais" className={subItem}>
                         <ShieldAlert size={16} />
                         Alertas Operacionais
-                      </Link>
-                      <Link to="/pendencias" className={subItem}>
+                      </Link>}
+                      {temModulo("operacao") && <Link to="/pendencias" className={subItem}>
                         <ListChecks size={16} />
                         Pendências
-                      </Link>
-                      <Link to="/evidencias" className={subItem}>
+                      </Link>}
+                      {temModulo("documentos") && <Link to="/evidencias" className={subItem}>
                         <Paperclip size={16} />
                         Evidências
-                      </Link>
+                      </Link>}
                     </>
                   )}
                 </div>
@@ -718,36 +729,36 @@ export default function AdminLayout() {
 
               {gestaoAvancadaOpen && (
                 <div className={submenuClass}>
-                  <Link to="/riscos/dashboard" className={subItem}>
+                  {temModulo("analise_riscos") && <Link to="/riscos/dashboard" className={subItem}>
                     <LayoutDashboard size={16} />
                     Dashboard
-                  </Link>
-                  <Link to="/riscos/fluxograma" className={subItem}>
+                  </Link>}
+                  {temModulo("analise_riscos") && <Link to="/riscos/fluxograma" className={subItem}>
                     <GitBranch size={16} />
                     Fluxograma
-                  </Link>
-                  <Link to="/riscos/cadastro-geral" className={subItem}>
+                  </Link>}
+                  {temModulo("analise_riscos") && <Link to="/riscos/cadastro-geral" className={subItem}>
                     <Columns3 size={16} />
                     Cadastro Geral
-                  </Link>
-                  <Link to="/riscos/analise-completa" className={subItem}>
+                  </Link>}
+                  {temModulo("analise_riscos") && <Link to="/riscos/analise-completa" className={subItem}>
                     <FileBarChart size={16} />
                     Análise Completa
-                  </Link>
-                  <Link to="/planos-acao" className={subItem}>
+                  </Link>}
+                  {temModulo("plano_acao") && <Link to="/planos-acao" className={subItem}>
                     <ListChecks size={16} />
                     Plano de ação
-                  </Link>
-                  <Link to="/riscos/pontuacoes" className={subItem}>
+                  </Link>}
+                  {temModulo("analise_riscos") && <Link to="/riscos/pontuacoes" className={subItem}>
                     <Gauge size={16} />
                     Pontuações
-                  </Link>
+                  </Link>}
                 </div>
               )}
             </>
           )}
 
-          {(podeAdministrar() || podeVerNaturezas()) && (
+          {podeVerAdministracaoMenu && (
             <>
               <button
                 onClick={() => setAdministracaoOpen(!administracaoOpen)}
@@ -764,13 +775,13 @@ export default function AdminLayout() {
 
               {administracaoOpen && (
                 <div className={submenuClass}>
-                  {podeAdministrar() && (
+                  {temModulo("usuarios") && (
                     <Link to="/usuarios" className={subItem}>
                       <Users size={16} />
                       Usuários
                     </Link>
                   )}
-                  {podeVerNaturezas() && (
+                  {temModulo("cadastros") && (
                     <>
                       <Link to="/naturezas" className={subItem}>
                         <Settings size={16} />
@@ -782,7 +793,7 @@ export default function AdminLayout() {
                       </Link>
                     </>
                   )}
-                  {podeAdministrar() && (
+                  {temModulo("configuracoes") && (
                     <>
                       <Link to="/configuracoes" className={subItem}>
                         <Settings size={16} />
@@ -799,9 +810,9 @@ export default function AdminLayout() {
             </>
           )}
 
-          {(podeAdministrar() || podeVerLogs() || podeVerNaturezas()) && (
+          {(podeVerSistemaMenu || podeVerLogs() || podeVerNaturezas()) && (
             <>
-              {podeAdministrar() && (
+              {temModulo("configuracoes") && (
                 <>
                   <button
                     onClick={() => setApisOpen(!apisOpen)}
@@ -838,13 +849,13 @@ export default function AdminLayout() {
 
               {sistemaOpen && (
                 <div className={submenuClass}>
-                  {podeAnalisar() && (
+                  {(temModulo("sistema") || temModulo("analise_riscos")) && (
                     <Link to="/governanca" className={subItem}>
                       <Server size={16} />
                       Governança
                     </Link>
                   )}
-                  {podeAdministrar() && (
+                  {temModulo("configuracoes") && (
                     <Link to="/atualizacoes" className={subItem}>
                       <ScrollText size={16} />
                       Atualizações
@@ -856,7 +867,7 @@ export default function AdminLayout() {
                       Sugestões
                     </Link>
                   )}
-                  {podeAdministrar() && (
+                  {temModulo("logs") && (
                     <Link to="/logs" className={subItem}>
                       <ScrollText size={16} />
                       Logs

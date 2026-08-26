@@ -146,6 +146,98 @@ function perfilSessaoUnica(perfil?: string) {
   return perfil === "SUPER_ADMIN" || perfil === "ADMINISTRADOR";
 }
 
+const TODOS_MODULOS_ACESSO = [
+  "dashboard",
+  "relatorios",
+  "documentos",
+  "treinamentos",
+  "operacao",
+  "cftv",
+  "quadra_seguranca",
+  "analise_riscos",
+  "plano_acao",
+  "cadastros",
+  "usuarios",
+  "configuracoes",
+  "sistema",
+  "logs",
+];
+
+const ACOES_ACESSO = ["leitura", "criar", "editar", "excluir"];
+
+type PermissaoModulo = {
+  modulo: string;
+  leitura: boolean;
+  criar: boolean;
+  editar: boolean;
+  excluir: boolean;
+};
+
+function permissoesCompletas(modulos: string[]) {
+  return Array.from(new Set(modulos))
+    .filter((modulo) => TODOS_MODULOS_ACESSO.includes(modulo))
+    .map((modulo) => ({
+      modulo,
+      leitura: true,
+      criar: true,
+      editar: true,
+      excluir: true,
+    }));
+}
+
+function normalizarPermissoesPerfil(valor: unknown): PermissaoModulo[] {
+  const normalizarLista = (lista: unknown[]) => {
+    if (lista.every((item) => typeof item === "string")) {
+      return permissoesCompletas(lista.map((item) => String(item)));
+    }
+
+    return lista
+      .map((item: any) => {
+        const modulo = String(item?.modulo || item?.chave || "").trim();
+        if (!TODOS_MODULOS_ACESSO.includes(modulo)) return null;
+        const permissoes = {
+          modulo,
+          leitura: Boolean(item.leitura),
+          criar: Boolean(item.criar),
+          editar: Boolean(item.editar),
+          excluir: Boolean(item.excluir),
+        };
+        if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+          permissoes.leitura = true;
+        }
+        return ACOES_ACESSO.some((acao) =>
+          Boolean(permissoes[acao as keyof PermissaoModulo]),
+        )
+          ? permissoes
+          : null;
+      })
+      .filter(Boolean) as PermissaoModulo[];
+  };
+
+  if (Array.isArray(valor)) {
+    return normalizarLista(valor);
+  }
+  if (typeof valor === "string") {
+    try {
+      const parsed = JSON.parse(valor);
+      return Array.isArray(parsed) ? normalizarLista(parsed) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+async function permissoesPerfil(codigo: string) {
+  if (codigo === "SUPER_ADMIN") return permissoesCompletas(TODOS_MODULOS_ACESSO);
+  const perfil = await prisma.perfilAcesso.findUnique({
+    where: { codigo },
+    select: { permissoesJson: true, status: true },
+  });
+  if (!perfil || perfil.status !== "ATIVO") return [];
+  return normalizarPermissoesPerfil(perfil.permissoesJson);
+}
+
 async function encerrarSessoesAdministrativasAnteriores(usuario: {
   id: number;
   perfilAcesso: string;
@@ -416,6 +508,8 @@ export async function login(req: Request, res: Response) {
     });
 
     aplicarCookiesSessao(req, res, token, refreshToken);
+    const permissoesAcoes = await permissoesPerfil(usuario.perfilAcesso);
+    const permissoesModulos = permissoesAcoes.map((permissao) => permissao.modulo);
 
     const agora = new Date();
     await prisma.usuario.update({
@@ -452,6 +546,8 @@ export async function login(req: Request, res: Response) {
         fotoPerfil: usuario.fotoPerfil,
         email: usuario.email,
         perfilAcesso: usuario.perfilAcesso,
+        permissoesModulos,
+        permissoesAcoes,
         equipe: usuario.equipe,
         unidade: usuario.unidade,
         unidadesPermitidas: normalizarUnidadesPermitidas(

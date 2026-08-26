@@ -20,9 +20,94 @@ export type UsuarioLocal = {
   equipe?: string;
   unidade?: string;
   unidadesPermitidas?: string[];
+  permissoesModulos?: string[];
+  permissoesAcoes?: PermissaoModulo[];
   fotoPerfil?: string;
   deveAlterarSenha?: boolean;
 };
+
+export type AcaoAcesso = "leitura" | "criar" | "editar" | "excluir";
+
+export type PermissaoModulo = {
+  modulo: string;
+  leitura: boolean;
+  criar: boolean;
+  editar: boolean;
+  excluir: boolean;
+};
+
+export const MODULOS_ACESSO = [
+  { chave: "dashboard", nome: "Dashboard" },
+  { chave: "relatorios", nome: "Relatórios" },
+  { chave: "documentos", nome: "Central de documentos" },
+  { chave: "treinamentos", nome: "Treinamentos" },
+  { chave: "operacao", nome: "Operação" },
+  { chave: "cftv", nome: "Câmeras e manutenção" },
+  { chave: "quadra_seguranca", nome: "Quadra de Segurança" },
+  { chave: "analise_riscos", nome: "Análise de riscos" },
+  { chave: "plano_acao", nome: "Plano de ação" },
+  { chave: "cadastros", nome: "Cadastros" },
+  { chave: "usuarios", nome: "Usuários" },
+  { chave: "configuracoes", nome: "Configurações" },
+  { chave: "sistema", nome: "Sistema" },
+  { chave: "logs", nome: "Logs" },
+];
+
+const PERFIS_POR_MODULO: Record<string, string[]> = {
+  [PERFIS.ADMINISTRADOR]: MODULOS_ACESSO.map((item) => item.chave),
+  [PERFIS.GESTOR]: ["dashboard", "treinamentos", "relatorios", "documentos"],
+  [PERFIS.COORDENADOR]: [
+    "dashboard",
+    "treinamentos",
+    "relatorios",
+    "documentos",
+  ],
+  [PERFIS.SUPERVISOR]: [
+    "dashboard",
+    "treinamentos",
+    "relatorios",
+    "documentos",
+  ],
+  [PERFIS.ANALISTA]: [
+    "dashboard",
+    "relatorios",
+    "documentos",
+    "treinamentos",
+    "operacao",
+    "cftv",
+    "quadra_seguranca",
+    "analise_riscos",
+    "plano_acao",
+    "cadastros",
+    "sistema",
+    "logs",
+  ],
+  [PERFIS.OPERADOR]: [
+    "dashboard",
+    "relatorios",
+    "documentos",
+    "operacao",
+    "cftv",
+    "quadra_seguranca",
+    "cadastros",
+    "sistema",
+  ],
+  [PERFIS.PORTARIA]: ["treinamentos"],
+  [PERFIS.CADASTRO]: ["treinamentos"],
+  [PERFIS.TECNICO_MANUTENCAO]: ["cftv"],
+};
+
+function permissoesCompletas(modulos: string[]) {
+  return Array.from(new Set(modulos))
+    .filter((modulo) => MODULOS_ACESSO.some((item) => item.chave === modulo))
+    .map((modulo) => ({
+      modulo,
+      leitura: true,
+      criar: true,
+      editar: true,
+      excluir: true,
+    }));
+}
 
 export function usuarioAtual(): UsuarioLocal | null {
   const raw = localStorage.getItem("usuario");
@@ -43,34 +128,93 @@ export function temPerfil(perfis: string[]) {
   return perfis.includes(perfilAtual());
 }
 
+export function permissoesModulosAtual() {
+  const usuario = usuarioAtual();
+  if (!usuario) return [];
+  if (usuario.perfilAcesso === PERFIS.SUPER_ADMIN) {
+    return MODULOS_ACESSO.map((item) => item.chave);
+  }
+  if (Array.isArray(usuario.permissoesAcoes)) {
+    return usuario.permissoesAcoes.map((permissao) => permissao.modulo);
+  }
+  if (Array.isArray(usuario.permissoesModulos)) {
+    return usuario.permissoesModulos;
+  }
+  return PERFIS_POR_MODULO[usuario.perfilAcesso || ""] || [];
+}
+
+export function permissoesAcoesAtual() {
+  const usuario = usuarioAtual();
+  if (!usuario) return [];
+  if (usuario.perfilAcesso === PERFIS.SUPER_ADMIN) {
+    return permissoesCompletas(MODULOS_ACESSO.map((item) => item.chave));
+  }
+  if (Array.isArray(usuario.permissoesAcoes)) {
+    return usuario.permissoesAcoes;
+  }
+  return permissoesCompletas(permissoesModulosAtual());
+}
+
+export function temModulo(modulo: string) {
+  if (perfilAtual() === PERFIS.SUPER_ADMIN) return true;
+  return permissoesModulosAtual().includes(modulo);
+}
+
+export function podeNoModulo(modulo: string, acao: AcaoAcesso = "leitura") {
+  if (perfilAtual() === PERFIS.SUPER_ADMIN) return true;
+  return permissoesAcoesAtual().some(
+    (permissao) => permissao.modulo === modulo && Boolean(permissao[acao]),
+  );
+}
+
+export function modulosDosPerfis(perfis: string[]) {
+  const modulos = new Set<string>();
+  for (const perfil of perfis) {
+    (PERFIS_POR_MODULO[perfil] || []).forEach((modulo) =>
+      modulos.add(modulo),
+    );
+  }
+  return Array.from(modulos);
+}
+
+export function temPerfilOuModulo(perfis: string[], modulo?: string) {
+  if (perfilAtual() === PERFIS.SUPER_ADMIN) return true;
+  if (modulo && podeNoModulo(modulo, "leitura")) return true;
+  if (!modulo && temPerfil(perfis)) return true;
+  return false;
+}
+
 export const podeAdministrar = () =>
-  temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]);
+  temPerfil([PERFIS.SUPER_ADMIN]) ||
+  podeNoModulo("usuarios", "criar") ||
+  podeNoModulo("usuarios", "editar") ||
+  podeNoModulo("usuarios", "excluir") ||
+  podeNoModulo("configuracoes", "editar");
 
 export const podeSuperAdmin = () => temPerfil([PERFIS.SUPER_ADMIN]);
 
 export const podeAnalisar = () =>
-  temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]);
+  temPerfil([PERFIS.SUPER_ADMIN]) ||
+  podeNoModulo("analise_riscos", "criar") ||
+  podeNoModulo("analise_riscos", "editar") ||
+  podeNoModulo("analise_riscos", "excluir");
 
 export const podeVerLogs = () =>
-  temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]);
+  temPerfil([PERFIS.SUPER_ADMIN]) || podeNoModulo("logs", "leitura");
 
 export const podeGerenciarRiscos = () =>
-  temPerfil([PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]);
+  temPerfil([PERFIS.SUPER_ADMIN]) ||
+  temModulo("analise_riscos") ||
+  temModulo("plano_acao");
 
 export const podeVerNaturezas = () =>
-  temPerfil([
-    PERFIS.SUPER_ADMIN,
-    PERFIS.ADMINISTRADOR,
-    PERFIS.ANALISTA,
-    PERFIS.OPERADOR,
-  ]);
+  temPerfil([PERFIS.SUPER_ADMIN]) || temModulo("cadastros");
 
 export const podeAtenderManutencao = () =>
-  temPerfil([
-    PERFIS.SUPER_ADMIN,
-    PERFIS.ADMINISTRADOR,
-    PERFIS.TECNICO_MANUTENCAO,
-  ]);
+  temPerfil([PERFIS.SUPER_ADMIN]) ||
+  podeNoModulo("cftv", "criar") ||
+  podeNoModulo("cftv", "editar") ||
+  podeNoModulo("cftv", "excluir");
 
 export const somenteTecnicoManutencao = () =>
   temPerfil([PERFIS.TECNICO_MANUTENCAO]);

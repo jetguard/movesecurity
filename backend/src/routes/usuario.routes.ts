@@ -2,11 +2,15 @@
 import fs from "fs";
 import multer from "multer";
 import {
+  atualizarPerfilAcesso,
   atualizarPerfil,
   alterarStatusUsuario,
   buscarPerfil,
+  criarPerfilAcesso,
   criarUsuario,
+  excluirPerfilAcesso,
   excluirUsuario,
+  listarPerfisAcesso,
   listarUsuarios,
   redefinirSenhaUsuario,
   resetarDispositivoUsuario,
@@ -47,9 +51,33 @@ const upload = multer({
 
 router.get("/", autenticarUsuario, autorizarPerfis(acessoTotal), listarUsuarios);
 router.post("/", autenticarUsuario, autorizarPerfis(acessoTotal), criarUsuario);
+router.get(
+  "/perfis-acesso",
+  autenticarUsuario,
+  autorizarPerfis(["SUPER_ADMIN"]),
+  listarPerfisAcesso,
+);
+router.post(
+  "/perfis-acesso",
+  autenticarUsuario,
+  autorizarPerfis(["SUPER_ADMIN"]),
+  criarPerfilAcesso,
+);
 router.get("/me", autenticarUsuario, buscarPerfil);
 router.put("/me", autenticarUsuario, upload.single("fotoPerfil"), atualizarPerfil);
 router.put("/me/pin", autenticarUsuario, atualizarPinOperacional);
+router.put(
+  "/perfis-acesso/:id",
+  autenticarUsuario,
+  autorizarPerfis(["SUPER_ADMIN"]),
+  atualizarPerfilAcesso,
+);
+router.delete(
+  "/perfis-acesso/:id",
+  autenticarUsuario,
+  autorizarPerfis(["SUPER_ADMIN"]),
+  excluirPerfilAcesso,
+);
 router.put("/:id", autenticarUsuario, autorizarPerfis(acessoTotal), atualizarUsuario);
 router.put("/:id/status", autenticarUsuario, autorizarPerfis(acessoTotal), alterarStatusUsuario);
 router.put("/:id/senha", autenticarUsuario, autorizarPerfis(acessoTotal), redefinirSenhaUsuario);

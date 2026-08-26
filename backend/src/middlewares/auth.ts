@@ -10,6 +10,8 @@ import {
 export type AuthRequest = Request & {
   usuarioId?: number;
   usuarioPerfil?: string;
+  usuarioPermissoes?: string[];
+  usuarioPermissoesAcoes?: PermissaoModulo[];
   usuarioUnidade?: string | null;
   unidadeAtiva?: string;
   unidadesPermitidas?: string[];
@@ -28,6 +30,116 @@ function lerCookie(req: Request, nome: string) {
     .map((item) => item.trim())
     .find((item) => item.startsWith(`${nome}=`))
     ?.slice(nome.length + 1);
+}
+
+type PermissaoModulo = {
+  modulo: string;
+  leitura: boolean;
+  criar: boolean;
+  editar: boolean;
+  excluir: boolean;
+};
+
+const ACOES_ACESSO = ["leitura", "criar", "editar", "excluir"];
+
+function permissoesCompletas(modulos: string[]) {
+  return Array.from(new Set(modulos))
+    .filter((modulo) => MODULOS_ACESSO.some((item) => item.chave === modulo))
+    .map((modulo) => ({
+      modulo,
+      leitura: true,
+      criar: true,
+      editar: true,
+      excluir: true,
+    }));
+}
+
+function normalizarPermissoes(valor: unknown): PermissaoModulo[] {
+  const normalizarLista = (lista: unknown[]) => {
+    if (lista.every((item) => typeof item === "string")) {
+      return permissoesCompletas(lista.map((item) => String(item)));
+    }
+
+    return lista
+      .map((item: any) => {
+        const modulo = String(item?.modulo || item?.chave || "").trim();
+        if (!MODULOS_ACESSO.some((opcao) => opcao.chave === modulo)) return null;
+        const permissoes = {
+          modulo,
+          leitura: Boolean(item.leitura),
+          criar: Boolean(item.criar),
+          editar: Boolean(item.editar),
+          excluir: Boolean(item.excluir),
+        };
+        if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+          permissoes.leitura = true;
+        }
+        return ACOES_ACESSO.some((acao) =>
+          Boolean(permissoes[acao as keyof PermissaoModulo]),
+        )
+          ? permissoes
+          : null;
+      })
+      .filter(Boolean) as PermissaoModulo[];
+  };
+
+  if (Array.isArray(valor)) {
+    return normalizarLista(valor);
+  }
+  if (typeof valor === "string") {
+    try {
+      const parsed = JSON.parse(valor);
+      return Array.isArray(parsed) ? normalizarLista(parsed) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
+async function permissoesDoPerfil(codigo?: string | null) {
+  if (!codigo) return [];
+  if (codigo === PERFIS.SUPER_ADMIN) {
+    return permissoesCompletas(MODULOS_ACESSO.map((item) => item.chave));
+  }
+  const perfil = await prisma.perfilAcesso.findUnique({
+    where: { codigo },
+    select: { permissoesJson: true, status: true },
+  });
+  if (!perfil || perfil.status !== "ATIVO") return [];
+  return normalizarPermissoes(perfil.permissoesJson);
+}
+
+function acaoDaRequisicao(req: AuthRequest) {
+  if (req.method === "GET") return "leitura";
+  if (req.method === "POST") return "criar";
+  if (req.method === "PUT" || req.method === "PATCH") return "editar";
+  if (req.method === "DELETE") return "excluir";
+  return "leitura";
+}
+
+function moduloDaRota(req: AuthRequest) {
+  const rota = req.originalUrl || req.path || "";
+  if (rota.startsWith("/api/usuarios")) return "usuarios";
+  if (rota.startsWith("/api/auth")) return undefined;
+  if (rota.startsWith("/api/treinamentos") || rota.includes("treinamento")) return "treinamentos";
+  if (rota.startsWith("/api/riscos")) return "analise_riscos";
+  if (rota.startsWith("/api/planos-acao")) return "plano_acao";
+  if (rota.startsWith("/api/cameras") || rota.startsWith("/api/ordens-servico")) return "cftv";
+  if (rota.startsWith("/api/quadra")) return "quadra_seguranca";
+  if (rota.startsWith("/api/naturezas") || rota.startsWith("/api/locais")) return "cadastros";
+  if (rota.startsWith("/api/logs") || rota.startsWith("/api/sessoes")) return "logs";
+  if (rota.startsWith("/api/configuracoes") || rota.startsWith("/api/apis")) return "configuracoes";
+  if (
+    rota.startsWith("/api/ocorrencias") ||
+    rota.startsWith("/api/eventos") ||
+    rota.startsWith("/api/investigacao") ||
+    rota.startsWith("/api/relatorios") ||
+    rota.startsWith("/api/relatos-campo")
+  ) {
+    return "relatorios";
+  }
+  return undefined;
 }
 
 export async function autenticarUsuario(
@@ -112,6 +224,10 @@ export async function autenticarUsuario(
 
     req.usuarioId = usuario.id;
     req.usuarioPerfil = usuario.perfilAcesso;
+    req.usuarioPermissoesAcoes = await permissoesDoPerfil(usuario.perfilAcesso);
+    req.usuarioPermissoes = req.usuarioPermissoesAcoes.map(
+      (permissao) => permissao.modulo,
+    );
     req.usuarioUnidade = usuario.unidade;
 
     const rotaLiberadaParaTrocaSenha = [
@@ -164,12 +280,35 @@ export async function autenticarUsuario(
 }
 
 export function autorizarPerfis(perfisPermitidos: string[]) {
-  return (req: AuthRequest, res: Response, next: NextFunction) => {
+  return async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (req.usuarioPerfil === PERFIS.SUPER_ADMIN) {
       return next();
     }
 
-    if (!req.usuarioPerfil || !perfisPermitidos.includes(req.usuarioPerfil)) {
+    if (
+      perfisPermitidos.length === 1 &&
+      perfisPermitidos[0] === PERFIS.SUPER_ADMIN
+    ) {
+      return res.status(403).json({
+        error: "Acesso não autorizado para este perfil",
+      });
+    }
+
+    const moduloRota = moduloDaRota(req);
+    const acessoPorPerfil =
+      !moduloRota && req.usuarioPerfil
+        ? perfisPermitidos.includes(req.usuarioPerfil)
+        : false;
+    const acao = acaoDaRequisicao(req);
+    const acessoPorModulo =
+      Boolean(moduloRota) &&
+      (req.usuarioPermissoesAcoes || []).some(
+        (permissao) =>
+          permissao.modulo === moduloRota &&
+          Boolean(permissao[acao as keyof PermissaoModulo]),
+      );
+
+    if (!acessoPorPerfil && !acessoPorModulo) {
       return res.status(403).json({
         error: "Acesso não autorizado para este perfil",
       });
@@ -190,6 +329,82 @@ export const PERFIS = {
   PORTARIA: "PORTARIA",
   CADASTRO: "CADASTRO",
   TECNICO_MANUTENCAO: "TECNICO_MANUTENCAO",
+};
+
+export const MODULOS_ACESSO = [
+  { chave: "dashboard", nome: "Dashboard" },
+  { chave: "relatorios", nome: "Relatórios" },
+  { chave: "documentos", nome: "Central de documentos" },
+  { chave: "treinamentos", nome: "Treinamentos" },
+  { chave: "operacao", nome: "Operação" },
+  { chave: "cftv", nome: "Câmeras e manutenção" },
+  { chave: "quadra_seguranca", nome: "Quadra de Segurança" },
+  { chave: "analise_riscos", nome: "Análise de riscos" },
+  { chave: "plano_acao", nome: "Plano de ação" },
+  { chave: "cadastros", nome: "Cadastros" },
+  { chave: "usuarios", nome: "Usuários" },
+  { chave: "configuracoes", nome: "Configurações" },
+  { chave: "sistema", nome: "Sistema" },
+  { chave: "logs", nome: "Logs" },
+];
+
+const PERFIS_POR_MODULO: Record<string, string[]> = {
+  [PERFIS.ADMINISTRADOR]: [
+    "dashboard",
+    "relatorios",
+    "documentos",
+    "treinamentos",
+    "operacao",
+    "cftv",
+    "quadra_seguranca",
+    "analise_riscos",
+    "plano_acao",
+    "cadastros",
+    "usuarios",
+    "configuracoes",
+    "sistema",
+    "logs",
+  ],
+  [PERFIS.GESTOR]: ["dashboard", "treinamentos", "relatorios", "documentos"],
+  [PERFIS.COORDENADOR]: [
+    "dashboard",
+    "treinamentos",
+    "relatorios",
+    "documentos",
+  ],
+  [PERFIS.SUPERVISOR]: [
+    "dashboard",
+    "treinamentos",
+    "relatorios",
+    "documentos",
+  ],
+  [PERFIS.ANALISTA]: [
+    "dashboard",
+    "relatorios",
+    "documentos",
+    "treinamentos",
+    "operacao",
+    "cftv",
+    "quadra_seguranca",
+    "analise_riscos",
+    "plano_acao",
+    "cadastros",
+    "sistema",
+    "logs",
+  ],
+  [PERFIS.OPERADOR]: [
+    "dashboard",
+    "relatorios",
+    "documentos",
+    "operacao",
+    "cftv",
+    "quadra_seguranca",
+    "cadastros",
+    "sistema",
+  ],
+  [PERFIS.PORTARIA]: ["treinamentos"],
+  [PERFIS.CADASTRO]: ["treinamentos"],
+  [PERFIS.TECNICO_MANUTENCAO]: ["cftv"],
 };
 
 export const acessoTotal = [PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR];

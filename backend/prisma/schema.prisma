@@ -77,6 +77,20 @@ model Usuario {
   relatosCampoGerados          RelatoCampo[]
 }
 
+model PerfilAcesso {
+  id             Int      @id @default(autoincrement())
+  codigo         String   @unique
+  nome           String
+  descricao      String?
+  permissoesJson String   @default("[]")
+  sistema        Boolean  @default(false)
+  status         String   @default("ATIVO")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status, nome])
+}
+
 model TreinamentoTerminal {
   id                 Int       @id @default(autoincrement())
   token              String    @unique

@@ -11,7 +11,12 @@ import {
   UserRound,
 } from "lucide-react";
 import { api } from "../services/api";
-import { podeSuperAdmin } from "../utils/permissoes";
+import {
+  MODULOS_ACESSO,
+  type AcaoAcesso,
+  type PermissaoModulo,
+  podeSuperAdmin,
+} from "../utils/permissoes";
 
 type Usuario = {
   id: number;
@@ -32,6 +37,17 @@ type Usuario = {
   statusUsuario: string;
   possuiPinOperacional?: boolean;
   ultimoAcesso?: string | null;
+};
+
+type PerfilAcesso = {
+  id: number;
+  codigo: string;
+  nome: string;
+  descricao?: string | null;
+  permissoes: string[];
+  permissoesDetalhadas?: PermissaoModulo[];
+  sistema: boolean;
+  status: string;
 };
 
 const unidades = [
@@ -88,6 +104,21 @@ const vazio = {
   confirmarSenha: "",
 };
 
+const perfilVazio = {
+  nome: "",
+  descricao: "",
+  permissoes: [] as string[],
+  permissoesDetalhadas: [] as PermissaoModulo[],
+  status: "ATIVO",
+};
+
+const acoesPerfil: { chave: AcaoAcesso; label: string }[] = [
+  { chave: "leitura", label: "Leitura" },
+  { chave: "criar", label: "Criar" },
+  { chave: "editar", label: "Editar" },
+  { chave: "excluir", label: "Excluir" },
+];
+
 function apenasDigitos(valor: string) {
   return String(valor || "").replace(/\D/g, "");
 }
@@ -135,11 +166,6 @@ function grupoLabel(valor: string) {
   );
 }
 
-function perfilLabel(valor: string) {
-  if (valor === "SUPER_ADMIN") return "Super Admin";
-  return perfis.find((perfil) => perfil.value === valor)?.label || valor || "-";
-}
-
 function statusClasse(status: string) {
   if (status === "ATIVO") {
     return "bg-emerald-50 text-emerald-700 ring-emerald-200";
@@ -175,9 +201,15 @@ function IconButton({
 }
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
+  const [perfisAcesso, setPerfisAcesso] = useState<PerfilAcesso[]>([]);
   const [formulario, setFormulario] = useState({ ...vazio });
+  const [formPerfil, setFormPerfil] = useState({ ...perfilVazio });
   const [editando, setEditando] = useState<Usuario | null>(null);
+  const [perfilEditando, setPerfilEditando] = useState<PerfilAcesso | null>(
+    null,
+  );
   const [abrirFormulario, setAbrirFormulario] = useState(false);
+  const [aba, setAba] = useState<"usuarios" | "perfis">("usuarios");
   const [busca, setBusca] = useState("");
   const [filtroPerfil, setFiltroPerfil] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("");
@@ -185,15 +217,34 @@ export default function Usuarios() {
   const [senhaReset, setSenhaReset] = useState("");
   const [confirmarReset, setConfirmarReset] = useState("");
   const superAdmin = podeSuperAdmin();
+  const perfisDisponiveis = useMemo(() => {
+    const doBanco = perfisAcesso
+      .filter((perfil) => perfil.status === "ATIVO")
+      .map((perfil) => ({ label: perfil.nome, value: perfil.codigo }));
+    const combinados = [
+      ...doBanco,
+      ...perfis.filter(
+        (perfil) => !doBanco.some((item) => item.value === perfil.value),
+      ),
+    ];
+    return combinados.sort((a, b) => a.label.localeCompare(b.label));
+  }, [perfisAcesso]);
 
   async function carregarUsuarios() {
     const response = await api.get("/usuarios");
     setUsuarios(response.data);
   }
 
+  async function carregarPerfisAcesso() {
+    if (!superAdmin) return;
+    const response = await api.get("/usuarios/perfis-acesso");
+    setPerfisAcesso(response.data);
+  }
+
   useEffect(() => {
     carregarUsuarios();
-  }, []);
+    carregarPerfisAcesso();
+  }, [superAdmin]);
 
   const usuariosFiltrados = useMemo(() => {
     const texto = normalizarBusca(busca);
@@ -440,6 +491,116 @@ export default function Usuarios() {
     carregarUsuarios();
   }
 
+  function novoPerfil() {
+    setPerfilEditando(null);
+    setFormPerfil({ ...perfilVazio });
+  }
+
+  function editarPerfil(perfil: PerfilAcesso) {
+    setPerfilEditando(perfil);
+    setFormPerfil({
+      nome: perfil.nome,
+      descricao: perfil.descricao || "",
+      permissoes: perfil.permissoes || [],
+      permissoesDetalhadas:
+        perfil.permissoesDetalhadas ||
+        (perfil.permissoes || []).map((modulo) => ({
+          modulo,
+          leitura: true,
+          criar: true,
+          editar: true,
+          excluir: true,
+        })),
+      status: perfil.status || "ATIVO",
+    });
+  }
+
+  function permissaoDoModulo(modulo: string) {
+    return formPerfil.permissoesDetalhadas.find(
+      (permissao) => permissao.modulo === modulo,
+    );
+  }
+
+  function alternarPermissaoPerfil(modulo: string, acao: AcaoAcesso) {
+    setFormPerfil((atual) => ({
+      ...atual,
+      permissoesDetalhadas: (() => {
+        const existente = atual.permissoesDetalhadas.find(
+          (permissao) => permissao.modulo === modulo,
+        ) || {
+          modulo,
+          leitura: false,
+          criar: false,
+          editar: false,
+          excluir: false,
+        };
+        const atualizado = {
+          ...existente,
+          [acao]: !existente[acao],
+        };
+        if (atualizado.criar || atualizado.editar || atualizado.excluir) {
+          atualizado.leitura = true;
+        }
+        const aindaPossuiPermissao = acoesPerfil.some(
+          (item) => atualizado[item.chave],
+        );
+        const demais = atual.permissoesDetalhadas.filter(
+          (permissao) => permissao.modulo !== modulo,
+        );
+        return aindaPossuiPermissao ? [...demais, atualizado] : demais;
+      })(),
+    }));
+  }
+
+  async function salvarPerfil(e: React.FormEvent) {
+    e.preventDefault();
+    if (!formPerfil.nome.trim()) {
+      alert("Informe o nome do perfil.");
+      return;
+    }
+    if (!formPerfil.permissoesDetalhadas.length) {
+      alert("Selecione ao menos um módulo.");
+      return;
+    }
+
+    const payload = {
+      ...formPerfil,
+      permissoes: formPerfil.permissoesDetalhadas.map(
+        (permissao) => permissao.modulo,
+      ),
+    };
+
+    if (perfilEditando) {
+      await api.put(`/usuarios/perfis-acesso/${perfilEditando.id}`, payload);
+    } else {
+      await api.post("/usuarios/perfis-acesso", payload);
+    }
+
+    await carregarPerfisAcesso();
+    setPerfilEditando(null);
+    setFormPerfil({ ...perfilVazio });
+  }
+
+  async function excluirPerfil(perfil: PerfilAcesso) {
+    if (!confirm(`Deseja excluir o perfil ${perfil.nome}?`)) return;
+    await api.delete(`/usuarios/perfis-acesso/${perfil.id}`);
+    await carregarPerfisAcesso();
+    if (perfilEditando?.id === perfil.id) {
+      setPerfilEditando(null);
+      setFormPerfil({ ...perfilVazio });
+    }
+  }
+
+  function nomePerfil(valor: string) {
+    if (valor === "SUPER_ADMIN") return "Super Admin";
+    return (
+      perfisAcesso.find((perfil) => perfil.codigo === valor)?.nome ||
+      perfis.find((perfil) => perfil.value === valor)?.label ||
+      valor ||
+      "-"
+    );
+  }
+
   return (
     <div className="space-y-5 p-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -452,16 +613,48 @@ export default function Usuarios() {
           </p>
         </div>
 
-        <button
-          onClick={novoUsuario}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
-        >
-          <Plus size={18} />
-          Novo Usuário
-        </button>
+        {aba === "usuarios" ? (
+          <button
+            onClick={novoUsuario}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
+          >
+            <Plus size={18} />
+            Novo Usuário
+          </button>
+        ) : (
+          <button
+            onClick={novoPerfil}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-700"
+          >
+            <Plus size={18} />
+            Novo Perfil
+          </button>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_190px_180px] dark:border-slate-800 dark:bg-slate-900">
+      {superAdmin && (
+        <div className="inline-flex rounded-2xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+          {[
+            ["usuarios", "Usuários"],
+            ["perfis", "Perfis de acesso"],
+          ].map(([valor, label]) => (
+            <button
+              key={valor}
+              type="button"
+              onClick={() => setAba(valor as "usuarios" | "perfis")}
+              className={`rounded-xl px-4 py-2 text-sm font-black transition ${
+                aba === valor
+                  ? "bg-blue-600 text-white shadow"
+                  : "text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {aba === "usuarios" && <div className="grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_220px_190px_180px] dark:border-slate-800 dark:bg-slate-900">
         <label className="relative">
           <Search
             size={18}
@@ -481,7 +674,7 @@ export default function Usuarios() {
         >
           <option value="">Todos os perfis</option>
           <option value="SUPER_ADMIN">Super Admin</option>
-          {perfis.map((perfil) => (
+          {perfisDisponiveis.map((perfil) => (
             <option key={perfil.value} value={perfil.value}>
               {perfil.label}
             </option>
@@ -509,8 +702,8 @@ export default function Usuarios() {
             </option>
           ))}
         </select>
-      </div>
-      {abrirFormulario && (
+      </div>}
+      {aba === "usuarios" && abrirFormulario && (
         <form
           onSubmit={salvarUsuario}
           className="rounded-xl bg-white p-6 shadow space-y-5"
@@ -686,7 +879,7 @@ export default function Usuarios() {
                   {editando?.perfilAcesso === "SUPER_ADMIN" && (
                     <option value="SUPER_ADMIN">Super Admin</option>
                   )}
-                  {perfis.map((perfil) => (
+                  {perfisDisponiveis.map((perfil) => (
                     <option key={perfil.value} value={perfil.value}>
                       {perfil.label}
                     </option>
@@ -820,7 +1013,243 @@ export default function Usuarios() {
         </form>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      {aba === "perfis" && superAdmin && (
+        <div className="grid gap-5 xl:grid-cols-[420px_1fr]">
+          <form
+            onSubmit={salvarPerfil}
+            className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900"
+          >
+            <div className="mb-5">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
+                Perfis de acesso
+              </p>
+              <h2 className="mt-1 text-xl font-black text-slate-950 dark:text-white">
+                {perfilEditando ? "Editar perfil" : "Novo perfil"}
+              </h2>
+              <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-300">
+                Selecione os módulos liberados para este perfil.
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                placeholder="Nome do perfil"
+                value={formPerfil.nome}
+                onChange={(e) =>
+                  setFormPerfil((atual) => ({
+                    ...atual,
+                    nome: e.target.value,
+                  }))
+                }
+                required
+              />
+              <textarea
+                className="min-h-24 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                placeholder="Descrição do perfil"
+                value={formPerfil.descricao}
+                onChange={(e) =>
+                  setFormPerfil((atual) => ({
+                    ...atual,
+                    descricao: e.target.value,
+                  }))
+                }
+              />
+              {perfilEditando && (
+                <select
+                  value={formPerfil.status}
+                  onChange={(e) =>
+                    setFormPerfil((atual) => ({
+                      ...atual,
+                      status: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-bold text-slate-900 outline-none focus:border-blue-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                  disabled={perfilEditando.codigo === "SUPER_ADMIN"}
+                >
+                  <option value="ATIVO">Ativo</option>
+                  <option value="INATIVO">Inativo</option>
+                </select>
+              )}
+            </div>
+
+            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div className="border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950">
+                <p className="text-sm font-black text-slate-900 dark:text-white">
+                  Permissões por módulo
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-300">
+                  Leitura libera visualização. Criar, editar ou excluir também
+                  habilitam leitura automaticamente.
+                </p>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-[620px] text-left text-xs">
+                  <thead className="bg-white text-[10px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-900 dark:text-slate-300">
+                    <tr>
+                      <th className="px-4 py-3">Módulo</th>
+                      {acoesPerfil.map((acao) => (
+                        <th key={acao.chave} className="px-2 py-3 text-center">
+                          {acao.label}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    {MODULOS_ACESSO.map((modulo) => {
+                      const permissao = permissaoDoModulo(modulo.chave);
+                      return (
+                        <tr key={modulo.chave}>
+                          <td className="px-4 py-2 font-black text-slate-800 dark:text-slate-100">
+                            {modulo.nome}
+                          </td>
+                          {acoesPerfil.map((acao) => (
+                            <td key={acao.chave} className="px-2 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 accent-blue-600"
+                                checked={Boolean(permissao?.[acao.chave])}
+                                onChange={() =>
+                                  alternarPermissaoPerfil(
+                                    modulo.chave,
+                                    acao.chave,
+                                  )
+                                }
+                                disabled={perfilEditando?.codigo === "SUPER_ADMIN"}
+                              />
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button className="rounded-xl bg-green-600 px-4 py-2 text-sm font-black text-white hover:bg-green-700">
+                Salvar perfil
+              </button>
+              {perfilEditando && (
+                <button
+                  type="button"
+                  onClick={novoPerfil}
+                  className="rounded-xl bg-slate-200 px-4 py-2 text-sm font-black text-slate-700 hover:bg-slate-300 dark:bg-slate-800 dark:text-slate-100"
+                >
+                  Cancelar edição
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
+                Perfis cadastrados
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-300">
+                {perfisAcesso.length} perfil(is) disponível(is)
+              </p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-[880px] text-left text-xs">
+                <thead className="bg-slate-50 text-[11px] font-black uppercase tracking-[0.12em] text-slate-500 dark:bg-slate-950 dark:text-slate-300">
+                  <tr>
+                    <th className="px-4 py-3">Perfil</th>
+                    <th className="px-3 py-3">Módulos</th>
+                    <th className="px-3 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {perfisAcesso.map((perfil) => (
+                    <tr
+                      key={perfil.id}
+                      className="align-top hover:bg-blue-50/50 dark:hover:bg-slate-800/70"
+                    >
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-black text-slate-950 dark:text-white">
+                          {perfil.nome}
+                        </p>
+                        <p className="mt-1 font-mono text-[11px] font-black text-blue-600">
+                          {perfil.codigo}
+                        </p>
+                        <p className="mt-1 max-w-sm text-xs font-semibold text-slate-500 dark:text-slate-300">
+                          {perfil.descricao || "Sem descrição"}
+                        </p>
+                        {perfil.sistema && (
+                          <span className="mt-2 inline-flex rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            Sistema
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex max-w-xl flex-wrap gap-1.5">
+                          {(perfil.permissoesDetalhadas || []).map((permissao) => (
+                            <span
+                              key={permissao.modulo}
+                              className="rounded-full bg-blue-50 px-2 py-1 text-[11px] font-black text-blue-700 ring-1 ring-blue-100 dark:bg-blue-500/10 dark:text-blue-200 dark:ring-blue-500/20"
+                            >
+                              {MODULOS_ACESSO.find(
+                                (modulo) => modulo.chave === permissao.modulo,
+                              )?.nome || permissao.modulo}
+                              :{" "}
+                              {acoesPerfil
+                                .filter((acao) => permissao[acao.chave])
+                                .map((acao) => acao.label.toLowerCase())
+                                .join(", ")}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-black ring-1 ${statusClasse(perfil.status)}`}
+                        >
+                          {perfil.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          <IconButton
+                            title="Editar perfil"
+                            onClick={() => editarPerfil(perfil)}
+                            className="border-blue-200 text-blue-700 hover:bg-blue-50"
+                          >
+                            <Pencil size={16} />
+                          </IconButton>
+                          {!perfil.sistema && (
+                            <IconButton
+                              title="Excluir perfil"
+                              onClick={() => excluirPerfil(perfil)}
+                              className="border-red-200 text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 size={16} />
+                            </IconButton>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!perfisAcesso.length && (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className="px-4 py-12 text-center text-sm font-bold text-slate-500"
+                      >
+                        Nenhum perfil encontrado.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {aba === "usuarios" && <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-slate-800">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-600">
@@ -938,7 +1367,7 @@ export default function Usuarios() {
                   </td>
                   <td className="px-3 py-3">
                     <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-black text-indigo-700 ring-1 ring-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-200 dark:ring-indigo-500/20">
-                      {perfilLabel(usuario.perfilAcesso)}
+                      {nomePerfil(usuario.perfilAcesso)}
                     </span>
                   </td>
                   <td className="px-3 py-3">
@@ -1033,7 +1462,7 @@ export default function Usuarios() {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

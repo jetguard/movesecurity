@@ -150,6 +150,33 @@ const GRUPOS_TREINAMENTO = [
   "Terceirizado",
 ];
 
+const MODULOS_ACESSO = [
+  "dashboard",
+  "relatorios",
+  "documentos",
+  "treinamentos",
+  "operacao",
+  "cftv",
+  "quadra_seguranca",
+  "analise_riscos",
+  "plano_acao",
+  "cadastros",
+  "usuarios",
+  "configuracoes",
+  "sistema",
+  "logs",
+];
+
+const ACOES_ACESSO = ["leitura", "criar", "editar", "excluir"];
+
+type PermissaoModulo = {
+  modulo: string;
+  leitura: boolean;
+  criar: boolean;
+  editar: boolean;
+  excluir: boolean;
+};
+
 function normalizarGrupoTreinamento(grupo: string) {
   const valor = String(grupo || "")
     .trim()
@@ -177,6 +204,288 @@ function normalizarGruposTreinamento(valor: unknown, terceirizado = false) {
     grupos.push("Terceirizado");
   }
   return Array.from(new Set(grupos));
+}
+
+function normalizarCodigoPerfil(valor: string) {
+  return String(valor || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function permissoesCompletas(modulos: string[]) {
+  return Array.from(new Set(modulos))
+    .filter((modulo) => MODULOS_ACESSO.includes(modulo))
+    .map((modulo) => ({
+      modulo,
+      leitura: true,
+      criar: true,
+      editar: true,
+      excluir: true,
+    }));
+}
+
+function normalizarPermissoesDetalhadas(valor: unknown): PermissaoModulo[] {
+  const bruto =
+    typeof valor === "string"
+      ? (() => {
+          try {
+            return JSON.parse(valor || "[]");
+          } catch {
+            return [];
+          }
+        })()
+      : valor;
+
+  if (Array.isArray(bruto)) {
+    if (bruto.every((item) => typeof item === "string")) {
+      return permissoesCompletas(bruto);
+    }
+
+    const mapa = new Map<string, PermissaoModulo>();
+    for (const item of bruto) {
+      const modulo = String(item?.modulo || item?.chave || "").trim();
+      if (!MODULOS_ACESSO.includes(modulo)) continue;
+      const permissoes = {
+        modulo,
+        leitura: Boolean(item.leitura),
+        criar: Boolean(item.criar),
+        editar: Boolean(item.editar),
+        excluir: Boolean(item.excluir),
+      };
+      if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+        permissoes.leitura = true;
+      }
+      if (ACOES_ACESSO.some((acao) => Boolean(permissoes[acao as keyof PermissaoModulo]))) {
+        mapa.set(modulo, permissoes);
+      }
+    }
+    return Array.from(mapa.values());
+  }
+
+  if (bruto && typeof bruto === "object") {
+    const mapa = new Map<string, PermissaoModulo>();
+    for (const [modulo, acoes] of Object.entries(bruto as Record<string, any>)) {
+      if (!MODULOS_ACESSO.includes(modulo)) continue;
+      const listaAcoes = Array.isArray(acoes) ? acoes : [];
+      const permissoes = {
+        modulo,
+        leitura: listaAcoes.includes("leitura"),
+        criar: listaAcoes.includes("criar"),
+        editar: listaAcoes.includes("editar"),
+        excluir: listaAcoes.includes("excluir"),
+      };
+      if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+        permissoes.leitura = true;
+      }
+      if (ACOES_ACESSO.some((acao) => Boolean(permissoes[acao as keyof PermissaoModulo]))) {
+        mapa.set(modulo, permissoes);
+      }
+    }
+    return Array.from(mapa.values());
+  }
+
+  return [];
+}
+
+function modulosPermitidos(permissoes: PermissaoModulo[]) {
+  return permissoes
+    .filter((permissao) =>
+      ACOES_ACESSO.some((acao) => Boolean(permissao[acao as keyof PermissaoModulo])),
+    )
+    .map((permissao) => permissao.modulo);
+}
+
+function formatarPerfilAcesso(perfil: any) {
+  const permissoesDetalhadas = normalizarPermissoesDetalhadas(
+    perfil.permissoesJson,
+  );
+  return {
+    ...perfil,
+    permissoes: modulosPermitidos(permissoesDetalhadas),
+    permissoesDetalhadas,
+    permissoesJson: undefined,
+  };
+}
+
+async function buscarPerfilAtivo(codigo: string) {
+  return prisma.perfilAcesso.findFirst({
+    where: {
+      codigo: normalizarPerfil(codigo),
+      status: "ATIVO",
+    },
+  });
+}
+
+async function validarPerfilUsuario(perfil: string) {
+  const codigo = normalizarPerfil(perfil);
+  if (!codigo) return "";
+  const perfilBanco = await buscarPerfilAtivo(codigo);
+  return perfilBanco ? codigo : "";
+}
+
+export async function listarPerfisAcesso(req: AuthRequest, res: Response) {
+  try {
+    const perfis = await prisma.perfilAcesso.findMany({
+      orderBy: [{ sistema: "desc" }, { nome: "asc" }],
+    });
+    return res.json(perfis.map(formatarPerfilAcesso));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar perfis de acesso." });
+  }
+}
+
+export async function criarPerfilAcesso(req: AuthRequest, res: Response) {
+  try {
+    const nome = String(req.body.nome || "").trim();
+    const descricao = String(req.body.descricao || "").trim();
+    const permissoes = normalizarPermissoesDetalhadas(
+      req.body.permissoesDetalhadas || req.body.permissoes,
+    );
+    const codigo = normalizarCodigoPerfil(req.body.codigo || nome);
+
+    if (!nome || !codigo) {
+      return res.status(400).json({ error: "Informe o nome do perfil." });
+    }
+
+    if (!permissoes.length) {
+      return res
+        .status(400)
+        .json({ error: "Selecione ao menos um módulo para o perfil." });
+    }
+
+    const perfil = await prisma.perfilAcesso.create({
+      data: {
+        codigo,
+        nome,
+        descricao: descricao || null,
+        permissoesJson: JSON.stringify(permissoes),
+        sistema: false,
+        status: "ATIVO",
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Criação de perfil de acesso",
+      tipoRegistro: "PerfilAcesso",
+      registroId: perfil.id,
+      dadosNovos: formatarPerfilAcesso(perfil),
+    });
+
+    return res.status(201).json(formatarPerfilAcesso(perfil));
+  } catch (error: any) {
+    console.error(error);
+    if (error?.code === "P2002") {
+      return res
+        .status(400)
+        .json({ error: "Já existe um perfil com este código." });
+    }
+    return res.status(500).json({ error: "Erro ao criar perfil de acesso." });
+  }
+}
+
+export async function atualizarPerfilAcesso(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.perfilAcesso.findUnique({ where: { id } });
+
+    if (!anterior) {
+      return res.status(404).json({ error: "Perfil de acesso não encontrado." });
+    }
+
+    const nome = String(req.body.nome || "").trim();
+    const descricao = String(req.body.descricao || "").trim();
+    const permissoes = normalizarPermissoesDetalhadas(
+      req.body.permissoesDetalhadas || req.body.permissoes,
+    );
+    const status = ["ATIVO", "INATIVO"].includes(String(req.body.status))
+      ? String(req.body.status)
+      : anterior.status;
+
+    if (!nome) {
+      return res.status(400).json({ error: "Informe o nome do perfil." });
+    }
+
+    if (!permissoes.length) {
+      return res
+        .status(400)
+        .json({ error: "Selecione ao menos um módulo para o perfil." });
+    }
+
+    const perfil = await prisma.perfilAcesso.update({
+      where: { id },
+      data: {
+        nome,
+        descricao: descricao || null,
+        permissoesJson: JSON.stringify(permissoes),
+        status,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Alteração de perfil de acesso",
+      tipoRegistro: "PerfilAcesso",
+      registroId: perfil.id,
+      dadosAnteriores: formatarPerfilAcesso(anterior),
+      dadosNovos: formatarPerfilAcesso(perfil),
+    });
+
+    return res.json(formatarPerfilAcesso(perfil));
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: "Erro ao atualizar perfil de acesso." });
+  }
+}
+
+export async function excluirPerfilAcesso(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const perfil = await prisma.perfilAcesso.findUnique({ where: { id } });
+
+    if (!perfil) {
+      return res.status(404).json({ error: "Perfil de acesso não encontrado." });
+    }
+
+    if (perfil.sistema || perfil.codigo === "SUPER_ADMIN") {
+      return res
+        .status(403)
+        .json({ error: "Perfis do sistema não podem ser excluídos." });
+    }
+
+    const emUso = await prisma.usuario.count({
+      where: { perfilAcesso: perfil.codigo },
+    });
+
+    if (emUso > 0) {
+      return res.status(400).json({
+        error:
+          "Este perfil está atribuído a usuários. Altere os usuários antes de excluir.",
+      });
+    }
+
+    await prisma.perfilAcesso.delete({ where: { id } });
+
+    await registrarLog({
+      req,
+      acao: "Exclusão de perfil de acesso",
+      tipoRegistro: "PerfilAcesso",
+      registroId: perfil.id,
+      dadosAnteriores: formatarPerfilAcesso(perfil),
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao excluir perfil de acesso." });
+  }
 }
 
 async function vincularTreinamentosPocSep007(usuario: {
@@ -298,6 +607,16 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "As senhas não coincidem." });
     }
 
+    const perfilNormalizado = cadastroSemAcesso
+      ? "CADASTRO"
+      : await validarPerfilUsuario(perfilAcesso);
+
+    if (!perfilNormalizado) {
+      return res
+        .status(400)
+        .json({ error: "Perfil de acesso inválido ou inativo." });
+    }
+
     const existe = await prisma.usuario.findFirst({
       where: {
         OR: [{ email }, ...(cpfNormalizado ? [{ cpf: cpfNormalizado }] : [])],
@@ -328,9 +647,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
           unidadePrincipal,
         ),
         empresa: "Movecta S/A",
-        perfilAcesso: cadastroSemAcesso
-          ? "CADASTRO"
-          : normalizarPerfil(perfilAcesso),
+        perfilAcesso: perfilNormalizado,
         statusUsuario: cadastroSemAcesso ? "INATIVO" : "ATIVO",
         deveAlterarSenha: !cadastroSemAcesso,
         somenteCadastro: cadastroSemAcesso,
@@ -430,6 +747,16 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       }
     }
 
+    const perfilNormalizado = cadastroSemAcesso
+      ? "CADASTRO"
+      : await validarPerfilUsuario(perfilAcesso || usuarioAnterior.perfilAcesso);
+
+    if (!perfilNormalizado) {
+      return res
+        .status(400)
+        .json({ error: "Perfil de acesso inválido ou inativo." });
+    }
+
     const usuario = await prisma.usuario.update({
       where: { id: Number(id) },
       data: {
@@ -447,9 +774,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
           unidadePrincipal,
         ),
         empresa: "Movecta S/A",
-        perfilAcesso: cadastroSemAcesso
-          ? "CADASTRO"
-          : normalizarPerfil(perfilAcesso),
+        perfilAcesso: perfilNormalizado,
         statusUsuario: cadastroSemAcesso
           ? "INATIVO"
           : validarStatus(statusUsuario),
