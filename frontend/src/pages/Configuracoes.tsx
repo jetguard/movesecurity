@@ -1,7 +1,7 @@
 import { CheckCircle2, KeyRound, LockKeyhole, Save, Settings2, ShieldCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
-import { PERFIS, perfilAtual } from "../utils/permissoes";
+import { PERFIS, perfilAtual, podeNoModulo } from "../utils/permissoes";
 
 type Configuracao = {
   nomeEmpresa: string;
@@ -64,6 +64,16 @@ const inicial: Configuracao = {
 const inputBase =
   "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-500 dark:focus:ring-blue-500/20";
 
+function normalizarPerfilAcesso(perfil?: string | null) {
+  return String(perfil || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 function Label({
   titulo,
   ajuda,
@@ -95,9 +105,10 @@ export default function Configuracoes() {
   const [salvando, setSalvando] = useState(false);
   const [aba, setAba] = useState<"geral" | "acesso">("geral");
   const [mensagemSso, setMensagemSso] = useState("");
-  const podeConfigurarAcesso = [PERFIS.SUPER_ADMIN, PERFIS.TI].includes(
-    perfilAtual(),
-  );
+  const perfilNormalizado = normalizarPerfilAcesso(perfilAtual());
+  const podeConfigurarAcesso =
+    [PERFIS.SUPER_ADMIN, PERFIS.TI, "TI"].includes(perfilNormalizado) ||
+    podeNoModulo("configuracoes", "editar");
 
   useEffect(() => {
     api

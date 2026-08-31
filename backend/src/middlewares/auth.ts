@@ -23,6 +23,18 @@ type TokenPayload = {
   sessaoId?: string;
 };
 
+function perfilPrivilegiado(perfil?: string | null) {
+  const normalizado = String(perfil || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return normalizado === PERFIS.SUPER_ADMIN || normalizado === PERFIS.TI || normalizado === "TI";
+}
+
 function lerCookie(req: Request, nome: string) {
   const cookies = String(req.headers.cookie || "");
   return cookies
@@ -99,7 +111,7 @@ function normalizarPermissoes(valor: unknown): PermissaoModulo[] {
 
 async function permissoesDoPerfil(codigo?: string | null) {
   if (!codigo) return [];
-  if (codigo === PERFIS.SUPER_ADMIN || codigo === PERFIS.TI) {
+  if (perfilPrivilegiado(codigo)) {
     return permissoesCompletas(MODULOS_ACESSO.map((item) => item.chave));
   }
   const perfil = await prisma.perfilAcesso.findUnique({
@@ -243,8 +255,7 @@ export async function autenticarUsuario(
     }
 
     const unidadesPermitidas =
-      usuario.perfilAcesso === PERFIS.SUPER_ADMIN ||
-      usuario.perfilAcesso === PERFIS.TI
+      perfilPrivilegiado(usuario.perfilAcesso)
         ? UNIDADES_SISTEMA
         : normalizarUnidadesPermitidas(
             usuario.unidadesPermitidas,
@@ -282,7 +293,7 @@ export async function autenticarUsuario(
 
 export function autorizarPerfis(perfisPermitidos: string[]) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (req.usuarioPerfil === PERFIS.SUPER_ADMIN || req.usuarioPerfil === PERFIS.TI) {
+    if (perfilPrivilegiado(req.usuarioPerfil)) {
       return next();
     }
 

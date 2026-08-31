@@ -5,7 +5,17 @@ import { registrarLog } from "../services/auditoria.service";
 
 const chavePadrao = "global";
 const chaveMascarada = "********";
-const perfisConfiguracaoSso = ["SUPER_ADMIN", "T_I"];
+const perfisConfiguracaoSso = ["SUPER_ADMIN", "T_I", "TI"];
+
+function normalizarPerfilAcesso(perfil?: string | null) {
+  return String(perfil || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
 
 async function obterOuCriarConfiguracao() {
   return prisma.configuracaoSistema.upsert({
@@ -40,7 +50,7 @@ function mascararConfiguracao(
 }
 
 function podeConfigurarSso(perfil?: string) {
-  return perfisConfiguracaoSso.includes(String(perfil || ""));
+  return perfisConfiguracaoSso.includes(normalizarPerfilAcesso(perfil));
 }
 
 function apiKeyOpenAi(
