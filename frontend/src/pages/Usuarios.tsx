@@ -11,6 +11,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { api } from "../services/api";
+import { cpfVisivelPorPerfil } from "../utils/cpf";
 import {
   MODULOS_ACESSO,
   type AcaoAcesso,
@@ -1341,7 +1342,7 @@ export default function Usuarios() {
                   <td className="px-3 py-3">
                     <div className="space-y-1 font-semibold text-slate-700 dark:text-slate-200">
                       <p>R.E: {usuario.re || "-"}</p>
-                      <p>CPF: {mascararCpf(usuario.cpf || "") || "-"}</p>
+                      <p>CPF: {cpfVisivelPorPerfil(usuario.cpf) || "-"}</p>
                     </div>
                   </td>
                   <td className="px-3 py-3">

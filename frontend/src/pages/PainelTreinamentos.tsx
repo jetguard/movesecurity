@@ -35,6 +35,7 @@ import {
   YAxis,
 } from "recharts";
 import { api } from "../services/api";
+import { cpfVisivelPorPerfil } from "../utils/cpf";
 
 type HistoricoTreinamento = {
   id: string;
@@ -272,7 +273,7 @@ export default function PainelTreinamentos() {
       dados.colaboradores.map((item) => ({
         Nome: item.nome,
         Matricula: item.matricula || "",
-        CPF: item.cpf || "",
+        CPF: cpfVisivelPorPerfil(item.cpf) || "",
         Cargo: item.cargo || "",
         Departamento: item.departamento || "",
         Unidade: item.unidade || "",

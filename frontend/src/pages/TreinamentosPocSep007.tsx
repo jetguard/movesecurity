@@ -11,6 +11,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { api } from "../services/api";
+import { cpfVisivelPorPerfil } from "../utils/cpf";
 import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type TreinamentoPoc = {
@@ -304,7 +305,7 @@ export default function TreinamentosPocSep007() {
                       {item.nomeCompleto}
                     </p>
                     <p className="text-xs text-slate-500">
-                      {item.cpf || "-"} - {item.email}
+                      {cpfVisivelPorPerfil(item.cpf) || "-"} - {item.email}
                     </p>
                   </td>
                   <td className="px-4 py-3">

@@ -10,6 +10,7 @@ import {
   PenLine,
   ShieldCheck,
 } from "lucide-react";
+import { ocultarCpf } from "../utils/cpf";
 import { formatarNomePessoa, nomePessoaValido } from "../utils/nomePessoa";
 
 type SecaoTreinamento = {
@@ -937,7 +938,7 @@ export default function TreinamentoPocSep005Publico() {
               {treinamento.nomeCompleto}
             </p>
             <p>
-              {treinamento.cpf || "-"} | {treinamento.email}
+              {ocultarCpf(treinamento.cpf) || "-"} | {treinamento.email}
             </p>
             <p>
               {treinamento.cargo || "-"} | {treinamento.departamento || "-"} |{" "}

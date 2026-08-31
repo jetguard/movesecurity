@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../services/api";
+import { cpfVisivelPorPerfil } from "../utils/cpf";
 import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type Participante = {
@@ -393,7 +394,7 @@ export default function TreinamentosCriados() {
                       {item.nomeCompleto}
                     </p>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
-                      {item.cpf || "-"} - {item.email}
+                      {cpfVisivelPorPerfil(item.cpf) || "-"} - {item.email}
                     </p>
                   </td>
                   <td className="px-4 py-3 font-semibold text-slate-600 dark:text-slate-300">

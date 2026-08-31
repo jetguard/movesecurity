@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { CheckCircle2, Download, ShieldCheck, XCircle } from "lucide-react";
+import { ocultarCpf } from "../utils/cpf";
 
 type CertificadoValidado = {
   valido: boolean;
@@ -20,12 +21,6 @@ function data(valor?: string) {
   return valor
     ? new Date(valor).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
     : "-";
-}
-
-function cpfFormatado(valor?: string) {
-  const digitos = String(valor || "").replace(/\D/g, "");
-  if (digitos.length !== 11) return valor || "-";
-  return digitos.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 }
 
 export default function ValidarCertificadoIntegracao() {
@@ -110,7 +105,7 @@ export default function ValidarCertificadoIntegracao() {
                     CPF
                   </p>
                   <p className="mt-1 font-black">
-                    {cpfFormatado(certificado.cpf)}
+                    {ocultarCpf(certificado.cpf) || "-"}
                   </p>
                 </div>
                 <div className="rounded-xl border border-slate-700 bg-slate-950/70 p-4">

@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { api } from "../services/api";
+import { cpfVisivelPorPerfil } from "../utils/cpf";
 import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type AlternativaForm = { texto: string; correta: boolean };
@@ -925,7 +926,9 @@ export default function TreinamentosDinamicos() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <p className="font-bold">{item.cpf || "-"}</p>
+                          <p className="font-bold">
+                            {cpfVisivelPorPerfil(item.cpf) || "-"}
+                          </p>
                           <p className="mt-1 text-xs font-semibold text-slate-500">
                             {item.email}
                           </p>
