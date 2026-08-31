@@ -64,121 +64,104 @@ export default function Login() {
   return (
     <main
       className="relative min-h-screen overflow-hidden bg-white bg-cover bg-center text-slate-950"
-      style={{ backgroundImage: "url('/images/movesecurity-login-bg.jpg')" }}
+      style={{ backgroundImage: "url('/images/movesecurity-login-bg.png')" }}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-white/95 via-white/82 to-white/44" />
-      <div className="absolute inset-x-0 bottom-0 h-44 bg-gradient-to-t from-white via-white/80 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/58 to-white/12" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white/80 to-transparent" />
 
-      <section className="relative z-10 flex min-h-screen items-center px-5 py-8 sm:px-8 lg:px-14">
-        <div className="grid w-full grid-cols-1 items-center gap-8 lg:grid-cols-[minmax(0,1fr)_430px]">
-          <div className="max-w-3xl">
-            <div className="mb-10 inline-flex items-center gap-3 rounded-full border border-blue-100 bg-white/85 px-4 py-2 text-sm font-bold text-blue-700 shadow-sm backdrop-blur">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white">
-                <ShieldCheck size={17} />
-              </span>
-              Segurança corporativa Movecta
+      <section className="relative z-10 flex min-h-screen items-center justify-center px-5 py-8">
+        <form
+          onSubmit={handleLogin}
+          className="w-full max-w-[470px] rounded-[32px] border border-slate-200/90 bg-white/88 p-7 shadow-[0_30px_95px_rgba(15,23,42,0.18)] backdrop-blur-xl sm:p-9"
+        >
+          <div className="text-center">
+            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/25">
+              <ShieldCheck size={26} />
             </div>
 
             <img
               src="/images/movecta-logo.png"
               alt="Movecta"
-              className="h-auto w-56 object-contain sm:w-64"
+              className="mx-auto h-auto w-48 object-contain"
             />
 
-            <h1 className="mt-8 text-5xl font-black tracking-normal text-slate-950 sm:text-6xl lg:text-7xl">
+            <p className="mt-7 text-xs font-black uppercase tracking-[0.22em] text-blue-600">
+              Acesso seguro
+            </p>
+            <h1 className="mt-3 text-4xl font-black text-slate-950">
               MoveSecurity
             </h1>
-            <p className="mt-4 max-w-2xl text-lg font-semibold leading-8 text-slate-600 sm:text-xl">
+            <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-slate-500">
               Plataforma nacional de segurança patrimonial, treinamentos,
               certificados, ocorrências, análises de risco e planos de ação.
             </p>
-
-            <div className="mt-9 grid max-w-2xl grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur">
-                <p className="text-2xl font-black text-blue-600">24h</p>
-                <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Controle operacional
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur">
-                <p className="text-2xl font-black text-blue-600">PDF</p>
-                <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Relatórios validados
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 bg-white/85 p-4 shadow-sm backdrop-blur">
-                <p className="text-2xl font-black text-blue-600">SSO</p>
-                <p className="mt-1 text-sm font-semibold text-slate-600">
-                  Login corporativo
-                </p>
-              </div>
-            </div>
           </div>
 
-          <form
-            onSubmit={handleLogin}
-            className="w-full rounded-[28px] border border-slate-200 bg-white/92 p-7 shadow-2xl shadow-blue-900/10 backdrop-blur-xl md:p-8"
+          <div className="mt-8 space-y-5">
+            <label className="block">
+              <span className="mb-2 block text-sm font-black text-slate-700">
+                Email
+              </span>
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
+                <Mail size={18} className="text-blue-600" />
+                <input
+                  type="email"
+                  placeholder="nome@empresa.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                />
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="mb-2 block text-sm font-black text-slate-700">
+                Senha
+              </span>
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
+                <LockKeyhole size={18} className="text-blue-600" />
+                <input
+                  type="password"
+                  placeholder="Digite sua senha"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                />
+              </div>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-7 w-full rounded-2xl bg-blue-600 px-4 py-3.5 font-black text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
-            <div className="mb-8">
-              <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">
-                Acesso seguro
-              </p>
-              <h2 className="mt-3 text-3xl font-black text-slate-950">
-                Entrar no MoveSecurity
-              </h2>
-              <p className="mt-2 text-sm font-semibold text-slate-500">
-                Use suas credenciais para continuar.
-              </p>
-            </div>
+            {loading ? "Entrando..." : "Entrar"}
+          </button>
 
-            <div className="space-y-5">
-              <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-700">
-                  Email
-                </span>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
-                  <Mail size={18} className="text-blue-600" />
-                  <input
-                    type="email"
-                    placeholder="nome@empresa.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
-                  />
-                </div>
-              </label>
+          <div className="mt-6 grid grid-cols-3 gap-2">
+            {[
+              ["24h", "Operação"],
+              ["PDF", "Validação"],
+              ["SSO", "Corporativo"],
+            ].map(([titulo, texto]) => (
+              <div
+                key={titulo}
+                className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 text-center"
+              >
+                <p className="text-lg font-black text-blue-600">{titulo}</p>
+                <p className="mt-1 text-[11px] font-bold text-slate-500">
+                  {texto}
+                </p>
+              </div>
+            ))}
+          </div>
 
-              <label className="block">
-                <span className="mb-2 block text-sm font-black text-slate-700">
-                  Senha
-                </span>
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
-                  <LockKeyhole size={18} className="text-blue-600" />
-                  <input
-                    type="password"
-                    placeholder="Digite sua senha"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
-                  />
-                </div>
-              </label>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="mt-7 w-full rounded-2xl bg-blue-600 px-4 py-3.5 font-black text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
-            >
-              {loading ? "Entrando..." : "Entrar"}
-            </button>
-
-            <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-5 text-xs font-bold text-slate-500">
-              <span>Movecta S/A</span>
-              <span>MoveSecurity</span>
-            </div>
-          </form>
-        </div>
+          <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-5 text-xs font-bold text-slate-500">
+            <span>Movecta S/A</span>
+            <span>MoveSecurity</span>
+          </div>
+        </form>
       </section>
     </main>
   );
