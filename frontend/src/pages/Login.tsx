@@ -63,7 +63,7 @@ export default function Login() {
 
   return (
     <main
-      className="relative min-h-screen overflow-hidden bg-white bg-cover bg-center text-slate-950"
+      className="movesecurity-login relative min-h-screen overflow-hidden bg-white bg-cover bg-center text-slate-950"
       style={{ backgroundImage: "url('/images/movesecurity-login-bg.png')" }}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/58 to-white/12" />
@@ -98,8 +98,8 @@ export default function Login() {
               <span className="mb-2 block text-sm font-black text-slate-700">
                 Email
               </span>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition focus-within:border-blue-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100/80">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
+                <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
                   <Mail size={17} />
                 </span>
                 <input
@@ -112,7 +112,7 @@ export default function Login() {
                     boxShadow: "none",
                     WebkitTextFillColor: "#020617",
                   }}
-                  className="h-9 w-full appearance-none bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                  className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
                 />
               </div>
             </label>
@@ -121,8 +121,8 @@ export default function Login() {
               <span className="mb-2 block text-sm font-black text-slate-700">
                 Senha
               </span>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition focus-within:border-blue-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100/80">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
+                <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
                   <LockKeyhole size={17} />
                 </span>
                 <input
@@ -135,7 +135,7 @@ export default function Login() {
                     boxShadow: "none",
                     WebkitTextFillColor: "#020617",
                   }}
-                  className="h-9 w-full appearance-none bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                  className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
                 />
               </div>
             </label>
