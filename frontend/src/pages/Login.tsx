@@ -98,19 +98,21 @@ export default function Login() {
               <span className="mb-2 block text-sm font-black text-slate-700">
                 Email
               </span>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
-                <Mail size={18} className="text-blue-600" />
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition focus-within:border-blue-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100/80">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <Mail size={17} />
+                </span>
                 <input
                   type="email"
                   placeholder="nome@empresa.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{
-                    backgroundColor: "#ffffff",
-                    boxShadow: "inset 0 0 0 1000px #ffffff",
+                    backgroundColor: "transparent",
+                    boxShadow: "none",
                     WebkitTextFillColor: "#020617",
                   }}
-                  className="w-full bg-white text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                  className="h-9 w-full appearance-none bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
                 />
               </div>
             </label>
@@ -119,19 +121,21 @@ export default function Login() {
               <span className="mb-2 block text-sm font-black text-slate-700">
                 Senha
               </span>
-              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-100">
-                <LockKeyhole size={18} className="text-blue-600" />
+              <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition focus-within:border-blue-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100/80">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                  <LockKeyhole size={17} />
+                </span>
                 <input
                   type="password"
                   placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   style={{
-                    backgroundColor: "#ffffff",
-                    boxShadow: "inset 0 0 0 1000px #ffffff",
+                    backgroundColor: "transparent",
+                    boxShadow: "none",
                     WebkitTextFillColor: "#020617",
                   }}
-                  className="w-full bg-white text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                  className="h-9 w-full appearance-none bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
                 />
               </div>
             </label>
