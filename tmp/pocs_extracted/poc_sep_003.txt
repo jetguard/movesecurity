@@ -1,0 +1,142 @@
+
+--- PAGE 1 ---
+POC-SEP-003
+Apuração e Investigação Rev.000
+09/04/2026
+1. APLICAÇÃO
+Aplica-se a área de Segurança Empresarial Patrimonial dos Terminais Movecta a nível nacional.
+2. OBJETIVO
+Padronizar e formalizar o passo a passo de procedimentos investigativos, garantindo que as informações
+sejam coletadas de maneira consistente, ética, imparcial e eficiente, minimizando riscos de erro, omissão ou
+contaminação de provas, utilizando métodos assertivos.
+3. DEFINIÇÕES
+POC: Procedimento Operacional Corporativo;
+SEP: Segurança Empresarial Patrimonial;
+RO: Relatório de Ocorrência;
+RI: Relatório de Investigação;
+FC: Formulário Corporativo;
+CIDA: Confidencialidade, Integridade, Disponibilidade e Autenticidade;
+Fidedignidade: Reforça que a informação é confiável e não foi corrompida;
+Incolumidade: Termo jurídico/técnico para garantir que algo ou alguém permaneça ileso; e
+Salvaguarda: Proteção sistemática e estratégica.
+4. RESPONSABILIDADES
+N/A
+5. DESCRIÇÃO
+A Segurança Patrimonial poderá ter como fonte de informações e/ou informes qualquer dos seguintes
+meios:
+Flagrante, comunicação via HT, ligação interna, app de mensagem ou fato formalizado por meios oficiais
+(teams e e-mail) ou via canal de denúncia.
+Emissor Elaborador Revisor Aprovador
+Gilmar Vicente
+Segurança Patrimonial Sidney Oliveira Renato Silva
+Ana Paula
+
+--- PAGE 2 ---
+POC-SEP-003
+Apuração e Investigação Rev.000
+09/04/2026
+Em poder das informações, essas devem ser reportadas a Liderança do departamento de Segurança
+Patrimonial, que validará o conteúdo com as informações recebidas e seguira com as tratativas pertinentes.
+Nota¹.: Para casos de denúncias anônimas via ligações externas, internet (app de mensagem ou redes sociais)
+a pessoa que receber deverá preencher o FC-2237 – Check List de Denúncia e Ameaça com o máximo de
+detalhes possíveis, para que seja tomada as ações cabíveis e sequência nas investigações.
+Após a validação do conteúdo, um representante do Departamento de Segurança Patrimonial iniciará a
+apuração dos fatos e posteriormente confeccionará o Relatório de Investigação através do FC-1048 -
+Relatório de Investigação e o FC-2207 - Relatório Cronológico Analítico – RCA (se necessário), com base nas
+instruções do POC-SEP-001 - Atendimento e Registros de Eventos, Ocorrências e Investigação, utilizando a
+FC-1114 - Matriz de Natureza para RO e RI, e dessa forma parametrizar e/ou validar a natureza dos fatos.
+Nota².: Mediante a natureza de determinada ocorrência registrada em FC-1051 Relatório de Ocorrência,
+essa poderá evoluir para um Relatório de Investigação.
+Nota³.: A manutenção do sigilo sobre ativos de informação e informes é condição indispensável, essencial
+para a preservação dos pilares de Confidencialidade, Integridade, Disponibilidade e Autenticidade (CIDA). A
+estrita observância desses critérios visa mitigar riscos operacionais, assegurar a fidedignidade dos dados
+custodiados e garantir a incolumidade física e moral das fontes (informantes), preservando a salvaguarda
+dos canais de inteligência.
+5.1 DEFINIÇÃO DE IMPORTÂNCIA
+As consequências da concretização das informações e/ou informes podem ser imensuráveis, para isso
+as ameaças identificadas pelo departamento de Segurança Patrimonial devem ter seu grau de
+importância definido mediante análise de risco para que as devidas tratativas sejam tomadas.
+5.2 MÉTODOS E APLICAÇÕES
+5.2.1 OS 5 PORQUÊS (ANÁLISE DE CAUSA RAIZ)
+É o método mais coerente para chegar à origem do problema, impedindo que a investigação pare no
+bode expiatório.
+ Uso: Descobrir por que um controle falhou.
+ Exemplo: Um desvio de estoque.
+ Por que o estoque sumiu?
+ Por que não foi registrado?
+ Por que ele(a) conseguiu burlar?
+ Por que não exige senha?
+Emissor Elaborador Revisor Aprovador
+Gilmar Vicente
+Segurança Patrimonial Sidney Oliveira Renato Silva
+Ana Paula
+
+--- PAGE 3 ---
+POC-SEP-003
+Apuração e Investigação Rev.000
+09/04/2026
+ Por que a política não foi atualizada?
+5.3 5W2H (PLANO DE AÇÃO E EXECUÇÃO)
+Após identificar o culpado ou a falha, o 5W2H é a ferramenta de gestão da investigação. Ele organiza o
+que será feito para coletar provas ou corrigir o dano.
+ What (O quê) O que será investigado? (Ex: Notas fiscais de janeiro).
+ Why (Por quê) Qual o indício de fraude? (Ex: Valores acima da média).
+ Who (Quem) Quem conduzirá a perícia e quem são os suspeitos?
+ Where (Onde) Em quais departamentos ou servidores digitais?
+ When (Quando) Cronograma da investigação para evitar prescrição.
+ How (Como) Quais métodos (Forense, entrevista, auditoria)?
+ How Much (Quanto) Qual o custo da investigação vs. o prejuízo estimado?
+5.4 Matriz SWOT (SUO-TE)
+No contexto em questão, utilizamos apenas para o Planejamento de Risco da própria investigação:
+ Forças: Temos provas digitais robustas?
+ Fraquezas: O suspeito é um cargo influente?
+ Oportunidades: Podemos usar o caso para melhorar o Compliance?
+ Ameaças: Risco de vazamento para a imprensa ou processo trabalhista?
+Nota⁴.: Durante uma tratativa de crise, usamos o metodo 5W2H para organizar os passos e os 5 Porquês
+para entender como a fraude aconteceu. A matriz SWOT utiizamos para o relatório final, ao sugerir
+melhorias estratégicas para a diretoria.
+5.5 CONCLUSÃO
+A aplicação rigorosa desta Instrução de Trabalho garante que as apurações sejam conduzidas com a
+neutralidade e o sigilo necessários para preservar a integridade dos envolvidos e da organização. O
+encerramento de cada processo deve refletir o compromisso com a verdade real e a conformidade,
+servindo como base sólida para decisões administrativas e medidas disciplinares, quando cabíveis.
+A padronização dos métodos de investigação aqui descritos é essencial para a validade das evidências
+colhidas.
+Emissor Elaborador Revisor Aprovador
+Gilmar Vicente
+Segurança Patrimonial Sidney Oliveira Renato Silva
+Ana Paula
+
+--- PAGE 4 ---
+POC-SEP-003
+Apuração e Investigação Rev.000
+09/04/2026
+O cumprimento integral deste fluxo assegura que o relatório final seja auditável e resistente a
+questionamentos jurídicos, mitigando riscos operacionais e fortalecendo a cultura de transparência da
+empresa.
+Para além da resolução de incidentes pontuais, este documento visa transformar cada investigação em
+um diagnóstico de vulnerabilidades. Ao finalizar a apuração, os dados devem ser consolidados para
+alimentar o ciclo de melhoria dos controles internos, permitindo que a organização ocorra de forma
+preventiva e educativa diante de desvios de conduta.
+6. REFERÊNCIAS
+Número Nome
+POC-SEP-001 Atendimento e Registros de Eventos, Ocorrências e Investigação
+N/A Os 5 Porquês (Análise de Causa Raiz)
+N/A 5W2H (Plano de Ação e Execução)
+N/A Matriz SWOT (SUO-TE)
+7. REGISTROS
+Tempo
+Código Registro
+Arquivamento
+FC-1048 Relatório de Investigação - RI 5 anos
+FC-1051 Relatório de Ocorrência - RO 5 anos
+FC-1114 Matriz de Natureza para RO e RI N/A
+FC-2207 Relatório Cronológico Analítico - RCA 5 anos
+FC-2237 Check List de Denúncia e Ameaça 5 anos
+8. HISTÓRICO DE REVISÕES
+Nº Revisão Data Elaborado/ Revisado por Motivo/ Justificativa
+000 09/04/2026 Sidney Oliveira Emissão inicial
+Emissor Elaborador Revisor Aprovador
+Gilmar Vicente
+Segurança Patrimonial Sidney Oliveira Renato Silva
+Ana Paula

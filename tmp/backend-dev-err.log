@@ -1,0 +1,254 @@
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+   node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenhnode:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+   node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenhnode:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+   node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+ at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0
+node:events:487
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::3000
+    at Server.setupListenHandle [as _listen2] (node:net:2008:16)
+    at listenInCluster (node:net:2065:12)
+    at Server.listen (node:net:2170:7)
+    at <anonymous> (C:\Users\Fernando Nunes\Documents\Codex\2026-05-23\tenho-um-projeto-em-andamento-nogithub\projetojetguard\backend\src\server.ts:198:16)
+    at <anonymous>
+Emitted 'error' event on WebSocketServer instance at:
+    at Server.emit (node:events:509:28)
+    at emitErrorNT (node:net:2044:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 3000
+}
+
+Node.js v24.16.0

@@ -1,0 +1,153 @@
+
+5. DESCRIÇÃO
+Os Terminais Movecta das regiões Sudeste (T1 - Guarujá) e Nordeste (T1 - Suape) estão equipados
+com um scanners de contêineres.
+Estes equipamentos são essenciais para a segurança na cadeia logística e são condicionantes para a
+operação do terminal, atendendo aos requisitos da RFB (Receita Federal do Brasil). Eles auxiliam na
+detecção e avaliação do conteúdo dos contêineres, garantindo a segurança e a conformidade com as
+normas aduaneiras. A operação desses scanners é de mão de obra terceirizada, que também são
+responsáveis pela manutenção e intermediação com a Comissão Nacional de Energia Nuclear (CNEN).
+Essas empresas asseguram que todas as normas de segurança radiológicas sejam seguidas conforme
+definido no Plano de Proteção Radiológica (PPR).
+Além da operação terceirizada, a Movecta dispõe de uma equipe interna para apoiar as operações de
+scanner.
+Estes profissionais têm a função de supervisionar diariamente as operações, promovendo uma
+comunicação eficaz entre os diversos departamentos, para garantir a continuidade das atividades sem
+interrupções. Eles monitoram o desempenho dos equipamentos e estão encarregados de relatar
+qualquer interrupção operacional para a tomadas das ações pertinentes.
+Nota¹.: Em caso de indisponibilidade dos equipamentos, o Departamento de Manutenção é acionado
+imediatamente para as tratativas junto a empresa responsável, bem como os departamentos de
+Operações, Planejamento, Segurança Patrimonial e Processos Aduaneiros são acionados para definir
+as ações de contigência, em quanto o equipamento estiver indisponível.
+Compete à autoridade aduaneira, a Receita Federal do Brasil, determinar, por meio de legislação ou
+acordos com portos, quais contêineres necessitam de escaneamento e se ações adicionais, como um
+segundo escaneamento, são necessárias para rotas críticas.
+5.1. FLUXO DE ESCANEAMENTO
+Atualmente na unidade T1 do Guarujá, todos os contêineres que acessam o terminal passam pelo
+processo de escaneamento, tendo em vista o posicionamento geaográfico do equipamento ser logo
+após a balança de entrada, conforme indica a seguir:
+Emissor Elaborador Revisor Aprovador
+Segurança Patrimonial Sidney Oliveira N/A Renato Silva
+
+--- PAGE 3 ---
+POC-SEP-005
+Operação de Escaneamento de Contêineres Rev.000
+03/06/2026
+Nota².: Os contêineres de importação que são armazenados no T2 Guarujá, possuem obrigatoriedade
+de escaneamento, sendo assim essas unidades são direcionadas para o T1, para que efetuem sua
+passagem pelo scanner, e posteriormente seguem para o armazenamento no T2.
+Tanto no T1 de Suape, quanto no T1 de Guarujá, as unidades definidas a passar pelo scanner são
+parametrizadas e demonstradas para o time de scanner através do sistema Novvs, conforme
+demonstra a seguir:
+5.2. MONITORAMENTO DE CONTÊINERES
+Os departamentos de Segurança Patrimonial e Processos Aduaneiros, monitoram contêineres de
+importação e exportação utilizando o sistema Novvs, onde é necessário notificar o setor Operacional
+sobre pendências de escaneamento, mantendo a conformidade com a Portaria nº 119 da ALF/STS.
+Contêineres modelo Flat Rack e Open Top, com excesso acima de 30cm, podem ser dispensados do
+escaneamento conforme acordo estabelecido com a Receita Federal, através da Portaria RFB nº 143,
+de 11 de fevereiro de 2022, devendo essas exceções serem informadas ao Centro Operacional de
+Emissor Elaborador Revisor Aprovador
+Segurança Patrimonial Sidney Oliveira N/A Renato Silva
+
+--- PAGE 4 ---
+POC-SEP-005
+Operação de Escaneamento de Contêineres Rev.000
+03/06/2026
+Vigilância (COV) pelo Departamento de Processos Aduaneiros. Atualmente essa comunicação ocorre via
+sistema conforme indica a seguir através a opção protocolo PL:
+5.3. ANÁLISE DAS IMAGENS ESCANEADAS.
+O Inspetor(a) de Imagem/ Carga, realiza a análise das imagens de raio-X para identificar anormalidades
+e áreas suspeitas em contêineres. Essa análise é baseada no peso atômico e na densidade dos
+materiais, utilizando um sistema de colorações específico: laranja para orgânicos, verde para mistos e
+azul para inorgânicos.
+Quando as imagens estão dentro dos padrões normais, a liberação é efetuada no sistema operacional
+de captação e análise, com compartilhamento automático das informações com a Receita Federal.
+Qualquer anormalidade identificada deve ser sinalizada no sistema, além de ser reportada aos
+departamentos de Processos Aduaneiros e Segurança Patrimonial. Também é de responsabilidade do
+Emissor Elaborador Revisor Aprovador
+Segurança Patrimonial Sidney Oliveira N/A Renato Silva
+
+--- PAGE 5 ---
+POC-SEP-005
+Operação de Escaneamento de Contêineres Rev.000
+03/06/2026
+Inspetor(a) de Imagem/ Carga, certificar-se sobre o status dos contêineres, que podem ser CHEIOS ou
+VAZIOS, comparando as informações recebidas do sistema Novvs com as imagens dos contêineres
+apresentadas na tela (imagem do escaneamento).
+Caso o Inspetor(a) de Imagem/Carga constate divergências nas informações, deverá imediatamente
+comunicar os departamentos responsáveis, e encaminhar via e-mail o número do contêiner para as
+devidas tratativas.
+Nota³.: O tempo de análise de imagem por parte do Inspetor(a) de Imagem/ Carga é inegociável, onde
+ninguém poderá interferir na decisão final de sua análise, mantendo sempre a coerência e acertividade
+mediante os critérios estabelecidos.
+5.4. DIRETÓRIO DA RECEITA FEDERAL
+As imagens de escaneamento devem estar disponíveis e com qualidade satisfatória no Diretório
+Movecta na mesma data do escaneamento. Os arquivos migram para a pasta da rede “Scanner” do
+Diretório diariamente.
+Nota⁴.: Caso algum contêiner passe pelo scanner e não gere uma imagem satisfatória dentro dos
+padrões aceitavéis pela Receita Federal, cabe a equipe do scanner solicitar o retorno do caminhão ao
+canal de inspeção. Caso isso não ocorra, os departamentos responsáveis devem ser acionados para
+garantir o retorno da unidade ao scanner, cumprindo com o processo adequado.
+Caso haja alguma imagem pendente onde não consta a migração automática para o sistema Novvs, a
+equipe de Processos Aduaneiros irá pontuar e solicitaremos junto a empresa prestadora de serviço do
+scanner a regularização.
+Segue abaixo a forma de identificação das imagens pendentes no sistema Novvs:
+Emissor Elaborador Revisor Aprovador
+Segurança Patrimonial Sidney Oliveira N/A Renato Silva
+
+--- PAGE 6 ---
+POC-SEP-005
+Operação de Escaneamento de Contêineres Rev.000
+03/06/2026
+5.5. UNIDADES COM ÁREA SUSPEITA NO PRIMEIRO ESCANEAMENTO
+Toda unidade que for identificada com área suspeita durante o turno por parte da prestadora de
+serviço, abrangendo contêineres cheios e vazios, nos fluxos de importação e exportação deverá ser
+informada aos departamentos de Segurança Patrimonial e Processos Aduaneiros via email, com a
+nomenclatura da unidade, bem como a imagem anexada extraída direto do sistema de análise.
+5.6. UNIDADES COM ÁREA SUSPEITA NO SEGUNDO ESCANEAMENTO - CONTÊINERES DE
+EXPORTAÇÃO PARA ROTAS CRÍTICAS
+Emissor Elaborador Revisor Aprovador
+Segurança Patrimonial Sidney Oliveira N/A Renato Silva
+
+--- PAGE 7 ---
+POC-SEP-005
+Operação de Escaneamento de Contêineres Rev.000
+03/06/2026
+O processo do segundo escaneamento de contêineres de exportação para rotas críticas é uma medida
+que visa garantir a segurança e conformidade das cargas durante as operações de armazenamento.
+Este procedimento é realizado de acordo com as diretrizes estabelecidas mediante análise de risco
+conforme o destino dos contêineres. Cabe ao departamento de Segurança Patrimonial acompanhar a
+programação de recebimento e destino dos contêineres e assim implementar as ações para o segundo
+escaneamento, antes do contêiner deixar o terminal, fiscalizando também o processo operacional de
+armazenamento e entrega, conforme estabelecido nas portarias ALF/STS 188/2024 e ALF/STS n°
+119/2022.
+Nota⁵.: Atualmente contamos com os departamentos de apoio (Transporte e Planejamento) para
+obtermos ciência da programação prevista para o recebimento de cargas com o destino de rotas
+críticas, e assim adotarmos as medidas pertinentes, bem como consultamos o sistema Novvs para
+obtermos maior detalhamento sobre cada unidade e adequação de seu posicionamento.
+O segundo escaneamento tem como objetivo a conferência pareada dos dados de imagem na origem
+(chegada) e destino (saída). Este procedimento de inspeção não invasiva busca identificar discrepâncias
+que possam comprometer a integridade da carga durante seu período de armazenamento.
+Nota⁶.: A Movecta através do departamento de Processos Aduaneiros é responsável por comunicar
+todas as imagens suspeitas à Receita Federal do Brasil. A decisão sobre potenciais ações cabe
+exclusivamente à Receita, enquanto o terminal mantém suas operações sem aguardar um retorno
+imediato. Contudo, a Receita Federal pode requisitar esclarecimentos adicionais do terminal a qualquer
+momento ou solicitar o posicionamento do contêiner em frente de câmera do COV para inspeção na
+carga se achar pertinente.
+5.7. RELATÓRIO DE PASSAGEM DE SERVIÇO
+A empresa responsável pela operação de scanner na região Sudeste trabalha em escala 12x36 em turno
+de 24horas 07:00 x 19:00 e 19:00 x 07:00, no término de cada turno é enviado um email “Relatório de
+Inspeção”, contendo as informações ocorridas no turno e encaminha para a gestão do departamento
+de Segurança Patrimonial e Processos Aduaneiros.
+Na região Nordeste a equipe trabalha em escala 6x1 em turno de 24horas nos peridos das 07:55 x
+16:40, 16:00 x 00:10 e 23:45 x 07:55.
+Emissor Elaborador Revisor Aprovador
+Segurança Patrimonial Sidney Oliveira N/A Renato Silva
+
+--- PAGE 8 ---
+POC-SEP-005
+Operação de Escaneamento de Contêineres Rev.000
+03/06/2026
+5.8. SITUAÇÕES DE AUSÊNCIA DA PRESTAÇÃO DE SERVIÇO DA EMPRESA CONTRATADA
+Em caso de ausência de membros das equipes das empresas de prestação de serviço contratada, cabe
+a própria empresa providenciar a cobertura de forma a não impactar as operações Movecta.

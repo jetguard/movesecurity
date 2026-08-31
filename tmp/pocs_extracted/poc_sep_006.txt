@@ -1,0 +1,303 @@
+
+--- PAGE 1 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+1. APLICAÇÃO
+Aplica-se à área de Segurança Empresarial Patrimonial dos Terminais Movecta, em âmbito nacional,
+abrangendo as unidades das regiões Sul, Nordeste e Sudeste, incluindo todas as atividades executadas pelo
+Centro de Controle Operacional de Segurança (CCOS) e pelo sistema de CFTV (Circuito Fechado de Televisão).
+Este procedimento estabelece as diretrizes operacionais para monitoramento eletrônico, gestão de eventos e
+suporte às equipes de segurança patrimonial, garantindo a padronização das atividades executadas pelo CCOS
+em todas as unidades.
+2. OBJETIVO
+Padronizar os processos operacionais do Centro de Controle Operacional de Segurança (CCOS), definindo as
+atribuições dos assistentes patrimonial de CFTV, o fluxo de monitoramento, comunicação, registro e
+tratamento de ocorrências identificadas por meio do sistema de vigilância eletrônica ou comunicadas pelas
+equipes operacionais.
+O procedimento visa:
+• Garantir monitoramento contínuo das instalações;
+• Assegurar rápida identificação de eventos e ocorrências;
+• Padronizar o fluxo de comunicação entre CCOS e equipes de campo;
+• Garantir a rastreabilidade dos registros operacionais, conforme critérios definidos no POC-SEP-001 –
+Atendimento e Registros de Eventos, Ocorrências e Investigações;
+• Apoiar as atividades de ronda patrimonial, conforme diretrizes do POC-SEP-002 – Procedimento de
+Ronda Patrimonial.
+3. DEFINIÇÕES
+POC – Procedimento Operacional Corporativo
+CCOS – Centro de Controle Operacional de Segurança
+CFTV – Circuito Fechado de Televisão
+RE – Registro de Evento
+RO – Registro de Ocorrência
+RI – Relatório de Investigação
+FC – Formulário Corporativo
+Evento – Situação identificada que pode representar risco ou anomalia operacional.
+Ocorrência – Materialização de um evento que exige registro formal e tratamento pela segurança patrimonial.
+Investigação – Processo técnico de análise destinado a identificar causas, responsabilidades e impactos de
+uma ocorrência.
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
+
+--- PAGE 2 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+4. RESPONSABILIDADES
+N/A
+5. DESCRIÇÃO
+O Centro de Controle Operacional de Segurança (CCOS) constitui a central de monitoramento das instalações,
+sendo responsável pelo acompanhamento das operações de segurança por meio do sistema de CFTV, alarmes
+e sensores eletrônicos.
+O CCOS opera em regime ininterrupto (24 horas por dia, 7 dias por semana), sendo responsável pela
+coordenação das atividades de segurança eletrônica e apoio às equipes de campo.
+Compete ao CCOS:
+Monitorar continuamente as áreas internas e perímetros das unidades;
+Identificar eventos ou situações suspeitas;
+Acionar as equipes de segurança para verificação in loco;
+Registrar e acompanhar ocorrências;
+Apoiar investigações mediante pesquisa e análise de imagens.
+Apoiar e acompanhar as rondas físicas realizadas pelas equipes de campo, conforme diretrizes do POC -SEP-
+002– Procedimento de Ronda Patrimonial.
+5.1. PASSAGEM DE POSTO
+Ao assumir o turno no CCOS, o Assistente de Segurança – CFTV deverá:
+• Realizar a rendição formal do Assistente de Segurança - CFTV do turno anterior;
+• Verificar os relatórios operacionais do turno anterior;
+• Avaliar o funcionamento das câmeras e equipamentos de monitoramento;
+• Confirmar o funcionamento dos meios de comunicação (HT, telefone e sistemas internos).
+A troca de turno deve garantir a continuidade do monitoramento e a integridade das informações
+operacionais.
+5.2. MONITORAMENTO OPERACIONAL
+Durante o turno de trabalho, o Assistente de Segurança - CFTV do CCOS deverá:
+• Monitorar continuamente o sistema de CFTV;
+• Verificar eventuais falhas ou interrupções de câmeras;
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
+
+--- PAGE 3 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+• Realizar varredura visual periódica nas áreas críticas;
+• Identificar situações suspeitas ou anormais;
+• Manter comunicação permanente com a equipe de segurança patrimonial.
+Sempre que identificado evento relevante, o Assistente de Segurança - CFTV deverá:
+1. Manter a câmera focada no evento;
+2. Acionar câmeras adjacentes para ampliar o campo de visão;
+3. Comunicar imediatamente a equipe de segurança responsável pela área;
+4. Registrar o evento conforme critérios do POC-SEP-001.
+5.3. RONDA ELETRÔNICA
+O operador do CCOS deverá realizar rondas eletrônicas utilizando o sistema de CFTV, observando:
+• integridade do perímetro (muros, cercas e portões);
+• movimentação em áreas restritas;
+• iluminação de áreas críticas;
+• presença de objetos ou veículos suspeitos;
+• sinais de incidentes ou sinistros.
+As rondas eletrônicas têm caráter preventivo e complementar às rondas físicas, devendo seguir os
+princípios operacionais definidos no POC-SEP-002 – Procedimento de Ronda Patrimonial.
+5.4. APOIO ÀS RONDAS DE SEGURANÇA
+Sempre que houver equipes realizando rondas físicas, o CCOS deverá:
+• acompanhar o deslocamento das equipes por meio do CFTV;
+• observar eventuais riscos nas áreas percorridas;
+• manter comunicação permanente com os agentes de segurança;
+• registrar qualquer irregularidade identificada durante a ronda.
+Nota³: Conforme estabelecido no POC-SEP-002– Procedimento de Ronda Patrimonial., o monitoramento
+por CFTV pode ser utilizado como ferramenta de apoio às rondas realizadas pelos agentes de segurança.
+5.5. GESTÃO DE OCORRÊNCIAS
+Ao identificar uma ocorrência, o Assistente de Segurança - CFTV deverá:
+1. Registrar o fato em relatório operacional;
+2. Informar imediatamente o Líder de Segurança;
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
+
+--- PAGE 4 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+3. Acionar a equipe de segurança responsável;
+4. Acompanhar a ocorrência por meio das câmeras;
+5. Registrar as evidências disponíveis;
+6. Acionar gestores responsáveis pela área, como Gestores Operacionais, QSSMA.
+Dependendo da gravidade do evento, poderão ser acionados:
+• Brigada de Incêndio
+• Polícia Militar
+• Polícia Federal
+• Corpo de Bombeiros
+• Guarda Portuária
+• Demais órgãos competentes, conforme o Plano de Acionamento Emergencial – POC de Contingência)
+5.6. REGISTRO DAS OCORRÊNCIAS
+Todas as ocorrências identificadas deverão ser registradas conforme os critérios estabelecidos no POC -
+SEP-001 – Atendimento e Registros de Eventos, Ocorrências e Investigações.
+Os registros devem conter:
+• Data e horário do evento;
+• Local da ocorrência;
+• Descrição detalhada do fato;
+• Evidências disponíveis (imagens ou relatos);
+• Numeração das câmeras que registraram os fatos;
+• Ações adotadas pelo CCOS e pela equipe de segurança.
+Os registros devem ser classificados conforme nível de criticidade definido no POC-SEP-001 Atendimento
+e Registros de Eventos, Ocorrências e Investigações.
+.
+5.7. QUADRA DE SEGURANÇA
+Terminal 1 e 2 Guarujá, inclui o preenchimento de planilha F-2243 - Relatório Semanal – Quadra de Segurança
+pelo CFTV e elaboração de FC-2241 - Relatório Semanal de Controle no Período de Armazenamento / FC-2240
+- Relatório Semanal de Controle de Armazenamento pelo líder de segurança Patrimonial bem como rondas
+aleatórias no local quando necessário.
+5.8. CONTROLE E GESTÃO DE LACRES
+5.8.1 Terminal 1 e 2 Guarujá
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
+
+--- PAGE 5 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+Os contêineres passam por vistoria, com a realização da lacração de todos os contêineres vazios, tanto na
+entrada quanto na saída, garantindo assim maior segurança, controle de acesso e integridade das operações
+no terminal.
+5.8.2 Terminal 1 Suape
+Quando houver solicitação da área operacional para retirada de lacres, conforme a necessidade de cada
+operação, o Supervisor, Coordenador ou Encarregado responsável deverá encaminhar e-mail formal à área
+competente, informando o quantitativo e o tipo de lacre a ser utilizado nas respectivas operações.
+O Operador de CFTV será responsável por registrar, na planilha F-2020 – Mapa de Controle de Lacres do
+Operacional, a numeração dos lacres disponibilizados, bem como coletar a assinatura da pessoa designada
+pela operação no ato do recebimento.
+Preferencialmente, os lacres deverão ser protocolados e registrados em sequência numérica crescente, do
+menor para o maior, garantindo melhor controle, rastreabilidade e organização do processo.
+5.8.3 Terminal 2 Suape
+O controle de lacres é realizado sempre que um contêiner sai carregado do terminal. Nessa etapa, o porteiro
+ou vigilante solicita ao motorista a apresentação da ir para conferência da numeração do lacre.
+Caso seja identificada qualquer divergência ou erro na numeração, o motorista é orientado a retornar à
+balança para que a correção seja realizada antes da liberação da saída.
+Adicionalmente, quando o cliente PQS realiza a entrega de suas mercadorias e o contêiner retorna vazio, é
+efetuada a aplicação do lacre, garantindo o controle e a rastreabilidade operacional.
+5.9. CONTROLE DE ACESSO AO CCOS
+O acesso ao interior do CCOS é restrito aos profissionais autorizados da Segurança Patrimonial.
+Poderão acessar o CCOS mediante autorização:
+• Equipe de Segurança Patrimonial
+• Equipe de Manutenção
+• Auditorias
+• Órgãos reguladores
+• Visitantes autorizados pela gestão de segurança
+Todo acesso deverá ser registrado em relatório operacional.
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
+
+--- PAGE 6 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+5.10. DISPONIBILIZAÇÃO DE IMAGENS
+A disponibilização de imagens do sistema de CFTV somente poderá ocorrer mediante autorização da
+gestão de Segurança Patrimonial.
+Para órgãos públicos ou investigações formais, a solicitação deverá ser realizada por meio de documento
+oficial.
+5.11. PARTICULARIDADES REGIONAIS
+Nota⁴ – Para os terminais da região Sul, determinadas atribuições de Supervisor e Coordenador poderão
+ser desempenhadas pelo Líder de Segurança, conforme estrutura organizacional local.
+Nota⁵ – Para os terminais do Sudeste, devem ser observadas também as diretrizes operacionais
+estabelecidas na Instrução de Trabalho do CCOS.
+Nota⁶ – Para os terminais da região Nordeste, poderão existir adequações operacionais relacionadas à
+infraestrutura de monitoramento, mantendo-se os princípios gerais deste POC.
+Nota7 – O item 6.7 não se aplica aos terminais de Suape e Itajaí.
+Nota8 – No terminal 2 de Suape não possui CCOS/CFTV. O terminal é monitorado remotamente por meio
+de câmeras, com supervisão realizada pelo time de monitoramento do Terminal 1.
+5.12. SEQUÊNCIA DAS ATIVIDADES
+TIPO DE ATIVIDADE EXECUÇÃO TRATAMENTO DESCRIÇÃO
+Monitoramento Assistente de Líder de Segurança Monitoramento contínuo das câmeras e
+Operacional CFTV sistemas eletrônicos de segurança.
+Gestão de Assistente de Líder / Supervisor de Identificação de eventos e acionamento das
+Ocorrências CFTV Segurança equipes de resposta.
+Ronda Eletrônica Assistente de Líder de Segurança Verificação preventiva das áreas críticas por
+CFTV meio do CFTV.
+Apoio às Rondas de Assistente de Supervisor de Monitoramento e acompanhamento das rondas
+Campo CFTV Segurança físicas realizadas pelos Agentes de Segurança.
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
+
+--- PAGE 7 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+TIPO DE ATIVIDADE EXECUÇÃO TRATAMENTO DESCRIÇÃO
+Registro Operacional Assistente de Líder de Segurança Registro e acompanhamento dos eventos e
+CFTV ocorrências.
+Nota¹: Todos os eventos e ocorrências identificados deverão seguir os critérios de registro estabelecidos no
+POC-SEP-001.
+Nota²: As atividades de monitoramento e apoio às rondas deverão observar as diretrizes operacionais do
+POC-SEP-002 – Procedimento de Ronda Patrimonial.
+5.13. CONCLUSÃO
+A padronização das atividades do Centro de Controle Operacional de Segurança (CCOS) garante maior
+eficiência no monitoramento das instalações, permitindo a rápida identificação de riscos e o acionamento
+adequado das equipes operacionais.
+A aplicação deste procedimento fortalece o sistema de segurança patrimonial da companhia, assegurando
+maior controle operacional, rastreabilidade das ocorrências e mitigação de riscos às pessoas, cargas e
+instalações.
+6. REFERÊNCIAS
+Número Nome
+POC-SEP-001 Atendimento e Registros de Eventos, Ocorrências e Investigações
+POC-SEP-002 Procedimento de Ronda Patrimonial
+POI-GJA-055 Ronda em Locais Restritos e Sensíveis
+POI-GJA-056 Plano de Contingência e Emergência
+FC-283 Relatório de Serviço Centro de Controle Operacional Segurança CCOS
+N/A Plano de Acionamento Emergencial – POC de Contingência
+N/A Instrução de Trabalho do CCOS – Região Sudeste
+N/A Política Corporativa de Segurança Patrimonial
+N/A Lei nº 13.709/2018 – Lei Geral de Proteção de Dados Pessoais (LGPD)
+F-2020 Mapa de Controle de Lacres do Operacional
+FC-2240 Relatório Semanal de Controle de Armazenamento
+FC-2243 Relatório Semanal da Quadra de Segurança
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
+
+--- PAGE 8 ---
+POC-SEP-006
+CCOS - Centro de Controle Operacional de
+Rev.000
+Segurança
+25/05/2026
+7. REGISTROS
+Tempo
+Código Registro
+Arquivamento
+FC-1045 Registro de Evento – RE 5 anos
+FC-1114 Matriz de Naturezas para RO e RI 5 anos
+FC-283 Relatório de Serviço Centro de Controle Operacional Segurança CCOS 5 anos
+8. HISTÓRICO DE REVISÕES
+Elaborado/ Revisado
+Nº Revisão Data Motivo/ Justificativa
+por
+Francisco P. Aquino
+000 25/05/2026 Jacielly dos Santos Emissão Inicial
+Sidney Oliveira
+Emissor Elaborador Revisor Aprovador
+Francisco P. Aquino Lauremar Soares
+Segurança Patrimonial Jacielly dos Santos Anderson Dias Renato Silva
+Sidney Oliveira Lais Pinto
