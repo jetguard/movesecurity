@@ -66,7 +66,7 @@ function textoChecklistColeta(valor?: string | null) {
 }
 
 function formatarData(valor?: Date | string | null) {
-  if (!valor) return "NÃƒÂ£o informado";
+  if (!valor) return "Não informado";
   return new Date(valor).toLocaleString("pt-BR");
 }
 
@@ -76,13 +76,13 @@ function valorChecklistColeta(valor?: string | null) {
     ["Fotos do local anexadas", checklist.fotosLocal],
     ["Relato principal coletado", checklist.relatoPrincipal],
     ["Existe testemunha", checklist.testemunha],
-    ["Existe veÃƒÂ­culo envolvido", checklist.veiculoEnvolvido],
-    ["Dano material visÃƒÂ­vel", checklist.danoMaterial],
-    ["HorÃƒÂ¡rio aproximado informado", checklist.horarioAproximado],
+    ["Existe veículo envolvido", checklist.veiculoEnvolvido],
+    ["Dano material visível", checklist.danoMaterial],
+    ["Horário aproximado informado", checklist.horarioAproximado],
     ["Local exato informado", checklist.localExato],
-    ["ÃƒÂudio gravado", checklist.audioGravado],
+    ["Áudio gravado", checklist.audioGravado],
     ["CCOS acionado", checklist.acionouCcos],
-    ["CÃƒÂ¢mera CFTV prÃƒÂ³xima", checklist.cameraCftv],
+    ["Câmera CFTV próxima", checklist.cameraCftv],
   ];
 }
 
@@ -92,7 +92,7 @@ function garantirEspaco(doc: PDFKit.PDFDocument, altura = 80) {
     desenharCabecalhoPadrao(doc, {
       titulo: "Relato de campo",
       subtitulo: "Coleta de dados patrimonial",
-      codigo: "ContinuaÃƒÂ§ÃƒÂ£o",
+      codigo: "Continuação",
       unidade: "",
     });
   }
@@ -138,7 +138,7 @@ function linhaInfo(
   doc
     .fillColor("#0f172a")
     .fontSize(9)
-    .text(valor || "NÃƒÂ£o informado", x + 10, atualY + 22, {
+    .text(valor || "Não informado", x + 10, atualY + 22, {
       width: width - 20,
       lineBreak: false,
       ellipsis: true,

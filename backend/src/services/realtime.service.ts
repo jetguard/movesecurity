@@ -20,7 +20,7 @@ export function iniciarRealtime(server: HttpServer) {
     socket.send(JSON.stringify({
       tipo: "conectado",
       titulo: "Tempo real ativo",
-      mensagem: "Canal de notificações JetGuard conectado.",
+      mensagem: "Canal de notificações MoveSecurity conectado.",
       severidade: "baixa",
       createdAt: new Date().toISOString(),
     }));

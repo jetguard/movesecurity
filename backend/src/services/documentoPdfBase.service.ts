@@ -108,7 +108,7 @@ export function desenharRodapeAssinaturaPadrao(
 
   doc.roundedRect(42, footerY, seloW, 54, 8).strokeColor("#bfdbfe").lineWidth(1).stroke();
   doc.rect(42, footerY, 4, 54).fill(pdfTheme.accent);
-  doc.fillColor(pdfTheme.primary).fontSize(9).text("Assinatura eletrônica JetGuard", 56, footerY + 9, { width: seloW - 24, lineBreak: false });
+  doc.fillColor(pdfTheme.primary).fontSize(9).text("Assinatura eletrônica MoveSecurity", 56, footerY + 9, { width: seloW - 24, lineBreak: false });
 
   if (params.assinatura) {
     doc.fillColor("#475569").fontSize(8).text(

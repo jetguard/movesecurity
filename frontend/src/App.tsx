@@ -65,7 +65,6 @@ const Cameras = lazyWithReload(() => import("./pages/Cameras"));
 const OrdensServico = lazyWithReload(() => import("./pages/OrdensServico"));
 const Configuracoes = lazyWithReload(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
-const Governanca = lazyWithReload(() => import("./pages/Governanca"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazyWithReload(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazyWithReload(() => import("./pages/OperacaoSOC"));
@@ -613,20 +612,6 @@ export default function App() {
                   ]}
                 >
                   <SugestoesMelhoria />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="governanca"
-              element={
-                <ProtectedRoute
-                  perfis={[
-                    PERFIS.SUPER_ADMIN,
-                    PERFIS.ADMINISTRADOR,
-                    PERFIS.ANALISTA,
-                  ]}
-                >
-                  <Governanca />
                 </ProtectedRoute>
               }
             />

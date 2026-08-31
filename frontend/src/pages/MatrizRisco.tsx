@@ -143,7 +143,7 @@ export default function MatrizRisco() {
                 Matriz de Risco 5x5
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">
-                Esta tela define a régua usada pelo JetGuard para classificar
+                Esta tela define a régua usada pelo MoveSecurity para classificar
                 riscos por probabilidade e severidade. O acompanhamento dos
                 riscos cadastrados continua na página{" "}
                 <strong className="text-white">Análise de Riscos</strong>.
@@ -284,7 +284,7 @@ export default function MatrizRisco() {
             <h2 className="font-bold text-white">Como usar na rotina</h2>
             <p className="mt-1 leading-6 text-blue-100/85">
               Ao abrir uma análise de risco, o usuário informa probabilidade e
-              severidade. O JetGuard calcula o nível automaticamente e exibe o
+              severidade. O MoveSecurity calcula o nível automaticamente e exibe o
               risco no mapa de calor operacional da página Análise de Risco.
             </p>
           </div>

@@ -741,7 +741,7 @@ export default function CentralDocumentos() {
           </h1>
           <p className="mt-1 max-w-3xl text-slate-500 dark:text-slate-400">
             Mesa documental para consultar protocolos, assinaturas eletrônicas,
-            validações e PDFs emitidos pelo JetGuard.
+            validações e PDFs emitidos pelo MoveSecurity.
           </p>
         </div>
 

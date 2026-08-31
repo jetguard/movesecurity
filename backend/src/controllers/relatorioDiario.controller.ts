@@ -161,7 +161,7 @@ function intervalosTurno(dataBase: Date) {
       chave: "equipe-a",
       nome: "Turno da Equipe A",
       equipeReferencia: "Equipe A",
-      escala: "07:00 Ã s 15:20",
+      escala: "07:00 às 15:20",
       inicio: criar(0, 7, 0),
       fim: criar(0, 15, 0),
     },
@@ -169,7 +169,7 @@ function intervalosTurno(dataBase: Date) {
       chave: "equipe-b",
       nome: "Turno da Equipe B",
       equipeReferencia: "Equipe B",
-      escala: "15:00 Ã s 23:20",
+      escala: "15:00 às 23:20",
       inicio: criar(0, 15, 0),
       fim: criar(0, 23, 0),
     },
@@ -177,7 +177,7 @@ function intervalosTurno(dataBase: Date) {
       chave: "equipe-c",
       nome: "Turno da Equipe C",
       equipeReferencia: "Equipe C",
-      escala: "23:00 Ã s 07:20",
+      escala: "23:00 às 07:20",
       inicio: criar(0, 23, 0),
       fim: criar(1, 7, 20),
     },
@@ -553,7 +553,7 @@ async function aprimorarResumoOpenAi(
       texto: resumo,
       aprimorado: false,
       aviso:
-        "OpenAI não configurada. Foi utilizado o resumo seguro do JetGuard.",
+        "OpenAI não configurada. Foi utilizado o resumo seguro do MoveSecurity.",
     };
 
   try {
@@ -595,7 +595,7 @@ async function aprimorarResumoOpenAi(
         texto: resumo,
         aprimorado: false,
         aviso:
-          "A OpenAI não respondeu. Foi utilizado o resumo seguro do JetGuard.",
+          "A OpenAI não respondeu. Foi utilizado o resumo seguro do MoveSecurity.",
       };
     const retorno = (await response.json()) as {
       output_text?: string;
@@ -614,14 +614,14 @@ async function aprimorarResumoOpenAi(
           texto: resumo,
           aprimorado: false,
           aviso:
-            "A IA não retornou texto. Foi utilizado o resumo seguro do JetGuard.",
+            "A IA não retornou texto. Foi utilizado o resumo seguro do MoveSecurity.",
         };
   } catch {
     return {
       texto: resumo,
       aprimorado: false,
       aviso:
-        "A OpenAI estava indisponível. Foi utilizado o resumo seguro do JetGuard.",
+        "A OpenAI estava indisponível. Foi utilizado o resumo seguro do MoveSecurity.",
     };
   }
 }

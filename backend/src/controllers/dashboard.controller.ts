@@ -2,7 +2,7 @@
 
 export function dashboard(req: Request, res: Response) {
   return res.json({
-    sistema: "JetGuard",
+    sistema: "MoveSecurity",
     usuario: "Fernando",
     status: "online",
   });

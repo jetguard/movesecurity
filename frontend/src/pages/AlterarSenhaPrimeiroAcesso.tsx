@@ -66,7 +66,7 @@ export default function AlterarSenhaPrimeiroAcesso() {
             </h1>
             <p className="mt-2 text-sm leading-6 text-slate-300">
               Olá, {usuario?.apelido || usuario?.nome || "usuário"}. Para
-              continuar no JetGuard, cadastre uma senha definitiva e um PIN
+              continuar no MoveSecurity, cadastre uma senha definitiva e um PIN
               operacional.
             </p>
           </div>

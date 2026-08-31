@@ -223,7 +223,7 @@ async function desenharPdfChecklist(
     doc
       .fillColor("#0f172a")
       .fontSize(9)
-      .text("Assinatura eletronica JetGuard", 56, footerY + 9, {
+      .text("Assinatura eletronica MoveSecurity", 56, footerY + 9, {
         width: seloW - 24,
         lineBreak: false,
       });

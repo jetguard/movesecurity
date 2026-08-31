@@ -394,7 +394,7 @@ function gerarResumoPatrimonial(params: {
       recomendacoes: [
         "Priorizar áreas com maior índice de criticidade no mapa operacional.",
         "Atuar em registros sem análise acima de 24 horas.",
-        "Revisar cÃ¢meras com falhas recorrentes e maior indisponibilidade.",
+        "Revisar câmeras com falhas recorrentes e maior indisponibilidade.",
         "Abrir planos de ação para naturezas e locais reincidentes.",
         "Preservar cadeia de custódia das evidências com hash e histórico de auditoria.",
       ],

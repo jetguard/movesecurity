@@ -127,7 +127,7 @@ export default function SugestoesMelhoria() {
           </p>
           <h1 className="text-3xl font-bold">Sugestão de melhorias</h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Envie ideias, correções e melhorias para evolução do JetGuard.
+            Envie ideias, correções e melhorias para evolução do MoveSecurity.
           </p>
         </div>
 

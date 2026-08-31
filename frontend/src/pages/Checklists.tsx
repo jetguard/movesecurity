@@ -48,7 +48,7 @@ const categoriasInspecao = [
   "Bebedouros",
   "Buracos",
   "Cabeamento ou fio exposto",
-  "CÃ¢mera CFTV",
+  "Câmera CFTV",
   "Cancelas",
   "Cerca",
   "Docas",
@@ -75,7 +75,7 @@ const categoriasInspecao = [
 ].sort((a, b) => a.localeCompare(b, "pt-BR"));
 
 const itemPadrao: Item = {
-  categoria: "CÃ¢mera CFTV",
+  categoria: "Câmera CFTV",
   descricao: "",
   conformidade: "Conforme",
   criticidade: "Media",

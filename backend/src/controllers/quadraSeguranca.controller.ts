@@ -788,7 +788,7 @@ export async function exportarDossieContainerPdf(
         .font("Helvetica")
         .fontSize(7.5)
         .text(
-          `JetGuard | Dossiê gerado em ${formatarDataHora(new Date())}`,
+          `MoveSecurity | Dossiê gerado em ${formatarDataHora(new Date())}`,
           margem,
           doc.page.height - 30,
           { width: largura / 2 },

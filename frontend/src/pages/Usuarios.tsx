@@ -735,7 +735,7 @@ export default function Usuarios() {
             </label>
             <p className="md:col-span-2 text-sm text-slate-600">
               Use somente cadastro para registrar pessoas que farão
-              treinamentos, sem liberar login no JetGuard.
+              treinamentos, sem liberar login no MoveSecurity.
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

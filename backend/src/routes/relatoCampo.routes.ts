@@ -54,7 +54,7 @@ const uploadMemoria = multer({
   limits: uploadLimits,
   fileFilter: (req, file, cb) => {
     if (!tiposPermitidosRelatoCampo.includes(file.mimetype)) {
-      return cb(new Error("Tipo de arquivo nÃ£o permitido."));
+      return cb(new Error("Tipo de arquivo não permitido."));
     }
     cb(null, true);
   },

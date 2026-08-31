@@ -538,7 +538,7 @@ export default function TreinamentoPocSep007Publico() {
         unidade: participante.unidade || atual.unidade,
       }));
       setMensagem(
-        "Cadastro localizado no JetGuard. Confira os dados e inicie o treinamento.",
+        "Cadastro localizado no MoveSecurity. Confira os dados e inicie o treinamento.",
       );
     } catch {
       return;
@@ -889,7 +889,7 @@ export default function TreinamentoPocSep007Publico() {
             )}
             {buscandoCadastro && (
               <p className="mt-3 text-sm font-black text-blue-700">
-                Consultando cadastro no JetGuard...
+                Consultando cadastro no MoveSecurity...
               </p>
             )}
             <button
@@ -1127,7 +1127,7 @@ export default function TreinamentoPocSep007Publico() {
                 onClick={voltar}
                 className="terminal-secondary-action inline-flex w-full items-center justify-center gap-2 rounded-xl border px-5 py-3 text-sm font-black shadow-lg transition sm:w-auto"
               >
-                <ArrowLeft size={18} /> Voltar Ã s etapas
+                <ArrowLeft size={18} /> Voltar às etapas
               </button>
               <button
                 type="button"

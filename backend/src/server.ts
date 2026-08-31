@@ -199,7 +199,7 @@ app.use("/api/locais", localRoutes);
 
 app.get("/", (req, res) => {
   return res.json({
-    sistema: "JetGuard API",
+    sistema: "MoveSecurity API",
     status: "online",
     realtime: "/ws",
   });
@@ -207,7 +207,7 @@ app.get("/", (req, res) => {
 
 app.get("/api/health", (req, res) => {
   return res.json({
-    sistema: "JetGuard API",
+    sistema: "MoveSecurity API",
     status: "online",
     timestamp: new Date().toISOString(),
   });

@@ -66,7 +66,7 @@ export default function LexicalEditor({
   placeholder = "Digite o relato...",
 }: Props) {
   const initialConfig = {
-    namespace: "JetGuardEditor",
+    namespace: "MoveSecurityEditor",
     nodes: [ListNode, ListItemNode],
     theme: {
       paragraph: "mb-2",

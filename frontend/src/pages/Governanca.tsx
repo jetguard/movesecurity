@@ -161,7 +161,7 @@ export default function Governanca() {
         {
           id: "plataforma" as const,
           titulo: "Saúde da Plataforma",
-          descricao: "Health Check técnico do ambiente JetGuard",
+          descricao: "Health Check técnico do ambiente MoveSecurity",
           icon: Server,
           permitido: dados?.permissoes.plataforma,
         },
@@ -205,7 +205,7 @@ export default function Governanca() {
       cor: "text-amber-300 bg-amber-950/70",
     },
     {
-      label: "CÃ¢meras offline",
+      label: "Câmeras offline",
       valor: dados.indicadores.camerasOffline,
       icon: Video,
       cor: "text-red-300 bg-red-950/70",
@@ -242,7 +242,7 @@ export default function Governanca() {
             Centro de Governança
           </p>
           <h1 className="mt-2 text-2xl font-bold sm:text-3xl">
-            Governança JetGuard
+            Governança MoveSecurity
           </h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
             Separe a gestão da operação, a proteção dos acessos e a saúde

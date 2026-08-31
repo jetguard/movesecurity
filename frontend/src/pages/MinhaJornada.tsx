@@ -78,7 +78,7 @@ export default function MinhaJornada() {
             Minha Jornada
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Resumo auditável das atividades realizadas por você no JetGuard.
+            Resumo auditável das atividades realizadas por você no MoveSecurity.
           </p>
         </div>
         <button
@@ -155,7 +155,7 @@ export default function MinhaJornada() {
           </p>
         </div>
         <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow">
-          <p className="text-sm text-slate-400">Ãšltima atividade</p>
+          <p className="text-sm text-slate-400">Última atividade</p>
           <p className="mt-2 text-3xl font-bold text-amber-600">
             {hora(jornada?.ultimaAtividade)}
           </p>
@@ -208,7 +208,7 @@ export default function MinhaJornada() {
               Atividades por módulo
             </h2>
             <p className="mt-1 text-xs leading-5 text-slate-400">
-              Distribui suas ações entre as áreas do JetGuard no período
+              Distribui suas ações entre as áreas do MoveSecurity no período
               filtrado.
             </p>
             <div className="mt-4 space-y-3">

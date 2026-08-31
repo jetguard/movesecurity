@@ -390,8 +390,8 @@ export async function gerarPdfOrdemServico(req: AuthRequest, res: Response) {
     );
     doc.y += 52;
 
-    secao(doc, "Dados da cÃ¢mera");
-    campo(doc, "Nomenclatura", `CÃ¢mera ${ordem.camera.numeroCamera}`, 42, 160);
+    secao(doc, "Dados da câmera");
+    campo(doc, "Nomenclatura", `Câmera ${ordem.camera.numeroCamera}`, 42, 160);
     campo(doc, "Nome", ordem.camera.nomeCamera, 214, 165);
     campo(doc, "Tipo", ordem.camera.tipoCamera, 391, 162);
     doc.y += 48;
@@ -407,7 +407,7 @@ export async function gerarPdfOrdemServico(req: AuthRequest, res: Response) {
     campo(doc, "Conclusão", data(ordem.concluidoEm), 308, 245);
     doc.y += 52;
     campo(doc, "Houve dano", ordem.houveDano, 42, 160);
-    campo(doc, "Troca de cÃ¢mera", ordem.requerTrocaCamera, 214, 165);
+    campo(doc, "Troca de câmera", ordem.requerTrocaCamera, 214, 165);
     campo(doc, "Necessita compra", ordem.requerCompra, 391, 162);
     doc.y += 52;
     doc

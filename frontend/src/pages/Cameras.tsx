@@ -760,7 +760,7 @@ export default function Cameras() {
 
   async function removerCamera(camera: CameraItem) {
     const motivo = window.prompt(
-      `Informe o motivo para remover/inativar a cÃ¢mera ${camera.numeroCamera}:`,
+      `Informe o motivo para remover/inativar a câmera ${camera.numeroCamera}:`,
       "Remoção operacional",
     );
     if (!motivo) return;
@@ -1021,7 +1021,7 @@ export default function Cameras() {
                   onClick={novaCamera}
                   className="rounded-xl bg-cyan-400 px-4 py-2 text-sm font-bold text-slate-950 shadow-lg shadow-cyan-950/30 transition hover:-translate-y-0.5 hover:bg-cyan-300"
                 >
-                  Nova CÃ¢mera
+                  Nova Câmera
                 </button>
               </div>
             )}
@@ -1155,7 +1155,7 @@ export default function Cameras() {
                         >
                           <div className="flex items-center justify-between">
                             <strong className="text-sm text-slate-100">
-                              CÃ¢mera {item.numeroCamera}
+                              Câmera {item.numeroCamera}
                             </strong>
                             <span
                               className={`h-2.5 w-2.5 rounded-full ${item.status === "Conectada" ? "bg-emerald-400 shadow-[0_0_14px_rgba(52,211,153,.7)]" : "bg-red-400 shadow-[0_0_14px_rgba(248,113,113,.7)]"}`}
@@ -1190,7 +1190,7 @@ export default function Cameras() {
                     <div className="mt-4 max-h-[330px] space-y-2 overflow-y-auto pr-1 [scrollbar-color:rgba(148,163,184,.35)_transparent] [scrollbar-width:thin]">
                       {dashboard.alertas.length === 0 ? (
                         <p className="rounded-xl bg-emerald-500/10 p-3 text-sm text-emerald-200">
-                          Nenhuma cÃ¢mera desconectada neste momento.
+                          Nenhuma câmera desconectada neste momento.
                         </p>
                       ) : (
                         dashboard.alertas.map((alerta) => (
@@ -1424,7 +1424,7 @@ export default function Cameras() {
                         >
                           <div className="flex items-center justify-between gap-3">
                             <p className="font-bold">
-                              CÃ¢mera {evento.camera} | {evento.status}
+                              Câmera {evento.camera} | {evento.status}
                             </p>
                             <span className="text-xs text-slate-500">
                               {new Date(evento.iniciadoEm).toLocaleString(
@@ -1459,7 +1459,7 @@ export default function Cameras() {
             <div className="mb-5 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
-                  {cameraEditando ? "Editar cÃ¢mera" : "Cadastrar cÃ¢mera"}
+                  {cameraEditando ? "Editar câmera" : "Cadastrar câmera"}
                 </h2>
                 <p className="text-sm text-slate-500">
                   Inventário individual por unidade operacional.
@@ -1487,7 +1487,7 @@ export default function Cameras() {
                 />
               </label>
               <label className="space-y-2 text-sm font-bold text-slate-700">
-                <span>Nome da cÃ¢mera</span>
+                <span>Nome da câmera</span>
                 <input
                   className="w-full rounded-lg border p-3"
                   placeholder="Ex: Gate 1 - Entrada"
@@ -1533,7 +1533,7 @@ export default function Cameras() {
                 </select>
               </label>
               <label className="space-y-2 text-sm font-bold text-slate-700">
-                <span>Tipo da cÃ¢mera</span>
+                <span>Tipo da câmera</span>
                 <select
                   className="w-full rounded-lg border p-3"
                   value={form.tipoCamera}
@@ -1604,7 +1604,7 @@ export default function Cameras() {
               </label>
             </div>
             <button className="mt-5 rounded-lg bg-blue-600 px-5 py-3 font-bold text-white">
-              Salvar cÃ¢mera
+              Salvar câmera
             </button>
           </form>
         </div>
@@ -1649,7 +1649,7 @@ export default function Cameras() {
                 Verificação automática da retenção
               </p>
               <p className="text-xs text-emerald-100/70">
-                O JetGuard recalcula os dias disponíveis de gravação
+                O MoveSecurity recalcula os dias disponíveis de gravação
                 considerando a data e hora atuais.
               </p>
             </div>
@@ -1716,10 +1716,10 @@ export default function Cameras() {
                     className="h-4 w-4 accent-blue-600"
                     checked={todasFiltradasSelecionadas}
                     onChange={alternarTodasFiltradas}
-                    aria-label="Selecionar todas as cÃ¢meras filtradas"
+                    aria-label="Selecionar todas as câmeras filtradas"
                   />
                 </th>
-                <th className="p-3">CÃ¢mera</th>
+                <th className="p-3">Câmera</th>
                 <th className="p-3">Servidor</th>
                 <th className="p-3">Status</th>
                 <th className="p-3">Tipo</th>
@@ -1739,7 +1739,7 @@ export default function Cameras() {
                       className="h-4 w-4 accent-blue-600"
                       checked={camerasSelecionadas.includes(camera.id)}
                       onChange={() => alternarCameraSelecionada(camera.id)}
-                      aria-label={`Selecionar cÃ¢mera ${camera.numeroCamera}`}
+                      aria-label={`Selecionar câmera ${camera.numeroCamera}`}
                     />
                   </td>
                   <td className="p-3 font-bold">
@@ -1820,7 +1820,7 @@ export default function Cameras() {
               {camerasFiltradas.length === 0 && (
                 <tr>
                   <td className="p-6 text-center text-slate-500" colSpan={10}>
-                    Nenhuma cÃ¢mera encontrada com os filtros selecionados.
+                    Nenhuma câmera encontrada com os filtros selecionados.
                   </td>
                 </tr>
               )}
@@ -2092,7 +2092,7 @@ export default function Cameras() {
                   Histórico de Indisponibilidade
                 </p>
                 <h2 className="text-xl font-bold text-slate-900">
-                  CÃ¢mera {cameraHistorico.numeroCamera}
+                  Câmera {cameraHistorico.numeroCamera}
                   {cameraHistorico.nomeCamera
                     ? ` - ${cameraHistorico.nomeCamera}`
                     : ""}
@@ -2284,7 +2284,7 @@ export default function Cameras() {
                   Checklist operacional semanal
                 </h2>
                 <p className="text-sm text-slate-500">
-                  CÃ¢mera {cameraChecklist.numeroCamera} |{" "}
+                  Câmera {cameraChecklist.numeroCamera} |{" "}
                   {cameraChecklist.areaMonitorada}
                 </p>
               </div>
@@ -2376,13 +2376,13 @@ export default function Cameras() {
                 </div>
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-200">
-                    CÃ¢mera desconectada
+                    Câmera desconectada
                   </p>
                   <h2 className="mt-2 text-2xl font-black text-white">
                     Abrir ordem de serviço?
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-300">
-                    A cÃ¢mera{" "}
+                    A câmera{" "}
                     <strong className="text-white">
                       {modalOrdemServico.numeroCamera}
                     </strong>

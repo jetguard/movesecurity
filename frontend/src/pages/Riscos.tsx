@@ -159,7 +159,7 @@ const categorias = [
 const unidades = [
   "GJA-T1",
   "GJA-T2",
-  "ITAJAÃ-SC",
+  "ITAJAÍ-SC",
   "SUAPE-T1",
   "SUAPE-T2",
   "ANHANGUERA",
@@ -208,7 +208,7 @@ const escalasImpacto = [
   {
     label: "Insignificante",
     valor: 1,
-    descricao: "Impacto inexistente, incidental ou de baixa relevÃ¢ncia.",
+    descricao: "Impacto inexistente, incidental ou de baixa relevância.",
   },
   {
     label: "Baixo",

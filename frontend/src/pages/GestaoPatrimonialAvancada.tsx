@@ -200,7 +200,7 @@ export default function GestaoPatrimonialAvancada() {
         </div>
         <div className="rounded-xl bg-white p-5 shadow">
           <Camera className="text-slate-700" />
-          <p className="mt-3 text-sm text-slate-500">CÃ¢meras offline</p>
+          <p className="mt-3 text-sm text-slate-500">Câmeras offline</p>
           <p className="text-3xl font-bold">
             {numero(dados.indicadores.camerasOffline)}
           </p>

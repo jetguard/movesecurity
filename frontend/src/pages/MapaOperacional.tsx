@@ -180,7 +180,7 @@ export default function MapaOperacional() {
         (item) => item.status === "Desconectada",
       ).length;
       const riscosCriticos = riscosArea.filter((item) =>
-        ["CRÃTICO", "CRITICO", "ALTO"].includes(normalizar(item.nivelRisco)),
+        ["CRÍTICO", "CRITICO", "ALTO"].includes(normalizar(item.nivelRisco)),
       ).length;
       const nivel = nivelArea({
         ocorrencias: ocorrenciasArea.length,
@@ -261,7 +261,7 @@ export default function MapaOperacional() {
             </p>
           </div>
           <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-            <p className="text-sm text-slate-400">CÃ¢meras offline</p>
+            <p className="text-sm text-slate-400">Câmeras offline</p>
             <p className="mt-2 text-3xl font-black text-cyan-200">
               {indicadores.camerasOffline}
             </p>

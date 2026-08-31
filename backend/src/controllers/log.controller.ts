@@ -44,7 +44,7 @@ const rotulosModulos: Record<string, string> = {
   Auth: "Acessos e Segurança",
   CameraChecklistOperacional: "Checklist CFTV",
   CameraEventoStatus: "Eventos CFTV",
-  CameraMonitoramento: "CÃ¢meras CFTV",
+  CameraMonitoramento: "Câmeras CFTV",
   ChecklistInspecao: "Inspeção Preventiva",
   ComentarioInterno: "Comentários Internos",
   ConfiguracaoSistema: "Configurações do Sistema",

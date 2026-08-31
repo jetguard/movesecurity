@@ -118,7 +118,7 @@ export async function obterInteligencia(req: AuthRequest, res: Response) {
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
       return res.status(503).json({
-        error: "ConversÃƒÂ£o de ÃƒÂ¡udio indisponÃƒÂ­vel no servidor.",
+        error: "Conversão de áudio indisponível no servidor.",
         detalhe:
           "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
       });
@@ -126,7 +126,7 @@ export async function obterInteligencia(req: AuthRequest, res: Response) {
 
     if (error instanceof Error && error.message.startsWith("FFMPEG_ERRO:")) {
       return res.status(503).json({
-        error: "ConversÃƒÂ£o de ÃƒÂ¡udio indisponÃƒÂ­vel no servidor.",
+        error: "Conversão de áudio indisponível no servidor.",
         detalhe:
           "Instale o ffmpeg na VPS ou configure FFMPEG_COMMAND no .env do backend.",
       });
@@ -339,7 +339,7 @@ async function sugerirRelatoComOpenAi(arquivo: Express.Multer.File) {
   }
 
   const prompt = [
-    "Você é um assistente do sistema JetGuard para segurança patrimonial.",
+    "Você é um assistente do sistema MoveSecurity para segurança patrimonial.",
     "Leia o documento anexado, que pode ser uma foto ou PDF escaneado de um relato manuscrito.",
     "Extraia o conteúdo com fidelidade, sem inventar fatos.",
     "Organize o texto em português do Brasil, em formato de relato claro, objetivo e profissional.",

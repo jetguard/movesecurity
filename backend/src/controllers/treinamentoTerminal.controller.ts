@@ -346,7 +346,7 @@ async function gerarCertificadoPdf(treinamento: any) {
     .fillColor("#334155")
     .font("Helvetica-Bold")
     .fontSize(7)
-    .text("VALIDAÃ‡ÃƒO", 49, 502, { width: 90, align: "center" });
+    .text("VALIDAÇÃO", 49, 502, { width: 90, align: "center" });
 
   doc
     .moveTo(206, 505)

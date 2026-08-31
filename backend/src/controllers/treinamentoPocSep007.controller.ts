@@ -245,7 +245,7 @@ async function gerarCertificadoPocSep007(treinamento: any) {
     .fillColor("#0f172a")
     .font("Helvetica-Bold")
     .fontSize(7)
-    .text("VALIDAÃ‡ÃƒO", 70, 508, { width: 102, align: "center" });
+    .text("VALIDAÇÃO", 70, 508, { width: 102, align: "center" });
 
   if (treinamento.assinaturaDataUrl) {
     const assinaturaBase64 = String(treinamento.assinaturaDataUrl).split(

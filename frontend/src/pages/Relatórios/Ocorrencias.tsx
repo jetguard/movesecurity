@@ -2664,7 +2664,7 @@ export default function Ocorrencias() {
                     Como funciona
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                    O JetGuard envia o arquivo para leitura inteligente, extrai
+                    O MoveSecurity envia o arquivo para leitura inteligente, extrai
                     o texto possível e organiza uma sugestão profissional para o
                     campo Relato do Envolvido. Trechos ilegíveis serão
                     sinalizados.

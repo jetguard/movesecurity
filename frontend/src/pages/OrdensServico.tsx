@@ -311,7 +311,7 @@ export default function OrdensServico() {
                       </span>
                     </td>
                     <td className="px-4 py-3 font-black text-white">
-                      CÃ¢mera {ordem.camera.numeroCamera}
+                      Câmera {ordem.camera.numeroCamera}
                     </td>
                     <td className="px-4 py-3">
                       {ordem.camera.nomeCamera || "-"}
@@ -376,7 +376,7 @@ export default function OrdensServico() {
                   Tratativa técnica
                 </p>
                 <h2 className="mt-1 text-2xl font-black text-white">
-                  OS #{ordemSelecionada.id} - CÃ¢mera{" "}
+                  OS #{ordemSelecionada.id} - Câmera{" "}
                   {ordemSelecionada.camera.numeroCamera}
                 </h2>
                 <p className="text-sm text-slate-400">
@@ -409,7 +409,7 @@ export default function OrdensServico() {
 
               <label className="space-y-2">
                 <span className="text-sm font-bold text-slate-200">
-                  Status da cÃ¢mera
+                  Status da câmera
                 </span>
                 <select
                   value={formulario.statusCamera}
@@ -457,7 +457,7 @@ export default function OrdensServico() {
                     atualizarCampo("requerTrocaCamera", e.target.checked)
                   }
                 />
-                Necessita troca da cÃ¢mera
+                Necessita troca da câmera
               </label>
 
               <label className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-sm font-bold text-slate-200">
@@ -481,7 +481,7 @@ export default function OrdensServico() {
                     atualizarCampo("itensNecessarios", e.target.value)
                   }
                   className="w-full rounded-lg border border-slate-700 bg-slate-900 p-3 text-white outline-none focus:border-sky-500"
-                  placeholder="CÃ¢mera, fonte, conector, cabo..."
+                  placeholder="Câmera, fonte, conector, cabo..."
                 />
               </label>
 

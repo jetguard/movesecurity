@@ -91,7 +91,7 @@ export function atualizacoesSistema(_req: AuthRequest, res: Response) {
     : "";
 
   return res.json({
-    sistema: "JetGuard - Movecta Patrimonial",
+    sistema: "MoveSecurity - Movecta Patrimonial",
     versaoAtual,
     atualizadoEm: new Date().toISOString(),
     changelog: parseChangelog(changelog),

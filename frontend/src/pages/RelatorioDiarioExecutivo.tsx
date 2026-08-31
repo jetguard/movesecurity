@@ -123,7 +123,7 @@ export default function RelatorioDiarioExecutivo() {
         response.data.aviso ||
           (response.data.aprimoradoPorIa
             ? "Resumo aprimorado pela OpenAI e pronto para revisão."
-            : "Resumo seguro gerado pelo próprio JetGuard."),
+            : "Resumo seguro gerado pelo próprio MoveSecurity."),
       );
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { error?: string } } };
@@ -227,7 +227,7 @@ export default function RelatorioDiarioExecutivo() {
             <div>
               <h2 className="font-bold text-white">Redação do resumo</h2>
               <p className="mt-1 text-sm leading-6 text-slate-400">
-                O JetGuard sempre gera a versão oficial com dados do banco. A
+                O MoveSecurity sempre gera a versão oficial com dados do banco. A
                 OpenAI apenas melhora a escrita e não pode alterar fatos, nomes
                 ou números.
               </p>

@@ -54,7 +54,7 @@ export default function AtualizacoesSistema() {
             Últimas atualizações
           </h1>
           <p className="mt-1 text-slate-500 dark:text-slate-400">
-            Histórico de versões, melhorias e correções do JetGuard.
+            Histórico de versões, melhorias e correções do MoveSecurity.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function AtualizacoesSistema() {
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">Sistema</p>
           <p className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-            {dados?.sistema || "JetGuard"}
+            {dados?.sistema || "MoveSecurity"}
           </p>
         </div>
 
@@ -121,7 +121,7 @@ export default function AtualizacoesSistema() {
               </div>
               {versao.versao === dados.versaoAtual && (
                 <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700 dark:bg-blue-500/15 dark:text-blue-200">
-                  VERSÃƒO ATUAL
+                  VERSÃO ATUAL
                 </span>
               )}
             </div>

@@ -289,7 +289,7 @@ export default function TreinamentosPocSep007() {
                 <th className="px-4 py-3">Progresso</th>
                 <th className="px-4 py-3">Avaliação</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Ãšltimo acesso</th>
+                <th className="px-4 py-3">Último acesso</th>
                 <th className="px-4 py-3">Certificado</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>

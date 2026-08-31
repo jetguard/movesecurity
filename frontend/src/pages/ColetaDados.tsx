@@ -446,7 +446,7 @@ export default function ColetaDados() {
           </h1>
           <p className="mt-2 text-sm text-emerald-100">
             Obrigado. O link foi finalizado e os dados já estão disponíveis para
-            análise no JetGuard.
+            análise no MoveSecurity.
           </p>
         </div>
       </div>
@@ -460,7 +460,7 @@ export default function ColetaDados() {
       <div className="mx-auto max-w-5xl">
         <header className="mb-6 rounded-3xl border border-white/10 bg-white/5 p-5 shadow-2xl">
           <p className="text-xs font-black uppercase tracking-[0.28em] text-blue-300">
-            JetGuard
+            MoveSecurity
           </p>
           <h1 className="mt-2 text-3xl font-black">
             Coleta de Dados para Relatório Patrimonial

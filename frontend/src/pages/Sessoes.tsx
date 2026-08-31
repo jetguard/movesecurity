@@ -177,7 +177,7 @@ export default function Sessoes() {
                   <th className="px-4 py-3">Usuário</th>
                   <th className="px-4 py-3">Ambiente</th>
                   <th className="px-4 py-3">Início</th>
-                  <th className="px-4 py-3">Ãšltima atividade</th>
+                  <th className="px-4 py-3">Última atividade</th>
                   <th className="px-4 py-3">Término</th>
                   <th className="px-4 py-3">Duração</th>
                   <th className="px-4 py-3">Dispositivo</th>

@@ -849,12 +849,6 @@ export default function AdminLayout() {
 
               {sistemaOpen && (
                 <div className={submenuClass}>
-                  {(temModulo("sistema") || temModulo("analise_riscos")) && (
-                    <Link to="/governanca" className={subItem}>
-                      <Server size={16} />
-                      Governança
-                    </Link>
-                  )}
                   {temModulo("configuracoes") && (
                     <Link to="/atualizacoes" className={subItem}>
                       <ScrollText size={16} />
@@ -1068,7 +1062,7 @@ export default function AdminLayout() {
                 {usuario?.apelido || usuario?.nome || "Usuario"}
               </p>
               <p className="text-xs text-slate-400">
-                Sessao: {formatarSessao(segundosSessao)}
+                Sessão: {formatarSessao(segundosSessao)}
               </p>
             </Link>
             <Link
@@ -1167,7 +1161,7 @@ export default function AdminLayout() {
 
             <div className="mt-5 text-center">
               <p className="text-sm font-semibold uppercase tracking-[0.25em] text-blue-200">
-                JetGuard bloqueado
+                MoveSecurity bloqueado
               </p>
               <h2 className="mt-2 text-2xl font-bold">Sessão protegida</h2>
               <p className="mt-2 text-sm text-slate-300">

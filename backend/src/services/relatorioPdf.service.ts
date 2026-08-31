@@ -250,7 +250,7 @@ function desenharAssinaturaDigital(
     .font("Helvetica-Bold")
     .fontSize(8.6)
     .fillColor("#0f172a")
-    .text("Assinatura digital JetGuard", textoX, params.y + 8, { width: textoWidth });
+    .text("Assinatura digital MoveSecurity", textoX, params.y + 8, { width: textoWidth });
 
   doc
     .font("Helvetica")

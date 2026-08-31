@@ -227,7 +227,7 @@ export default function APIsOpenAI() {
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
                 Quando ativo, módulos compatíveis podem aprimorar a redação
                 corporativa sem alterar fatos, protocolos, nomes, horários ou
-                valores registrados pelo JetGuard.
+                valores registrados pelo MoveSecurity.
               </p>
             </div>
           </div>
@@ -390,7 +390,7 @@ export default function APIsOpenAI() {
             </p>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            Ãšltimos 2.000 registros
+            Últimos 2.000 registros
           </span>
         </div>
 
@@ -404,7 +404,7 @@ export default function APIsOpenAI() {
                   <th className="px-4 py-3">Entrada</th>
                   <th className="px-4 py-3">Saída</th>
                   <th className="px-4 py-3">Total</th>
-                  <th className="px-4 py-3">Ãšltimo uso</th>
+                  <th className="px-4 py-3">Último uso</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">

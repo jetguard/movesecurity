@@ -307,7 +307,7 @@ export async function registrarMudancaStatus(params: {
     });
     emitirRealtime({
       tipo: "camera.desconectada",
-      titulo: `CÃ¢mera ${camera.numeroCamera} desconectada`,
+      titulo: `Câmera ${camera.numeroCamera} desconectada`,
       mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
       severidade: "alta",
       unidade: params.unidade,
@@ -370,7 +370,7 @@ export async function registrarMudancaStatus(params: {
     });
     emitirRealtime({
       tipo: "camera.conectada",
-      titulo: `CÃ¢mera ${camera.numeroCamera} reconectada`,
+      titulo: `Câmera ${camera.numeroCamera} reconectada`,
       mensagem: `${camera.areaMonitorada} | offline por ${duracao} minuto(s)`,
       severidade: "media",
       unidade: params.unidade,
@@ -446,7 +446,7 @@ export async function listarCameras(req: AuthRequest, res: Response) {
     return res.json(camerasComRetencaoAtual);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao listar cÃ¢meras" });
+    return res.status(500).json({ error: "Erro ao listar câmeras" });
   }
 }
 
@@ -513,7 +513,7 @@ export async function criarCamera(req: AuthRequest, res: Response) {
       });
       emitirRealtime({
         tipo: "camera.desconectada",
-        titulo: `CÃ¢mera ${camera.numeroCamera} cadastrada desconectada`,
+        titulo: `Câmera ${camera.numeroCamera} cadastrada desconectada`,
         mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
         severidade: "alta",
         unidade: camera.unidade,
@@ -523,7 +523,7 @@ export async function criarCamera(req: AuthRequest, res: Response) {
 
     await registrarLog({
       req,
-      acao: `Cadastro de cÃ¢mera ${camera.numeroCamera}`,
+      acao: `Cadastro de câmera ${camera.numeroCamera}`,
       tipoRegistro: "CameraMonitoramento",
       registroId: camera.id,
       dadosNovos: camera,
@@ -536,7 +536,7 @@ export async function criarCamera(req: AuthRequest, res: Response) {
         .status(400)
         .json({ error: "Já existe uma câmera com esse número nesta unidade." });
     }
-    return res.status(500).json({ error: "Erro ao cadastrar cÃ¢mera" });
+    return res.status(500).json({ error: "Erro ao cadastrar câmera" });
   }
 }
 
@@ -606,7 +606,7 @@ export async function atualizarCamera(req: AuthRequest, res: Response) {
     return res.json(atualizada);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao atualizar cÃ¢mera" });
+    return res.status(500).json({ error: "Erro ao atualizar câmera" });
   }
 }
 
@@ -631,7 +631,7 @@ export async function excluirCamera(req: AuthRequest, res: Response) {
         .status(403)
         .json({
           error:
-            "Somente Super Admin pode excluir definitivamente uma cÃ¢mera.",
+            "Somente Super Admin pode excluir definitivamente uma câmera.",
         });
     }
 
@@ -655,7 +655,7 @@ export async function excluirCamera(req: AuthRequest, res: Response) {
 
       await registrarLog({
         req,
-        acao: `CÃ¢mera ${camera.numeroCamera} marcada como removida/inativa`,
+        acao: `Câmera ${camera.numeroCamera} marcada como removida/inativa`,
         tipoRegistro: "CameraMonitoramento",
         registroId: camera.id,
         dadosAnteriores: camera,
@@ -680,7 +680,7 @@ export async function excluirCamera(req: AuthRequest, res: Response) {
     return res.status(204).send();
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: "Erro ao excluir cÃ¢mera" });
+    return res.status(500).json({ error: "Erro ao excluir câmera" });
   }
 }
 
@@ -806,7 +806,7 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
 
     await registrarLog({
       req,
-      acao: `Checklist operacional da cÃ¢mera ${camera.numeroCamera}`,
+      acao: `Checklist operacional da câmera ${camera.numeroCamera}`,
       tipoRegistro: "CameraChecklistOperacional",
       registroId: checklist.id,
       dadosNovos: checklist,
@@ -816,7 +816,7 @@ export async function criarChecklistCamera(req: AuthRequest, res: Response) {
     console.error(error);
     return res
       .status(500)
-      .json({ error: "Erro ao criar checklist da cÃ¢mera" });
+      .json({ error: "Erro ao criar checklist da câmera" });
   }
 }
 
@@ -857,7 +857,7 @@ export async function listarIndisponibilidadesCamera(
       },
     });
     if (!camera)
-      return res.status(404).json({ error: "CÃƒÂ¢mera nÃƒÂ£o encontrada" });
+      return res.status(404).json({ error: "Câmera não encontrada" });
 
     const eventos = await prisma.cameraEventoStatus.findMany({
       where: {
@@ -903,7 +903,7 @@ export async function listarIndisponibilidadesCamera(
     console.error(error);
     return res
       .status(500)
-      .json({ error: "Erro ao listar histÃƒÂ³rico de indisponibilidade" });
+      .json({ error: "Erro ao listar histórico de indisponibilidade" });
   }
 }
 
@@ -921,7 +921,7 @@ export async function registrarIndisponibilidadeCamera(
       },
     });
     if (!camera)
-      return res.status(404).json({ error: "CÃƒÂ¢mera nÃƒÂ£o encontrada" });
+      return res.status(404).json({ error: "Câmera não encontrada" });
 
     const iniciadoEm = dataOpcional(req.body.iniciadoEm);
     const encerradoEm = dataOpcional(req.body.encerradoEm);
@@ -969,7 +969,7 @@ export async function registrarIndisponibilidadeCamera(
 
     await registrarLog({
       req,
-      acao: `Registro de indisponibilidade da cÃƒÂ¢mera ${camera.numeroCamera} por ${formatarIndisponibilidade(duracao)}`,
+      acao: `Registro de indisponibilidade da câmera ${camera.numeroCamera} por ${formatarIndisponibilidade(duracao)}`,
       tipoRegistro: "CameraEventoStatus",
       registroId: evento.id,
       dadosNovos: evento,
@@ -1004,7 +1004,7 @@ export async function atualizarIndisponibilidadeCamera(
     if (!anterior)
       return res
         .status(404)
-        .json({ error: "Registro de indisponibilidade nÃƒÂ£o encontrado" });
+        .json({ error: "Registro de indisponibilidade não encontrado" });
 
     const iniciadoEm = dataOpcional(req.body.iniciadoEm) || anterior.iniciadoEm;
     const encerradoEm =
@@ -1042,7 +1042,7 @@ export async function atualizarIndisponibilidadeCamera(
 
     await registrarLog({
       req,
-      acao: `AtualizaÃƒÂ§ÃƒÂ£o de indisponibilidade da cÃƒÂ¢mera ID ${cameraId}`,
+      acao: `Atualização de indisponibilidade da câmera ID ${cameraId}`,
       tipoRegistro: "CameraEventoStatus",
       registroId: evento.id,
       dadosAnteriores: anterior,
@@ -1202,7 +1202,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
 
     const instabilidadePorCamera = ranking(
       cameras.reduce<Record<string, number>>((acc, camera) => {
-        acc[`CÃ¢mera ${camera.numeroCamera}`] =
+        acc[`Câmera ${camera.numeroCamera}`] =
           camera.totalFalhas + (camera.status === STATUS_DESCONECTADA ? 1 : 0);
         return acc;
       }, {}),
@@ -1326,7 +1326,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
         .filter((camera) => camera.status === STATUS_DESCONECTADA)
         .map((camera) => ({
           id: camera.id,
-          titulo: `CÃ¢mera ${camera.numeroCamera} desconectada`,
+          titulo: `Câmera ${camera.numeroCamera} desconectada`,
           mensagem: `${camera.areaMonitorada} | Servidor ${camera.numeroServidor}`,
           minutos: camera.desconectadaDesde
             ? minutosEntre(camera.desconectadaDesde, agora)
@@ -1346,7 +1346,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
           )
           .map((camera) => ({
             tipo: "SLA violado",
-            mensagem: `CÃ¢mera ${camera.numeroCamera} offline acima de ${tempoMaximoOffline} minutos`,
+            mensagem: `Câmera ${camera.numeroCamera} offline acima de ${tempoMaximoOffline} minutos`,
             severidade: "Crítica",
           })),
         ...menorRetencao
@@ -1373,7 +1373,7 @@ export async function dashboardCameras(req: AuthRequest, res: Response) {
     console.error(error);
     return res
       .status(500)
-      .json({ error: "Erro ao gerar dashboard de cÃ¢meras" });
+      .json({ error: "Erro ao gerar dashboard de câmeras" });
   }
 }
 
@@ -1517,7 +1517,7 @@ export async function gerarRelatorioDisponibilidadeCameras(
       return res
         .status(404)
         .json({
-          error: "Nenhuma cÃ¢mera encontrada para os filtros selecionados.",
+          error: "Nenhuma câmera encontrada para os filtros selecionados.",
         });
     }
 
@@ -1911,7 +1911,7 @@ export async function gerarRelatorioDisponibilidadeCameras(
     doc.y = yCards + 68;
 
     const intro =
-      "Conforme analise realizada no modulo de Gestao e Monitoramento de Cameras CFTV do JetGuard, este relatorio consolida o status operacional, a retencao de gravacao e os registros de conexao, desconexao e indisponibilidade das cameras selecionadas. As informacoes apresentadas apoiam a auditoria tecnica, o acompanhamento de SLA, a rastreabilidade das falhas e a tomada de decisao para tratativas preventivas ou corretivas.";
+      "Conforme analise realizada no modulo de Gestao e Monitoramento de Cameras CFTV do MoveSecurity, este relatorio consolida o status operacional, a retencao de gravacao e os registros de conexao, desconexao e indisponibilidade das cameras selecionadas. As informacoes apresentadas apoiam a auditoria tecnica, o acompanhamento de SLA, a rastreabilidade das falhas e a tomada de decisao para tratativas preventivas ou corretivas.";
     const introY = doc.y;
     const introH = 74;
     doc
@@ -1969,7 +1969,7 @@ export async function gerarRelatorioDisponibilidadeCameras(
         .fillColor("#475569")
         .fontSize(9)
         .text(
-          "Este e o primeiro relatorio CFTV com base comparativa armazenada para esta unidade. A partir da proxima emissao, o JetGuard apresentara ganhos, perdas e variacoes em relacao ao relatorio anterior.",
+          "Este e o primeiro relatorio CFTV com base comparativa armazenada para esta unidade. A partir da proxima emissao, o MoveSecurity apresentara ganhos, perdas e variacoes em relacao ao relatorio anterior.",
           56,
           doc.y + 12,
           { width: contentWidth - 28 },

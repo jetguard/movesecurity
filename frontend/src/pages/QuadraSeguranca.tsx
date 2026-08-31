@@ -1249,7 +1249,7 @@ export default function QuadraSeguranca() {
                           ? "border-cyan-300/70 bg-cyan-500/20 text-white shadow-cyan-950/30"
                           : "border-slate-700/70 bg-slate-950/75 text-slate-200 hover:border-cyan-400/60 hover:bg-cyan-500/10"
                       }`}
-                      title={`Visualizar o mapa pelo Ã¢ngulo da cÃ¢mera ${camera.numeroCamera}`}
+                      title={`Visualizar o mapa pelo ângulo da câmera ${camera.numeroCamera}`}
                     >
                       <span
                         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
@@ -1490,7 +1490,7 @@ export default function QuadraSeguranca() {
                   className="mt-2 w-full accent-blue-500"
                 />
                 <span className="mt-1 block text-center text-[10px] font-black normal-case tracking-normal text-blue-200">
-                  Ã‚ngulo exato: {Math.round(anguloMapa.x)}Â°
+                  Ângulo exato: {Math.round(anguloMapa.x)}°
                 </span>
               </label>
               <label className="mt-3 block text-[11px] font-bold uppercase tracking-wide text-slate-400">
@@ -1510,7 +1510,7 @@ export default function QuadraSeguranca() {
                   className="mt-2 w-full accent-blue-500"
                 />
                 <span className="mt-1 block text-center text-[10px] font-black normal-case tracking-normal text-blue-200">
-                  Ã‚ngulo exato: {Math.round(normalizarGiro(anguloMapa.z))}Â°
+                  Ângulo exato: {Math.round(normalizarGiro(anguloMapa.z))}°
                 </span>
               </label>
               <p className="mt-3 text-[11px] text-slate-400">

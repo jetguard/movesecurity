@@ -18,7 +18,7 @@ import {
 import { criarUrlValidacaoAssinatura } from "../services/assinaturaDocumento.service";
 
 const usuarioConsultaPublica = {
-  nome: "JetGuard - Movecta Patrimonial",
+  nome: "MoveSecurity - Movecta Patrimonial",
   empresa: "Movecta S/A",
 };
 
@@ -428,7 +428,7 @@ export async function validarAssinaturaPublica(req: Request, res: Response) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Validação JetGuard</title>
+  <title>Validação MoveSecurity</title>
   <style>
     body { margin:0; font-family: Arial, sans-serif; background:#07111f; color:#e5eefc; display:grid; place-items:center; min-height:100vh; }
     .card { width:min(680px, calc(100vw - 32px)); background:#0f1b2d; border:1px solid #1d3b63; border-left:6px solid #0b74ff; border-radius:18px; padding:28px; box-shadow:0 20px 60px rgba(0,0,0,.35); }
@@ -445,7 +445,7 @@ export async function validarAssinaturaPublica(req: Request, res: Response) {
   <main class="card">
     <span class="badge">${valido ? "DOCUMENTO VÁLIDO" : "ASSINATURA INVALIDADA"}</span>
     <h1>Validação de assinatura eletrônica</h1>
-    <p>Este registro foi assinado eletronicamente dentro do JetGuard.</p>
+    <p>Este registro foi assinado eletronicamente dentro do MoveSecurity.</p>
     <dl>
       <dt>Documento</dt><dd>${escaparHtml(assinatura.modulo)} nº ${escaparHtml(assinatura.codigoRegistro)}</dd>
       <dt>Ação</dt><dd>${escaparHtml(assinatura.acao)}</dd>

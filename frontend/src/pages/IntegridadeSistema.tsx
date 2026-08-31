@@ -187,7 +187,7 @@ export default function IntegridadeSistema() {
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
             Auditoria técnica de evidências, uploads, backups, sessões e
-            políticas críticas do JetGuard.
+            políticas críticas do MoveSecurity.
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -344,7 +344,7 @@ export default function IntegridadeSistema() {
       </section>
 
       <section className={card}>
-        <h2 className="text-lg font-bold">Ãšltimos backups locais</h2>
+        <h2 className="text-lg font-bold">Últimos backups locais</h2>
         <div className="mt-4 overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead className="text-xs uppercase text-slate-500 dark:text-slate-400">
