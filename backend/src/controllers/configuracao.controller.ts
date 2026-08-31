@@ -5,6 +5,7 @@ import { registrarLog } from "../services/auditoria.service";
 
 const chavePadrao = "global";
 const chaveMascarada = "********";
+const perfisConfiguracaoSso = ["SUPER_ADMIN", "T_I"];
 
 async function obterOuCriarConfiguracao() {
   return prisma.configuracaoSistema.upsert({
@@ -16,14 +17,30 @@ async function obterOuCriarConfiguracao() {
 
 function mascararConfiguracao(
   configuracao: Awaited<ReturnType<typeof obterOuCriarConfiguracao>>,
+  exibirSso = false,
 ) {
-  return {
-    ...configuracao,
+  const config = configuracao as any;
+  const dados = {
+    ...config,
     openaiApiKeyConfigurada: Boolean(
-      configuracao.openaiApiKey || process.env.OPENAI_API_KEY,
+      config.openaiApiKey || process.env.OPENAI_API_KEY,
     ),
-    openaiApiKey: configuracao.openaiApiKey ? chaveMascarada : "",
+    openaiApiKey: config.openaiApiKey ? chaveMascarada : "",
+    ssoClientSecretConfigurado: Boolean(config.ssoClientSecret),
+    ssoClientSecret: config.ssoClientSecret ? chaveMascarada : "",
   };
+
+  if (!exibirSso) {
+    for (const chave of Object.keys(dados)) {
+      if (chave.startsWith("sso")) delete dados[chave];
+    }
+  }
+
+  return dados;
+}
+
+function podeConfigurarSso(perfil?: string) {
+  return perfisConfiguracaoSso.includes(String(perfil || ""));
 }
 
 function apiKeyOpenAi(
@@ -90,7 +107,9 @@ async function validarChaveOpenAi(apiKey: string) {
 export async function buscarConfiguracao(req: AuthRequest, res: Response) {
   try {
     const configuracao = await obterOuCriarConfiguracao();
-    return res.json(mascararConfiguracao(configuracao));
+    return res.json(
+      mascararConfiguracao(configuracao, podeConfigurarSso(req.usuarioPerfil)),
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao buscar configuracoes" });
@@ -240,6 +259,39 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
       }
     }
 
+    if (podeConfigurarSso(req.usuarioPerfil)) {
+      data.ssoAtivo = Boolean(req.body.ssoAtivo);
+      data.ssoProvider = req.body.ssoProvider || "azure-ad";
+      data.ssoNomeBotao =
+        req.body.ssoNomeBotao || "Entrar com conta corporativa";
+      data.ssoDominioPermitido = req.body.ssoDominioPermitido || null;
+      data.ssoClientId = req.body.ssoClientId || null;
+      data.ssoTenantId = req.body.ssoTenantId || null;
+      data.ssoCallbackUrl = req.body.ssoCallbackUrl || null;
+      data.ssoFrontendUrl = req.body.ssoFrontendUrl || null;
+      data.ssoAuthorizationUrl = req.body.ssoAuthorizationUrl || null;
+      data.ssoTokenUrl = req.body.ssoTokenUrl || null;
+      data.ssoUserInfoUrl = req.body.ssoUserInfoUrl || null;
+      data.ssoLogoutUrl = req.body.ssoLogoutUrl || null;
+      data.ssoMetadataUrl = req.body.ssoMetadataUrl || null;
+      data.ssoCertificado = req.body.ssoCertificado || null;
+      data.ssoModoPermissao = req.body.ssoModoPermissao || "perfil_manual";
+      data.ssoLoginLocalEmergencia =
+        req.body.ssoLoginLocalEmergencia !== false;
+
+      if (
+        typeof req.body.ssoClientSecret === "string" &&
+        req.body.ssoClientSecret.trim() &&
+        req.body.ssoClientSecret !== chaveMascarada
+      ) {
+        data.ssoClientSecret = req.body.ssoClientSecret.trim();
+      }
+
+      if (req.body.removerSsoClientSecret === true) {
+        data.ssoClientSecret = null;
+      }
+    }
+
     const configuracao = await prisma.configuracaoSistema.update({
       where: { chave: chavePadrao },
       data,
@@ -251,16 +303,20 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
       tipoRegistro: "ConfiguracaoSistema",
       registroId: configuracao.id,
       dadosAnteriores: {
-        ...anterior,
-        openaiApiKey: anterior.openaiApiKey ? chaveMascarada : "",
+        ...(anterior as any),
+        openaiApiKey: (anterior as any).openaiApiKey ? chaveMascarada : "",
+        ssoClientSecret: (anterior as any).ssoClientSecret ? chaveMascarada : "",
       },
       dadosNovos: {
-        ...configuracao,
-        openaiApiKey: configuracao.openaiApiKey ? chaveMascarada : "",
+        ...(configuracao as any),
+        openaiApiKey: (configuracao as any).openaiApiKey ? chaveMascarada : "",
+        ssoClientSecret: (configuracao as any).ssoClientSecret ? chaveMascarada : "",
       },
     });
 
-    return res.json(mascararConfiguracao(configuracao));
+    return res.json(
+      mascararConfiguracao(configuracao, podeConfigurarSso(req.usuarioPerfil)),
+    );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao atualizar configuracoes" });

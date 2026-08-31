@@ -1,5 +1,6 @@
 ﻿export const PERFIS = {
   SUPER_ADMIN: "SUPER_ADMIN",
+  TI: "T_I",
   ADMINISTRADOR: "ADMINISTRADOR",
   GESTOR: "GESTOR",
   COORDENADOR: "COORDENADOR",
@@ -54,6 +55,7 @@ export const MODULOS_ACESSO = [
 ];
 
 const PERFIS_POR_MODULO: Record<string, string[]> = {
+  [PERFIS.TI]: MODULOS_ACESSO.map((item) => item.chave),
   [PERFIS.ADMINISTRADOR]: MODULOS_ACESSO.map((item) => item.chave),
   [PERFIS.GESTOR]: ["dashboard", "treinamentos", "relatorios", "documentos"],
   [PERFIS.COORDENADOR]: [
@@ -131,7 +133,10 @@ export function temPerfil(perfis: string[]) {
 export function permissoesModulosAtual() {
   const usuario = usuarioAtual();
   if (!usuario) return [];
-  if (usuario.perfilAcesso === PERFIS.SUPER_ADMIN) {
+  if (
+    usuario.perfilAcesso === PERFIS.SUPER_ADMIN ||
+    usuario.perfilAcesso === PERFIS.TI
+  ) {
     return MODULOS_ACESSO.map((item) => item.chave);
   }
   if (Array.isArray(usuario.permissoesAcoes)) {
@@ -146,7 +151,10 @@ export function permissoesModulosAtual() {
 export function permissoesAcoesAtual() {
   const usuario = usuarioAtual();
   if (!usuario) return [];
-  if (usuario.perfilAcesso === PERFIS.SUPER_ADMIN) {
+  if (
+    usuario.perfilAcesso === PERFIS.SUPER_ADMIN ||
+    usuario.perfilAcesso === PERFIS.TI
+  ) {
     return permissoesCompletas(MODULOS_ACESSO.map((item) => item.chave));
   }
   if (Array.isArray(usuario.permissoesAcoes)) {
@@ -156,12 +164,14 @@ export function permissoesAcoesAtual() {
 }
 
 export function temModulo(modulo: string) {
-  if (perfilAtual() === PERFIS.SUPER_ADMIN) return true;
+  if (perfilAtual() === PERFIS.SUPER_ADMIN || perfilAtual() === PERFIS.TI)
+    return true;
   return permissoesModulosAtual().includes(modulo);
 }
 
 export function podeNoModulo(modulo: string, acao: AcaoAcesso = "leitura") {
-  if (perfilAtual() === PERFIS.SUPER_ADMIN) return true;
+  if (perfilAtual() === PERFIS.SUPER_ADMIN || perfilAtual() === PERFIS.TI)
+    return true;
   return permissoesAcoesAtual().some(
     (permissao) => permissao.modulo === modulo && Boolean(permissao[acao]),
   );
@@ -178,7 +188,8 @@ export function modulosDosPerfis(perfis: string[]) {
 }
 
 export function temPerfilOuModulo(perfis: string[], modulo?: string) {
-  if (perfilAtual() === PERFIS.SUPER_ADMIN) return true;
+  if (perfilAtual() === PERFIS.SUPER_ADMIN || perfilAtual() === PERFIS.TI)
+    return true;
   if (modulo && podeNoModulo(modulo, "leitura")) return true;
   if (!modulo && temPerfil(perfis)) return true;
   return false;
@@ -191,7 +202,7 @@ export const podeAdministrar = () =>
   podeNoModulo("usuarios", "excluir") ||
   podeNoModulo("configuracoes", "editar");
 
-export const podeSuperAdmin = () => temPerfil([PERFIS.SUPER_ADMIN]);
+export const podeSuperAdmin = () => temPerfil([PERFIS.SUPER_ADMIN, PERFIS.TI]);
 
 export const podeAnalisar = () =>
   temPerfil([PERFIS.SUPER_ADMIN]) ||
@@ -223,7 +234,10 @@ export function unidadesPermitidasUsuario() {
   const usuario = usuarioAtual();
   if (!usuario) return ["GJA-T1"];
 
-  if (usuario.perfilAcesso === PERFIS.SUPER_ADMIN) {
+  if (
+    usuario.perfilAcesso === PERFIS.SUPER_ADMIN ||
+    usuario.perfilAcesso === PERFIS.TI
+  ) {
     return [
       "GJA-T1",
       "GJA-T2",

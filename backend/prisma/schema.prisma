@@ -1423,6 +1423,23 @@ model ConfiguracaoSistema {
   openaiApiKey                  String?
   openaiOcrModel                String?  @default("gpt-4.1-mini")
   openaiAprimoramentoTextoAtivo Boolean  @default(false)
+  ssoAtivo                      Boolean  @default(false)
+  ssoProvider                   String?  @default("azure-ad")
+  ssoNomeBotao                  String?  @default("Entrar com conta corporativa")
+  ssoDominioPermitido           String?
+  ssoClientId                   String?
+  ssoClientSecret               String?
+  ssoTenantId                   String?
+  ssoCallbackUrl                String?
+  ssoFrontendUrl                String?
+  ssoAuthorizationUrl           String?
+  ssoTokenUrl                   String?
+  ssoUserInfoUrl                String?
+  ssoLogoutUrl                  String?
+  ssoMetadataUrl                String?
+  ssoCertificado                String?
+  ssoModoPermissao              String?  @default("perfil_manual")
+  ssoLoginLocalEmergencia       Boolean  @default(true)
   updatedAt                     DateTime @updatedAt
   createdAt                     DateTime @default(now())
 }

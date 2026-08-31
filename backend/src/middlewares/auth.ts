@@ -99,7 +99,7 @@ function normalizarPermissoes(valor: unknown): PermissaoModulo[] {
 
 async function permissoesDoPerfil(codigo?: string | null) {
   if (!codigo) return [];
-  if (codigo === PERFIS.SUPER_ADMIN) {
+  if (codigo === PERFIS.SUPER_ADMIN || codigo === PERFIS.TI) {
     return permissoesCompletas(MODULOS_ACESSO.map((item) => item.chave));
   }
   const perfil = await prisma.perfilAcesso.findUnique({
@@ -243,7 +243,8 @@ export async function autenticarUsuario(
     }
 
     const unidadesPermitidas =
-      usuario.perfilAcesso === PERFIS.SUPER_ADMIN
+      usuario.perfilAcesso === PERFIS.SUPER_ADMIN ||
+      usuario.perfilAcesso === PERFIS.TI
         ? UNIDADES_SISTEMA
         : normalizarUnidadesPermitidas(
             usuario.unidadesPermitidas,
@@ -281,7 +282,7 @@ export async function autenticarUsuario(
 
 export function autorizarPerfis(perfisPermitidos: string[]) {
   return async (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (req.usuarioPerfil === PERFIS.SUPER_ADMIN) {
+    if (req.usuarioPerfil === PERFIS.SUPER_ADMIN || req.usuarioPerfil === PERFIS.TI) {
       return next();
     }
 
@@ -320,6 +321,7 @@ export function autorizarPerfis(perfisPermitidos: string[]) {
 
 export const PERFIS = {
   SUPER_ADMIN: "SUPER_ADMIN",
+  TI: "T_I",
   ADMINISTRADOR: "ADMINISTRADOR",
   GESTOR: "GESTOR",
   COORDENADOR: "COORDENADOR",
@@ -349,6 +351,7 @@ export const MODULOS_ACESSO = [
 ];
 
 const PERFIS_POR_MODULO: Record<string, string[]> = {
+  [PERFIS.TI]: MODULOS_ACESSO.map((item) => item.chave),
   [PERFIS.ADMINISTRADOR]: [
     "dashboard",
     "relatorios",
