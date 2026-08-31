@@ -91,13 +91,9 @@ export default function Login() {
             <h1 className="mt-3 text-4xl font-black text-slate-950">
               MoveSecurity
             </h1>
-            <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-slate-500">
-              Plataforma nacional de segurança patrimonial, treinamentos,
-              certificados, ocorrências, análises de risco e planos de ação.
-            </p>
           </div>
 
-          <div className="mt-8 space-y-5">
+          <div className="mt-10 space-y-5">
             <label className="block">
               <span className="mb-2 block text-sm font-black text-slate-700">
                 Email
@@ -109,7 +105,12 @@ export default function Login() {
                   placeholder="nome@empresa.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    boxShadow: "inset 0 0 0 1000px #ffffff",
+                    WebkitTextFillColor: "#020617",
+                  }}
+                  className="w-full bg-white text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
                 />
               </div>
             </label>
@@ -125,7 +126,12 @@ export default function Login() {
                   placeholder="Digite sua senha"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-transparent text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
+                  style={{
+                    backgroundColor: "#ffffff",
+                    boxShadow: "inset 0 0 0 1000px #ffffff",
+                    WebkitTextFillColor: "#020617",
+                  }}
+                  className="w-full bg-white text-sm font-bold text-slate-950 outline-none placeholder:text-slate-400"
                 />
               </div>
             </label>
@@ -138,24 +144,6 @@ export default function Login() {
           >
             {loading ? "Entrando..." : "Entrar"}
           </button>
-
-          <div className="mt-6 grid grid-cols-3 gap-2">
-            {[
-              ["24h", "Operação"],
-              ["PDF", "Validação"],
-              ["SSO", "Corporativo"],
-            ].map(([titulo, texto]) => (
-              <div
-                key={titulo}
-                className="rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-3 text-center"
-              >
-                <p className="text-lg font-black text-blue-600">{titulo}</p>
-                <p className="mt-1 text-[11px] font-bold text-slate-500">
-                  {texto}
-                </p>
-              </div>
-            ))}
-          </div>
 
           <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-5 text-xs font-bold text-slate-500">
             <span>Movecta S/A</span>
