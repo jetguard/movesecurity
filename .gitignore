@@ -15,6 +15,10 @@ node_modules/
 **/uploads/
 **/backups/
 **/prisma/.generated/
+tmp/
+output/
+docs/
+backend/docs/
 
 # Large local media assets
 frontend/public/videos/*.mp4
