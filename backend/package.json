@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:migrate:sqlite-to-postgres": "tsx scripts/migrate-sqlite-to-postgres.ts",

@@ -1,0 +1,16 @@
+**/node_modules
+**/.git
+**/.env
+**/.env.*
+!**/.env.example
+**/uploads
+**/backups
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite3
+**/dist
+**/frontend/dist
+.claude
+CHANGELOG.md
+scripts

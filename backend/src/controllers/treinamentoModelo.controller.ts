@@ -6,6 +6,7 @@ import archiver = require("archiver");
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
+import { travarSequencia } from "../utils/lockSequencia";
 import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
 import { enviarEmail } from "../services/email.service";
@@ -390,9 +391,7 @@ async function carregarModeloPorSlug(slug: string) {
 async function proximoCodigoCertificado(tx: any, modelo: any) {
   const ano = new Date().getFullYear();
   const prefixo = normalizarCodigo(modelo.codigo).replace(/[^A-Z0-9]/g, "");
-  await tx.$executeRawUnsafe(
-    `SELECT pg_advisory_xact_lock(hashtext('movecta_treinamento_modelo_${prefixo}_${ano}'))`,
-  );
+  await travarSequencia(tx, `movecta_treinamento_modelo_${prefixo}_${ano}`);
   const certificados = await tx.treinamentoModeloParticipante.findMany({
     where: {
       treinamentoId: modelo.id,

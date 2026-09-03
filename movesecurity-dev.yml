@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: movesecurity-dev
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: movesecurity-dev
+  namespace: movesecurity-dev
+spec:
+  selector:
+    matchLabels:
+      app: movesecurity-dev
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: movesecurity-dev
+    spec:
+      securityContext:
+        # GID do usuário "movesecurity" criado na imagem (ver Dockerfile) -
+        # garante que o volume de uploads montado abaixo seja gravável por
+        # ele, mesmo sendo um PVC provisionado com dono root por padrão.
+        fsGroup: 10001
+      containers:
+        - name: movesecurity-dev
+          image: gru.ocir.io/grs61s2n1sbr/movesecurity-dev:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 443
+            - containerPort: 80
+          envFrom:
+            - secretRef:
+                name: movesecurity-secrets
+          env:
+            - name: NODE_ENV
+              value: "production"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "384Mi"
+            limits:
+              cpu: "1"
+              memory: "768Mi"
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 20
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/backend/uploads
+            - name: ssl-certs
+              mountPath: /etc/nginx/certs
+              readOnly: true
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: movesecurity-uploads-dev
+        - name: ssl-certs
+          secret:
+            secretName: ca-certificate-secret-movesecurity
+      imagePullSecrets:
+        - name: ocir-pull-movesecurity
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: movesecurity-uploads-dev
+  namespace: movesecurity-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: oci-bv
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: svc-movesecurity-dev
+  namespace: movesecurity-dev
+  labels:
+    app: movesecurity-dev
+  annotations:
+    oci.oraclecloud.com/load-balancer-type: "lb"
+    service.beta.kubernetes.io/oci-load-balancer-ssl-ports: "443"
+    service.beta.kubernetes.io/oci-load-balancer-tls-secret: ca-certificate-secret-movesecurity
+    service.beta.kubernetes.io/oci-load-balancer-tls-backendset-secret: ca-certificate-secret-movesecurity
+    service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "10"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "100"
+spec:
+  # loadBalancerIP: "PREENCHER_APOS_RESERVAR_IP_NA_OCI"
+  type: LoadBalancer
+  selector:
+    app: movesecurity-dev
+  ports:
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80

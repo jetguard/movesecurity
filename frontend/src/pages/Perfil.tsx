@@ -30,6 +30,7 @@ export default function Perfil() {
   const [novoPin, setNovoPin] = useState("");
   const [confirmarNovoPin, setConfirmarNovoPin] = useState("");
   const [salvandoPin, setSalvandoPin] = useState(false);
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
 
   function normalizarPin(valor: string) {
     return valor.replace(/\D/g, "").slice(0, 4);
@@ -80,18 +81,26 @@ export default function Perfil() {
       formData.append("fotoPerfil", fotoPerfil);
     }
 
-    const response = await api.put("/usuarios/me", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    try {
+      setSalvandoPerfil(true);
+      const response = await api.put("/usuarios/me", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
-    localStorage.setItem("usuario", JSON.stringify(response.data));
-    setPerfil(response.data);
-    setFotoPerfil(null);
-    setRemoverFoto(false);
-    setPreviewFoto(response.data.fotoPerfil || "");
-    alert("Perfil atualizado com sucesso");
+      localStorage.setItem("usuario", JSON.stringify(response.data));
+      setPerfil(response.data);
+      setFotoPerfil(null);
+      setRemoverFoto(false);
+      setPreviewFoto(response.data.fotoPerfil || "");
+      alert("Perfil atualizado com sucesso");
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      alert(apiError.response?.data?.error || "Erro ao atualizar perfil.");
+    } finally {
+      setSalvandoPerfil(false);
+    }
   }
 
   async function salvarPin(e: React.FormEvent) {
@@ -302,8 +311,12 @@ export default function Perfil() {
         </div>
 
         <div className="flex justify-end">
-          <button className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg">
-            Salvar Perfil
+          <button
+            type="submit"
+            disabled={salvandoPerfil}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg disabled:cursor-not-allowed disabled:bg-blue-300"
+          >
+            {salvandoPerfil ? "Salvando..." : "Salvar Perfil"}
           </button>
         </div>
       </form>

@@ -6,6 +6,8 @@ node_modules/
 .env.*
 !.env.example
 !.env.*.example
+secrets.env
+*.secrets.env
 
 # Local databases and operational data
 *.db

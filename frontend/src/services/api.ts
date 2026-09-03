@@ -56,6 +56,15 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 403 && error.response?.data?.code === "TROCA_SENHA_OBRIGATORIA") {
+      try {
+        const usuarioCache = JSON.parse(localStorage.getItem("usuario") || "null");
+        if (usuarioCache) {
+          localStorage.setItem("usuario", JSON.stringify({ ...usuarioCache, deveAlterarSenha: true }));
+        }
+      } catch {
+        // cache local corrompido: o redirecionamento abaixo ainda protege a rota
+      }
+
       if (window.location.pathname !== "/alterar-senha") {
         window.location.href = "/alterar-senha";
       }

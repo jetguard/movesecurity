@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma";
 import { serializarUnidadesPermitidas, UNIDADES_SISTEMA } from "../config/unidades";
 
 export async function garantirSuperAdmin() {
-  const email = "fertechbyte@hotmail.com";
+  const email = "marcelo.tavares@movecta.com.br";
   const senhaPadrao = process.env.SUPER_ADMIN_PASSWORD || "Movecta@2026";
 
   if (!process.env.SUPER_ADMIN_PASSWORD) {
@@ -19,7 +19,7 @@ export async function garantirSuperAdmin() {
   if (!usuario) {
     await prisma.usuario.create({
       data: {
-        nome: "Fernando Nunes",
+        nome: "Marcelo Tavares",
         email,
         senha: await bcrypt.hash(senhaPadrao, 10),
         empresa: "Movecta S/A",
@@ -40,7 +40,7 @@ export async function garantirSuperAdmin() {
         id: usuario.id,
       },
       data: {
-        nome: usuario.nome || "Fernando Nunes",
+        nome: usuario.nome || "Marcelo Tavares",
         empresa: usuario.empresa || "Movecta S/A",
         unidade: usuario.unidade || "GJA-T1",
         unidadesPermitidas: serializarUnidadesPermitidas(UNIDADES_SISTEMA, usuario.unidade || "GJA-T1"),

@@ -850,9 +850,9 @@ export default function Dashboard() {
       riscosResponse,
       planosResponse,
     ] = await Promise.all([
-      api.get("/ocorrencias"),
-      api.get("/eventos"),
-      api.get("/investigacoes"),
+      api.get("/ocorrencias").catch(() => ({ data: [] })),
+      api.get("/eventos").catch(() => ({ data: [] })),
+      api.get("/investigacoes").catch(() => ({ data: [] })),
       api.get("/cameras/dashboard").catch(() => ({ data: {} })),
       api
         .get(

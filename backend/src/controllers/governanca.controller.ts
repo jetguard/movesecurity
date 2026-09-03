@@ -166,12 +166,12 @@ export async function statusGovernanca(req: AuthRequest, res: Response) {
           recomendacao:
             "Agendar backup diário do banco e da pasta uploads no cron da VPS.",
         },
-        postgres: {
-          status: (process.env.DATABASE_URL || "").startsWith("postgres")
-            ? "PostgreSQL ativo"
-            : "Preparado para migração futura",
+        banco: {
+          status: (process.env.DATABASE_URL || "").startsWith("mysql")
+            ? "MySQL ativo"
+            : "DATABASE_URL não configurada",
           recomendacao:
-            "Migrar para PostgreSQL quando houver maior volume ou múltiplos acessos simultâneos.",
+            "Garantir backup e monitoramento da instância MySQL de produção.",
         },
         testesAutomatizados: {
           status: "Base ativa",
@@ -192,7 +192,6 @@ export async function statusGovernanca(req: AuthRequest, res: Response) {
         "Configurar JWT_SECRET e SUPER_ADMIN_PASSWORD próprios em produção.",
         "Usar CORS_ORIGIN restrito ao domínio oficial do sistema.",
         "Executar backup diário do banco e da pasta uploads.",
-        "Migrar para PostgreSQL quando o volume de registros e usuários crescer.",
         "Publicar a API atrás de HTTPS e proxy reverso.",
       ],
     });

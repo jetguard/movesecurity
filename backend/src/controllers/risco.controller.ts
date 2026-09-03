@@ -1,5 +1,6 @@
 ﻿import { Response } from "express";
 import { prisma } from "../lib/prisma";
+import { travarSequencia } from "../utils/lockSequencia";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { gerarAnaliseCompletaPdf } from "../services/analiseCompletaPdf.service";
 import { registrarLog } from "../services/auditoria.service";
@@ -187,9 +188,7 @@ async function proximoCodigoCadastro(
   delegate: string,
   prefixo: string,
 ) {
-  await tx.$executeRawUnsafe(
-    `SELECT pg_advisory_xact_lock(hashtext('jetguard_${delegate}_${prefixo}'))`,
-  );
+  await travarSequencia(tx, `jetguard_${delegate}_${prefixo}`);
   const ultimo = await tx[delegate].findFirst({ orderBy: { numero: "desc" } });
   const numero = Number(ultimo?.numero || 0) + 1;
   return { numero, codigo: codigoCadastro(prefixo, numero) };
@@ -211,9 +210,7 @@ function nomeTipoControle(tipo: string) {
 }
 
 async function proximoCodigoControle(tx: any, tipoControle: TipoControle) {
-  await tx.$executeRawUnsafe(
-    `SELECT pg_advisory_xact_lock(hashtext('jetguard_controle_${tipoControle}'))`,
-  );
+  await travarSequencia(tx, `jetguard_controle_${tipoControle}`);
   const ultimo = await tx.controlePreventivoCadastro.findFirst({
     where: { tipoControle },
     orderBy: { numero: "desc" },
@@ -1893,8 +1890,9 @@ export async function criarAnaliseCompletaRisco(
     const ano = new Date().getFullYear();
     const dados = await dadosAnaliseCompleta(req);
     const registro = await prisma.$transaction(async (tx) => {
-      await tx.$executeRawUnsafe(
-        `SELECT pg_advisory_xact_lock(hashtext('jetguard_analise_risco_completa_${req.unidadeAtiva}_${ano}'))`,
+      await travarSequencia(
+        tx,
+        `jetguard_analise_risco_completa_${req.unidadeAtiva}_${ano}`,
       );
       const ultimo = await tx.analiseRiscoCompleta.findFirst({
         where: { ano, unidade: req.unidadeAtiva },

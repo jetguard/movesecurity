@@ -3,33 +3,40 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+}
+
+// Tabela de apoio usada só para serializar a geração de numeração sequencial
+// (substitui o pg_advisory_xact_lock do Postgres, sem equivalente direto no MySQL).
+// Ver backend/src/utils/lockSequencia.ts.
+model SequenciaControle {
+  chave String @id
 }
 
 model Usuario {
   id                         Int       @id @default(autoincrement())
-  nome                       String
+  nome                       String    @db.Text
   email                      String    @unique
   cpf                        String?   @unique
-  senha                      String
-  apelido                    String?
-  fotoPerfil                 String?
-  re                         String?
-  setor                      String?
-  cargo                      String?
-  empresa                    String?
+  senha                      String    @db.Text
+  apelido                    String?   @db.Text
+  fotoPerfil                 String?   @db.Text
+  re                         String?   @db.Text
+  setor                      String?   @db.Text
+  cargo                      String?   @db.Text
+  empresa                    String?   @db.Text
   terceirizado               Boolean   @default(false)
-  equipe                     String?
-  unidade                    String?
-  unidadesPermitidas         String?
+  equipe                     String?   @db.Text
+  unidade                    String?   @db.Text
+  unidadesPermitidas         String?   @db.Text
   perfilAcesso               String    @default("USUARIO")
   statusUsuario              String    @default("ATIVO")
   deveAlterarSenha           Boolean   @default(true)
   somenteCadastro            Boolean   @default(false)
   gruposTreinamentoJson      String    @default("[]")
   senhaAlteradaEm            DateTime?
-  pinOperacionalHash         String?
+  pinOperacionalHash         String?   @db.Text
   pinOperacionalCriadoEm     DateTime?
   pinOperacionalAtualizadoEm DateTime?
   pinTentativasInvalidas     Int       @default(0)
@@ -81,7 +88,7 @@ model PerfilAcesso {
   id             Int      @id @default(autoincrement())
   codigo         String   @unique
   nome           String
-  descricao      String?
+  descricao      String?  @db.Text
   permissoesJson String   @default("[]")
   sistema        Boolean  @default(false)
   status         String   @default("ATIVO")
@@ -95,23 +102,23 @@ model TreinamentoTerminal {
   id                 Int       @id @default(autoincrement())
   token              String    @unique
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String
   dataNascimento     DateTime
-  empresa            String
-  cargo              String
-  email              String
-  telefone           String
+  empresa            String    @db.Text
+  cargo              String    @db.Text
+  email              String    @db.Text
+  telefone           String    @db.Text
   etapa              String    @default("video")
   status             String    @default("Em andamento")
-  videoUrl           String?
+  videoUrl           String?   @db.Text
   progressoSegundos  Int       @default(0)
   duracaoSegundos    Int       @default(0)
   videoConcluido     Boolean   @default(false)
   aceiteDeclaracao   Boolean   @default(false)
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
   concluidoEm        DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -126,25 +133,25 @@ model IntegracaoTerminal {
   id                 Int       @id @default(autoincrement())
   token              String    @unique
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String
   dataNascimento     DateTime
-  empresa            String
-  cargo              String
-  email              String
-  telefone           String
+  empresa            String    @db.Text
+  cargo              String    @db.Text
+  email              String    @db.Text
+  telefone           String    @db.Text
   etapa              String    @default("video")
   status             String    @default("Em andamento")
-  videoUrl           String?
+  videoUrl           String?   @db.Text
   progressoSegundos  Int       @default(0)
   duracaoSegundos    Int       @default(0)
   videoConcluido     Boolean   @default(false)
   quizAprovado       Boolean   @default(false)
-  respostasQuiz      String?
+  respostasQuiz      String?   @db.Text
   aceiteDeclaracao   Boolean   @default(false)
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
   concluidoEm        DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -160,26 +167,26 @@ model TreinamentoPocSep007 {
   token              String    @unique
   usuarioId          Int?
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String?
   email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
+  cargo              String?   @db.Text
+  departamento       String?   @db.Text
+  unidade            String?   @db.Text
+  empresa            String?   @db.Text
   etapaAtual         Int       @default(1)
   status             String    @default("Em andamento")
   porcentagem        Int       @default(0)
   nota               Float?
   tentativas         Int       @default(0)
-  respostasQuiz      String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  respostasQuiz      String?   @db.Text
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
+  ipInicio           String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   dataInicio         DateTime  @default(now())
   dataConclusao      DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -196,26 +203,26 @@ model TreinamentoPocSep001 {
   token              String    @unique
   usuarioId          Int?
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String?
   email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
+  cargo              String?   @db.Text
+  departamento       String?   @db.Text
+  unidade            String?   @db.Text
+  empresa            String?   @db.Text
   etapaAtual         Int       @default(1)
   status             String    @default("Em andamento")
   porcentagem        Int       @default(0)
   nota               Float?
   tentativas         Int       @default(0)
-  respostasQuiz      String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  respostasQuiz      String?   @db.Text
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
+  ipInicio           String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   dataInicio         DateTime  @default(now())
   dataConclusao      DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -234,19 +241,19 @@ model SessaoUsuario {
   refreshTokenHash   String?   @unique
   refreshExpiraEm    DateTime?
   status             String    @default("ATIVA")
-  unidadeAtiva       String?
-  equipe             String?
-  perfilAcesso       String?
-  ipInicio           String?
-  ipUltimaAtividade  String?
-  navegador          String?
-  sistema            String?
+  unidadeAtiva       String?   @db.Text
+  equipe             String?   @db.Text
+  perfilAcesso       String?   @db.Text
+  ipInicio           String?   @db.Text
+  ipUltimaAtividade  String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   iniciadaEm         DateTime  @default(now())
   ultimaAtividadeEm  DateTime  @default(now())
   encerradaEm        DateTime?
-  encerradaPor       String?
+  encerradaPor       String?   @db.Text
   encerradaPorId     Int?
-  motivoEncerramento String?
+  motivoEncerramento String?   @db.Text
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
@@ -258,12 +265,12 @@ model SessaoUsuario {
 
 model SugestaoMelhoria {
   id            Int       @id @default(autoincrement())
-  assunto       String
-  sugestao      String
-  printTela     String?
-  nomeArquivo   String?
+  assunto       String    @db.Text
+  sugestao      String    @db.Text
+  printTela     String?   @db.Text
+  nomeArquivo   String?   @db.Text
   status        String    @default("Recebida")
-  resposta      String?
+  resposta      String?   @db.Text
   unidade       String    @default("GJA-T1")
   autorId       Int
   avaliadoPorId Int?
@@ -283,22 +290,22 @@ model Ocorrencia {
   numero             Int
   ano                Int
   codigo             String
-  assunto            String
-  local              String
+  assunto            String    @db.Text
+  local              String    @db.Text
   unidade            String    @default("GJA-T1")
-  natureza           String
-  subNatureza        String
+  natureza           String    @db.Text
+  subNatureza        String    @db.Text
   status             String    @default("ABERTO")
   dataOcorrencia     DateTime
-  relatoSeguranca    String?
-  acoesTomadas       String?
-  impactoOperacional String?
+  relatoSeguranca    String?   @db.Text
+  acoesTomadas       String?   @db.Text
+  impactoOperacional String?   @db.Text
   fluxoStatus        String    @default("Aguardando Revisao")
   revisadoPorId      Int?
   revisadoEm         DateTime?
   aprovadoPorId      Int?
   aprovadoEm         DateTime?
-  motivoDevolucao    String?
+  motivoDevolucao    String?   @db.Text
   createdAt          DateTime  @default(now())
 
   envolvidos   EnvolvidoOcorrencia[]
@@ -314,16 +321,16 @@ model EnvolvidoOcorrencia {
   id           Int @id @default(autoincrement())
   ocorrenciaId Int
 
-  tipoEnvolvimento String
+  tipoEnvolvimento String @db.Text
 
-  nome          String
-  tipoDocumento String
-  documento     String
-  empresa       String?
+  nome          String  @db.Text
+  tipoDocumento String  @db.Text
+  documento     String  @db.Text
+  empresa       String? @db.Text
   possuiVeiculo Boolean @default(false)
-  placa         String?
-  reboque       String?
-  relato        String
+  placa         String? @db.Text
+  reboque       String? @db.Text
+  relato        String  @db.Text
 
   ocorrencia Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
 }
@@ -331,11 +338,11 @@ model EnvolvidoOcorrencia {
 model AnexoOcorrencia {
   id           Int      @id @default(autoincrement())
   ocorrenciaId Int
-  nomeOriginal String
-  nomeArquivo  String
-  caminho      String
-  tipo         String
-  hashArquivo  String?
+  nomeOriginal String   @db.Text
+  nomeArquivo  String   @db.Text
+  caminho      String   @db.Text
+  tipo         String   @db.Text
+  hashArquivo  String?  @db.Text
   createdAt    DateTime @default(now())
 
   ocorrencia Ocorrencia @relation(fields: [ocorrenciaId], references: [id], onDelete: Cascade)
@@ -346,22 +353,22 @@ model Evento {
   numero             Int
   ano                Int
   codigo             String
-  assunto            String
-  local              String
+  assunto            String    @db.Text
+  local              String    @db.Text
   unidade            String    @default("GJA-T1")
-  natureza           String
-  subNatureza        String
+  natureza           String    @db.Text
+  subNatureza        String    @db.Text
   status             String    @default("ABERTO")
   dataEvento         DateTime
-  relatoSeguranca    String?
-  acoesTomadas       String?
-  impactoOperacional String?
+  relatoSeguranca    String?   @db.Text
+  acoesTomadas       String?   @db.Text
+  impactoOperacional String?   @db.Text
   fluxoStatus        String    @default("Aguardando Revisao")
   revisadoPorId      Int?
   revisadoEm         DateTime?
   aprovadoPorId      Int?
   aprovadoEm         DateTime?
-  motivoDevolucao    String?
+  motivoDevolucao    String?   @db.Text
   createdAt          DateTime  @default(now())
 
   envolvidos EnvolvidoEvento[]
@@ -376,16 +383,16 @@ model EnvolvidoEvento {
   id       Int @id @default(autoincrement())
   eventoId Int
 
-  tipoEnvolvimento String
+  tipoEnvolvimento String @db.Text
 
-  nome          String
-  tipoDocumento String
-  documento     String
-  empresa       String?
+  nome          String  @db.Text
+  tipoDocumento String  @db.Text
+  documento     String  @db.Text
+  empresa       String? @db.Text
   possuiVeiculo Boolean @default(false)
-  placa         String?
-  reboque       String?
-  relato        String
+  placa         String? @db.Text
+  reboque       String? @db.Text
+  relato        String  @db.Text
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
 }
@@ -393,11 +400,11 @@ model EnvolvidoEvento {
 model AnexoEvento {
   id           Int      @id @default(autoincrement())
   eventoId     Int
-  nomeOriginal String
-  nomeArquivo  String
-  caminho      String
-  tipo         String
-  hashArquivo  String?
+  nomeOriginal String   @db.Text
+  nomeArquivo  String   @db.Text
+  caminho      String   @db.Text
+  tipo         String   @db.Text
+  hashArquivo  String?  @db.Text
   createdAt    DateTime @default(now())
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -407,20 +414,20 @@ model RelatoCampo {
   id                   Int       @id @default(autoincrement())
   token                String    @unique
   status               String    @default("Link Gerado")
-  titulo               String?
-  setor                String?
-  local                String?
+  titulo               String?   @db.Text
+  setor                String?   @db.Text
+  local                String?   @db.Text
   unidade              String    @default("GJA-T1")
-  responsavelColeta    String?
+  responsavelColeta    String?   @db.Text
   dataOcorrido         DateTime?
-  observacoes          String?
-  checklistColeta      String?
+  observacoes          String?   @db.Text
+  checklistColeta      String?   @db.Text
   expiraEm             DateTime
   enviadoEm            DateTime?
   finalizadoEm         DateTime?
-  convertidoTipo       String?
+  convertidoTipo       String?   @db.Text
   convertidoRegistroId Int?
-  convertidoCodigo     String?
+  convertidoCodigo     String?   @db.Text
   geradoPorId          Int?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
@@ -437,18 +444,18 @@ model EnvolvidoRelatoCampo {
   id            Int @id @default(autoincrement())
   relatoCampoId Int
 
-  tipoEnvolvimento String
-  nome             String
-  tipoDocumento    String
-  documento        String?
-  empresa          String?
+  tipoEnvolvimento String   @db.Text
+  nome             String   @db.Text
+  tipoDocumento    String   @db.Text
+  documento        String?  @db.Text
+  empresa          String?  @db.Text
   possuiVeiculo    Boolean  @default(false)
-  placa            String?
-  reboque          String?
-  relato           String
-  audioCaminho     String?
-  audioNome        String?
-  audioTipo        String?
+  placa            String?  @db.Text
+  reboque          String?  @db.Text
+  relato           String   @db.Text
+  audioCaminho     String?  @db.Text
+  audioNome        String?  @db.Text
+  audioTipo        String?  @db.Text
   createdAt        DateTime @default(now())
 
   relatoCampo RelatoCampo @relation(fields: [relatoCampoId], references: [id], onDelete: Cascade)
@@ -457,12 +464,12 @@ model EnvolvidoRelatoCampo {
 model AnexoRelatoCampo {
   id            Int      @id @default(autoincrement())
   relatoCampoId Int
-  nomeOriginal  String
-  nomeArquivo   String
-  caminho       String
-  tipo          String
+  nomeOriginal  String   @db.Text
+  nomeArquivo   String   @db.Text
+  caminho       String   @db.Text
+  tipo          String   @db.Text
   categoria     String   @default("Evidencia")
-  hashArquivo   String?
+  hashArquivo   String?  @db.Text
   createdAt     DateTime @default(now())
 
   relatoCampo RelatoCampo @relation(fields: [relatoCampoId], references: [id], onDelete: Cascade)
@@ -474,25 +481,25 @@ model Investigacao {
   numero                Int?
   ano                   Int?
   codigo                String?
-  titulo                String
-  descricao             String
+  titulo                String    @db.Text
+  descricao             String    @db.Text
   status                String    @default("Em Análise")
-  numeroOcorrencia      String
-  assunto               String
-  local                 String
+  numeroOcorrencia      String    @db.Text
+  assunto               String    @db.Text
+  local                 String    @db.Text
   unidade               String    @default("GJA-T1")
-  natureza              String
-  subNatureza           String
+  natureza              String    @db.Text
+  subNatureza           String    @db.Text
   dataOcorrencia        DateTime
-  relatoSeguranca       String?
+  relatoSeguranca       String?   @db.Text
   fluxoStatus           String    @default("Aguardando Revisao")
   revisadoPorId         Int?
   revisadoEm            DateTime?
   aprovadoPorId         Int?
   aprovadoEm            DateTime?
-  motivoDevolucao       String?
-  descricaoInvestigacao String?
-  conclusaoFatos        String?
+  motivoDevolucao       String?   @db.Text
+  descricaoInvestigacao String?   @db.Text
+  conclusaoFatos        String?   @db.Text
   responsavelId         Int?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
@@ -526,8 +533,8 @@ model SubNatureza {
 model LocalTerminal {
   id           Int      @id @default(autoincrement())
   nome         String
-  descricao    String?
-  tipo         String
+  descricao    String?  @db.Text
+  tipo         String   @db.Text
   areaSensivel Boolean  @default(false)
   status       String   @default("Ativo")
   unidade      String   @default("GJA-T1")
@@ -544,28 +551,28 @@ model QuadraSegurancaContainer {
   unidade              String    @default("GJA-T1")
   dataHoraEntrada      DateTime
   dataHoraSaida        DateTime?
-  posicionamento       String?
-  tipoContainer        String
-  dimensao             String
-  destino              String
+  posicionamento       String?   @db.Text
+  tipoContainer        String    @db.Text
+  dimensao             String    @db.Text
+  destino              String    @db.Text
   scannerEntrada       Boolean   @default(false)
   scannerSaida         Boolean?
   estufadoTerminal     Boolean   @default(false)
-  numeroLacre          String?
-  novoLacre            String?
-  armador              String?
-  transportadora       String?
-  motoristaResponsavel String?
-  documentoMotorista   String?
-  placaCavalo          String?
-  placaCarreta         String?
-  tipoCarga            String?
-  pesoCarga            String?
+  numeroLacre          String?   @db.Text
+  novoLacre            String?   @db.Text
+  armador              String?   @db.Text
+  transportadora       String?   @db.Text
+  motoristaResponsavel String?   @db.Text
+  documentoMotorista   String?   @db.Text
+  placaCavalo          String?   @db.Text
+  placaCarreta         String?   @db.Text
+  tipoCarga            String?   @db.Text
+  pesoCarga            String?   @db.Text
   prioridade           String    @default("Baixa")
   statusOperacional    String    @default("Dentro do terminal")
-  statusFinal          String?
-  observacoes          String?
-  observacoesSaida     String?
+  statusFinal          String?   @db.Text
+  observacoes          String?   @db.Text
+  observacoesSaida     String?   @db.Text
   criadoPorId          Int?
   atualizadoPorId      Int?
   createdAt            DateTime  @default(now())
@@ -584,12 +591,12 @@ model QuadraSegurancaContainer {
 model QuadraSegurancaAnexo {
   id           Int      @id @default(autoincrement())
   containerId  Int
-  categoria    String
-  nomeOriginal String
-  nomeArquivo  String
-  caminho      String
-  tipo         String
-  hashArquivo  String?
+  categoria    String   @db.Text
+  nomeOriginal String   @db.Text
+  nomeArquivo  String   @db.Text
+  caminho      String   @db.Text
+  tipo         String   @db.Text
+  hashArquivo  String?  @db.Text
   usuarioId    Int?
   createdAt    DateTime @default(now())
 
@@ -601,16 +608,16 @@ model DispositivoAutorizado {
   id             Int       @id @default(autoincrement())
   usuarioId      Int
   identificador  String
-  navegador      String?
-  sistema        String?
-  ipCadastro     String?
-  ipUltimoAcesso String?
+  navegador      String?   @db.Text
+  sistema        String?   @db.Text
+  ipCadastro     String?   @db.Text
+  ipUltimoAcesso String?   @db.Text
   status         String    @default("Autorizado")
   primeiroAcesso DateTime  @default(now())
   ultimoAcesso   DateTime?
   resetadoEm     DateTime?
   resetadoPorId  Int?
-  motivoReset    String?
+  motivoReset    String?   @db.Text
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -622,10 +629,10 @@ model QuadraSegurancaHistorico {
   id              Int      @id @default(autoincrement())
   containerId     Int
   usuarioId       Int?
-  acao            String
-  detalhes        String?
-  dadosAnteriores String?
-  dadosNovos      String?
+  acao            String   @db.Text
+  detalhes        String?  @db.Text
+  dadosAnteriores String?  @db.Text
+  dadosNovos      String?  @db.Text
   createdAt       DateTime @default(now())
 
   container QuadraSegurancaContainer @relation(fields: [containerId], references: [id], onDelete: Cascade)
@@ -640,7 +647,7 @@ model AnaliseOcorrencia {
   concluidoEm        DateTime?
   status             String    @default("Em Análise")
   prejuizoFinanceiro String    @default("0,00")
-  conclusaoAnalise   String?
+  conclusaoAnalise   String?   @db.Text
   concluidoPorId     Int?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
@@ -658,7 +665,7 @@ model AnaliseEvento {
   concluidoEm      DateTime?
   status           String    @default("Em Análise")
   valorRecuperado  String    @default("0,00")
-  conclusaoAnalise String?
+  conclusaoAnalise String?   @db.Text
   concluidoPorId   Int?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
@@ -671,13 +678,13 @@ model AnaliseEvento {
 model LogAuditoria {
   id              Int      @id @default(autoincrement())
   usuarioId       Int?
-  usuarioNome     String
-  ip              String?
-  acao            String
-  tipoRegistro    String
+  usuarioNome     String   @db.Text
+  ip              String?  @db.Text
+  acao            String   @db.Text
+  tipoRegistro    String   @db.Text
   registroId      Int?
-  dadosAnteriores String?
-  dadosNovos      String?
+  dadosAnteriores String?  @db.Text
+  dadosNovos      String?  @db.Text
   createdAt       DateTime @default(now())
 
   usuario Usuario? @relation(fields: [usuarioId], references: [id])
@@ -689,18 +696,18 @@ model AssinaturaDocumento {
   status            String    @default("VALIDA")
   modulo            String
   registroId        Int
-  codigoRegistro    String
-  unidade           String
-  acao              String
+  codigoRegistro    String    @db.Text
+  unidade           String    @db.Text
+  acao              String    @db.Text
   usuarioId         Int
-  usuarioNome       String
-  perfilAcesso      String?
-  ip                String?
-  sessaoId          String?
-  documentoHash     String
+  usuarioNome       String    @db.Text
+  perfilAcesso      String?   @db.Text
+  ip                String?   @db.Text
+  sessaoId          String?   @db.Text
+  documentoHash     String    @db.Text
   versao            Int       @default(1)
   invalidadaEm      DateTime?
-  motivoInvalidacao String?
+  motivoInvalidacao String?   @db.Text
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -716,7 +723,7 @@ model RascunhoFormulario {
   modulo          String
   chave           String
   unidade         String   @default("GJA-T1")
-  dadosJson       String
+  dadosJson       String   @db.Text
   status          String   @default("EM_PREENCHIMENTO")
   ultimaAlteracao DateTime @default(now())
   createdAt       DateTime @default(now())
@@ -738,61 +745,61 @@ model AnaliseRisco {
   dataHora               DateTime
   responsavelId          Int
   unidade                String
-  setor                  String
-  local                  String
-  area                   String?
-  tipoRisco              String
-  naturezaRisco          String
-  tituloRisco            String?
-  origemRisco            String?
-  fonteRisco             String?
-  fatorRisco             String?
-  fragilidade            String?
-  eventoIncerteza        String?
-  objetivoImpactado      String?
-  eficaciaControles      String?
-  criteriosAvaliacao     String?
-  controlesInternos      String?
-  atividadesControle     String?
-  monitoramento          String?
-  comunicacaoConsulta    String?
-  descricaoRisco         String
-  possivelImpacto        String
-  causaProvavel          String?
-  consequencia           String?
-  pessoasAfetadas        String?
-  controlesExistentes    String?
-  probabilidade          String
-  severidade             String
+  setor                  String    @db.Text
+  local                  String    @db.Text
+  area                   String?   @db.Text
+  tipoRisco              String    @db.Text
+  naturezaRisco          String    @db.Text
+  tituloRisco            String?   @db.Text
+  origemRisco            String?   @db.Text
+  fonteRisco             String?   @db.Text
+  fatorRisco             String?   @db.Text
+  fragilidade            String?   @db.Text
+  eventoIncerteza        String?   @db.Text
+  objetivoImpactado      String?   @db.Text
+  eficaciaControles      String?   @db.Text
+  criteriosAvaliacao     String?   @db.Text
+  controlesInternos      String?   @db.Text
+  atividadesControle     String?   @db.Text
+  monitoramento          String?   @db.Text
+  comunicacaoConsulta    String?   @db.Text
+  descricaoRisco         String    @db.Text
+  possivelImpacto        String    @db.Text
+  causaProvavel          String?   @db.Text
+  consequencia           String?   @db.Text
+  pessoasAfetadas        String?   @db.Text
+  controlesExistentes    String?   @db.Text
+  probabilidade          String    @db.Text
+  severidade             String    @db.Text
   probabilidadeValor     Int?
   impactoValor           Float?
   resultadoRisco         Float?
-  nivelRisco             String
-  nivelAceitacao         String?
-  tratamentoRisco        String?
-  medidasPreventivas     String
-  planoAcao              String
-  acaoProposta           String?
+  nivelRisco             String    @db.Text
+  nivelAceitacao         String?   @db.Text
+  tratamentoRisco        String?   @db.Text
+  medidasPreventivas     String    @db.Text
+  planoAcao              String    @db.Text
+  acaoProposta           String?   @db.Text
   responsavelAcaoId      Int?
-  responsavelAcaoNome    String?
+  responsavelAcaoNome    String?   @db.Text
   prazo                  DateTime
-  custoEstimado          String?
-  prioridade             String?
-  statusAcao             String?
-  observacoes            String?
+  custoEstimado          String?   @db.Text
+  prioridade             String?   @db.Text
+  statusAcao             String?   @db.Text
+  observacoes            String?   @db.Text
   novaProbabilidade      Int?
   novoImpacto            Float?
   novoResultado          Float?
-  novoNivelRisco         String?
-  observacaoReavaliacao  String?
+  novoNivelRisco         String?   @db.Text
+  observacaoReavaliacao  String?   @db.Text
   dataReavaliacao        DateTime?
-  responsavelReavaliacao String?
+  responsavelReavaliacao String?   @db.Text
   status                 String    @default("Pendente")
   ocorrenciaId           Int?
   eventoId               Int?
   investigacaoId         Int?
   anulado                Boolean   @default(false)
-  motivoAnulacao         String?
+  motivoAnulacao         String?   @db.Text
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
 
@@ -811,10 +818,10 @@ model AnaliseRisco {
 model FotoRisco {
   id             Int      @id @default(autoincrement())
   analiseRiscoId Int
-  nomeOriginal   String
-  nomeArquivo    String
-  caminho        String
-  tipo           String
+  nomeOriginal   String   @db.Text
+  nomeArquivo    String   @db.Text
+  caminho        String   @db.Text
+  tipo           String   @db.Text
   createdAt      DateTime @default(now())
 
   analiseRisco AnaliseRisco @relation(fields: [analiseRiscoId], references: [id], onDelete: Cascade)
@@ -826,23 +833,23 @@ model RiscoCatalogo {
   ano                Int      @default(2026)
   codigo             String
   unidade            String
-  local              String?
-  area               String?
+  local              String?  @db.Text
+  area               String?  @db.Text
   nome               String
-  tipoRisco          String
+  tipoRisco          String   @db.Text
   grauRisco          String   @default("Média")
-  naturezaRisco      String
-  origemRisco        String?
-  fonteRisco         String?
-  fatorRisco         String?
-  fragilidade        String?
-  eventoIncerteza    String?
-  objetivoImpactado  String?
-  responsavelNome    String?
-  descricaoRisco     String
-  possivelImpacto    String
-  medidasPreventivas String?
-  planoAcaoSugerido  String?
+  naturezaRisco      String   @db.Text
+  origemRisco        String?  @db.Text
+  fonteRisco         String?  @db.Text
+  fatorRisco         String?  @db.Text
+  fragilidade        String?  @db.Text
+  eventoIncerteza    String?  @db.Text
+  objetivoImpactado  String?  @db.Text
+  responsavelNome    String?  @db.Text
+  descricaoRisco     String   @db.Text
+  possivelImpacto    String   @db.Text
+  medidasPreventivas String?  @db.Text
+  planoAcaoSugerido  String?  @db.Text
   status             String   @default("Ativo")
   criadoPorId        Int?
   createdAt          DateTime @default(now())
@@ -886,7 +893,7 @@ model RiscoCadastroGeral {
   numero           Int
   codigo           String   @unique
   nome             String   @unique
-  descricao        String?
+  descricao        String?  @db.Text
   fatoresRiscoJson String   @default("[]")
   status           String   @default("Ativo")
   createdAt        DateTime @default(now())
@@ -900,7 +907,7 @@ model FatorRiscoCadastro {
   numero    Int
   codigo    String   @unique
   nome      String   @unique
-  descricao String?
+  descricao String?  @db.Text
   status    String   @default("Ativo")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -914,14 +921,14 @@ model ControlePreventivoCadastro {
   codigo       String   @unique
   tipoControle String   @default("CP")
   nome         String
-  descricao    String?
+  descricao    String?  @db.Text
   status       String   @default("Ativo")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@unique([tipoControle, nome])
   @@index([status, numero])
   @@index([tipoControle, status, numero])
-  @@unique([tipoControle, nome])
 }
 
 model AnaliseRiscoCompleta {
@@ -931,13 +938,13 @@ model AnaliseRiscoCompleta {
   codigo                          String
   unidade                         String
   macroProcessoId                 Int?
-  macroProcessoCodigo             String
-  macroProcessoNome               String
+  macroProcessoCodigo             String    @db.Text
+  macroProcessoNome               String    @db.Text
   setorId                         Int?
-  setorNome                       String
+  setorNome                       String    @db.Text
   riscoId                         Int?
-  riscoCodigo                     String
-  riscoNome                       String
+  riscoCodigo                     String    @db.Text
+  riscoNome                       String    @db.Text
   fatoresRiscoJson                String    @default("[]")
   sc                              Int
   fe                              Int
@@ -951,15 +958,15 @@ model AnaliseRiscoCompleta {
   notaProbabilidade               Float
   mediaProbabilidade              Float
   percentualProbabilidade         Float
-  nivelProbabilidade              String
+  nivelProbabilidade              String    @db.Text
   notaConsequencia                Float
   mediaConsequencia               Float
-  nivelConsequencia               String
+  nivelConsequencia               String    @db.Text
   resultadoInerente               Float
-  nivelRiscoInerente              String
-  classificacaoRisco              String
-  periodicidadeAcao               String
-  estrategiaTratamento            String?
+  nivelRiscoInerente              String    @db.Text
+  classificacaoRisco              String    @db.Text
+  periodicidadeAcao               String    @db.Text
+  estrategiaTratamento            String?   @db.Text
   preventivosJson                 String    @default("[]")
   detectivosJson                  String    @default("[]")
   corretivosJson                  String    @default("[]")
@@ -975,13 +982,13 @@ model AnaliseRiscoCompleta {
   notaProbabilidadeResidual       Float?
   probabilidadeResidual           Float?
   percentualProbabilidadeResidual Float?
-  nivelProbabilidadeResidual      String?
+  nivelProbabilidadeResidual      String?   @db.Text
   notaConsequenciaResidual        Float?
   consequenciaResidual            Float?
-  nivelConsequenciaResidual       String?
+  nivelConsequenciaResidual       String?   @db.Text
   resultadoResidual               Float?
-  nivelRiscoResidual              String?
-  classificacaoResidual           String?
+  nivelRiscoResidual              String?   @db.Text
+  classificacaoResidual           String?   @db.Text
   desempenhoNota                  Float?
   desempenhoProbabilidade         Float?
   desempenhoConsequencia          Float?
@@ -989,18 +996,18 @@ model AnaliseRiscoCompleta {
   responsavelId                   Int?
   tratativaStatus                 String    @default("Aberta")
   tratativaResponsavelId          Int?
-  tratativaResponsavelNome        String?
+  tratativaResponsavelNome        String?   @db.Text
   tratativaPrazo                  DateTime?
-  tratativaAcao                   String?
-  tratativaEvidencia              String?
-  tratativaValidacao              String?
+  tratativaAcao                   String?   @db.Text
+  tratativaEvidencia              String?   @db.Text
+  tratativaValidacao              String?   @db.Text
   tratativaConcluidaEm            DateTime?
   finalizacaoStatus               String    @default("Aberta")
-  finalizacaoDecisao              String?
-  finalizacaoJustificativa        String?
+  finalizacaoDecisao              String?   @db.Text
+  finalizacaoJustificativa        String?   @db.Text
   finalizacaoAprovadorId          Int?
-  finalizacaoAprovadorNome        String?
-  finalizacaoObservacoes          String?
+  finalizacaoAprovadorNome        String?   @db.Text
+  finalizacaoObservacoes          String?   @db.Text
   finalizadaEm                    DateTime?
   status                          String    @default("Ativo")
   createdAt                       DateTime  @default(now())
@@ -1020,22 +1027,22 @@ model AprOperacional {
   codigo                String
   unidade               String
   local                 String
-  area                  String?
-  atividade             String
-  descricaoAtividade    String
+  area                  String?   @db.Text
+  atividade             String    @db.Text
+  descricaoAtividade    String    @db.Text
   dataPrevista          DateTime?
-  responsavelAtividade  String
-  equipeEnvolvida       String?
-  empresaTerceira       String?
-  riscosIds             String?
-  perigos               String
-  controlesObrigatorios String
-  episNecessarios       String?
-  permissoesNecessarias String?
+  responsavelAtividade  String    @db.Text
+  equipeEnvolvida       String?   @db.Text
+  empresaTerceira       String?   @db.Text
+  riscosIds             String?   @db.Text
+  perigos               String    @db.Text
+  controlesObrigatorios String    @db.Text
+  episNecessarios       String?   @db.Text
+  permissoesNecessarias String?   @db.Text
   nivelRisco            String    @default("Moderado")
   status                String    @default("Rascunho")
   criadoPorId           Int?
-  criadoPorNome         String?
+  criadoPorNome         String?   @db.Text
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
@@ -1050,10 +1057,10 @@ model AprAprovacao {
   id           Int       @id @default(autoincrement())
   aprId        Int
   usuarioId    Int?
-  usuarioNome  String
-  perfilAcesso String?
+  usuarioNome  String    @db.Text
+  perfilAcesso String?   @db.Text
   decisao      String    @default("Pendente")
-  observacao   String?
+  observacao   String?   @db.Text
   decididoEm   DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
@@ -1069,20 +1076,20 @@ model AnaliseEstrategica {
   numero          Int
   ano             Int
   codigo          String
-  tipo            String
-  titulo          String
+  tipo            String    @db.Text
+  titulo          String    @db.Text
   unidade         String
-  setor           String?
-  local           String?
+  setor           String?   @db.Text
+  local           String?   @db.Text
   dataHora        DateTime  @default(now())
   responsavelId   Int
   status          String    @default("Aberta")
-  descricao       String
-  diagnostico     String?
-  impacto         String?
-  recomendacoes   String?
-  planoAcao       String?
-  responsavelAcao String?
+  descricao       String    @db.Text
+  diagnostico     String?   @db.Text
+  impacto         String?   @db.Text
+  recomendacoes   String?   @db.Text
+  planoAcao       String?   @db.Text
+  responsavelAcao String?   @db.Text
   prazo           DateTime?
   ocorrenciaId    Int?
   eventoId        Int?
@@ -1101,26 +1108,26 @@ model PlanoAcaoCorporativo {
   numero           Int
   ano              Int
   codigo           String
-  titulo           String
+  titulo           String    @db.Text
   unidade          String
   origemModulo     String?
   origemId         Int?
   fatorRiscoId     Int?
-  fatorRiscoCodigo String?
-  fatorRiscoNome   String?
+  fatorRiscoCodigo String?   @db.Text
+  fatorRiscoNome   String?   @db.Text
   prioridade       String    @default("Media")
   status           String    @default("Pendente")
   percentual       Int       @default(0)
-  descricao        String
-  acaoCorretiva    String?
-  acaoPreventiva   String?
+  descricao        String    @db.Text
+  acaoCorretiva    String?   @db.Text
+  acaoPreventiva   String?   @db.Text
   responsavelId    Int?
-  responsavelNome  String?
+  responsavelNome  String?   @db.Text
   mediadoresJson   String    @default("[]")
   prazo            DateTime
   concluidoEm      DateTime?
-  evidencia        String?
-  comentarios      String?
+  evidencia        String?   @db.Text
+  comentarios      String?   @db.Text
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -1136,16 +1143,16 @@ model ChecklistInspecao {
   numero          Int
   ano             Int
   codigo          String
-  titulo          String
+  titulo          String   @db.Text
   unidade         String
-  setor           String?
-  local           String
-  tipo            String
+  setor           String?  @db.Text
+  local           String   @db.Text
+  tipo            String   @db.Text
   dataHora        DateTime @default(now())
   responsavelId   Int
   status          String   @default("Aberto")
   pontuacao       Int      @default(0)
-  observacoes     String?
+  observacoes     String?  @db.Text
   planoAcaoGerado Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1159,11 +1166,11 @@ model ChecklistInspecao {
 model ChecklistItem {
   id           Int      @id @default(autoincrement())
   checklistId  Int
-  categoria    String
-  descricao    String
+  categoria    String   @db.Text
+  descricao    String   @db.Text
   conformidade String   @default("Conforme")
   criticidade  String   @default("Media")
-  observacao   String?
+  observacao   String?  @db.Text
   createdAt    DateTime @default(now())
 
   checklist ChecklistInspecao @relation(fields: [checklistId], references: [id], onDelete: Cascade)
@@ -1179,17 +1186,17 @@ model PassagemTurno {
   horaEncerramento          DateTime?
   unidade                   String
   equipe                    String
-  equipeCoberta             String?
+  equipeCoberta             String?   @db.Text
   responsavelId             Int
-  colaboradoresIds          String?
+  colaboradoresIds          String?   @db.Text
   status                    String    @default("Aberto")
   statusPostoGocil          String    @default("Completo")
-  observacaoPostoGocil      String?
+  observacaoPostoGocil      String?   @db.Text
   statusPostoScanner        String    @default("Completo")
-  observacaoPostoScanner    String?
-  informacoesComplementares String?
-  checklistEquipamentos     String?
-  rondas                    String?
+  observacaoPostoScanner    String?   @db.Text
+  informacoesComplementares String?   @db.Text
+  checklistEquipamentos     String?   @db.Text
+  rondas                    String?   @db.Text
   cftvConectadas            Int?
   cftvDesconectadas         Int?
   containersArmazenados     Int?
@@ -1206,10 +1213,10 @@ model PassagemTurno {
 model PassagemTurnoPosto {
   id          Int      @id @default(autoincrement())
   passagemId  Int
-  posto       String
-  colaborador String
-  re          String?
-  escala      String
+  posto       String   @db.Text
+  colaborador String   @db.Text
+  re          String?  @db.Text
+  escala      String   @db.Text
   createdAt   DateTime @default(now())
 
   passagem PassagemTurno @relation(fields: [passagemId], references: [id], onDelete: Cascade)
@@ -1223,10 +1230,10 @@ model RelatorioDiarioExecutivo {
   dataOperacional DateTime
   unidade         String
   status          String   @default("Consolidado")
-  resumoExecutivo String
-  dadosJson       String
+  resumoExecutivo String   @db.Text
+  dadosJson       String   @db.Text
   aprimoradoPorIa Boolean  @default(false)
-  modeloIa        String?
+  modeloIa        String?  @db.Text
   responsavelId   Int
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1240,17 +1247,17 @@ model RelatorioDiarioExecutivo {
 
 model Mencao {
   id                  Int       @id @default(autoincrement())
-  modulo              String
+  modulo              String    @db.Text
   registroId          Int
-  codigoRegistro      String
-  tituloRegistro      String
-  unidade             String
+  codigoRegistro      String    @db.Text
+  tituloRegistro      String    @db.Text
+  unidade             String    @db.Text
   usuarioMencionadoId Int
   autorId             Int?
   tipoMencao          String    @default("Acompanhar")
   status              String    @default("Pendente")
   prazo               DateTime?
-  observacao          String?
+  observacao          String?   @db.Text
   lidaEm              DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -1261,10 +1268,10 @@ model Mencao {
 
 model ComentarioInterno {
   id         Int      @id @default(autoincrement())
-  modulo     String
+  modulo     String   @db.Text
   registroId Int
-  unidade    String
-  comentario String
+  unidade    String   @db.Text
+  comentario String   @db.Text
   autorId    Int
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -1275,25 +1282,25 @@ model ComentarioInterno {
 model CameraMonitoramento {
   id                     Int       @id @default(autoincrement())
   numeroCamera           String
-  nomeCamera             String?
-  numeroServidor         String
+  nomeCamera             String?   @db.Text
+  numeroServidor         String    @db.Text
   tipoSistema            String    @default("DIGIFORT")
   periodoGravacaoDias    Int       @default(0)
   status                 String    @default("Conectada")
-  tecnologia             String
-  tipoCamera             String
-  localInstalado         String
-  areaMonitorada         String
-  infravermelho          String
+  tecnologia             String    @db.Text
+  tipoCamera             String    @db.Text
+  localInstalado         String    @db.Text
+  areaMonitorada         String    @db.Text
+  infravermelho          String    @db.Text
   monitoramento          String    @default("Ativo")
   ultimaManutencao       DateTime?
-  observacoesTecnicas    String?
+  observacoesTecnicas    String?   @db.Text
   unidade                String    @default("GJA-T1")
   cadastradoPorId        Int?
   statusCadastro         String    @default("Ativa")
   removidaEm             DateTime?
   removidaPorId          Int?
-  motivoRemocao          String?
+  motivoRemocao          String?   @db.Text
   desconectadaDesde      DateTime?
   totalIndisponibilidade Int       @default(0)
   totalFalhas            Int       @default(0)
@@ -1317,16 +1324,16 @@ model OrdemServicoCamera {
   unidade               String    @default("GJA-T1")
   status                String    @default("EM_ABERTO")
   origem                String    @default("CAMERA_DESCONECTADA")
-  descricao             String?
+  descricao             String?   @db.Text
   abertaPorId           Int?
   atendidoPorId         Int?
-  tratativa             String?
+  tratativa             String?   @db.Text
   houveDano             Boolean   @default(false)
-  descricaoDano         String?
+  descricaoDano         String?   @db.Text
   requerTrocaCamera     Boolean   @default(false)
   requerCompra          Boolean   @default(false)
-  itensNecessarios      String?
-  observacoesTecnicas   String?
+  itensNecessarios      String?   @db.Text
+  observacoesTecnicas   String?   @db.Text
   desconectadaEm        DateTime?
   atendimentoIniciadoEm DateTime?
   concluidoEm           DateTime?
@@ -1348,21 +1355,21 @@ model CameraChecklistOperacional {
   cameraId                   Int
   unidade                    String    @default("GJA-T1")
   responsavelId              Int
-  statusAtual                String
+  statusAtual                String    @db.Text
   tempoGravacaoDisponivel    Int
   dataInicialGravacao        DateTime?
   dataMaisRecenteGravacao    DateTime?
   dataDesconexaoManual       DateTime?
   dataReconexaoManual        DateTime?
   retencaoEstimadaMinutos    Int?
-  retencaoEstimadaTexto      String?
-  qualidadeImagem            String
-  funcionamentoInfravermelho String
-  funcionamentoGravacao      String
-  comunicacaoServidor        String
-  instabilidadeDetectada     String
-  necessidadeManutencao      String
-  observacoesOperacionais    String?
+  retencaoEstimadaTexto      String?   @db.Text
+  qualidadeImagem            String    @db.Text
+  funcionamentoInfravermelho String    @db.Text
+  funcionamentoGravacao      String    @db.Text
+  comunicacaoServidor        String    @db.Text
+  instabilidadeDetectada     String    @db.Text
+  necessidadeManutencao      String    @db.Text
+  observacoesOperacionais    String?   @db.Text
   indisponibilidadeMinutos   Int       @default(0)
   falhaRecorrente            Boolean   @default(false)
   createdAt                  DateTime  @default(now())
@@ -1376,14 +1383,14 @@ model CameraEventoStatus {
   id                  Int       @id @default(autoincrement())
   cameraId            Int
   unidade             String    @default("GJA-T1")
-  statusAnterior      String?
-  statusNovo          String
+  statusAnterior      String?   @db.Text
+  statusNovo          String    @db.Text
   iniciadoEm          DateTime  @default(now())
   encerradoEm         DateTime?
   duracaoIndisponivel Int?
-  motivo              String?
+  motivo              String?   @db.Text
   responsavelId       Int?
-  observacao          String?
+  observacao          String?   @db.Text
   createdAt           DateTime  @default(now())
 
   camera CameraMonitoramento @relation(fields: [cameraId], references: [id], onDelete: Cascade)
@@ -1396,8 +1403,8 @@ model RelatorioCftv {
   codigo                 String
   unidade                String
   responsavelId          Int?
-  camerasIdsJson         String
-  snapshotJson           String?
+  camerasIdsJson         String   @db.Text
+  snapshotJson           String?  @db.Text
   retencaoMedia          Int      @default(0)
   totalEventos           Int      @default(0)
   totalIndisponibilidade Int      @default(0)
@@ -1416,28 +1423,28 @@ model ConfiguracaoSistema {
   slaCameras                    Int      @default(98)
   tempoMaximoOffline            Int      @default(60)
   checklistCameraDias           Int      @default(7)
-  corsPermitido                 String?
-  logoUrl                       String?
-  rodapePdf                     String?
+  corsPermitido                 String?  @db.Text
+  logoUrl                       String?  @db.Text
+  rodapePdf                     String?  @db.Text
   ocrProvider                   String?  @default("openai")
-  openaiApiKey                  String?
+  openaiApiKey                  String?  @db.Text
   openaiOcrModel                String?  @default("gpt-4.1-mini")
   openaiAprimoramentoTextoAtivo Boolean  @default(false)
   ssoAtivo                      Boolean  @default(false)
   ssoProvider                   String?  @default("azure-ad")
   ssoNomeBotao                  String?  @default("Entrar com conta corporativa")
-  ssoDominioPermitido           String?
-  ssoClientId                   String?
-  ssoClientSecret               String?
-  ssoTenantId                   String?
-  ssoCallbackUrl                String?
-  ssoFrontendUrl                String?
-  ssoAuthorizationUrl           String?
-  ssoTokenUrl                   String?
-  ssoUserInfoUrl                String?
-  ssoLogoutUrl                  String?
-  ssoMetadataUrl                String?
-  ssoCertificado                String?
+  ssoDominioPermitido           String?  @db.Text
+  ssoClientId                   String?  @db.Text
+  ssoClientSecret               String?  @db.Text
+  ssoTenantId                   String?  @db.Text
+  ssoCallbackUrl                String?  @db.Text
+  ssoFrontendUrl                String?  @db.Text
+  ssoAuthorizationUrl           String?  @db.Text
+  ssoTokenUrl                   String?  @db.Text
+  ssoUserInfoUrl                String?  @db.Text
+  ssoLogoutUrl                  String?  @db.Text
+  ssoMetadataUrl                String?  @db.Text
+  ssoCertificado                String?  @db.Text
   ssoModoPermissao              String?  @default("perfil_manual")
   ssoLoginLocalEmergencia       Boolean  @default(true)
   updatedAt                     DateTime @updatedAt
@@ -1459,14 +1466,14 @@ model SolicitacaoAnulacaoRelatorio {
   id             Int       @id @default(autoincrement())
   modulo         String
   registroId     Int
-  codigoRegistro String
-  tituloRegistro String
-  unidade        String
-  motivo         String
+  codigoRegistro String    @db.Text
+  tituloRegistro String    @db.Text
+  unidade        String    @db.Text
+  motivo         String    @db.Text
   status         String    @default("Pendente")
   solicitanteId  Int
   decididoPorId  Int?
-  decisaoMotivo  String?
+  decisaoMotivo  String?   @db.Text
   decididoEm     DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
@@ -1483,7 +1490,7 @@ model AcordoAnulacaoRelatorio {
   solicitacaoId Int
   analistaId    Int
   status        String    @default("Pendente")
-  observacao    String?
+  observacao    String?   @db.Text
   decididoEm    DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -1496,10 +1503,10 @@ model AcordoAnulacaoRelatorio {
 
 model PlanejamentoColuna {
   id        Int      @id @default(autoincrement())
-  titulo    String
+  titulo    String   @db.Text
   unidade   String
   ordem     Int      @default(0)
-  cor       String?
+  cor       String?  @db.Text
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1510,16 +1517,16 @@ model PlanejamentoColuna {
 
 model PlanejamentoCard {
   id              Int       @id @default(autoincrement())
-  titulo          String
-  descricao       String?
+  titulo          String    @db.Text
+  descricao       String?   @db.Text
   prioridade      String    @default("Media")
   prazo           DateTime?
   unidade         String
-  setor           String?
-  local           String?
-  moduloVinculado String?
+  setor           String?   @db.Text
+  local           String?   @db.Text
+  moduloVinculado String?   @db.Text
   registroId      Int?
-  codigoRegistro  String?
+  codigoRegistro  String?   @db.Text
   ordem           Int       @default(0)
   status          String    @default("Ativo")
   colunaId        Int
@@ -1541,26 +1548,26 @@ model TreinamentoPocSep002 {
   token              String    @unique
   usuarioId          Int?
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String?
   email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
+  cargo              String?   @db.Text
+  departamento       String?   @db.Text
+  unidade            String?   @db.Text
+  empresa            String?   @db.Text
   etapaAtual         Int       @default(1)
   status             String    @default("Em andamento")
   porcentagem        Int       @default(0)
   nota               Float?
   tentativas         Int       @default(0)
-  respostasQuiz      String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  respostasQuiz      String?   @db.Text
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
+  ipInicio           String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   dataInicio         DateTime  @default(now())
   dataConclusao      DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -1577,26 +1584,26 @@ model TreinamentoPocSep003 {
   token              String    @unique
   usuarioId          Int?
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String?
   email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
+  cargo              String?   @db.Text
+  departamento       String?   @db.Text
+  unidade            String?   @db.Text
+  empresa            String?   @db.Text
   etapaAtual         Int       @default(1)
   status             String    @default("Em andamento")
   porcentagem        Int       @default(0)
   nota               Float?
   tentativas         Int       @default(0)
-  respostasQuiz      String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  respostasQuiz      String?   @db.Text
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
+  ipInicio           String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   dataInicio         DateTime  @default(now())
   dataConclusao      DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -1613,26 +1620,26 @@ model TreinamentoPocSep004 {
   token              String    @unique
   usuarioId          Int?
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String?
   email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
+  cargo              String?   @db.Text
+  departamento       String?   @db.Text
+  unidade            String?   @db.Text
+  empresa            String?   @db.Text
   etapaAtual         Int       @default(1)
   status             String    @default("Em andamento")
   porcentagem        Int       @default(0)
   nota               Float?
   tentativas         Int       @default(0)
-  respostasQuiz      String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  respostasQuiz      String?   @db.Text
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
+  ipInicio           String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   dataInicio         DateTime  @default(now())
   dataConclusao      DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -1649,26 +1656,26 @@ model TreinamentoPocSep005 {
   token              String    @unique
   usuarioId          Int?
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String?
   email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
+  cargo              String?   @db.Text
+  departamento       String?   @db.Text
+  unidade            String?   @db.Text
+  empresa            String?   @db.Text
   etapaAtual         Int       @default(1)
   status             String    @default("Em andamento")
   porcentagem        Int       @default(0)
   nota               Float?
   tentativas         Int       @default(0)
-  respostasQuiz      String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  respostasQuiz      String?   @db.Text
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
+  ipInicio           String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   dataInicio         DateTime  @default(now())
   dataConclusao      DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -1685,26 +1692,26 @@ model TreinamentoPocSep006 {
   token              String    @unique
   usuarioId          Int?
   codigo             String?   @unique
-  nomeCompleto       String
+  nomeCompleto       String    @db.Text
   cpf                String?
   email              String
-  cargo              String?
-  departamento       String?
-  unidade            String?
-  empresa            String?
+  cargo              String?   @db.Text
+  departamento       String?   @db.Text
+  unidade            String?   @db.Text
+  empresa            String?   @db.Text
   etapaAtual         Int       @default(1)
   status             String    @default("Em andamento")
   porcentagem        Int       @default(0)
   nota               Float?
   tentativas         Int       @default(0)
-  respostasQuiz      String?
-  assinaturaDataUrl  String?
-  certificadoArquivo String?
-  emailStatus        String?
+  respostasQuiz      String?   @db.Text
+  assinaturaDataUrl  String?   @db.LongText
+  certificadoArquivo String?   @db.Text
+  emailStatus        String?   @db.Text
   emailEnviadoEm     DateTime?
-  ipInicio           String?
-  navegador          String?
-  sistema            String?
+  ipInicio           String?   @db.Text
+  navegador          String?   @db.Text
+  sistema            String?   @db.Text
   dataInicio         DateTime  @default(now())
   dataConclusao      DateTime?
   ultimoAcessoEm     DateTime  @default(now())
@@ -1720,13 +1727,13 @@ model TreinamentoModelo {
   id                   Int      @id @default(autoincrement())
   codigo               String   @unique
   slug                 String   @unique
-  tipo                 String
-  nome                 String
-  descricao            String?
-  subtitulo            String?
+  tipo                 String   @db.Text
+  nome                 String   @db.Text
+  descricao            String?  @db.Text
+  subtitulo            String?  @db.Text
   notaMinima           Int      @default(80)
   validadeMeses        Int      @default(24)
-  textoCertificado     String?
+  textoCertificado     String?  @db.Text
   gruposPermitidosJson String   @default("[]")
   versao               Int      @default(1)
   status               String   @default("Rascunho")
@@ -1744,11 +1751,11 @@ model TreinamentoModeloEtapa {
   id            Int      @id @default(autoincrement())
   treinamentoId Int
   ordem         Int
-  titulo        String
-  objetivo      String?
-  conteudo      String
+  titulo        String   @db.Text
+  objetivo      String?  @db.Text
+  conteudo      String   @db.Text
   topicosJson   String   @default("[]")
-  atencao       String?
+  atencao       String?  @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1764,7 +1771,7 @@ model TreinamentoModeloPergunta {
   treinamentoId Int
   etapaId       Int?
   ordem         Int
-  pergunta      String
+  pergunta      String   @db.Text
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -1781,7 +1788,7 @@ model TreinamentoModeloAlternativa {
   id         Int      @id @default(autoincrement())
   perguntaId Int
   ordem      Int
-  texto      String
+  texto      String   @db.Text
   correta    Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -1797,30 +1804,30 @@ model TreinamentoModeloParticipante {
   token                    String    @unique
   usuarioId                Int?
   codigo                   String?   @unique
-  nomeCompleto             String
+  nomeCompleto             String    @db.Text
   cpf                      String?
   email                    String
-  cargo                    String?
-  departamento             String?
-  unidade                  String?
-  empresa                  String?
+  cargo                    String?   @db.Text
+  departamento             String?   @db.Text
+  unidade                  String?   @db.Text
+  empresa                  String?   @db.Text
   etapaAtual               Int       @default(1)
   status                   String    @default("Em andamento")
   porcentagem              Int       @default(0)
   nota                     Float?
   tentativas               Int       @default(0)
-  respostasQuiz            String?
-  avaliacaoTreinamentoJson String?
+  respostasQuiz            String?   @db.Text
+  avaliacaoTreinamentoJson String?   @db.Text
   avaliacaoTreinamentoEm   DateTime?
   versao                   Int       @default(1)
-  snapshotJson             String?
-  assinaturaDataUrl        String?
-  certificadoArquivo       String?
-  emailStatus              String?
+  snapshotJson             String?   @db.Text
+  assinaturaDataUrl        String?   @db.LongText
+  certificadoArquivo       String?   @db.Text
+  emailStatus              String?   @db.Text
   emailEnviadoEm           DateTime?
-  ipInicio                 String?
-  navegador                String?
-  sistema                  String?
+  ipInicio                 String?   @db.Text
+  navegador                String?   @db.Text
+  sistema                  String?   @db.Text
   dataInicio               DateTime  @default(now())
   dataConclusao            DateTime?
   ultimoAcessoEm           DateTime  @default(now())

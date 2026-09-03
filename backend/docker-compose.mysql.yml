@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: mysql:8
+    container_name: movesecurity-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: movesecurity
+      MYSQL_USER: movesecurity
+      MYSQL_PASSWORD: movesecurity_password
+      MYSQL_ROOT_PASSWORD: movesecurity_root_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - movesecurity_mysql_data:/var/lib/mysql
+
+volumes:
+  movesecurity_mysql_data:

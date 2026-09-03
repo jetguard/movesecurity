@@ -6,6 +6,7 @@ import { Request, Response } from "express";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 import { prisma } from "../lib/prisma";
+import { travarSequencia } from "../utils/lockSequencia";
 import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
 import { enviarEmail } from "../services/email.service";
@@ -323,9 +324,7 @@ async function enviarCertificadoPocSep007(
 
 async function proximoCodigo(tx: any) {
   const ano = new Date().getFullYear();
-  await tx.$executeRawUnsafe(
-    `SELECT pg_advisory_xact_lock(hashtext('movecta_poc_sep_007_certificado_${ano}'))`,
-  );
+  await travarSequencia(tx, `movecta_poc_sep_007_certificado_${ano}`);
   const certificados = await tx.treinamentoPocSep007.findMany({
     where: { codigo: { endsWith: `/${ano}` } },
     select: { codigo: true },
