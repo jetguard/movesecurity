@@ -1,4 +1,13 @@
-import { CheckCircle2, KeyRound, LockKeyhole, Save, Settings2, ShieldCheck } from "lucide-react";
+import {
+  CheckCircle2,
+  KeyRound,
+  LockKeyhole,
+  Mail,
+  Save,
+  Send,
+  Settings2,
+  ShieldCheck,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
 import { PERFIS, perfilAtual, podeNoModulo } from "../utils/permissoes";
@@ -30,6 +39,16 @@ type Configuracao = {
   ssoModoPermissao?: string;
   ssoLoginLocalEmergencia?: boolean;
   removerSsoClientSecret?: boolean;
+  smtpAtivo?: boolean;
+  smtpHost?: string;
+  smtpPorta?: number;
+  smtpSeguro?: boolean;
+  smtpUsuario?: string;
+  smtpSenha?: string;
+  smtpSenhaConfigurada?: boolean;
+  smtpRemetente?: string;
+  smtpRespostaPara?: string;
+  removerSmtpSenha?: boolean;
 };
 
 const inicial: Configuracao = {
@@ -59,6 +78,16 @@ const inicial: Configuracao = {
   ssoModoPermissao: "perfil_manual",
   ssoLoginLocalEmergencia: true,
   removerSsoClientSecret: false,
+  smtpAtivo: false,
+  smtpHost: "",
+  smtpPorta: 587,
+  smtpSeguro: false,
+  smtpUsuario: "",
+  smtpSenha: "",
+  smtpSenhaConfigurada: false,
+  smtpRemetente: "noreply.movesecurity@movecta.com.br",
+  smtpRespostaPara: "",
+  removerSmtpSenha: false,
 };
 
 const inputBase =
@@ -103,12 +132,16 @@ function Label({
 export default function Configuracoes() {
   const [form, setForm] = useState<Configuracao>(inicial);
   const [salvando, setSalvando] = useState(false);
-  const [aba, setAba] = useState<"geral" | "acesso">("geral");
+  const [aba, setAba] = useState<"geral" | "acesso" | "smtp">("geral");
   const [mensagemSso, setMensagemSso] = useState("");
+  const [mensagemSmtp, setMensagemSmtp] = useState("");
+  const [emailTesteSmtp, setEmailTesteSmtp] = useState("");
+  const [testandoSmtp, setTestandoSmtp] = useState(false);
   const perfilNormalizado = normalizarPerfilAcesso(perfilAtual());
   const podeConfigurarAcesso =
     [PERFIS.SUPER_ADMIN, PERFIS.TI, "TI"].includes(perfilNormalizado) ||
     podeNoModulo("configuracoes", "editar");
+  const podeConfigurarSmtp = perfilNormalizado === PERFIS.SUPER_ADMIN;
 
   useEffect(() => {
     api
@@ -133,6 +166,7 @@ export default function Configuracoes() {
         "slaCameras",
         "tempoMaximoOffline",
         "checklistCameraDias",
+        "smtpPorta",
       ].includes(nome)
         ? Number(valor)
         : valor,
@@ -166,6 +200,26 @@ export default function Configuracoes() {
     setMensagemSso(
       "Configuração básica preenchida. A validação real do login depende dos dados liberados pelo T.I no provedor corporativo.",
     );
+  }
+
+  async function testarConfiguracaoSmtp() {
+    if (!podeConfigurarSmtp) return;
+    setTestandoSmtp(true);
+    setMensagemSmtp("");
+    try {
+      const response = await api.post("/configuracoes/smtp/teste", {
+        destino: emailTesteSmtp,
+      });
+      setMensagemSmtp(
+        response.data?.mensagem || "E-mail de teste enviado com sucesso.",
+      );
+    } catch (error: any) {
+      setMensagemSmtp(
+        error.response?.data?.error || "Não foi possível testar o SMTP.",
+      );
+    } finally {
+      setTestandoSmtp(false);
+    }
   }
 
   return (
@@ -210,6 +264,20 @@ export default function Configuracoes() {
               >
                 <ShieldCheck size={16} />
                 Configurações de Acesso
+              </button>
+            )}
+            {podeConfigurarSmtp && (
+              <button
+                type="button"
+                onClick={() => setAba("smtp")}
+                className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-black transition ${
+                  aba === "smtp"
+                    ? "bg-blue-600 text-white shadow"
+                    : "text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
+                }`}
+              >
+                <Mail size={16} />
+                SMTP
               </button>
             )}
           </div>
@@ -540,6 +608,173 @@ export default function Configuracoes() {
                 </span>
               </div>
             )}
+          </div>
+        )}
+
+        {aba === "smtp" && podeConfigurarSmtp && (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-500/30 dark:bg-blue-500/10">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="flex items-start gap-3">
+                  <span className="rounded-2xl bg-blue-600 p-2 text-white">
+                    <Mail size={20} />
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-black text-slate-950 dark:text-white">
+                      Envio de e-mails via SMTP
+                    </h2>
+                    <p className="mt-1 text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Configure o servidor usado para envio de certificados,
+                      convites de treinamento e comunicações automáticas. A
+                      senha é criptografada no backend e não retorna para a
+                      tela.
+                    </p>
+                  </div>
+                </div>
+                <label className="inline-flex cursor-pointer items-center gap-3 rounded-full border border-blue-200 bg-white px-4 py-2 text-sm font-black text-slate-800 shadow-sm dark:border-blue-500/30 dark:bg-slate-950 dark:text-white">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.smtpAtivo)}
+                    onChange={(e) => campo("smtpAtivo", e.target.checked)}
+                    className="h-5 w-5 accent-blue-600"
+                  />
+                  SMTP ativo
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <Label titulo="Servidor SMTP" className="xl:col-span-2">
+                <input
+                  className={inputBase}
+                  placeholder="smtp.office365.com"
+                  value={form.smtpHost || ""}
+                  onChange={(e) => campo("smtpHost", e.target.value)}
+                />
+              </Label>
+              <Label titulo="Porta">
+                <input
+                  type="number"
+                  className={inputBase}
+                  placeholder="587"
+                  value={form.smtpPorta || 587}
+                  onChange={(e) => campo("smtpPorta", e.target.value)}
+                />
+              </Label>
+              <Label titulo="Conexão segura">
+                <select
+                  className={inputBase}
+                  value={form.smtpSeguro ? "sim" : "nao"}
+                  onChange={(e) =>
+                    campo("smtpSeguro", e.target.value === "sim")
+                  }
+                >
+                  <option value="nao">STARTTLS / porta 587</option>
+                  <option value="sim">SSL direto / porta 465</option>
+                </select>
+              </Label>
+              <Label titulo="Usuário SMTP" className="xl:col-span-2">
+                <input
+                  className={inputBase}
+                  placeholder="noreply.movesecurity@movecta.com.br"
+                  value={form.smtpUsuario || ""}
+                  onChange={(e) => campo("smtpUsuario", e.target.value)}
+                />
+              </Label>
+              <Label
+                titulo="Senha SMTP"
+                ajuda={
+                  form.smtpSenhaConfigurada
+                    ? "Senha já configurada. Digite outra somente para substituir."
+                    : "A senha será criptografada no banco e não ficará visível novamente."
+                }
+                className="xl:col-span-2"
+              >
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    className={inputBase}
+                    placeholder={
+                      form.smtpSenhaConfigurada
+                        ? "********"
+                        : "Senha, token ou app password do SMTP"
+                    }
+                    value={form.smtpSenha === "********" ? "" : form.smtpSenha || ""}
+                    onChange={(e) =>
+                      setForm((atual) => ({
+                        ...atual,
+                        smtpSenha: e.target.value,
+                        removerSmtpSenha: false,
+                      }))
+                    }
+                  />
+                  {form.smtpSenhaConfigurada && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setForm((atual) => ({
+                          ...atual,
+                          smtpSenha: "",
+                          removerSmtpSenha: true,
+                          smtpSenhaConfigurada: false,
+                        }))
+                      }
+                      className="rounded-xl border border-rose-200 px-3 text-xs font-black text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10"
+                    >
+                      Remover
+                    </button>
+                  )}
+                </div>
+              </Label>
+              <Label titulo="Remetente" className="xl:col-span-2">
+                <input
+                  className={inputBase}
+                  placeholder="noreply.movesecurity@movecta.com.br"
+                  value={form.smtpRemetente || ""}
+                  onChange={(e) => campo("smtpRemetente", e.target.value)}
+                />
+              </Label>
+              <Label titulo="Responder para" className="xl:col-span-2">
+                <input
+                  className={inputBase}
+                  placeholder="Opcional"
+                  value={form.smtpRespostaPara || ""}
+                  onChange={(e) => campo("smtpRespostaPara", e.target.value)}
+                />
+              </Label>
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+              <div className="grid grid-cols-1 gap-3 lg:grid-cols-[1fr_auto] lg:items-end">
+                <Label
+                  titulo="E-mail para teste"
+                  ajuda="Salve as configurações antes de testar, caso tenha alterado algum campo."
+                >
+                  <input
+                    type="email"
+                    className={inputBase}
+                    placeholder="email@movecta.com.br"
+                    value={emailTesteSmtp}
+                    onChange={(e) => setEmailTesteSmtp(e.target.value)}
+                  />
+                </Label>
+                <button
+                  type="button"
+                  onClick={testarConfiguracaoSmtp}
+                  disabled={testandoSmtp}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 hover:bg-blue-50 disabled:opacity-60 dark:border-blue-500/30 dark:bg-slate-950 dark:text-blue-200 dark:hover:bg-blue-500/10"
+                >
+                  <Send size={16} />
+                  {testandoSmtp ? "Testando..." : "Enviar teste"}
+                </button>
+              </div>
+              {mensagemSmtp && (
+                <div className="mt-4 flex items-start gap-3 rounded-2xl border border-blue-200 bg-white p-4 text-sm font-bold text-slate-700 dark:border-blue-500/30 dark:bg-slate-950 dark:text-slate-200">
+                  <CheckCircle2 size={18} className="text-blue-600" />
+                  <span>{mensagemSmtp}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

@@ -1440,6 +1440,14 @@ model ConfiguracaoSistema {
   ssoCertificado                String?
   ssoModoPermissao              String?  @default("perfil_manual")
   ssoLoginLocalEmergencia       Boolean  @default(true)
+  smtpAtivo                     Boolean  @default(false)
+  smtpHost                      String?
+  smtpPorta                     Int      @default(587)
+  smtpSeguro                    Boolean  @default(false)
+  smtpUsuario                   String?
+  smtpSenha                     String?
+  smtpRemetente                 String?
+  smtpRespostaPara              String?
   updatedAt                     DateTime @updatedAt
   createdAt                     DateTime @default(now())
 }
