@@ -184,6 +184,12 @@ function urlVideoIncorporado(url?: string | null) {
       const videoId = parsed.searchParams.get("v");
       if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
+    if (parsed.hostname.includes("drive.google.com")) {
+      const fileId = parsed.pathname.match(/\/file\/d\/([^/]+)/)?.[1];
+      if (fileId) return `https://drive.google.com/file/d/${fileId}/preview`;
+      const id = parsed.searchParams.get("id");
+      if (id) return `https://drive.google.com/file/d/${id}/preview`;
+    }
     return valor;
   } catch {
     return valor;
