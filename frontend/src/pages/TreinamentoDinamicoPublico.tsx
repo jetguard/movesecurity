@@ -2,7 +2,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import { useParams } from "react-router-dom";
-import { Award, CheckCircle2, FileSignature, ShieldCheck } from "lucide-react";
+import {
+  Award,
+  CheckCircle2,
+  ExternalLink,
+  FileSignature,
+  Paperclip,
+  PlayCircle,
+  ShieldCheck,
+} from "lucide-react";
 
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
@@ -34,6 +42,11 @@ type Modelo = {
   nome: string;
   tipo: string;
   descricao?: string | null;
+  acessoPublico?: boolean;
+  perguntasHabilitadas?: boolean;
+  videoUrl?: string | null;
+  anexoNome?: string | null;
+  anexoUrl?: string | null;
   notaMinima: number;
   etapas: Etapa[];
   perguntas: Pergunta[];
@@ -147,6 +160,9 @@ function avaliacaoTreinamentoPadrao() {
 }
 
 function resultadoDoParticipante(participante: Participante, modelo: Modelo) {
+  if (!modelo.perguntasHabilitadas || !modelo.perguntas.length) {
+    return { aprovado: true, nota: 100, acertos: 0 };
+  }
   if (participante.nota == null) return null;
   const nota = Number(participante.nota) || 0;
   return {
@@ -154,6 +170,24 @@ function resultadoDoParticipante(participante: Participante, modelo: Modelo) {
     nota,
     acertos: Number(participante.acertos ?? 0),
   };
+}
+
+function urlVideoIncorporado(url?: string | null) {
+  const valor = String(url || "").trim();
+  if (!valor) return "";
+  try {
+    const parsed = new URL(valor);
+    if (parsed.hostname.includes("youtu.be")) {
+      return `https://www.youtube.com/embed/${parsed.pathname.replace("/", "")}`;
+    }
+    if (parsed.hostname.includes("youtube.com")) {
+      const videoId = parsed.searchParams.get("v");
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
+    }
+    return valor;
+  } catch {
+    return valor;
+  }
 }
 
 export default function TreinamentoDinamicoPublico() {
@@ -180,12 +214,16 @@ export default function TreinamentoDinamicoPublico() {
   const [assinando, setAssinando] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const perguntas = modelo?.perguntas || [];
+  const perguntas =
+    modelo?.perguntasHabilitadas === false ? [] : modelo?.perguntas || [];
+  const temQuiz = perguntas.length > 0;
+  const temVideo = Boolean(modelo?.videoUrl);
   const totalEtapas = modelo?.etapas.length || 0;
-  const indiceQuiz = totalEtapas;
-  const indiceResultado = totalEtapas + 1;
-  const indiceAvaliacaoTreinamento = totalEtapas + 2;
-  const indiceAssinatura = totalEtapas + 3;
+  const indiceVideo = temVideo ? totalEtapas : -1;
+  const indiceQuiz = totalEtapas + (temVideo ? 1 : 0);
+  const indiceResultado = temQuiz ? indiceQuiz + 1 : -1;
+  const indiceAvaliacaoTreinamento = temQuiz ? indiceQuiz + 2 : indiceQuiz;
+  const indiceAssinatura = indiceAvaliacaoTreinamento + 1;
   const etapa = modelo?.etapas[indice];
   const totalAvaliacaoTreinamento = perguntasAvaliacaoTreinamento.length + 1;
   const perguntaAvaliacao =
@@ -197,6 +235,19 @@ export default function TreinamentoDinamicoPublico() {
     participante && modelo
       ? resultado || resultadoDoParticipante(participante, modelo)
       : resultado;
+  const fluxoTreinamento = [
+    { label: "Etapas", ativo: indice < totalEtapas },
+    ...(temVideo ? [{ label: "Vídeo", ativo: indice === indiceVideo }] : []),
+    ...(temQuiz
+      ? [
+          { label: "Perguntas", ativo: indice === indiceQuiz },
+          { label: "Resultado", ativo: indice === indiceResultado },
+        ]
+      : []),
+    { label: "Opinião", ativo: indice === indiceAvaliacaoTreinamento },
+    { label: "Assinatura", ativo: indice >= indiceAssinatura },
+  ];
+  const videoIncorporado = urlVideoIncorporado(modelo?.videoUrl);
 
   useEffect(() => {
     axios
@@ -230,12 +281,19 @@ export default function TreinamentoDinamicoPublico() {
       const registro = response.data.participante as Participante;
       setParticipante(registro);
       setResultado(resultadoDoParticipante(registro, treinamentoRecebido));
-      const etapaAssinaturaRecebida =
-        (treinamentoRecebido.etapas?.length || 0) + 3;
+      const totalConteudoRecebido = treinamentoRecebido.etapas?.length || 0;
+      const temVideoRecebido = Boolean(treinamentoRecebido.videoUrl);
+      const temQuizRecebido =
+        treinamentoRecebido.perguntasHabilitadas !== false &&
+        (treinamentoRecebido.perguntas?.length || 0) > 0;
+      const etapaMaximaRecebida =
+        totalConteudoRecebido +
+        (temVideoRecebido ? 1 : 0) +
+        (temQuizRecebido ? 3 : 1);
       setIndice(
         Math.max(
           0,
-          Math.min(etapaAssinaturaRecebida, (registro.etapaAtual || 1) - 1),
+          Math.min(etapaMaximaRecebida, (registro.etapaAtual || 1) - 1),
         ),
       );
     } catch (error: any) {
@@ -270,7 +328,7 @@ export default function TreinamentoDinamicoPublico() {
         },
       );
       setParticipante(response.data.participante);
-      setIndice((atual) => Math.min(indiceQuiz, atual + 1));
+      setIndice((atual) => Math.min(indiceAvaliacaoTreinamento, atual + 1));
       rolarTopo();
     } catch (error: any) {
       setMensagem(
@@ -283,6 +341,12 @@ export default function TreinamentoDinamicoPublico() {
 
   async function validarQuiz() {
     if (!participante || !modelo) return;
+    if (!temQuiz) {
+      setResultado({ aprovado: true, nota: 100, acertos: 0 });
+      setIndice(indiceAvaliacaoTreinamento);
+      rolarTopo();
+      return;
+    }
     if (Object.keys(respostas).length < perguntas.length) {
       setMensagem("Responda todas as perguntas antes de validar.");
       return;
@@ -555,30 +619,18 @@ export default function TreinamentoDinamicoPublico() {
               </div>
             </div>
 
-            <div className="grid gap-1.5 rounded-2xl border border-blue-100 bg-white/82 p-2 shadow-sm backdrop-blur md:grid-cols-5">
-              {[
-                "Etapas",
-                "Avaliação",
-                "Resultado",
-                "Opinião",
-                "Assinatura",
-              ].map((label, pos) => {
-                const ativo =
-                  (pos === 0 && indice < indiceQuiz) ||
-                  (pos === 1 && indice === indiceQuiz) ||
-                  (pos === 2 && indice === indiceResultado) ||
-                  (pos === 3 && indice === indiceAvaliacaoTreinamento) ||
-                  (pos === 4 && indice >= indiceAssinatura);
+            <div className="grid gap-1.5 rounded-2xl border border-blue-100 bg-white/82 p-2 shadow-sm backdrop-blur sm:grid-cols-2 lg:grid-cols-5">
+              {fluxoTreinamento.map((item) => {
                 return (
                   <div
-                    key={label}
+                    key={item.label}
                     className={`rounded-xl px-3 py-2.5 text-center text-xs font-black transition ${
-                      ativo
+                      item.ativo
                         ? "bg-blue-600 text-white shadow-sm"
                         : "bg-transparent text-slate-500"
                     }`}
                   >
-                    {label}
+                    {item.label}
                   </div>
                 );
               })}
@@ -629,6 +681,21 @@ export default function TreinamentoDinamicoPublico() {
                     {etapa.atencao}
                   </p>
                 )}
+                {indice === 0 && modelo.anexoUrl && (
+                  <a
+                    href={modelo.anexoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-4 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-black text-blue-800 shadow-sm hover:border-blue-500 hover:bg-blue-100"
+                  >
+                    <Paperclip size={18} />
+                    Ver anexo
+                    <span className="text-xs font-bold text-blue-600">
+                      {modelo.anexoNome || "Documento de apoio"}
+                    </span>
+                    <ExternalLink size={16} />
+                  </a>
+                )}
                 <div className="mt-5 flex flex-wrap gap-3">
                   {indice > 0 && (
                     <button
@@ -650,7 +717,57 @@ export default function TreinamentoDinamicoPublico() {
               </section>
             )}
 
-            {indice === indiceQuiz && (
+            {indice === indiceVideo && modelo.videoUrl && (
+              <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 text-slate-950 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-6">
+                <p className="text-sm font-black uppercase tracking-[0.22em] text-blue-700">
+                  Etapa {totalEtapas + 1}
+                </p>
+                <div className="mt-3 flex items-start gap-3 border-b border-blue-100 pb-4">
+                  <PlayCircle className="mt-1 h-8 w-8 shrink-0 text-blue-600" />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+                      Vídeo
+                    </p>
+                    <h2 className="mt-1.5 text-2xl font-black leading-tight text-slate-950 sm:text-3xl">
+                      Assista ao conteúdo complementar
+                    </h2>
+                  </div>
+                </div>
+                <div className="mt-5 overflow-hidden rounded-2xl border border-blue-100 bg-slate-950 shadow-sm">
+                  <iframe
+                    src={videoIncorporado}
+                    title="Vídeo do treinamento"
+                    className="aspect-video w-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <a
+                    href={modelo.videoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"
+                  >
+                    <ExternalLink size={18} /> Abrir vídeo em nova aba
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIndice(
+                        temQuiz ? indiceQuiz : indiceAvaliacaoTreinamento,
+                      );
+                      rolarTopo();
+                    }}
+                    className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-700"
+                  >
+                    Continuar treinamento
+                  </button>
+                </div>
+              </section>
+            )}
+
+            {temQuiz && indice === indiceQuiz && (
               <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-6">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
                   Avaliação final
@@ -726,7 +843,7 @@ export default function TreinamentoDinamicoPublico() {
               </section>
             )}
 
-            {indice === indiceResultado && (
+            {temQuiz && indice === indiceResultado && (
               <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-6">
                 <Award className="h-10 w-10 text-blue-600" />
                 <h2 className="mt-3 text-2xl font-black text-slate-950 sm:text-3xl">
@@ -901,7 +1018,14 @@ export default function TreinamentoDinamicoPublico() {
                     type="button"
                     onClick={
                       perguntaAvaliacaoAtual === 0
-                        ? () => setIndice(indiceResultado)
+                        ? () =>
+                            setIndice(
+                              temQuiz
+                                ? indiceResultado
+                                : temVideo
+                                  ? indiceVideo
+                                  : Math.max(0, totalEtapas - 1),
+                            )
                         : voltarAvaliacaoTreinamento
                     }
                     className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"

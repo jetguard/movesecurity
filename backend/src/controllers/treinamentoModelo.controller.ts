@@ -319,6 +319,11 @@ function serializarModelo(modelo: any, incluirCorretas = true) {
   return {
     ...modelo,
     publicUrl: `/treinamento/${modelo.slug}`,
+    acessoPublico: Boolean(modelo.acessoPublico),
+    perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
+    videoUrl: modelo.videoUrl || null,
+    anexoNome: modelo.anexoNome || null,
+    anexoUrl: modelo.anexoUrl || null,
     gruposPermitidos: normalizarGruposTreinamento(modelo.gruposPermitidosJson),
     gruposPermitidosJson: undefined,
     etapas: (modelo.etapas || []).map((etapa: any) => ({
@@ -635,6 +640,8 @@ async function enviarConvitesTreinamento(modelo: any, grupos: string[]) {
 function validarPayloadModelo(body: any) {
   const status = texto(body.status) || "Rascunho";
   const rascunho = status !== "Publicado";
+  const acessoPublico = Boolean(body.acessoPublico);
+  const perguntasHabilitadas = body.perguntasHabilitadas !== false;
   const codigo =
     normalizarCodigo(body.codigo) || (rascunho ? `RASCUNHO-${Date.now()}` : "");
   const nome = texto(body.nome) || (rascunho ? "Treinamento em rascunho" : "");
@@ -673,7 +680,7 @@ function validarPayloadModelo(body: any) {
   if (!rascunho && !etapas.length) {
     return { error: "Cadastre pelo menos uma etapa de conteúdo." };
   }
-  if (!rascunho && !perguntas.length) {
+  if (!rascunho && perguntasHabilitadas && !perguntas.length) {
     return { error: "Cadastre pelo menos uma pergunta para avaliação." };
   }
   for (const pergunta of perguntas) {
@@ -699,7 +706,20 @@ function validarPayloadModelo(body: any) {
     pergunta.alternativas = alternativas;
   }
 
-  return { codigo, nome, tipo, etapas, perguntas, gruposPermitidos, status };
+  return {
+    codigo,
+    nome,
+    tipo,
+    etapas,
+    perguntas,
+    gruposPermitidos: acessoPublico ? [] : gruposPermitidos,
+    status,
+    acessoPublico,
+    perguntasHabilitadas,
+    videoUrl: texto(body.videoUrl) || null,
+    anexoNome: texto(body.anexoNome) || null,
+    anexoUrl: texto(body.anexoUrl) || null,
+  };
 }
 
 export async function listarTreinamentosModelo(
@@ -756,6 +776,11 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               nome: validacao.nome,
               descricao: texto(req.body.descricao) || null,
               subtitulo: texto(req.body.subtitulo) || null,
+              acessoPublico: validacao.acessoPublico,
+              perguntasHabilitadas: validacao.perguntasHabilitadas,
+              videoUrl: validacao.videoUrl,
+              anexoNome: validacao.anexoNome,
+              anexoUrl: validacao.anexoUrl,
               notaMinima: Number(req.body.notaMinima) || 80,
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
@@ -772,6 +797,11 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               nome: validacao.nome,
               descricao: texto(req.body.descricao) || null,
               subtitulo: texto(req.body.subtitulo) || null,
+              acessoPublico: validacao.acessoPublico,
+              perguntasHabilitadas: validacao.perguntasHabilitadas,
+              videoUrl: validacao.videoUrl,
+              anexoNome: validacao.anexoNome,
+              anexoUrl: validacao.anexoUrl,
               notaMinima: Number(req.body.notaMinima) || 80,
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
@@ -874,6 +904,12 @@ export async function enviarConvitesTreinamentoModelo(
     if (modelo.status !== "Publicado") {
       return res.status(400).json({
         error: "Publique o treinamento antes de enviar o link aos grupos.",
+      });
+    }
+    if (modelo.acessoPublico) {
+      return res.status(400).json({
+        error:
+          "Treinamentos públicos não exigem envio por grupo. Copie o link público para divulgação.",
       });
     }
 
@@ -1024,7 +1060,10 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
     const gruposPermitidos = normalizarGruposTreinamento(
       modelo.gruposPermitidosJson,
     );
-    if (!temGrupoTreinamento(usuario, gruposPermitidos)) {
+    if (
+      !modelo.acessoPublico &&
+      !temGrupoTreinamento(usuario, gruposPermitidos)
+    ) {
       return res.status(403).json({
         error: "Este treinamento não está disponível para sua função.",
       });
@@ -1169,7 +1208,7 @@ export async function responderQuizTreinamentoModelo(
       return res.status(404).json({ error: "Treinamento não encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
     const perguntas = snapshot.perguntas || [];
-    if (perguntas.length === 0)
+    if (snapshot.perguntasHabilitadas === false || perguntas.length === 0)
       return res.status(400).json({ error: "Treinamento sem avaliação." });
     if (Object.keys(respostas).length < perguntas.length) {
       return res.status(400).json({ error: "Responda todas as questões." });
@@ -1256,7 +1295,10 @@ export async function salvarAvaliacaoTreinamentoModelo(
       return res.status(404).json({ error: "Treinamento não encontrado." });
 
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
-    if ((participante.nota || 0) < snapshot.notaMinima) {
+    const temQuiz =
+      snapshot.perguntasHabilitadas !== false &&
+      (snapshot.perguntas || []).length > 0;
+    if (temQuiz && (participante.nota || 0) < snapshot.notaMinima) {
       return res.status(400).json({
         error: "Conclua a avaliação final antes de avaliar o treinamento.",
       });
@@ -1333,7 +1375,10 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     if (!participante)
       return res.status(404).json({ error: "Treinamento não encontrado." });
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
-    if ((participante.nota || 0) < snapshot.notaMinima) {
+    const temQuiz =
+      snapshot.perguntasHabilitadas !== false &&
+      (snapshot.perguntas || []).length > 0;
+    if (temQuiz && (participante.nota || 0) < snapshot.notaMinima) {
       return res
         .status(400)
         .json({ error: "A nota mínima ainda não foi atingida." });
