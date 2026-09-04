@@ -40,6 +40,7 @@ type ModeloForm = {
   subtitulo: string;
   acessoPublico: boolean;
   perguntasHabilitadas: boolean;
+  avaliacaoHabilitada: boolean;
   videoUrl: string;
   anexoNome: string;
   anexoUrl: string;
@@ -85,6 +86,7 @@ const modeloInicial: ModeloForm = {
   subtitulo: "",
   acessoPublico: false,
   perguntasHabilitadas: true,
+  avaliacaoHabilitada: true,
   videoUrl: "",
   anexoNome: "",
   anexoUrl: "",
@@ -230,6 +232,7 @@ export default function TreinamentosDinamicos() {
       subtitulo: modelo.subtitulo || "",
       acessoPublico: Boolean(modelo.acessoPublico),
       perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
+      avaliacaoHabilitada: modelo.avaliacaoHabilitada !== false,
       videoUrl: modelo.videoUrl || "",
       anexoNome: modelo.anexoNome || "",
       anexoUrl: modelo.anexoUrl || "",
@@ -615,6 +618,32 @@ export default function TreinamentosDinamicos() {
                   <small className="mt-1 block text-xs font-semibold text-slate-300">
                     Quando desligado, o treinamento segue direto para opinião,
                     assinatura e certificado.
+                  </small>
+                </span>
+              </label>
+              <label
+                className={`flex items-start gap-3 rounded-2xl border p-4 text-sm font-black ${
+                  form.avaliacaoHabilitada
+                    ? "border-emerald-400 bg-emerald-500/15 text-emerald-100"
+                    : "border-slate-700 bg-slate-950/70 text-slate-200"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={form.avaliacaoHabilitada}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      avaliacaoHabilitada: event.target.checked,
+                    })
+                  }
+                  className="mt-1 h-5 w-5 accent-emerald-500"
+                />
+                <span>
+                  Coletar opinião
+                  <small className="mt-1 block text-xs font-semibold text-slate-300">
+                    Quando desligado, a etapa de opinião não aparece e o
+                    treinamento segue direto para assinatura.
                   </small>
                 </span>
               </label>

@@ -1726,6 +1726,7 @@ model TreinamentoModelo {
   subtitulo            String?
   acessoPublico        Boolean  @default(false)
   perguntasHabilitadas Boolean  @default(true)
+  avaliacaoHabilitada  Boolean  @default(true)
   videoUrl             String?
   anexoNome            String?
   anexoUrl             String?
