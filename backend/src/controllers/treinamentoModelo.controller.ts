@@ -362,6 +362,20 @@ function criarSnapshot(modelo: any) {
   return JSON.stringify(serializarModelo(modelo, true));
 }
 
+function aplicarConfiguracaoAtual(snapshot: any, modeloAtual?: any) {
+  if (!modeloAtual) return snapshot;
+  const atual = serializarModelo(modeloAtual, true);
+  return {
+    ...snapshot,
+    acessoPublico: atual.acessoPublico,
+    perguntasHabilitadas: atual.perguntasHabilitadas,
+    videoUrl: atual.videoUrl,
+    anexoNome: atual.anexoNome,
+    anexoUrl: atual.anexoUrl,
+    anexoArquivo: atual.anexoArquivo,
+  };
+}
+
 function lerSnapshot(
   participante: any,
   modeloFallback?: any,
@@ -370,7 +384,13 @@ function lerSnapshot(
   if (participante?.snapshotJson) {
     try {
       const snapshot = JSON.parse(participante.snapshotJson);
-      return incluirCorretas ? snapshot : removerGabarito(snapshot);
+      const comConfiguracaoAtual = aplicarConfiguracaoAtual(
+        snapshot,
+        modeloFallback || participante?.treinamento,
+      );
+      return incluirCorretas
+        ? comConfiguracaoAtual
+        : removerGabarito(comConfiguracaoAtual);
     } catch {
       // Se o snapshot estiver inválido, usa o modelo atual.
     }
