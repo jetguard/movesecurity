@@ -6,14 +6,18 @@ import {
   Award,
   CheckCircle2,
   ExternalLink,
+  FastForward,
   FileSignature,
   Paperclip,
+  Pause,
+  Play,
   PlayCircle,
   ShieldCheck,
 } from "lucide-react";
 
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
+const velocidadesVideo = [1, 1.25, 1.5];
 
 type Etapa = {
   id: number;
@@ -196,6 +200,27 @@ function urlVideoIncorporado(url?: string | null) {
   }
 }
 
+function videoControlavel(url?: string | null) {
+  const valor = String(url || "").trim();
+  if (!valor) return false;
+  if (valor.startsWith("/")) return true;
+  if (valor.startsWith("blob:") || valor.startsWith("data:video/"))
+    return true;
+  try {
+    const parsed = new URL(valor);
+    return /\.(mp4|webm|ogg)(\?.*)?$/i.test(parsed.pathname);
+  } catch {
+    return /\.(mp4|webm|ogg)(\?.*)?$/i.test(valor);
+  }
+}
+
+function formatarTempo(segundos: number) {
+  const total = Math.max(0, Math.floor(segundos || 0));
+  const minutos = Math.floor(total / 60);
+  const resto = total % 60;
+  return `${minutos}:${String(resto).padStart(2, "0")}`;
+}
+
 export default function TreinamentoDinamicoPublico() {
   const { slug = "" } = useParams();
   const [modelo, setModelo] = useState<Modelo | null>(null);
@@ -218,6 +243,11 @@ export default function TreinamentoDinamicoPublico() {
   const [comentarioAvaliacao, setComentarioAvaliacao] = useState("");
   const [assinaturaVazia, setAssinaturaVazia] = useState(true);
   const [assinando, setAssinando] = useState(false);
+  const [tocandoVideo, setTocandoVideo] = useState(false);
+  const [velocidadeVideo, setVelocidadeVideo] = useState(1);
+  const [tempoVideo, setTempoVideo] = useState(0);
+  const [duracaoVideo, setDuracaoVideo] = useState(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const perguntas =
@@ -254,6 +284,11 @@ export default function TreinamentoDinamicoPublico() {
     { label: "Assinatura", ativo: indice >= indiceAssinatura },
   ];
   const videoIncorporado = urlVideoIncorporado(modelo?.videoUrl);
+  const videoTemControle = videoControlavel(modelo?.videoUrl);
+  const chaveProgressoVideo =
+    modelo && participante
+      ? `movesecurity:treinamento-video:${modelo.id}:${participante.email}`
+      : "";
 
   useEffect(() => {
     axios
@@ -261,6 +296,91 @@ export default function TreinamentoDinamicoPublico() {
       .then((response) => setModelo(response.data?.treinamento))
       .catch(() => setMensagem("Treinamento não encontrado ou indisponível."));
   }, [slug]);
+
+  useEffect(() => {
+    if (!chaveProgressoVideo || !videoTemControle) return;
+
+    function salvarVideoAoSair() {
+      const video = videoRef.current;
+      if (!video) return;
+      localStorage.setItem(
+        chaveProgressoVideo,
+        JSON.stringify({
+          tempo: Math.floor(video.currentTime || 0),
+          duracao: Math.floor(video.duration || duracaoVideo || 0),
+          atualizadoEm: new Date().toISOString(),
+        }),
+      );
+    }
+
+    function salvarVideoAoOcultar() {
+      if (document.visibilityState === "hidden") salvarVideoAoSair();
+    }
+
+    document.addEventListener("visibilitychange", salvarVideoAoOcultar);
+    window.addEventListener("pagehide", salvarVideoAoSair);
+    window.addEventListener("beforeunload", salvarVideoAoSair);
+    return () => {
+      document.removeEventListener("visibilitychange", salvarVideoAoOcultar);
+      window.removeEventListener("pagehide", salvarVideoAoSair);
+      window.removeEventListener("beforeunload", salvarVideoAoSair);
+    };
+  }, [chaveProgressoVideo, duracaoVideo, videoTemControle]);
+
+  function prepararVideoDinamico() {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = velocidadeVideo;
+    setDuracaoVideo(video.duration || 0);
+    if (!chaveProgressoVideo) return;
+    try {
+      const salvo = JSON.parse(localStorage.getItem(chaveProgressoVideo) || "");
+      const tempoSalvo = Number(salvo?.tempo || 0);
+      if (tempoSalvo > 0 && tempoSalvo < Math.max(1, video.duration || 0) - 3) {
+        video.currentTime = tempoSalvo;
+        setTempoVideo(tempoSalvo);
+      }
+    } catch {
+      // sem progresso local salvo
+    }
+  }
+
+  function atualizarTempoVideoDinamico() {
+    const video = videoRef.current;
+    if (!video) return;
+    setTempoVideo(video.currentTime || 0);
+    setDuracaoVideo(video.duration || duracaoVideo || 0);
+    if (!chaveProgressoVideo) return;
+    localStorage.setItem(
+      chaveProgressoVideo,
+      JSON.stringify({
+        tempo: Math.floor(video.currentTime || 0),
+        duracao: Math.floor(video.duration || duracaoVideo || 0),
+        atualizadoEm: new Date().toISOString(),
+      }),
+    );
+  }
+
+  function alternarVideoDinamico() {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.playbackRate = velocidadeVideo;
+      video
+        .play()
+        .then(() => setTocandoVideo(true))
+        .catch(() => setMensagem("Não foi possível iniciar o vídeo."));
+    } else {
+      video.pause();
+      setTocandoVideo(false);
+      atualizarTempoVideoDinamico();
+    }
+  }
+
+  function selecionarVelocidadeVideo(valor: number) {
+    setVelocidadeVideo(valor);
+    if (videoRef.current) videoRef.current.playbackRate = valor;
+  }
 
   function alterarEmail(valor: string) {
     setForm((atual) => ({ ...atual, email: valor.trim().toLowerCase() }));
@@ -740,23 +860,78 @@ export default function TreinamentoDinamicoPublico() {
                   </div>
                 </div>
                 <div className="mt-5 overflow-hidden rounded-2xl border border-blue-100 bg-slate-950 shadow-sm">
-                  <iframe
-                    src={videoIncorporado}
-                    title="Vídeo do treinamento"
-                    className="aspect-video w-full"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
-                  />
+                  {videoTemControle ? (
+                    <video
+                      ref={videoRef}
+                      src={modelo.videoUrl}
+                      className="aspect-video w-full bg-slate-950 object-contain"
+                      preload="metadata"
+                      playsInline
+                      poster={fundoDesktopUrl}
+                      onLoadedMetadata={prepararVideoDinamico}
+                      onTimeUpdate={atualizarTempoVideoDinamico}
+                      onPlay={() => setTocandoVideo(true)}
+                      onPause={() => setTocandoVideo(false)}
+                      onEnded={() => {
+                        setTocandoVideo(false);
+                        atualizarTempoVideoDinamico();
+                      }}
+                      onRateChange={() => {
+                        if (
+                          videoRef.current &&
+                          videoRef.current.playbackRate !== velocidadeVideo
+                        )
+                          videoRef.current.playbackRate = velocidadeVideo;
+                      }}
+                    />
+                  ) : (
+                    <iframe
+                      src={videoIncorporado}
+                      title="Vídeo do treinamento"
+                      className="aspect-video w-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      allowFullScreen
+                    />
+                  )}
                 </div>
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <a
-                    href={modelo.videoUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"
-                  >
-                    <ExternalLink size={18} /> Abrir vídeo em nova aba
-                  </a>
+                  {videoTemControle && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={alternarVideoDinamico}
+                        className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"
+                      >
+                        {tocandoVideo ? (
+                          <Pause size={18} />
+                        ) : (
+                          <Play size={18} />
+                        )}
+                        {tocandoVideo ? "Pausar vídeo" : "Continuar vídeo"}
+                      </button>
+                      <div className="inline-flex items-center gap-1 rounded-xl border border-blue-200 bg-white p-1 text-sm font-black text-blue-700 shadow-sm">
+                        <span className="flex items-center gap-1 px-3 text-xs uppercase tracking-[0.14em] text-slate-600">
+                          <FastForward size={15} /> Velocidade
+                        </span>
+                        {velocidadesVideo.map((velocidade) => (
+                          <button
+                            key={velocidade}
+                            type="button"
+                            onClick={() =>
+                              selecionarVelocidadeVideo(velocidade)
+                            }
+                            className={`rounded-lg px-3 py-2 text-xs font-black transition ${
+                              velocidadeVideo === velocidade
+                                ? "bg-blue-600 text-white"
+                                : "text-slate-700 hover:bg-blue-50"
+                            }`}
+                          >
+                            {velocidade}x
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                   <button
                     type="button"
                     onClick={() => {
@@ -770,6 +945,18 @@ export default function TreinamentoDinamicoPublico() {
                     Continuar treinamento
                   </button>
                 </div>
+                {videoTemControle ? (
+                  <p className="mt-3 text-xs font-bold text-slate-600">
+                    Progresso salvo neste dispositivo:{" "}
+                    {formatarTempo(tempoVideo)} de{" "}
+                    {formatarTempo(duracaoVideo)}.
+                  </p>
+                ) : (
+                  <p className="mt-3 text-xs font-bold text-slate-600">
+                    Use os controles do próprio player incorporado para assistir
+                    ao vídeo.
+                  </p>
+                )}
               </section>
             )}
 
