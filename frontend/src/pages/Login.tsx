@@ -1,10 +1,16 @@
 import type { AxiosError } from "axios";
-import { LockKeyhole, Mail, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { Building2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
 import { api } from "../services/api";
 
 type ApiError = {
   error?: string;
+};
+
+type SsoConfig = {
+  ativo: boolean;
+  nomeBotao?: string;
+  loginLocalEmergencia?: boolean;
 };
 
 function obterDeviceId() {
@@ -23,6 +29,21 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingSso, setLoadingSso] = useState(false);
+  const [ssoConfig, setSsoConfig] = useState<SsoConfig | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("sso") === "erro") {
+      alert(params.get("motivo") || "Não foi possível concluir o login corporativo.");
+      window.history.replaceState({}, document.title, "/login");
+    }
+
+    api
+      .get<SsoConfig>("/auth/sso/config")
+      .then((response) => setSsoConfig(response.data))
+      .catch(() => setSsoConfig({ ativo: false, loginLocalEmergencia: true }));
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +82,13 @@ export default function Login() {
     }
   }
 
+  function iniciarLoginCorporativo() {
+    setLoadingSso(true);
+    window.location.href = "/api/auth/sso/iniciar";
+  }
+
+  const exibirLoginLocal = ssoConfig?.loginLocalEmergencia !== false;
+
   return (
     <main
       className="movesecurity-login relative min-h-screen overflow-hidden bg-white bg-cover bg-center text-slate-950"
@@ -93,69 +121,98 @@ export default function Login() {
             </h1>
           </div>
 
-          <div className="mt-10 space-y-5">
-            <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-700">
-                Email
-              </span>
-              <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
-                <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
-                  <Mail size={17} />
+          <div className="mt-9 space-y-5">
+            {ssoConfig?.ativo && (
+              <button
+                type="button"
+                onClick={iniciarLoginCorporativo}
+                disabled={loadingSso}
+                className="flex w-full items-center justify-center gap-3 rounded-2xl border border-blue-100 bg-blue-600 px-4 py-3.5 text-sm font-black text-white shadow-lg shadow-blue-600/20 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
+              >
+                <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-white/15">
+                  <Building2 size={17} />
                 </span>
-                <input
-                  type="email"
-                  placeholder="nome@empresa.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  style={{
-                    backgroundColor: "transparent",
-                    boxShadow: "none",
-                    WebkitTextFillColor: "#020617",
-                  }}
-                  className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
-                />
-              </div>
-            </label>
+                {loadingSso
+                  ? "Abrindo login corporativo..."
+                  : ssoConfig.nomeBotao || "Entrar com conta corporativa"}
+              </button>
+            )}
 
-            <label className="block">
-              <span className="mb-2 block text-sm font-black text-slate-700">
-                Senha
-              </span>
-              <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
-                <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
-                  <LockKeyhole size={17} />
+            {ssoConfig?.ativo && exibirLoginLocal && (
+              <div className="flex items-center gap-3">
+                <span className="h-px flex-1 bg-slate-200" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  acesso local
                 </span>
-                <input
-                  type="password"
-                  placeholder="Digite sua senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  style={{
-                    backgroundColor: "transparent",
-                    boxShadow: "none",
-                    WebkitTextFillColor: "#020617",
-                  }}
-                  className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
-                />
+                <span className="h-px flex-1 bg-slate-200" />
               </div>
-            </label>
+            )}
+
+            {exibirLoginLocal && (
+              <>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-black text-slate-700">
+                    Email
+                  </span>
+                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
+                    <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                      <Mail size={17} />
+                    </span>
+                    <input
+                      type="email"
+                      placeholder="nome@empresa.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      style={{
+                        backgroundColor: "transparent",
+                        boxShadow: "none",
+                        WebkitTextFillColor: "#020617",
+                      }}
+                      className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
+                    />
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-black text-slate-700">
+                    Senha
+                  </span>
+                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
+                    <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                      <LockKeyhole size={17} />
+                    </span>
+                    <input
+                      type="password"
+                      placeholder="Digite sua senha"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      style={{
+                        backgroundColor: "transparent",
+                        boxShadow: "none",
+                        WebkitTextFillColor: "#020617",
+                      }}
+                      className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
+                    />
+                  </div>
+                </label>
+              </>
+            )}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-7 w-full rounded-2xl bg-blue-600 px-4 py-3.5 font-black text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {loading ? "Entrando..." : "Entrar"}
-          </button>
+          {exibirLoginLocal && (
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-7 w-full rounded-2xl bg-blue-600 px-4 py-3.5 font-black text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
+            >
+              {loading ? "Entrando..." : "Entrar"}
+            </button>
+          )}
 
           <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-5 text-xs font-bold text-slate-500">
             <span>Movecta S/A</span>
             <span>MoveSecurity</span>
           </div>
-          <p className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-            Deploy teste 03/09/2026
-          </p>
         </form>
       </section>
     </main>

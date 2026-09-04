@@ -103,6 +103,13 @@ function cookieOptions(req: Request, maxAge: number) {
   };
 }
 
+function cookieSsoOptions(req: Request, maxAge: number) {
+  return {
+    ...cookieOptions(req, maxAge),
+    path: "/api/auth/sso",
+  };
+}
+
 function criarAccessToken(usuarioId: number, sessaoId: string) {
   return jwt.sign({ id: usuarioId, sessaoId }, jwtSecret(), {
     expiresIn: jwtExpiresIn() as jwt.SignOptions["expiresIn"],
@@ -336,6 +343,194 @@ async function validarDispositivoAutorizado(
     return null;
   }
 }
+
+type UsuarioAutenticado = {
+  id: number;
+  nome: string;
+  apelido: string | null;
+  fotoPerfil: string | null;
+  email: string;
+  perfilAcesso: string;
+  equipe: string | null;
+  unidade: string | null;
+  unidadesPermitidas: string | null;
+  deveAlterarSenha: boolean;
+  pinOperacionalHash: string | null;
+};
+
+async function criarSessaoAutenticada(
+  req: Request,
+  res: Response,
+  usuario: UsuarioAutenticado,
+  origem: "senha" | "sso",
+) {
+  const userAgent = String(req.headers["user-agent"] || "");
+  const unidadeAtiva =
+    normalizarUnidadesPermitidas(usuario.unidadesPermitidas, usuario.unidade)[0] ||
+    usuario.unidade ||
+    "GJA-T1";
+
+  await encerrarSessoesAdministrativasAnteriores(usuario);
+
+  const sessao = await prisma.sessaoUsuario.create({
+    data: {
+      usuarioId: usuario.id,
+      unidadeAtiva,
+      equipe: usuario.equipe,
+      perfilAcesso: usuario.perfilAcesso,
+      ipInicio: req.ip,
+      ipUltimaAtividade: req.ip,
+      navegador: userAgent.slice(0, 250),
+      sistema: sistemaDoUserAgent(userAgent),
+    },
+  });
+
+  const token = criarAccessToken(usuario.id, sessao.id);
+  const refreshToken = criarRefreshToken();
+
+  await prisma.sessaoUsuario.update({
+    where: { id: sessao.id },
+    data: {
+      tokenHash: hashToken(token),
+      refreshTokenHash: hashToken(refreshToken),
+      refreshExpiraEm: refreshExpiraEm(),
+    },
+  });
+
+  aplicarCookiesSessao(req, res, token, refreshToken);
+  const permissoesAcoes = await permissoesPerfil(usuario.perfilAcesso);
+  const permissoesModulos = permissoesAcoes.map((permissao) => permissao.modulo);
+
+  const agora = new Date();
+  await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: { ultimoAcesso: agora },
+  });
+
+  await prisma.logAuditoria.create({
+    data: {
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      ip: req.ip,
+      acao: origem === "sso" ? "Acesso corporativo SSO" : "Acesso ao sistema",
+      tipoRegistro: "Auth",
+      registroId: usuario.id,
+      dadosNovos: JSON.stringify({
+        email: usuario.email,
+        origem,
+        acessoEm: agora.toISOString(),
+        expiraEm: jwtExpiresIn(),
+        sessaoId: sessao.id,
+      }),
+    },
+  });
+
+  return {
+    id: usuario.id,
+    nome: usuario.nome,
+    apelido: usuario.apelido,
+    fotoPerfil: usuario.fotoPerfil,
+    email: usuario.email,
+    perfilAcesso: usuario.perfilAcesso,
+    permissoesModulos,
+    permissoesAcoes,
+    equipe: usuario.equipe,
+    unidade: usuario.unidade,
+    unidadesPermitidas: normalizarUnidadesPermitidas(
+      usuario.unidadesPermitidas,
+      usuario.unidade,
+    ),
+    deveAlterarSenha: usuario.deveAlterarSenha,
+    possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
+  };
+}
+
+async function obterConfiguracaoSso() {
+  return prisma.configuracaoSistema.findUnique({ where: { chave: "global" } });
+}
+
+function ssoConfigurado(config: Awaited<ReturnType<typeof obterConfiguracaoSso>>) {
+  if (!config?.ssoAtivo) return false;
+  return Boolean(config.ssoClientId && config.ssoCallbackUrl);
+}
+
+function montarUrlAutorizacaoSso(
+  config: NonNullable<Awaited<ReturnType<typeof obterConfiguracaoSso>>>,
+  state: string,
+  nonce: string,
+) {
+  const tenant = config.ssoTenantId || "common";
+  const authorizationUrl =
+    config.ssoAuthorizationUrl ||
+    `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`;
+  const url = new URL(authorizationUrl);
+  url.searchParams.set("client_id", String(config.ssoClientId));
+  url.searchParams.set("response_type", "code");
+  url.searchParams.set("redirect_uri", String(config.ssoCallbackUrl));
+  url.searchParams.set("response_mode", "query");
+  url.searchParams.set("scope", "openid profile email");
+  url.searchParams.set("state", state);
+  url.searchParams.set("nonce", nonce);
+  return url.toString();
+}
+
+function montarUrlTokenSso(
+  config: NonNullable<Awaited<ReturnType<typeof obterConfiguracaoSso>>>,
+) {
+  const tenant = config.ssoTenantId || "common";
+  return (
+    config.ssoTokenUrl ||
+    `https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/token`
+  );
+}
+
+function decodificarJwtSemValidar(token?: string) {
+  if (!token) return {};
+  try {
+    const [, payload] = token.split(".");
+    if (!payload) return {};
+    const base64 = payload.replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+  } catch {
+    return {};
+  }
+}
+
+function normalizarEmailSso(claims: Record<string, any>) {
+  return String(
+    claims.preferred_username ||
+      claims.email ||
+      claims.upn ||
+      claims.unique_name ||
+      "",
+  )
+    .trim()
+    .toLowerCase();
+}
+
+function urlFrontendSso(
+  req: Request,
+  config?: Awaited<ReturnType<typeof obterConfiguracaoSso>>,
+) {
+  return (
+    config?.ssoFrontendUrl ||
+    process.env.FRONTEND_URL ||
+    `${req.protocol}://${req.get("host")}`
+  ).replace(/\/+$/, "");
+}
+
+function redirecionarLoginSso(
+  req: Request,
+  res: Response,
+  config: Awaited<ReturnType<typeof obterConfiguracaoSso>>,
+  motivo: string,
+) {
+  const url = new URL("/login", urlFrontendSso(req, config));
+  url.searchParams.set("sso", "erro");
+  url.searchParams.set("motivo", motivo);
+  return res.redirect(url.toString());
+}
+
 async function registrarFalhaAuditoria(
   req: Request,
   email: string,
@@ -472,97 +667,165 @@ export async function login(req: Request, res: Response) {
 
     limparTentativas(emailLogin, req.ip);
 
-    const userAgent = String(req.headers["user-agent"] || "");
-    const unidadeAtiva =
-      normalizarUnidadesPermitidas(
-        usuario.unidadesPermitidas,
-        usuario.unidade,
-      )[0] ||
-      usuario.unidade ||
-      "GJA-T1";
-    await encerrarSessoesAdministrativasAnteriores(usuario);
-
-    const sessao = await prisma.sessaoUsuario.create({
-      data: {
-        usuarioId: usuario.id,
-        unidadeAtiva,
-        equipe: usuario.equipe,
-        perfilAcesso: usuario.perfilAcesso,
-        ipInicio: req.ip,
-        ipUltimaAtividade: req.ip,
-        navegador: userAgent.slice(0, 250),
-        sistema: sistemaDoUserAgent(userAgent),
-      },
-    });
-
-    const token = criarAccessToken(usuario.id, sessao.id);
-    const refreshToken = criarRefreshToken();
-
-    await prisma.sessaoUsuario.update({
-      where: { id: sessao.id },
-      data: {
-        tokenHash: hashToken(token),
-        refreshTokenHash: hashToken(refreshToken),
-        refreshExpiraEm: refreshExpiraEm(),
-      },
-    });
-
-    aplicarCookiesSessao(req, res, token, refreshToken);
-    const permissoesAcoes = await permissoesPerfil(usuario.perfilAcesso);
-    const permissoesModulos = permissoesAcoes.map((permissao) => permissao.modulo);
-
-    const agora = new Date();
-    await prisma.usuario.update({
-      where: {
-        id: usuario.id,
-      },
-      data: {
-        ultimoAcesso: agora,
-      },
-    });
-
-    await prisma.logAuditoria.create({
-      data: {
-        usuarioId: usuario.id,
-        usuarioNome: usuario.nome,
-        ip: req.ip,
-        acao: "Acesso ao sistema",
-        tipoRegistro: "Auth",
-        registroId: usuario.id,
-        dadosNovos: JSON.stringify({
-          email: usuario.email,
-          acessoEm: agora.toISOString(),
-          expiraEm: jwtExpiresIn(),
-          sessaoId: sessao.id,
-        }),
-      },
-    });
+    const usuarioSessao = await criarSessaoAutenticada(req, res, usuario, "senha");
 
     return res.json({
-      usuario: {
-        id: usuario.id,
-        nome: usuario.nome,
-        apelido: usuario.apelido,
-        fotoPerfil: usuario.fotoPerfil,
-        email: usuario.email,
-        perfilAcesso: usuario.perfilAcesso,
-        permissoesModulos,
-        permissoesAcoes,
-        equipe: usuario.equipe,
-        unidade: usuario.unidade,
-        unidadesPermitidas: normalizarUnidadesPermitidas(
-          usuario.unidadesPermitidas,
-          usuario.unidade,
-        ),
-        deveAlterarSenha: usuario.deveAlterarSenha,
-        possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
-      },
+      usuario: usuarioSessao,
     });
   } catch (error) {
     console.error("Erro ao fazer login:", error);
     return res.status(500).json({
       error: "Erro ao fazer login",
     });
+  }
+}
+
+export async function configuracaoSsoPublica(_req: Request, res: Response) {
+  try {
+    const config = await obterConfiguracaoSso();
+    return res.json({
+      ativo: ssoConfigurado(config),
+      nomeBotao: config?.ssoNomeBotao || "Entrar com conta corporativa",
+      loginLocalEmergencia: config?.ssoLoginLocalEmergencia !== false,
+    });
+  } catch (error) {
+    console.error("Erro ao buscar configuracao publica de SSO:", error);
+    return res.status(500).json({ error: "Erro ao buscar configuracao de SSO" });
+  }
+}
+
+export async function iniciarSso(req: Request, res: Response) {
+  try {
+    const config = await obterConfiguracaoSso();
+    if (!config || !ssoConfigurado(config)) {
+      return res.status(400).json({ error: "SSO não configurado." });
+    }
+
+    const state = crypto.randomBytes(24).toString("hex");
+    const nonce = crypto.randomBytes(24).toString("hex");
+    const maxAge = 10 * 60 * 1000;
+
+    res.cookie("movesecurity_sso_state", state, cookieSsoOptions(req, maxAge));
+    res.cookie("movesecurity_sso_nonce", nonce, cookieSsoOptions(req, maxAge));
+
+    return res.redirect(montarUrlAutorizacaoSso(config, state, nonce));
+  } catch (error) {
+    console.error("Erro ao iniciar SSO:", error);
+    return res.status(500).json({ error: "Erro ao iniciar login corporativo" });
+  }
+}
+
+export async function callbackSso(req: Request, res: Response) {
+  const config = await obterConfiguracaoSso();
+  try {
+    if (!config || !ssoConfigurado(config)) {
+      return redirecionarLoginSso(req, res, config, "SSO não configurado.");
+    }
+
+    const code = String(req.query.code || "");
+    const state = String(req.query.state || "");
+    const stateCookie = lerCookie(req, "movesecurity_sso_state");
+    const nonceCookie = lerCookie(req, "movesecurity_sso_nonce");
+
+    res.clearCookie("movesecurity_sso_state", cookieSsoOptions(req, 0));
+    res.clearCookie("movesecurity_sso_nonce", cookieSsoOptions(req, 0));
+
+    if (!code || !state || !stateCookie || state !== stateCookie) {
+      return redirecionarLoginSso(req, res, config, "Retorno SSO inválido.");
+    }
+
+    if (!config.ssoClientSecret) {
+      return redirecionarLoginSso(req, res, config, "Client secret não configurado.");
+    }
+
+    const params = new URLSearchParams({
+      client_id: String(config.ssoClientId),
+      client_secret: String(config.ssoClientSecret),
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: String(config.ssoCallbackUrl),
+      scope: "openid profile email",
+    });
+
+    const tokenResponse = await fetch(montarUrlTokenSso(config), {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params,
+    });
+
+    if (!tokenResponse.ok) {
+      const detalhe = await tokenResponse.text().catch(() => "");
+      console.error("Erro no token SSO:", tokenResponse.status, detalhe);
+      return redirecionarLoginSso(req, res, config, "Falha ao validar SSO.");
+    }
+
+    const tokenData = (await tokenResponse.json()) as Record<string, any>;
+    const claims = decodificarJwtSemValidar(tokenData.id_token) as Record<string, any>;
+
+    if (nonceCookie && claims.nonce && claims.nonce !== nonceCookie) {
+      return redirecionarLoginSso(req, res, config, "Nonce SSO inválido.");
+    }
+
+    if (config.ssoUserInfoUrl && tokenData.access_token) {
+      try {
+        const userInfoResponse = await fetch(config.ssoUserInfoUrl, {
+          headers: { Authorization: `Bearer ${tokenData.access_token}` },
+        });
+        if (userInfoResponse.ok) {
+          Object.assign(claims, await userInfoResponse.json());
+        }
+      } catch (error) {
+        console.error("Erro ao buscar userinfo SSO:", error);
+      }
+    }
+
+    const email = normalizarEmailSso(claims);
+    if (!email) {
+      return redirecionarLoginSso(req, res, config, "E-mail corporativo não retornado.");
+    }
+
+    const dominio = String(config.ssoDominioPermitido || "").trim().toLowerCase();
+    if (dominio && !email.endsWith(`@${dominio.replace(/^@/, "")}`)) {
+      await registrarFalhaAuditoria(req, email, "domínio SSO não permitido");
+      return redirecionarLoginSso(req, res, config, "Domínio não permitido.");
+    }
+
+    const usuario = await prisma.usuario.findFirst({
+      where: { email: { equals: email, mode: "insensitive" } },
+    });
+
+    if (!usuario) {
+      await registrarFalhaAuditoria(req, email, "usuário SSO não cadastrado");
+      return redirecionarLoginSso(req, res, config, "Usuário não cadastrado.");
+    }
+
+    if (usuario.statusUsuario !== "ATIVO" || usuario.somenteCadastro) {
+      await registrarFalhaAuditoria(req, email, "usuário SSO sem acesso ativo");
+      return redirecionarLoginSso(req, res, config, "Usuário sem acesso ativo.");
+    }
+
+    const usuarioSessao = await criarSessaoAutenticada(req, res, usuario, "sso");
+    const destino = usuarioSessao.deveAlterarSenha ? "/alterar-senha" : "/";
+    const usuarioJson = JSON.stringify(usuarioSessao).replace(/</g, "\\u003c");
+
+    return res.type("html").send(`<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <title>MoveSecurity - Login corporativo</title>
+  </head>
+  <body>
+    <script>
+      localStorage.setItem("usuario", ${JSON.stringify(usuarioJson)});
+      localStorage.setItem("jetguardUltimaAtividade", String(Date.now()));
+      sessionStorage.setItem("loginInicio", String(Date.now()));
+      window.location.replace(${JSON.stringify(urlFrontendSso(req, config) + destino)});
+    </script>
+  </body>
+</html>`);
+  } catch (error) {
+    console.error("Erro no callback SSO:", error);
+    return redirecionarLoginSso(req, res, config, "Erro no login corporativo.");
   }
 }
 

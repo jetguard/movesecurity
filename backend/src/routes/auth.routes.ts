@@ -8,6 +8,9 @@ import {
   emitirCsrf,
   alterarSenhaObrigatoria,
   desbloquearSessao,
+  configuracaoSsoPublica,
+  iniciarSso,
+  callbackSso,
 } from "../controllers/auth.controller";
 import { acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
@@ -15,6 +18,9 @@ const router = Router();
 
 router.post("/register", autenticarUsuario, autorizarPerfis(acessoTotal), register);
 router.post("/login", login);
+router.get("/sso/config", configuracaoSsoPublica);
+router.get("/sso/iniciar", iniciarSso);
+router.get("/sso/callback", callbackSso);
 router.post("/refresh", renovarSessao);
 router.get("/csrf", emitirCsrf);
 router.post("/alterar-senha", autenticarUsuario, alterarSenhaObrigatoria);
