@@ -1,5 +1,9 @@
 import { Router } from "express";
+import fs from "fs";
+import multer from "multer";
+import path from "path";
 import {
+  baixarAnexoTreinamentoModelo,
   baixarCertificadoTreinamentoModelo,
   baixarCertificadosTreinamentoModeloZip,
   buscarTreinamentoPublico,
@@ -16,7 +20,9 @@ import {
   responderQuizTreinamentoModelo,
   salvarAvaliacaoTreinamentoModelo,
   salvarTreinamentoModelo,
+  uploadAnexoTreinamentoModelo,
 } from "../controllers/treinamentoModelo.controller";
+import { tiposAnexoPermitidos, uploadLimits } from "../config/security";
 import {
   acessoTotal,
   acessoTreinamentosTerminal,
@@ -26,6 +32,27 @@ import {
 } from "../middlewares/auth";
 
 const router = Router();
+const uploadDir = "uploads/treinamentos-dinamicos";
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: uploadDir,
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: uploadLimits,
+  fileFilter: (req, file, cb) => {
+    if (!tiposAnexoPermitidos.includes(file.mimetype)) {
+      return cb(new Error("Tipo de arquivo não permitido."));
+    }
+    return cb(null, true);
+  },
+});
 
 router.get(
   "/public/treinamentos-dinamicos/unidades",
@@ -36,6 +63,10 @@ router.get(
   localizarParticipanteTreinamentoModelo,
 );
 router.get("/public/treinamentos-dinamicos/:slug", buscarTreinamentoPublico);
+router.get(
+  "/public/treinamentos-dinamicos/:slug/anexo",
+  baixarAnexoTreinamentoModelo,
+);
 router.post(
   "/public/treinamentos-dinamicos/:slug/iniciar",
   iniciarTreinamentoModelo,
@@ -72,6 +103,13 @@ router.post(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   salvarTreinamentoModelo,
+);
+router.post(
+  "/treinamentos-dinamicos/anexo",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  upload.single("anexo"),
+  uploadAnexoTreinamentoModelo,
 );
 router.put(
   "/treinamentos-dinamicos/:id",
