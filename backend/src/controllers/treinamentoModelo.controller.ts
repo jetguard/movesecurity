@@ -316,12 +316,17 @@ function respostaParticipante(registro: any) {
 }
 
 function serializarModelo(modelo: any, incluirCorretas = true) {
+  const videoUrl = String(modelo.videoUrl || "");
+  const videoPublico = !incluirCorretas && videoUrl.startsWith("uploads/")
+    ? `/api/public/treinamentos-dinamicos/${modelo.slug}/video`
+    : videoUrl || null;
+
   return {
     ...modelo,
     publicUrl: `/treinamento/${modelo.slug}`,
     acessoPublico: Boolean(modelo.acessoPublico),
     perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
-    videoUrl: modelo.videoUrl || null,
+    videoUrl: videoPublico,
     anexoNome: modelo.anexoNome || null,
     anexoUrl: modelo.anexoArquivo
       ? `/api/public/treinamentos-dinamicos/${modelo.slug}/anexo`
@@ -364,13 +369,14 @@ function criarSnapshot(modelo: any) {
 function aplicarConfiguracaoAtual(snapshot: any, modeloAtual?: any) {
   if (!modeloAtual) return snapshot;
   const atual = serializarModelo(modeloAtual, true);
+  const atualPublico = serializarModelo(modeloAtual, false);
   return {
     ...snapshot,
     acessoPublico: atual.acessoPublico,
     perguntasHabilitadas: atual.perguntasHabilitadas,
-    videoUrl: atual.videoUrl,
+    videoUrl: atualPublico.videoUrl,
     anexoNome: atual.anexoNome,
-    anexoUrl: atual.anexoUrl,
+    anexoUrl: atualPublico.anexoUrl,
     anexoArquivo: atual.anexoArquivo,
   };
 }
@@ -1026,6 +1032,84 @@ export async function uploadAnexoTreinamentoModelo(
     anexoArquivo: arquivo.path.replace(/\\/g, "/"),
     anexoUrl: `/uploads/treinamentos-dinamicos/${arquivo.filename}`,
   });
+}
+
+export async function uploadVideoTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
+  const arquivo = req.file as Express.Multer.File | undefined;
+  if (!arquivo) {
+    return res.status(400).json({ error: "Selecione um vídeo para anexar." });
+  }
+
+  return res.status(201).json({
+    videoNome: arquivo.originalname,
+    videoArquivo: arquivo.path.replace(/\\/g, "/"),
+    videoUrl: arquivo.path.replace(/\\/g, "/"),
+  });
+}
+
+export async function baixarVideoTreinamentoModelo(req: Request, res: Response) {
+  try {
+    const modelo = await db.treinamentoModelo.findUnique({
+      where: { slug: texto(req.params.slug) },
+      select: {
+        status: true,
+        videoUrl: true,
+      },
+    });
+
+    const videoUrl = String(modelo?.videoUrl || "");
+    if (
+      !modelo ||
+      modelo.status !== "Publicado" ||
+      !videoUrl.startsWith("uploads/")
+    ) {
+      return res.status(404).json({ error: "Vídeo não encontrado." });
+    }
+
+    const caminhoAbsoluto = path.resolve(process.cwd(), videoUrl);
+    const raizUploads = path.resolve(process.cwd(), "uploads");
+    if (
+      !caminhoAbsoluto.startsWith(raizUploads) ||
+      !fs.existsSync(caminhoAbsoluto)
+    ) {
+      return res.status(404).json({ error: "Vídeo não encontrado." });
+    }
+
+    const tamanho = fs.statSync(caminhoAbsoluto).size;
+    const range = req.headers.range;
+    const contentType = videoUrl.endsWith(".webm")
+      ? "video/webm"
+      : videoUrl.endsWith(".ogg")
+        ? "video/ogg"
+        : "video/mp4";
+
+    if (range) {
+      const partes = range.replace(/bytes=/, "").split("-");
+      const inicio = parseInt(partes[0], 10);
+      const fim = partes[1] ? parseInt(partes[1], 10) : tamanho - 1;
+      const tamanhoBloco = fim - inicio + 1;
+      res.writeHead(206, {
+        "Content-Range": `bytes ${inicio}-${fim}/${tamanho}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": tamanhoBloco,
+        "Content-Type": contentType,
+      });
+      return fs.createReadStream(caminhoAbsoluto, { start: inicio, end: fim }).pipe(res);
+    }
+
+    res.writeHead(200, {
+      "Content-Length": tamanho,
+      "Content-Type": contentType,
+      "Accept-Ranges": "bytes",
+    });
+    return fs.createReadStream(caminhoAbsoluto).pipe(res);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao carregar vídeo." });
+  }
 }
 
 export async function baixarAnexoTreinamentoModelo(

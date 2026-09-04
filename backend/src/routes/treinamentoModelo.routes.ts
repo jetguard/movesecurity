@@ -6,6 +6,7 @@ import {
   baixarAnexoTreinamentoModelo,
   baixarCertificadoTreinamentoModelo,
   baixarCertificadosTreinamentoModeloZip,
+  baixarVideoTreinamentoModelo,
   buscarTreinamentoPublico,
   concluirEtapaTreinamentoModelo,
   concluirTreinamentoModelo,
@@ -21,8 +22,14 @@ import {
   salvarAvaliacaoTreinamentoModelo,
   salvarTreinamentoModelo,
   uploadAnexoTreinamentoModelo,
+  uploadVideoTreinamentoModelo,
 } from "../controllers/treinamentoModelo.controller";
-import { tiposAnexoPermitidos, uploadLimits } from "../config/security";
+import {
+  tiposAnexoPermitidos,
+  tiposVideoPermitidos,
+  uploadLimits,
+  videoUploadLimits,
+} from "../config/security";
 import {
   acessoTotal,
   acessoTreinamentosTerminal,
@@ -33,7 +40,9 @@ import {
 
 const router = Router();
 const uploadDir = "uploads/treinamentos-dinamicos";
+const videoUploadDir = "uploads/treinamentos-dinamicos/videos";
 fs.mkdirSync(uploadDir, { recursive: true });
+fs.mkdirSync(videoUploadDir, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: uploadDir,
@@ -54,6 +63,25 @@ const upload = multer({
   },
 });
 
+const videoStorage = multer.diskStorage({
+  destination: videoUploadDir,
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || ".mp4";
+    cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  },
+});
+
+const uploadVideo = multer({
+  storage: videoStorage,
+  limits: videoUploadLimits,
+  fileFilter: (req, file, cb) => {
+    if (!tiposVideoPermitidos.includes(file.mimetype)) {
+      return cb(new Error("Tipo de vídeo não permitido."));
+    }
+    return cb(null, true);
+  },
+});
+
 router.get(
   "/public/treinamentos-dinamicos/unidades",
   listarUnidadesTreinamentoModelo,
@@ -66,6 +94,10 @@ router.get("/public/treinamentos-dinamicos/:slug", buscarTreinamentoPublico);
 router.get(
   "/public/treinamentos-dinamicos/:slug/anexo",
   baixarAnexoTreinamentoModelo,
+);
+router.get(
+  "/public/treinamentos-dinamicos/:slug/video",
+  baixarVideoTreinamentoModelo,
 );
 router.post(
   "/public/treinamentos-dinamicos/:slug/iniciar",
@@ -110,6 +142,13 @@ router.post(
   autorizarPerfis(acessoTotal),
   upload.single("anexo"),
   uploadAnexoTreinamentoModelo,
+);
+router.post(
+  "/treinamentos-dinamicos/video",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  uploadVideo.single("video"),
+  uploadVideoTreinamentoModelo,
 );
 router.put(
   "/treinamentos-dinamicos/:id",

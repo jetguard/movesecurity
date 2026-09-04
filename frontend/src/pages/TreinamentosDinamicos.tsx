@@ -177,6 +177,7 @@ export default function TreinamentosDinamicos() {
   const [mensagem, setMensagem] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [anexando, setAnexando] = useState(false);
+  const [videoAnexando, setVideoAnexando] = useState(false);
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
   const perfil = perfilAtual();
   const podeEditar = perfil === PERFIS.SUPER_ADMIN;
@@ -427,6 +428,30 @@ export default function TreinamentosDinamicos() {
     }
   }
 
+  async function anexarVideo(arquivo?: File | null) {
+    if (!arquivo) return;
+    setVideoAnexando(true);
+    setMensagem("");
+    try {
+      const dados = new FormData();
+      dados.append("video", arquivo);
+      const response = await api.post("/treinamentos-dinamicos/video", dados, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setForm((atual) => ({
+        ...atual,
+        videoUrl: response.data?.videoUrl || atual.videoUrl,
+      }));
+      setMensagem("Vídeo anexado. Salve o treinamento para vincular o MP4.");
+    } catch (error: any) {
+      setMensagem(
+        error.response?.data?.error || "Não foi possível anexar o vídeo.",
+      );
+    } finally {
+      setVideoAnexando(false);
+    }
+  }
+
   async function excluirModelo(modelo: Modelo) {
     if (!podeEditar) return;
     if (!confirm(`Deseja excluir o treinamento ${modelo.codigo}?`)) return;
@@ -606,10 +631,52 @@ export default function TreinamentosDinamicos() {
                     onChange={(event) =>
                       setForm({ ...form, videoUrl: event.target.value })
                     }
-                    placeholder="SharePoint, YouTube ou URL do vídeo"
+                    placeholder="SharePoint, YouTube, Google Drive ou URL direta"
                     className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm font-bold text-white outline-none"
                   />
                 </div>
+                <p className="mt-1 text-[11px] font-semibold normal-case tracking-normal text-slate-400">
+                  Links externos usam o player do provedor. Para bloquear avanço
+                  e retomar o ponto salvo, envie um MP4.
+                </p>
+              </label>
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Anexar vídeo MP4
+                <div className="mt-2 flex min-h-[50px] items-center justify-between gap-3 rounded-xl border border-dashed border-blue-400/60 bg-blue-500/10 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black normal-case tracking-normal text-white">
+                      {form.videoUrl?.startsWith("uploads/")
+                        ? "Vídeo MP4 anexado"
+                        : "Selecione um vídeo"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-300">
+                      MP4, WebM ou OGG. O arquivo fica salvo no servidor.
+                    </p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white">
+                    <Upload size={15} />
+                    {videoAnexando ? "Enviando" : "Escolher"}
+                  </span>
+                  <input
+                    type="file"
+                    disabled={videoAnexando}
+                    accept="video/mp4,video/webm,video/ogg,.mp4,.webm,.ogg"
+                    onChange={(event) => {
+                      anexarVideo(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
+                    className="sr-only"
+                  />
+                </div>
+                {form.videoUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, videoUrl: "" })}
+                    className="mt-2 inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-xs font-black normal-case tracking-normal text-red-200 hover:bg-red-500/10"
+                  >
+                    <Trash2 size={14} /> Remover vídeo
+                  </button>
+                )}
               </label>
               <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Link do anexo
