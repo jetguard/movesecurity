@@ -1,6 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { Mail, RefreshCw, Search, Send, UserPlus } from "lucide-react";
+import {
+  Edit3,
+  Mail,
+  RefreshCw,
+  Search,
+  Send,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { api } from "../services/api";
 import { cpfVisivelPorPerfil } from "../utils/cpf";
 
@@ -51,18 +60,18 @@ function mascararCpf(valor: string) {
     .replace(/\.(\d{3})(\d)/, ".$1-$2");
 }
 
-function data(valor?: string | null) {
-  return valor ? new Date(valor).toLocaleString("pt-BR") : "-";
-}
-
 export default function TreinamentosVisitantes() {
   const [visitantes, setVisitantes] = useState<Visitante[]>([]);
   const [treinamentos, setTreinamentos] = useState<TreinamentoPublico[]>([]);
   const [form, setForm] = useState(inicial);
+  const [editandoId, setEditandoId] = useState<number | null>(null);
   const [busca, setBusca] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
-  const [envioPorVisitante, setEnvioPorVisitante] = useState<Record<number, string>>({});
+  const [excluindoId, setExcluindoId] = useState<number | null>(null);
+  const [envioPorVisitante, setEnvioPorVisitante] = useState<
+    Record<number, string>
+  >({});
   const [mensagem, setMensagem] = useState("");
 
   async function carregar() {
@@ -105,15 +114,21 @@ export default function TreinamentosVisitantes() {
     setSalvando(true);
     setMensagem("");
     try {
-      await api.post("/treinamentos-visitantes", {
+      const payload = {
         ...form,
         treinamentoId: form.treinamentoId ? Number(form.treinamentoId) : null,
-      });
+      };
+      if (editandoId) {
+        await api.put(`/treinamentos-visitantes/${editandoId}`, payload);
+      } else {
+        await api.post("/treinamentos-visitantes", payload);
+      }
       setForm(inicial);
+      setEditandoId(null);
       setMensagem(
         form.treinamentoId
-          ? "Visitante cadastrado e treinamento enviado por e-mail."
-          : "Visitante cadastrado.",
+          ? "Visitante salvo e treinamento enviado por e-mail."
+          : "Visitante salvo.",
       );
       await carregar();
     } catch (error: any) {
@@ -138,6 +153,48 @@ export default function TreinamentosVisitantes() {
       setMensagem(error.response?.data?.error || "Erro ao enviar convite.");
     } finally {
       setEnviandoId(null);
+    }
+  }
+
+  function editar(visitante: Visitante) {
+    setEditandoId(visitante.id);
+    setForm({
+      nomeCompleto: visitante.nomeCompleto || "",
+      cpf: mascararCpf(visitante.cpf || ""),
+      email: visitante.email || "",
+      dataNascimento: visitante.dataNascimento
+        ? visitante.dataNascimento.slice(0, 10)
+        : "",
+      empresa: visitante.empresa || "",
+      cargo: visitante.cargo || "",
+      treinamentoId: "",
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function cancelarEdicao() {
+    setEditandoId(null);
+    setForm(inicial);
+  }
+
+  async function excluir(visitante: Visitante) {
+    if (
+      !window.confirm(
+        `Deseja excluir o visitante ${visitante.nomeCompleto}? O acompanhamento de treinamentos já enviados permanece na tela de Treinamentos Criados.`,
+      )
+    ) {
+      return;
+    }
+    setExcluindoId(visitante.id);
+    setMensagem("");
+    try {
+      await api.delete(`/treinamentos-visitantes/${visitante.id}`);
+      setMensagem("Visitante excluído.");
+      await carregar();
+    } catch (error: any) {
+      setMensagem(error.response?.data?.error || "Erro ao excluir visitante.");
+    } finally {
+      setExcluindoId(null);
     }
   }
 
@@ -179,9 +236,12 @@ export default function TreinamentosVisitantes() {
             <UserPlus size={20} />
           </div>
           <div>
-            <h2 className="text-lg font-black text-white">Novo visitante</h2>
+            <h2 className="text-lg font-black text-white">
+              {editandoId ? "Editar visitante" : "Novo visitante"}
+            </h2>
             <p className="text-xs font-bold text-slate-400">
-              O treinamento selecionado será enviado ao salvar.
+              Selecione um treinamento público para enviar ao salvar, ou deixe em
+              branco para cadastrar sem envio.
             </p>
           </div>
         </div>
@@ -241,13 +301,25 @@ export default function TreinamentosVisitantes() {
           </select>
         </div>
 
-        <button
-          disabled={salvando}
-          className="mt-5 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 disabled:opacity-60"
-        >
-          <Mail size={17} />
-          {salvando ? "Salvando..." : "Salvar visitante"}
-        </button>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button
+            disabled={salvando}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500 disabled:opacity-60"
+          >
+            <Mail size={17} />
+            {salvando ? "Salvando..." : "Salvar visitante"}
+          </button>
+          {editandoId && (
+            <button
+              type="button"
+              onClick={cancelarEdicao}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-5 py-3 text-sm font-black text-slate-200 hover:border-slate-500"
+            >
+              <X size={17} />
+              Cancelar edição
+            </button>
+          )}
+        </div>
       </form>
 
       <section className="rounded-2xl border border-slate-800 bg-slate-950/70 shadow-xl">
@@ -277,41 +349,40 @@ export default function TreinamentosVisitantes() {
               <tr className="border-b border-slate-800">
                 <th className="px-4 py-3">Visitante</th>
                 <th className="px-4 py-3">Empresa / cargo</th>
-                <th className="px-4 py-3">Último treinamento</th>
-                <th className="px-4 py-3">Validade</th>
+                <th className="px-4 py-3">Nascimento</th>
                 <th className="px-4 py-3">Enviar treinamento</th>
-                <th className="px-4 py-3 text-right">Ação</th>
+                <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filtrados.map((visitante) => {
-                const ultimo = visitante.participantes?.[0];
                 return (
-                  <tr key={visitante.id} className="border-b border-slate-800/80">
+                  <tr
+                    key={visitante.id}
+                    className="border-b border-slate-800/80"
+                  >
                     <td className="px-4 py-4">
-                      <p className="font-black text-white">{visitante.nomeCompleto}</p>
+                      <p className="font-black text-white">
+                        {visitante.nomeCompleto}
+                      </p>
                       <p className="mt-1 text-xs font-bold text-slate-400">
                         {cpfVisivelPorPerfil(visitante.cpf)} - {visitante.email}
                       </p>
                     </td>
                     <td className="px-4 py-4">
-                      <p className="font-bold text-slate-200">{visitante.empresa || "-"}</p>
+                      <p className="font-bold text-slate-200">
+                        {visitante.empresa || "-"}
+                      </p>
                       <p className="mt-1 text-xs font-bold text-slate-500">
                         {visitante.cargo || "-"}
                       </p>
                     </td>
-                    <td className="px-4 py-4">
-                      <p className="font-black text-slate-100">
-                        {ultimo?.treinamento
-                          ? `${ultimo.treinamento.codigo} - ${ultimo.treinamento.nome}`
-                          : "-"}
-                      </p>
-                      <p className="mt-1 text-xs font-bold text-slate-500">
-                        {ultimo?.status || "Sem envio"}
-                      </p>
-                    </td>
                     <td className="px-4 py-4 text-xs font-bold text-slate-300">
-                      {data(ultimo?.tokenExpiraEm)}
+                      {visitante.dataNascimento
+                        ? new Date(visitante.dataNascimento).toLocaleDateString(
+                            "pt-BR",
+                          )
+                        : "-"}
                     </td>
                     <td className="px-4 py-4">
                       <select
@@ -333,14 +404,34 @@ export default function TreinamentosVisitantes() {
                       </select>
                     </td>
                     <td className="px-4 py-4 text-right">
-                      <button
-                        onClick={() => enviar(visitante.id)}
-                        disabled={enviandoId === visitante.id || !envioPorVisitante[visitante.id]}
-                        className="inline-flex items-center gap-2 rounded-xl border border-blue-500/50 bg-blue-600/15 px-3 py-2 text-xs font-black text-blue-100 hover:bg-blue-600/25 disabled:opacity-60"
-                      >
-                        <Send size={15} />
-                        Enviar
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => enviar(visitante.id)}
+                          disabled={
+                            enviandoId === visitante.id ||
+                            !envioPorVisitante[visitante.id]
+                          }
+                          title="Enviar treinamento"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-500/50 bg-blue-600/15 text-blue-100 hover:bg-blue-600/25 disabled:opacity-60"
+                        >
+                          <Send size={15} />
+                        </button>
+                        <button
+                          onClick={() => editar(visitante)}
+                          title="Editar visitante"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 text-slate-100 hover:border-blue-500"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() => excluir(visitante)}
+                          disabled={excluindoId === visitante.id}
+                          title="Excluir visitante"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/50 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20 disabled:opacity-60"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );

@@ -999,13 +999,6 @@ export async function listarVisitantesTreinamentoModelo(
     const [visitantes, treinamentosPublicos] = await Promise.all([
       db.treinamentoModeloVisitante.findMany({
         orderBy: { updatedAt: "desc" },
-        include: {
-          participantes: {
-            orderBy: { updatedAt: "desc" },
-            take: 20,
-            include: { treinamento: { select: { codigo: true, nome: true, slug: true } } },
-          },
-        },
       }),
       db.treinamentoModelo.findMany({
         where: { acessoPublico: true, status: "Publicado" },
@@ -1203,6 +1196,33 @@ export async function enviarConviteVisitanteTreinamentoModelo(
     return res
       .status(500)
       .json({ error: error?.message || "Erro ao enviar treinamento." });
+  }
+}
+
+export async function excluirVisitanteTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ error: "Visitante inválido." });
+    }
+
+    const visitante = await db.treinamentoModeloVisitante.findUnique({
+      where: { id },
+    });
+    if (!visitante) {
+      return res.status(404).json({ error: "Visitante não encontrado." });
+    }
+
+    await db.treinamentoModeloVisitante.delete({ where: { id } });
+    return res.status(204).send();
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao excluir visitante." });
   }
 }
 

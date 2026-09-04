@@ -14,6 +14,7 @@ import {
   enviarConviteVisitanteTreinamentoModelo,
   excluirParticipanteTreinamentoModelo,
   excluirTreinamentoModelo,
+  excluirVisitanteTreinamentoModelo,
   iniciarTreinamentoModelo,
   listarTreinamentosModelo,
   listarUnidadesTreinamentoModelo,
@@ -188,6 +189,12 @@ router.post(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   enviarConviteVisitanteTreinamentoModelo,
+);
+router.delete(
+  "/treinamentos-visitantes/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  excluirVisitanteTreinamentoModelo,
 );
 router.get(
   "/treinamentos-dinamicos/:id/certificados.zip",
