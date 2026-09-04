@@ -24,6 +24,10 @@ export const uploadLimits = {
   fileSize: Number(process.env.UPLOAD_MAX_FILE_SIZE || 10 * 1024 * 1024),
 };
 
+export const videoUploadLimits = {
+  fileSize: Number(process.env.VIDEO_UPLOAD_MAX_FILE_SIZE || 700 * 1024 * 1024),
+};
+
 export const tiposAnexoPermitidos = [
   "image/jpeg",
   "image/png",
@@ -35,3 +39,5 @@ export const tiposAnexoPermitidos = [
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
+
+export const tiposVideoPermitidos = ["video/mp4", "video/webm", "video/ogg"];

@@ -248,6 +248,7 @@ export default function TreinamentoDinamicoPublico() {
   const [tempoVideo, setTempoVideo] = useState(0);
   const [duracaoVideo, setDuracaoVideo] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const maiorTempoVideoRef = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const perguntas =
@@ -285,6 +286,9 @@ export default function TreinamentoDinamicoPublico() {
   ];
   const videoIncorporado = urlVideoIncorporado(modelo?.videoUrl);
   const videoTemControle = videoControlavel(modelo?.videoUrl);
+  const videoAssistido =
+    !videoTemControle ||
+    (duracaoVideo > 0 && tempoVideo >= Math.max(0, duracaoVideo - 2));
   const chaveProgressoVideo =
     modelo && participante
       ? `movesecurity:treinamento-video:${modelo.id}:${participante.email}`
@@ -306,7 +310,7 @@ export default function TreinamentoDinamicoPublico() {
       localStorage.setItem(
         chaveProgressoVideo,
         JSON.stringify({
-          tempo: Math.floor(video.currentTime || 0),
+          tempo: Math.floor(maiorTempoVideoRef.current || video.currentTime || 0),
           duracao: Math.floor(video.duration || duracaoVideo || 0),
           atualizadoEm: new Date().toISOString(),
         }),
@@ -339,6 +343,7 @@ export default function TreinamentoDinamicoPublico() {
       if (tempoSalvo > 0 && tempoSalvo < Math.max(1, video.duration || 0) - 3) {
         video.currentTime = tempoSalvo;
         setTempoVideo(tempoSalvo);
+        maiorTempoVideoRef.current = tempoSalvo;
       }
     } catch {
       // sem progresso local salvo
@@ -348,13 +353,22 @@ export default function TreinamentoDinamicoPublico() {
   function atualizarTempoVideoDinamico() {
     const video = videoRef.current;
     if (!video) return;
+    if (video.currentTime > maiorTempoVideoRef.current + 3) {
+      video.currentTime = maiorTempoVideoRef.current;
+      setMensagem("O avanço do vídeo é bloqueado. Continue assistindo do ponto atual.");
+      return;
+    }
+    maiorTempoVideoRef.current = Math.max(
+      maiorTempoVideoRef.current,
+      video.currentTime || 0,
+    );
     setTempoVideo(video.currentTime || 0);
     setDuracaoVideo(video.duration || duracaoVideo || 0);
     if (!chaveProgressoVideo) return;
     localStorage.setItem(
       chaveProgressoVideo,
       JSON.stringify({
-        tempo: Math.floor(video.currentTime || 0),
+        tempo: Math.floor(maiorTempoVideoRef.current || video.currentTime || 0),
         duracao: Math.floor(video.duration || duracaoVideo || 0),
         atualizadoEm: new Date().toISOString(),
       }),
@@ -873,6 +887,10 @@ export default function TreinamentoDinamicoPublico() {
                       onPlay={() => setTocandoVideo(true)}
                       onPause={() => setTocandoVideo(false)}
                       onEnded={() => {
+                        maiorTempoVideoRef.current = Math.max(
+                          maiorTempoVideoRef.current,
+                          videoRef.current?.duration || tempoVideo,
+                        );
                         setTocandoVideo(false);
                         atualizarTempoVideoDinamico();
                       }}
@@ -882,6 +900,16 @@ export default function TreinamentoDinamicoPublico() {
                           videoRef.current.playbackRate !== velocidadeVideo
                         )
                           videoRef.current.playbackRate = velocidadeVideo;
+                      }}
+                      onSeeking={() => {
+                        if (
+                          videoRef.current &&
+                          videoRef.current.currentTime >
+                            maiorTempoVideoRef.current + 1
+                        ) {
+                          videoRef.current.currentTime =
+                            maiorTempoVideoRef.current;
+                        }
                       }}
                     />
                   ) : (
@@ -934,13 +962,20 @@ export default function TreinamentoDinamicoPublico() {
                   )}
                   <button
                     type="button"
+                    disabled={!videoAssistido}
                     onClick={() => {
+                      if (!videoAssistido) {
+                        setMensagem(
+                          "Assista ao vídeo até o final para continuar o treinamento.",
+                        );
+                        return;
+                      }
                       setIndice(
                         temQuiz ? indiceQuiz : indiceAvaliacaoTreinamento,
                       );
                       rolarTopo();
                     }}
-                    className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-700"
+                    className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Continuar treinamento
                   </button>
