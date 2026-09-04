@@ -2,6 +2,8 @@
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
+import { enviarEmail } from "../services/email.service";
+import { criptografarSegredo } from "../utils/secretCrypto";
 
 const chavePadrao = "global";
 const chaveMascarada = "********";
@@ -28,6 +30,7 @@ async function obterOuCriarConfiguracao() {
 function mascararConfiguracao(
   configuracao: Awaited<ReturnType<typeof obterOuCriarConfiguracao>>,
   exibirSso = false,
+  exibirSmtp = false,
 ) {
   const config = configuracao as any;
   const dados = {
@@ -38,11 +41,19 @@ function mascararConfiguracao(
     openaiApiKey: config.openaiApiKey ? chaveMascarada : "",
     ssoClientSecretConfigurado: Boolean(config.ssoClientSecret),
     ssoClientSecret: config.ssoClientSecret ? chaveMascarada : "",
+    smtpSenhaConfigurada: Boolean(config.smtpSenha || process.env.SMTP_PASS),
+    smtpSenha: config.smtpSenha ? chaveMascarada : "",
   };
 
   if (!exibirSso) {
     for (const chave of Object.keys(dados)) {
       if (chave.startsWith("sso")) delete dados[chave];
+    }
+  }
+
+  if (!exibirSmtp) {
+    for (const chave of Object.keys(dados)) {
+      if (chave.startsWith("smtp")) delete dados[chave];
     }
   }
 
@@ -118,7 +129,11 @@ export async function buscarConfiguracao(req: AuthRequest, res: Response) {
   try {
     const configuracao = await obterOuCriarConfiguracao();
     return res.json(
-      mascararConfiguracao(configuracao, podeConfigurarSso(req.usuarioPerfil)),
+      mascararConfiguracao(
+        configuracao,
+        podeConfigurarSso(req.usuarioPerfil),
+        req.usuarioPerfil === "SUPER_ADMIN",
+      ),
     );
   } catch (error) {
     console.error(error);
@@ -302,6 +317,28 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
       }
     }
 
+    if (req.usuarioPerfil === "SUPER_ADMIN") {
+      data.smtpAtivo = Boolean(req.body.smtpAtivo);
+      data.smtpHost = req.body.smtpHost || null;
+      data.smtpPorta = Number(req.body.smtpPorta || 587);
+      data.smtpSeguro = Boolean(req.body.smtpSeguro);
+      data.smtpUsuario = req.body.smtpUsuario || null;
+      data.smtpRemetente = req.body.smtpRemetente || null;
+      data.smtpRespostaPara = req.body.smtpRespostaPara || null;
+
+      if (
+        typeof req.body.smtpSenha === "string" &&
+        req.body.smtpSenha.trim() &&
+        req.body.smtpSenha !== chaveMascarada
+      ) {
+        data.smtpSenha = criptografarSegredo(req.body.smtpSenha.trim());
+      }
+
+      if (req.body.removerSmtpSenha === true) {
+        data.smtpSenha = null;
+      }
+    }
+
     const configuracao = await prisma.configuracaoSistema.update({
       where: { chave: chavePadrao },
       data,
@@ -316,19 +353,86 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
         ...(anterior as any),
         openaiApiKey: (anterior as any).openaiApiKey ? chaveMascarada : "",
         ssoClientSecret: (anterior as any).ssoClientSecret ? chaveMascarada : "",
+        smtpSenha: (anterior as any).smtpSenha ? chaveMascarada : "",
       },
       dadosNovos: {
         ...(configuracao as any),
         openaiApiKey: (configuracao as any).openaiApiKey ? chaveMascarada : "",
         ssoClientSecret: (configuracao as any).ssoClientSecret ? chaveMascarada : "",
+        smtpSenha: (configuracao as any).smtpSenha ? chaveMascarada : "",
       },
     });
 
     return res.json(
-      mascararConfiguracao(configuracao, podeConfigurarSso(req.usuarioPerfil)),
+      mascararConfiguracao(
+        configuracao,
+        podeConfigurarSso(req.usuarioPerfil),
+        req.usuarioPerfil === "SUPER_ADMIN",
+      ),
     );
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao atualizar configuracoes" });
+  }
+}
+
+export async function testarSmtpConfiguracao(req: AuthRequest, res: Response) {
+  try {
+    if (req.usuarioPerfil !== "SUPER_ADMIN") {
+      return res.status(403).json({ error: "Acesso restrito ao super_admin." });
+    }
+
+    const usuario = req.usuarioId
+      ? await prisma.usuario.findUnique({
+          where: { id: req.usuarioId },
+          select: { email: true },
+        })
+      : null;
+    const destino = String(req.body?.destino || usuario?.email || "").trim();
+    if (!destino || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(destino)) {
+      return res
+        .status(400)
+        .json({ error: "Informe um e-mail válido para o teste." });
+    }
+
+    const resultado = await enviarEmail({
+      to: destino,
+      subject: "Teste SMTP - MoveSecurity",
+      text:
+        "Este é um e-mail de teste enviado pelas configurações SMTP do MoveSecurity.",
+      html: `
+        <div style="font-family:Arial,sans-serif;color:#0f172a;line-height:1.5">
+          <h2 style="margin:0 0 12px;color:#2563eb">Teste SMTP - MoveSecurity</h2>
+          <p>Este é um e-mail de teste enviado pelas configurações SMTP do MoveSecurity.</p>
+          <p style="margin-top:18px">Atenciosamente,<br/>Segurança Patrimonial - Movecta</p>
+        </div>
+      `,
+    });
+
+    if (!resultado.enviado) {
+      return res.status(400).json({
+        error:
+          resultado.status === "SMTP_NAO_CONFIGURADO"
+            ? "SMTP não configurado ou inativo."
+            : "Não foi possível enviar o e-mail de teste.",
+        status: resultado.status,
+      });
+    }
+
+    await registrarLog({
+      req,
+      acao: "Teste das configuracoes SMTP",
+      tipoRegistro: "ConfiguracaoSistema",
+      registroId: (await obterOuCriarConfiguracao()).id,
+      dadosNovos: { destino, status: resultado.status },
+    });
+
+    return res.json({
+      mensagem: `E-mail de teste enviado para ${destino}.`,
+      status: resultado.status,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao testar SMTP." });
   }
 }
