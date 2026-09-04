@@ -153,6 +153,9 @@ export default function Login() {
             <span>Movecta S/A</span>
             <span>MoveSecurity</span>
           </div>
+          <p className="mt-3 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            Deploy teste 03/09/2026
+          </p>
         </form>
       </section>
     </main>
