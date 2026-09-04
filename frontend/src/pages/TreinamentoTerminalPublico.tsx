@@ -53,6 +53,7 @@ const vazio = {
 const portariaPdfUrl = "/docs/portaria-alf-sts-205-2026.pdf";
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
+const velocidadesVideo = [1, 1.25, 1.5];
 
 function campoClasse() {
   return "terminal-input w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition";
@@ -190,6 +191,51 @@ export default function TreinamentoTerminalPublico() {
       Math.max(0, (duracao || treinamento?.duracaoSegundos || 0) - tempoAtual),
     [duracao, tempoAtual, treinamento],
   );
+
+  useEffect(() => {
+    if (!treinamento || treinamento.videoConcluido) return;
+
+    function salvarAoSair() {
+      if (!treinamento || treinamentoConcluido(treinamento)) return;
+      maiorTempoRef.current = Math.max(
+        maiorTempoRef.current,
+        videoRef.current?.currentTime || 0,
+      );
+      const progressoSegundos = Math.floor(maiorTempoRef.current);
+      const duracaoSegundos = Math.floor(
+        duracao ||
+          videoRef.current?.duration ||
+          treinamento.duracaoSegundos ||
+          0,
+      );
+      if (!progressoSegundos && !duracaoSegundos) return;
+
+      fetch(`/api/public/treinamento-terminal/${treinamento.token}/progresso`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        keepalive: true,
+        body: JSON.stringify({
+          progressoSegundos,
+          duracaoSegundos,
+          videoConcluido: false,
+        }),
+      }).catch(() => undefined);
+    }
+
+    function salvarAoOcultar() {
+      if (document.visibilityState === "hidden") salvarAoSair();
+    }
+
+    document.addEventListener("visibilitychange", salvarAoOcultar);
+    window.addEventListener("pagehide", salvarAoSair);
+    window.addEventListener("beforeunload", salvarAoSair);
+    return () => {
+      document.removeEventListener("visibilitychange", salvarAoOcultar);
+      window.removeEventListener("pagehide", salvarAoSair);
+      window.removeEventListener("beforeunload", salvarAoSair);
+    };
+  }, [duracao, treinamento]);
 
   async function salvarProgresso(videoConcluido = false) {
     if (!treinamento) return;
@@ -348,8 +394,7 @@ export default function TreinamentoTerminalPublico() {
       );
   }
 
-  function alternarVelocidadeVideo() {
-    const proximaVelocidade = velocidadeVideo === 1 ? 1.5 : 1;
+  function selecionarVelocidadeVideo(proximaVelocidade: number) {
     setVelocidadeVideo(proximaVelocidade);
     if (videoRef.current) videoRef.current.playbackRate = proximaVelocidade;
   }
@@ -626,7 +671,8 @@ export default function TreinamentoTerminalPublico() {
                   Vídeo obrigatório
                 </h2>
                 <p className="mt-1 text-sm font-bold text-slate-900">
-                  Use os controles abaixo para reproduzir ou acelerar o vídeo.
+                  Use os controles abaixo para pausar, continuar ou ajustar a
+                  velocidade.
                 </p>
               </div>
               <div className="terminal-info-card rounded-xl border px-4 py-3 text-sm font-black shadow-sm">
@@ -708,15 +754,30 @@ export default function TreinamentoTerminalPublico() {
               >
                 <Maximize2 size={18} /> Tela cheia
               </button>
-              <button
-                type="button"
-                onClick={alternarVelocidadeVideo}
-                className={botaoSecundarioClasse()}
-              >
-                <FastForward size={18} />{" "}
-                {velocidadeVideo === 1 ? "Acelerar 1.5x" : "Voltar para 1x"}
-              </button>
+              <div className="terminal-secondary-action inline-flex w-full items-center justify-center gap-1 rounded-xl border p-1 shadow-lg sm:w-auto">
+                <span className="flex items-center gap-1 px-3 text-xs font-black text-slate-700">
+                  <FastForward size={15} /> Velocidade
+                </span>
+                {velocidadesVideo.map((velocidade) => (
+                  <button
+                    key={velocidade}
+                    type="button"
+                    onClick={() => selecionarVelocidadeVideo(velocidade)}
+                    className={`rounded-lg px-3 py-2 text-xs font-black transition ${
+                      velocidadeVideo === velocidade
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "text-slate-700 hover:bg-blue-50"
+                    }`}
+                  >
+                    {velocidade}x
+                  </button>
+                ))}
+              </div>
             </div>
+            <p className="mt-3 text-xs font-bold text-slate-600">
+              O progresso é salvo automaticamente para continuar depois do ponto
+              assistido.
+            </p>
           </div>
         )}
 
