@@ -323,7 +323,10 @@ function serializarModelo(modelo: any, incluirCorretas = true) {
     perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
     videoUrl: modelo.videoUrl || null,
     anexoNome: modelo.anexoNome || null,
-    anexoUrl: modelo.anexoUrl || null,
+    anexoUrl: modelo.anexoArquivo
+      ? `/api/public/treinamentos-dinamicos/${modelo.slug}/anexo`
+      : modelo.anexoUrl || null,
+    anexoArquivo: modelo.anexoArquivo || null,
     gruposPermitidos: normalizarGruposTreinamento(modelo.gruposPermitidosJson),
     gruposPermitidosJson: undefined,
     etapas: (modelo.etapas || []).map((etapa: any) => ({
@@ -719,6 +722,7 @@ function validarPayloadModelo(body: any) {
     videoUrl: texto(body.videoUrl) || null,
     anexoNome: texto(body.anexoNome) || null,
     anexoUrl: texto(body.anexoUrl) || null,
+    anexoArquivo: texto(body.anexoArquivo) || null,
   };
 }
 
@@ -781,6 +785,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               videoUrl: validacao.videoUrl,
               anexoNome: validacao.anexoNome,
               anexoUrl: validacao.anexoUrl,
+              anexoArquivo: validacao.anexoArquivo,
               notaMinima: Number(req.body.notaMinima) || 80,
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
@@ -802,6 +807,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               videoUrl: validacao.videoUrl,
               anexoNome: validacao.anexoNome,
               anexoUrl: validacao.anexoUrl,
+              anexoArquivo: validacao.anexoArquivo,
               notaMinima: Number(req.body.notaMinima) || 80,
               validadeMeses: Number(req.body.validadeMeses) || 24,
               textoCertificado: texto(req.body.textoCertificado) || null,
@@ -984,6 +990,64 @@ export async function buscarTreinamentoPublico(req: Request, res: Response) {
     return res.status(404).json({ error: "Treinamento não encontrado." });
   }
   return res.json({ treinamento: serializarModelo(modelo, false) });
+}
+
+export async function uploadAnexoTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
+  const arquivo = req.file as Express.Multer.File | undefined;
+  if (!arquivo) {
+    return res.status(400).json({ error: "Selecione um arquivo para anexar." });
+  }
+
+  return res.status(201).json({
+    anexoNome: arquivo.originalname,
+    anexoArquivo: arquivo.path.replace(/\\/g, "/"),
+    anexoUrl: `/uploads/treinamentos-dinamicos/${arquivo.filename}`,
+  });
+}
+
+export async function baixarAnexoTreinamentoModelo(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const modelo = await db.treinamentoModelo.findUnique({
+      where: { slug: texto(req.params.slug) },
+      select: {
+        status: true,
+        anexoNome: true,
+        anexoArquivo: true,
+      },
+    });
+
+    if (!modelo || modelo.status !== "Publicado" || !modelo.anexoArquivo) {
+      return res.status(404).json({ error: "Anexo não encontrado." });
+    }
+
+    const caminhoAbsoluto = path.resolve(process.cwd(), modelo.anexoArquivo);
+    const raizUploads = path.resolve(process.cwd(), "uploads");
+    const relativo = path.relative(raizUploads, caminhoAbsoluto);
+    if (
+      !relativo ||
+      relativo.startsWith("..") ||
+      path.isAbsolute(relativo) ||
+      !fs.existsSync(caminhoAbsoluto)
+    ) {
+      return res.status(404).json({ error: "Anexo não encontrado." });
+    }
+
+    return res.download(
+      caminhoAbsoluto,
+      modelo.anexoNome || path.basename(caminhoAbsoluto),
+    );
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao carregar anexo." });
+  }
 }
 
 export async function listarUnidadesTreinamentoModelo(

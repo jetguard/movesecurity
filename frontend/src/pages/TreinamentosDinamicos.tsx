@@ -13,6 +13,7 @@ import {
   Search,
   Video,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { api } from "../services/api";
 import { cpfVisivelPorPerfil } from "../utils/cpf";
@@ -44,6 +45,7 @@ type ModeloForm = {
   videoUrl: string;
   anexoNome: string;
   anexoUrl: string;
+  anexoArquivo: string;
   notaMinima: number;
   validadeMeses: number;
   versao?: number;
@@ -88,6 +90,7 @@ const modeloInicial: ModeloForm = {
   videoUrl: "",
   anexoNome: "",
   anexoUrl: "",
+  anexoArquivo: "",
   notaMinima: 80,
   validadeMeses: 24,
   status: "Publicado",
@@ -173,6 +176,7 @@ export default function TreinamentosDinamicos() {
   const [busca, setBusca] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [salvando, setSalvando] = useState(false);
+  const [anexando, setAnexando] = useState(false);
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
   const perfil = perfilAtual();
   const podeEditar = perfil === PERFIS.SUPER_ADMIN;
@@ -230,6 +234,7 @@ export default function TreinamentosDinamicos() {
       videoUrl: modelo.videoUrl || "",
       anexoNome: modelo.anexoNome || "",
       anexoUrl: modelo.anexoUrl || "",
+      anexoArquivo: modelo.anexoArquivo || "",
       notaMinima: modelo.notaMinima || 80,
       validadeMeses: modelo.validadeMeses || 24,
       status: modelo.status || "Publicado",
@@ -391,6 +396,34 @@ export default function TreinamentosDinamicos() {
       );
     } finally {
       setEnviandoId(null);
+    }
+  }
+
+  async function anexarArquivo(arquivo?: File | null) {
+    if (!arquivo) return;
+    setAnexando(true);
+    setMensagem("");
+    try {
+      const dados = new FormData();
+      dados.append("anexo", arquivo);
+      const response = await api.post("/treinamentos-dinamicos/anexo", dados, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      setForm((atual) => ({
+        ...atual,
+        anexoNome: response.data?.anexoNome || arquivo.name,
+        anexoUrl: response.data?.anexoUrl || atual.anexoUrl,
+        anexoArquivo: response.data?.anexoArquivo || atual.anexoArquivo,
+      }));
+      setMensagem(
+        "Arquivo anexado. Salve o treinamento para vincular o anexo.",
+      );
+    } catch (error: any) {
+      setMensagem(
+        error.response?.data?.error || "Não foi possível anexar o arquivo.",
+      );
+    } finally {
+      setAnexando(false);
     }
   }
 
@@ -585,10 +618,41 @@ export default function TreinamentosDinamicos() {
                   <input
                     value={form.anexoUrl}
                     onChange={(event) =>
-                      setForm({ ...form, anexoUrl: event.target.value })
+                      setForm({
+                        ...form,
+                        anexoUrl: event.target.value,
+                        anexoArquivo: "",
+                      })
                     }
                     placeholder="URL do PDF ou documento de apoio"
                     className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm font-bold text-white outline-none"
+                  />
+                </div>
+              </label>
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Anexar arquivo
+                <div className="mt-2 flex min-h-[50px] items-center justify-between gap-3 rounded-xl border border-dashed border-blue-400/60 bg-blue-500/10 px-3 py-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black normal-case tracking-normal text-white">
+                      {form.anexoNome || "Selecione um PDF ou arquivo"}
+                    </p>
+                    <p className="mt-0.5 text-[11px] font-semibold normal-case tracking-normal text-slate-300">
+                      PDF, Word, Excel, imagem ou texto até o limite do sistema.
+                    </p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-black text-white">
+                    <Upload size={15} />
+                    {anexando ? "Enviando" : "Escolher"}
+                  </span>
+                  <input
+                    type="file"
+                    disabled={anexando}
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.jpg,.jpeg,.png,.webp"
+                    onChange={(event) => {
+                      anexarArquivo(event.target.files?.[0]);
+                      event.target.value = "";
+                    }}
+                    className="sr-only"
                   />
                 </div>
               </label>
@@ -602,6 +666,22 @@ export default function TreinamentosDinamicos() {
                   placeholder="Ex.: Procedimento operacional em PDF"
                   className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
                 />
+                {(form.anexoUrl || form.anexoArquivo || form.anexoNome) && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        anexoNome: "",
+                        anexoUrl: "",
+                        anexoArquivo: "",
+                      })
+                    }
+                    className="mt-2 inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-xs font-black normal-case tracking-normal text-red-200 hover:bg-red-500/10"
+                  >
+                    <Trash2 size={14} /> Remover anexo
+                  </button>
+                )}
               </label>
             </div>
             <div className="md:col-span-2 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">

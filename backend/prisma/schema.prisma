@@ -1729,6 +1729,7 @@ model TreinamentoModelo {
   videoUrl             String?
   anexoNome            String?
   anexoUrl             String?
+  anexoArquivo         String?
   notaMinima           Int      @default(80)
   validadeMeses        Int      @default(24)
   textoCertificado     String?
