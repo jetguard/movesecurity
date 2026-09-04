@@ -7,11 +7,9 @@ import {
   ExternalLink,
   FileCheck2,
   Mail,
-  Paperclip,
   Plus,
   Save,
   Search,
-  Video,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -623,24 +621,6 @@ export default function TreinamentosDinamicos() {
             </div>
             <div className="md:col-span-2 grid gap-4 lg:grid-cols-2">
               <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                Link do vídeo
-                <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3">
-                  <Video size={17} className="shrink-0 text-blue-300" />
-                  <input
-                    value={form.videoUrl}
-                    onChange={(event) =>
-                      setForm({ ...form, videoUrl: event.target.value })
-                    }
-                    placeholder="SharePoint, YouTube, Google Drive ou URL direta"
-                    className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm font-bold text-white outline-none"
-                  />
-                </div>
-                <p className="mt-1 text-[11px] font-semibold normal-case tracking-normal text-slate-400">
-                  Links externos usam o player do provedor. Para bloquear avanço
-                  e retomar o ponto salvo, envie um MP4.
-                </p>
-              </label>
-              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Anexar vídeo MP4
                 <div className="mt-2 flex min-h-[50px] items-center justify-between gap-3 rounded-xl border border-dashed border-blue-400/60 bg-blue-500/10 px-3 py-2">
                   <div className="min-w-0">
@@ -677,24 +657,6 @@ export default function TreinamentosDinamicos() {
                     <Trash2 size={14} /> Remover vídeo
                   </button>
                 )}
-              </label>
-              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-                Link do anexo
-                <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3">
-                  <Paperclip size={17} className="shrink-0 text-blue-300" />
-                  <input
-                    value={form.anexoUrl}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        anexoUrl: event.target.value,
-                        anexoArquivo: "",
-                      })
-                    }
-                    placeholder="URL do PDF ou documento de apoio"
-                    className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm font-bold text-white outline-none"
-                  />
-                </div>
               </label>
               <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
                 Anexar arquivo

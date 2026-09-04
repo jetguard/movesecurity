@@ -27,6 +27,15 @@ function nomeArquivoSeguro(valor: unknown, fallback = "arquivo") {
   return limpo || fallback;
 }
 
+function removerArquivoInterno(caminho?: string | null) {
+  const relativo = texto(caminho).replace(/\\/g, "/");
+  if (!relativo || !relativo.startsWith("uploads/")) return;
+  const absoluto = path.resolve(process.cwd(), relativo);
+  const raizUploads = path.resolve(process.cwd(), "uploads");
+  if (!absoluto.startsWith(raizUploads)) return;
+  fs.rmSync(absoluto, { force: true });
+}
+
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
 }
@@ -976,7 +985,26 @@ export async function excluirTreinamentoModelo(
     const id = Number(req.params.id);
     if (!Number.isInteger(id))
       return res.status(400).json({ error: "Treinamento inválido." });
+    const modelo = await db.treinamentoModelo.findUnique({
+      where: { id },
+      select: {
+        videoUrl: true,
+        anexoArquivo: true,
+        participantes: {
+          select: {
+            certificadoArquivo: true,
+          },
+        },
+      },
+    });
+    if (!modelo)
+      return res.status(404).json({ error: "Treinamento não encontrado." });
     await db.treinamentoModelo.delete({ where: { id } });
+    removerArquivoInterno(modelo.videoUrl);
+    removerArquivoInterno(modelo.anexoArquivo);
+    for (const participante of modelo.participantes || []) {
+      removerArquivoInterno(participante.certificadoArquivo);
+    }
     return res.status(204).send();
   } catch (error: any) {
     return res
@@ -999,7 +1027,7 @@ export async function excluirParticipanteTreinamentoModelo(
     if (!participante)
       return res.status(404).json({ error: "Registro não encontrado." });
     if (participante.certificadoArquivo) {
-      fs.rmSync(participante.certificadoArquivo, { force: true });
+      removerArquivoInterno(participante.certificadoArquivo);
     }
     await db.treinamentoModeloParticipante.delete({ where: { id } });
     return res.status(204).send();
