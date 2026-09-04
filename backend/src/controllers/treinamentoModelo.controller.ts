@@ -52,6 +52,14 @@ function emailCorporativoMovecta(email: string) {
   return texto(email).toLowerCase().endsWith("@movecta.com.br");
 }
 
+function tokenExpiraEm24h() {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000);
+}
+
+function tokenExpirado(data?: Date | string | null) {
+  return Boolean(data && new Date(data).getTime() < Date.now());
+}
+
 const GRUPOS_TREINAMENTO = [
   "CCOS",
   "LIDERANCA",
@@ -982,6 +990,221 @@ export async function enviarConvitesTreinamentoModelo(
   }
 }
 
+export async function listarVisitantesTreinamentoModelo(
+  _req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const [visitantes, treinamentosPublicos] = await Promise.all([
+      db.treinamentoModeloVisitante.findMany({
+        orderBy: { updatedAt: "desc" },
+        include: {
+          participantes: {
+            orderBy: { updatedAt: "desc" },
+            take: 20,
+            include: { treinamento: { select: { codigo: true, nome: true, slug: true } } },
+          },
+        },
+      }),
+      db.treinamentoModelo.findMany({
+        where: { acessoPublico: true, status: "Publicado" },
+        orderBy: { nome: "asc" },
+        select: { id: true, codigo: true, nome: true, slug: true },
+      }),
+    ]);
+
+    return res.json({
+      visitantes,
+      treinamentosPublicos,
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao listar visitantes." });
+  }
+}
+
+export async function salvarVisitanteTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id || 0);
+    const nomeCompleto = texto(req.body.nomeCompleto);
+    const cpf = limparCpf(req.body.cpf || "");
+    const email = texto(req.body.email).toLowerCase();
+    const dataNascimentoTexto = texto(req.body.dataNascimento);
+    const dataNascimento = dataNascimentoTexto
+      ? new Date(`${dataNascimentoTexto}T00:00:00`)
+      : null;
+
+    if (!nomeCompleto || cpf.length !== 11 || !emailValido(email)) {
+      return res
+        .status(400)
+        .json({ error: "Informe nome completo, CPF válido e e-mail." });
+    }
+
+    if (dataNascimentoTexto && (!dataNascimento || Number.isNaN(dataNascimento.getTime()))) {
+      return res.status(400).json({ error: "Data de nascimento inválida." });
+    }
+
+    const data = {
+      nomeCompleto,
+      cpf,
+      email,
+      dataNascimento,
+      empresa: texto(req.body.empresa) || null,
+      cargo: texto(req.body.cargo) || null,
+      status: texto(req.body.status) || "Ativo",
+    };
+
+    const visitante = id
+      ? await db.treinamentoModeloVisitante.update({ where: { id }, data })
+      : await db.treinamentoModeloVisitante.upsert({
+          where: { cpf },
+          update: data,
+          create: data,
+        });
+
+    if (req.body.treinamentoId) {
+      await enviarConviteVisitanteInterno(Number(req.body.treinamentoId), visitante);
+    }
+
+    return res.status(id ? 200 : 201).json({ visitante });
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao salvar visitante." });
+  }
+}
+
+async function enviarConviteVisitanteInterno(treinamentoId: number, visitante: any) {
+  const modelo = await db.treinamentoModelo.findUnique({
+    where: { id: treinamentoId },
+    include: {
+      etapas: { orderBy: { ordem: "asc" } },
+      perguntas: {
+        orderBy: { ordem: "asc" },
+        include: { alternativas: { orderBy: { ordem: "asc" } } },
+      },
+    },
+  });
+
+  if (!modelo || modelo.status !== "Publicado" || !modelo.acessoPublico) {
+    throw new Error("Selecione um treinamento público publicado.");
+  }
+
+  const token = randomUUID();
+  const expiraEm = tokenExpiraEm24h();
+  const snapshotAtual = criarSnapshot(modelo);
+  const existente = await db.treinamentoModeloParticipante.findFirst({
+    where: {
+      treinamentoId: modelo.id,
+      OR: [{ visitanteId: visitante.id }, { email: visitante.email }, { cpf: visitante.cpf }],
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const dadosParticipante = {
+    visitanteId: visitante.id,
+    usuarioId: null,
+    nomeCompleto: visitante.nomeCompleto,
+    cpf: visitante.cpf,
+    email: visitante.email,
+    cargo: visitante.cargo,
+    departamento: "Visitante",
+    unidade: "Visitante",
+    empresa: visitante.empresa,
+    token,
+    tokenExpiraEm: expiraEm,
+    conviteEnviadoEm: new Date(),
+    versao: modelo.versao,
+    snapshotJson: snapshotAtual,
+    status: existente?.status === "Concluído" ? existente.status : "Em andamento",
+  };
+
+  const participante = existente
+    ? await db.treinamentoModeloParticipante.update({
+        where: { id: existente.id },
+        data: dadosParticipante,
+      })
+    : await db.treinamentoModeloParticipante.create({
+        data: {
+          treinamentoId: modelo.id,
+          ...dadosParticipante,
+        },
+      });
+
+  const link = `${appPublicUrl()}/treinamento/${modelo.slug}`;
+  const treinamentoCompleto = [modelo.codigo, modelo.nome]
+    .map(texto)
+    .filter(Boolean)
+    .join(" - ");
+
+  await enviarEmail({
+    to: visitante.email,
+    subject: `Treinamento ${modelo.nome}`,
+    text: [
+      `Olá, ${visitante.nomeCompleto}`,
+      "",
+      `Segue o treinamento ${treinamentoCompleto}.`,
+      "Acesse o link abaixo e informe o token para iniciar. Este acesso é válido por 24 horas.",
+      "",
+      `Link: ${link}`,
+      `Token: ${participante.token}`,
+      "",
+      "Atenciosamente,",
+      "Segurança Patrimonial - Movecta",
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+        <p>Olá, <strong>${escaparHtml(visitante.nomeCompleto)}</strong></p>
+        <p>Segue o treinamento <strong>${escaparHtml(treinamentoCompleto)}</strong>.</p>
+        <p>Acesse o link abaixo e informe o token para iniciar. Este acesso é válido por <strong>24 horas</strong>.</p>
+        <p style="margin: 24px 0;">
+          <a href="${escaparHtml(link)}" style="background: #2563eb; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: 700;">
+            Acessar treinamento
+          </a>
+        </p>
+        <p style="font-size: 20px; font-weight: 800; letter-spacing: 0.08em;">Token: ${escaparHtml(participante.token)}</p>
+        <p>Atenciosamente,<br><strong>Segurança Patrimonial - Movecta</strong></p>
+      </div>
+    `,
+  });
+
+  return participante;
+}
+
+export async function enviarConviteVisitanteTreinamentoModelo(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const visitante = await db.treinamentoModeloVisitante.findUnique({
+      where: { id: Number(req.params.id) },
+    });
+    if (!visitante) {
+      return res.status(404).json({ error: "Visitante não encontrado." });
+    }
+
+    const participante = await enviarConviteVisitanteInterno(
+      Number(req.body.treinamentoId),
+      visitante,
+    );
+    return res.json({
+      participante,
+      mensagem: "Treinamento enviado com token válido por 24 horas.",
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao enviar treinamento." });
+  }
+}
+
 export async function excluirTreinamentoModelo(
   req: AuthRequest,
   res: Response,
@@ -1235,6 +1458,52 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
     const modelo = await carregarModeloPorSlug(texto(req.params.slug));
     if (!modelo || modelo.status !== "Publicado")
       return res.status(404).json({ error: "Treinamento não encontrado." });
+
+    if (modelo.acessoPublico) {
+      const token = texto(req.body.token);
+      if (!token) {
+        return res
+          .status(400)
+          .json({ error: "Informe o token recebido por e-mail." });
+      }
+
+      const participante = await db.treinamentoModeloParticipante.findFirst({
+        where: { token, treinamentoId: modelo.id },
+      });
+
+      if (!participante) {
+        return res.status(404).json({ error: "Token inválido para este treinamento." });
+      }
+
+      if (tokenExpirado(participante.tokenExpiraEm)) {
+        await db.treinamentoModeloParticipante.update({
+          where: { id: participante.id },
+          data: { status: "Expirado" },
+        });
+        return res.status(403).json({
+          error:
+            "Token expirado. Solicite um novo envio do treinamento para continuar.",
+        });
+      }
+
+      const snapshotAtual = participante.snapshotJson || criarSnapshot(modelo);
+      const atualizado = await db.treinamentoModeloParticipante.update({
+        where: { id: participante.id },
+        data: {
+          ultimoAcessoEm: new Date(),
+          navegador: userAgent(req),
+          sistema: userAgent(req),
+          ipInicio: participante.ipInicio || req.ip,
+          versao: participante.versao || modelo.versao,
+          snapshotJson: snapshotAtual,
+        },
+      });
+
+      return res.json({
+        treinamento: lerSnapshot(atualizado, modelo, false),
+        participante: respostaParticipante(atualizado),
+      });
+    }
 
     const email = texto(req.body.email).toLowerCase();
     const terceirizado = Boolean(req.body.terceirizado);

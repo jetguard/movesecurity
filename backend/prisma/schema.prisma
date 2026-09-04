@@ -1816,6 +1816,7 @@ model TreinamentoModeloAlternativa {
 model TreinamentoModeloParticipante {
   id                       Int       @id @default(autoincrement())
   treinamentoId            Int
+  visitanteId              Int?
   token                    String    @unique
   usuarioId                Int?
   codigo                   String?   @unique
@@ -1838,6 +1839,8 @@ model TreinamentoModeloParticipante {
   snapshotJson             String?   @db.Text
   assinaturaDataUrl        String?   @db.LongText
   certificadoArquivo       String?   @db.Text
+  tokenExpiraEm            DateTime?
+  conviteEnviadoEm         DateTime?
   emailStatus              String?   @db.Text
   emailEnviadoEm           DateTime?
   ipInicio                 String?   @db.Text
@@ -1849,9 +1852,29 @@ model TreinamentoModeloParticipante {
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
 
-  treinamento TreinamentoModelo @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
+  treinamento TreinamentoModelo           @relation(fields: [treinamentoId], references: [id], onDelete: Cascade)
+  visitante   TreinamentoModeloVisitante? @relation(fields: [visitanteId], references: [id], onDelete: SetNull)
 
   @@index([treinamentoId, status, updatedAt])
+  @@index([visitanteId])
   @@index([email])
   @@index([cpf])
+}
+
+model TreinamentoModeloVisitante {
+  id             Int       @id @default(autoincrement())
+  nomeCompleto   String    @db.Text
+  cpf            String    @unique
+  email          String
+  dataNascimento DateTime?
+  empresa        String?   @db.Text
+  cargo          String?   @db.Text
+  status         String    @default("Ativo")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  participantes TreinamentoModeloParticipante[]
+
+  @@index([email])
+  @@index([status, updatedAt])
 }

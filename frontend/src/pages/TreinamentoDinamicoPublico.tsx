@@ -75,6 +75,7 @@ type Participante = {
 
 const formInicial = {
   email: "",
+  token: "",
   terceirizado: false,
 };
 
@@ -427,12 +428,21 @@ export default function TreinamentoDinamicoPublico() {
     setForm((atual) => ({ ...atual, email: valor.trim().toLowerCase() }));
   }
 
+  function alterarToken(valor: string) {
+    setForm((atual) => ({ ...atual, token: valor.trim() }));
+  }
+
   function alterarTerceirizado(valor: boolean) {
     setForm((atual) => ({ ...atual, terceirizado: valor }));
   }
   async function iniciar(event: FormEvent) {
     event.preventDefault();
-    if (!emailValido(form.email)) {
+    if (modelo?.acessoPublico) {
+      if (!form.token.trim()) {
+        setMensagem("Informe o token recebido por e-mail para iniciar.");
+        return;
+      }
+    } else if (!emailValido(form.email)) {
       setMensagem("Informe o e-mail cadastrado para iniciar.");
       return;
     }
@@ -745,37 +755,56 @@ export default function TreinamentoDinamicoPublico() {
               Acesso ao treinamento
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">
-              Identificação do participante
+              {modelo.acessoPublico ? "Token de acesso" : "Identificação do participante"}
             </h2>
             <p className="mt-2 text-sm font-extrabold leading-6 text-slate-800">
-              Preencha seus dados para iniciar ou continuar este treinamento.
+              {modelo.acessoPublico
+                ? "Informe o token temporário recebido por e-mail para iniciar ou continuar."
+                : "Preencha seus dados para iniciar ou continuar este treinamento."}
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm font-bold text-blue-950">
-                Este treinamento é restrito, informe seu e-mail corporativo para
-                continuar.
-              </div>
-              <input
-                value={form.email}
-                onChange={(e) => alterarEmail(e.target.value)}
-                required
-                type="email"
-                placeholder={
-                  form.terceirizado
-                    ? "E-mail pessoal cadastrado"
-                    : "E-mail corporativo cadastrado"
-                }
-                className="md:col-span-2 rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
-              <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
-                <input
-                  type="checkbox"
-                  checked={form.terceirizado}
-                  onChange={(e) => alterarTerceirizado(e.target.checked)}
-                  className="h-5 w-5 rounded border-blue-300 accent-blue-600"
-                />
-                Sou terceirizado
-              </label>
+              {modelo.acessoPublico ? (
+                <>
+                  <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm font-bold text-blue-950">
+                    O acesso é temporário e válido por 24 horas após o envio do convite.
+                  </div>
+                  <input
+                    value={form.token}
+                    onChange={(e) => alterarToken(e.target.value)}
+                    required
+                    placeholder="Digite o token recebido"
+                    className="md:col-span-2 rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-black text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm font-bold text-blue-950">
+                    Este treinamento é restrito, informe seu e-mail corporativo para
+                    continuar.
+                  </div>
+                  <input
+                    value={form.email}
+                    onChange={(e) => alterarEmail(e.target.value)}
+                    required
+                    type="email"
+                    placeholder={
+                      form.terceirizado
+                        ? "E-mail pessoal cadastrado"
+                        : "E-mail corporativo cadastrado"
+                    }
+                    className="md:col-span-2 rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                  />
+                  <label className="md:col-span-2 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm">
+                    <input
+                      type="checkbox"
+                      checked={form.terceirizado}
+                      onChange={(e) => alterarTerceirizado(e.target.checked)}
+                      className="h-5 w-5 rounded border-blue-300 accent-blue-600"
+                    />
+                    Sou terceirizado
+                  </label>
+                </>
+              )}
             </div>
             <button
               disabled={carregando}
