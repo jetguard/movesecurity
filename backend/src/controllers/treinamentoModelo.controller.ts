@@ -336,6 +336,7 @@ function serializarModelo(modelo: any, incluirCorretas = true) {
     publicUrl: `/treinamento/${modelo.slug}`,
     acessoPublico: Boolean(modelo.acessoPublico),
     perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
+    avaliacaoHabilitada: modelo.avaliacaoHabilitada !== false,
     videoUrl: videoPublico,
     anexoNome: modelo.anexoNome || null,
     anexoUrl: modelo.anexoArquivo
@@ -384,6 +385,7 @@ function aplicarConfiguracaoAtual(snapshot: any, modeloAtual?: any) {
     ...snapshot,
     acessoPublico: atual.acessoPublico,
     perguntasHabilitadas: atual.perguntasHabilitadas,
+    avaliacaoHabilitada: atual.avaliacaoHabilitada,
     videoUrl: atualPublico.videoUrl,
     anexoNome: atual.anexoNome,
     anexoUrl: atualPublico.anexoUrl,
@@ -679,6 +681,7 @@ function validarPayloadModelo(body: any) {
   const rascunho = status !== "Publicado";
   const acessoPublico = Boolean(body.acessoPublico);
   const perguntasHabilitadas = body.perguntasHabilitadas !== false;
+  const avaliacaoHabilitada = body.avaliacaoHabilitada !== false;
   const codigo =
     normalizarCodigo(body.codigo) || (rascunho ? `RASCUNHO-${Date.now()}` : "");
   const nome = texto(body.nome) || (rascunho ? "Treinamento em rascunho" : "");
@@ -753,6 +756,7 @@ function validarPayloadModelo(body: any) {
     status,
     acessoPublico,
     perguntasHabilitadas,
+    avaliacaoHabilitada,
     videoUrl: texto(body.videoUrl) || null,
     anexoNome: texto(body.anexoNome) || null,
     anexoUrl: texto(body.anexoUrl) || null,
@@ -816,6 +820,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               subtitulo: texto(req.body.subtitulo) || null,
               acessoPublico: validacao.acessoPublico,
               perguntasHabilitadas: validacao.perguntasHabilitadas,
+              avaliacaoHabilitada: validacao.avaliacaoHabilitada,
               videoUrl: validacao.videoUrl,
               anexoNome: validacao.anexoNome,
               anexoUrl: validacao.anexoUrl,
@@ -838,6 +843,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               subtitulo: texto(req.body.subtitulo) || null,
               acessoPublico: validacao.acessoPublico,
               perguntasHabilitadas: validacao.perguntasHabilitadas,
+              avaliacaoHabilitada: validacao.avaliacaoHabilitada,
               videoUrl: validacao.videoUrl,
               anexoNome: validacao.anexoNome,
               anexoUrl: validacao.anexoUrl,
@@ -1490,6 +1496,11 @@ export async function salvarAvaliacaoTreinamentoModelo(
       return res.status(404).json({ error: "Treinamento não encontrado." });
 
     const snapshot = lerSnapshot(participante, participante.treinamento, true);
+    if (snapshot.avaliacaoHabilitada === false) {
+      return res.status(400).json({
+        error: "Avaliação do treinamento não habilitada para este treinamento.",
+      });
+    }
     const temQuiz =
       snapshot.perguntasHabilitadas !== false &&
       (snapshot.perguntas || []).length > 0;
@@ -1573,13 +1584,14 @@ export async function concluirTreinamentoModelo(req: Request, res: Response) {
     const temQuiz =
       snapshot.perguntasHabilitadas !== false &&
       (snapshot.perguntas || []).length > 0;
+    const temAvaliacaoTreinamento = snapshot.avaliacaoHabilitada !== false;
     if (temQuiz && (participante.nota || 0) < snapshot.notaMinima) {
       return res
         .status(400)
         .json({ error: "A nota mínima ainda não foi atingida." });
     }
 
-    if (!participante.avaliacaoTreinamentoJson) {
+    if (temAvaliacaoTreinamento && !participante.avaliacaoTreinamentoJson) {
       return res.status(400).json({
         error:
           "Responda a avaliação do treinamento antes de emitir o certificado.",

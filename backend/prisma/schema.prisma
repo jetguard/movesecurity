@@ -1733,6 +1733,7 @@ model TreinamentoModelo {
   subtitulo            String?  @db.Text
   acessoPublico        Boolean  @default(false)
   perguntasHabilitadas Boolean  @default(true)
+  avaliacaoHabilitada  Boolean  @default(true)
   videoUrl             String?  @db.Text
   anexoNome            String?  @db.Text
   anexoUrl             String?  @db.Text

@@ -48,6 +48,7 @@ type Modelo = {
   descricao?: string | null;
   acessoPublico?: boolean;
   perguntasHabilitadas?: boolean;
+  avaliacaoHabilitada?: boolean;
   videoUrl?: string | null;
   anexoNome?: string | null;
   anexoUrl?: string | null;
@@ -255,12 +256,21 @@ export default function TreinamentoDinamicoPublico() {
     modelo?.perguntasHabilitadas === false ? [] : modelo?.perguntas || [];
   const temQuiz = perguntas.length > 0;
   const temVideo = Boolean(modelo?.videoUrl);
+  const temOpiniao = modelo?.avaliacaoHabilitada !== false;
   const totalEtapas = modelo?.etapas.length || 0;
   const indiceVideo = temVideo ? totalEtapas : -1;
   const indiceQuiz = totalEtapas + (temVideo ? 1 : 0);
   const indiceResultado = temQuiz ? indiceQuiz + 1 : -1;
-  const indiceAvaliacaoTreinamento = temQuiz ? indiceQuiz + 2 : indiceQuiz;
-  const indiceAssinatura = indiceAvaliacaoTreinamento + 1;
+  const indiceAvaliacaoTreinamento = temOpiniao
+    ? temQuiz
+      ? indiceResultado + 1
+      : indiceQuiz
+    : -1;
+  const indiceAssinatura = temOpiniao
+    ? indiceAvaliacaoTreinamento + 1
+    : temQuiz
+      ? indiceResultado + 1
+      : indiceQuiz;
   const etapa = modelo?.etapas[indice];
   const totalAvaliacaoTreinamento = perguntasAvaliacaoTreinamento.length + 1;
   const perguntaAvaliacao =
@@ -281,7 +291,9 @@ export default function TreinamentoDinamicoPublico() {
           { label: "Resultado", ativo: indice === indiceResultado },
         ]
       : []),
-    { label: "Opinião", ativo: indice === indiceAvaliacaoTreinamento },
+    ...(temOpiniao
+      ? [{ label: "Opinião", ativo: indice === indiceAvaliacaoTreinamento }]
+      : []),
     { label: "Assinatura", ativo: indice >= indiceAssinatura },
   ];
   const videoIncorporado = urlVideoIncorporado(modelo?.videoUrl);
@@ -289,6 +301,21 @@ export default function TreinamentoDinamicoPublico() {
   const videoAssistido =
     !videoTemControle ||
     (duracaoVideo > 0 && tempoVideo >= Math.max(0, duracaoVideo - 2));
+  const indiceAposConteudo = temVideo
+    ? indiceVideo
+    : temQuiz
+      ? indiceQuiz
+      : temOpiniao
+        ? indiceAvaliacaoTreinamento
+        : indiceAssinatura;
+  const indiceAposVideo = temQuiz
+    ? indiceQuiz
+    : temOpiniao
+      ? indiceAvaliacaoTreinamento
+      : indiceAssinatura;
+  const indiceAposResultado = temOpiniao
+    ? indiceAvaliacaoTreinamento
+    : indiceAssinatura;
   const chaveProgressoVideo =
     modelo && participante
       ? `movesecurity:treinamento-video:${modelo.id}:${participante.email}`
@@ -426,14 +453,18 @@ export default function TreinamentoDinamicoPublico() {
       const temQuizRecebido =
         treinamentoRecebido.perguntasHabilitadas !== false &&
         (treinamentoRecebido.perguntas?.length || 0) > 0;
-      const etapaMaximaRecebida =
+      const temOpiniaoRecebida =
+        treinamentoRecebido.avaliacaoHabilitada !== false;
+      const totalFluxoRecebido =
         totalConteudoRecebido +
         (temVideoRecebido ? 1 : 0) +
-        (temQuizRecebido ? 3 : 1);
+        (temQuizRecebido ? 2 : 0) +
+        (temOpiniaoRecebida ? 1 : 0) +
+        1;
       setIndice(
         Math.max(
           0,
-          Math.min(etapaMaximaRecebida, (registro.etapaAtual || 1) - 1),
+          Math.min(totalFluxoRecebido - 1, (registro.etapaAtual || 1) - 1),
         ),
       );
     } catch (error: any) {
@@ -468,7 +499,9 @@ export default function TreinamentoDinamicoPublico() {
         },
       );
       setParticipante(response.data.participante);
-      setIndice((atual) => Math.min(indiceAvaliacaoTreinamento, atual + 1));
+      setIndice((atual) =>
+        atual + 1 >= totalEtapas ? indiceAposConteudo : atual + 1,
+      );
       rolarTopo();
     } catch (error: any) {
       setMensagem(
@@ -483,7 +516,7 @@ export default function TreinamentoDinamicoPublico() {
     if (!participante || !modelo) return;
     if (!temQuiz) {
       setResultado({ aprovado: true, nota: 100, acertos: 0 });
-      setIndice(indiceAvaliacaoTreinamento);
+      setIndice(indiceAposResultado);
       rolarTopo();
       return;
     }
@@ -510,7 +543,9 @@ export default function TreinamentoDinamicoPublico() {
       rolarTopo();
       setMensagem(
         response.data.aprovado
-          ? "Você atingiu a nota mínima. Avance para avaliar o treinamento."
+          ? temOpiniao
+            ? "Você atingiu a nota mínima. Avance para avaliar o treinamento."
+            : "Você atingiu a nota mínima. Avance para assinar o treinamento."
           : "Você não atingiu a nota mínima. Revise as perguntas e tente novamente.",
       );
     } catch (error: any) {
@@ -970,9 +1005,7 @@ export default function TreinamentoDinamicoPublico() {
                         );
                         return;
                       }
-                      setIndice(
-                        temQuiz ? indiceQuiz : indiceAvaliacaoTreinamento,
-                      );
+                      setIndice(indiceAposVideo);
                       rolarTopo();
                     }}
                     className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -1086,11 +1119,11 @@ export default function TreinamentoDinamicoPublico() {
                   <button
                     onClick={() => {
                       setPerguntaAvaliacaoAtual(0);
-                      setIndice(indiceAvaliacaoTreinamento);
+                      setIndice(indiceAposResultado);
                     }}
                     className="mt-6 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white"
                   >
-                    Avaliar treinamento
+                    {temOpiniao ? "Avaliar treinamento" : "Avançar para assinatura"}
                   </button>
                 ) : (
                   <button
@@ -1106,7 +1139,7 @@ export default function TreinamentoDinamicoPublico() {
               </section>
             )}
 
-            {indice === indiceAvaliacaoTreinamento && (
+            {temOpiniao && indice === indiceAvaliacaoTreinamento && (
               <section className="rounded-2xl border border-blue-100 bg-white/95 p-4 text-slate-950 shadow-lg shadow-blue-900/5 backdrop-blur sm:p-5">
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
                   Avaliação do treinamento
@@ -1259,7 +1292,11 @@ export default function TreinamentoDinamicoPublico() {
                     className="rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-black text-blue-700 shadow-sm hover:bg-blue-50"
                   >
                     {perguntaAvaliacaoAtual === 0
-                      ? "Voltar ao resultado"
+                      ? temQuiz
+                        ? "Voltar ao resultado"
+                        : temVideo
+                          ? "Voltar ao vídeo"
+                          : "Voltar ao conteúdo"
                       : "Voltar etapa"}
                   </button>
                   {perguntaAvaliacaoAtual < totalAvaliacaoTreinamento - 1 ? (
@@ -1291,8 +1328,10 @@ export default function TreinamentoDinamicoPublico() {
                   Declaração e assinatura
                 </h2>
                 <p className="mt-4 rounded-xl border border-blue-100 bg-blue-50/55 p-4 text-sm font-black leading-6 text-slate-950">
-                  Declaro que li integralmente o conteúdo, respondi à avaliação
-                  e estou ciente das orientações apresentadas neste treinamento.
+                  Declaro que li integralmente o conteúdo
+                  {temQuiz ? ", respondi à avaliação" : ""}
+                  {temOpiniao ? " e registrei minha opinião" : ""}, estando
+                  ciente das orientações apresentadas neste treinamento.
                 </p>
                 {!participante.certificadoUrl && (
                   <div className="mt-5 rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
