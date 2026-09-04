@@ -7,9 +7,11 @@ import {
   ExternalLink,
   FileCheck2,
   Mail,
+  Paperclip,
   Plus,
   Save,
   Search,
+  Video,
   Trash2,
 } from "lucide-react";
 import { api } from "../services/api";
@@ -37,6 +39,11 @@ type ModeloForm = {
   nome: string;
   descricao: string;
   subtitulo: string;
+  acessoPublico: boolean;
+  perguntasHabilitadas: boolean;
+  videoUrl: string;
+  anexoNome: string;
+  anexoUrl: string;
   notaMinima: number;
   validadeMeses: number;
   versao?: number;
@@ -76,6 +83,11 @@ const modeloInicial: ModeloForm = {
   nome: "",
   descricao: "",
   subtitulo: "",
+  acessoPublico: false,
+  perguntasHabilitadas: true,
+  videoUrl: "",
+  anexoNome: "",
+  anexoUrl: "",
   notaMinima: 80,
   validadeMeses: 24,
   status: "Publicado",
@@ -213,6 +225,11 @@ export default function TreinamentosDinamicos() {
       nome: modelo.nome,
       descricao: modelo.descricao || "",
       subtitulo: modelo.subtitulo || "",
+      acessoPublico: Boolean(modelo.acessoPublico),
+      perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
+      videoUrl: modelo.videoUrl || "",
+      anexoNome: modelo.anexoNome || "",
+      anexoUrl: modelo.anexoUrl || "",
       notaMinima: modelo.notaMinima || 80,
       validadeMeses: modelo.validadeMeses || 24,
       status: modelo.status || "Publicado",
@@ -233,6 +250,7 @@ export default function TreinamentosDinamicos() {
   }
 
   function alternarGrupo(grupo: string) {
+    if (form.acessoPublico) return;
     const grupoNormalizado = normalizarGrupoTreinamento(grupo);
     if (!grupoNormalizado) return;
     setForm((atual) => ({
@@ -488,6 +506,104 @@ export default function TreinamentosDinamicos() {
                 <option>Rascunho</option>
               </select>
             </label>
+            <div className="md:col-span-2 grid gap-3 lg:grid-cols-2">
+              <label
+                className={`flex items-start gap-3 rounded-2xl border p-4 text-sm font-black ${
+                  form.acessoPublico
+                    ? "border-emerald-400 bg-emerald-500/15 text-emerald-100"
+                    : "border-slate-700 bg-slate-950/70 text-slate-200"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={form.acessoPublico}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      acessoPublico: event.target.checked,
+                      gruposPermitidos: event.target.checked
+                        ? []
+                        : form.gruposPermitidos,
+                    })
+                  }
+                  className="mt-1 h-5 w-5 accent-emerald-500"
+                />
+                <span>
+                  Treinamento público
+                  <small className="mt-1 block text-xs font-semibold text-slate-300">
+                    Libera o acesso sem restrição por grupo. Ao ativar, os
+                    grupos ficam bloqueados.
+                  </small>
+                </span>
+              </label>
+              <label
+                className={`flex items-start gap-3 rounded-2xl border p-4 text-sm font-black ${
+                  form.perguntasHabilitadas
+                    ? "border-blue-400 bg-blue-500/15 text-blue-100"
+                    : "border-slate-700 bg-slate-950/70 text-slate-200"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={form.perguntasHabilitadas}
+                  onChange={(event) =>
+                    setForm({
+                      ...form,
+                      perguntasHabilitadas: event.target.checked,
+                    })
+                  }
+                  className="mt-1 h-5 w-5 accent-blue-500"
+                />
+                <span>
+                  Habilitar perguntas
+                  <small className="mt-1 block text-xs font-semibold text-slate-300">
+                    Quando desligado, o treinamento segue direto para opinião,
+                    assinatura e certificado.
+                  </small>
+                </span>
+              </label>
+            </div>
+            <div className="md:col-span-2 grid gap-4 lg:grid-cols-2">
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Link do vídeo
+                <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3">
+                  <Video size={17} className="shrink-0 text-blue-300" />
+                  <input
+                    value={form.videoUrl}
+                    onChange={(event) =>
+                      setForm({ ...form, videoUrl: event.target.value })
+                    }
+                    placeholder="SharePoint, YouTube ou URL do vídeo"
+                    className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm font-bold text-white outline-none"
+                  />
+                </div>
+              </label>
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500">
+                Link do anexo
+                <div className="mt-2 flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3">
+                  <Paperclip size={17} className="shrink-0 text-blue-300" />
+                  <input
+                    value={form.anexoUrl}
+                    onChange={(event) =>
+                      setForm({ ...form, anexoUrl: event.target.value })
+                    }
+                    placeholder="URL do PDF ou documento de apoio"
+                    className="min-w-0 flex-1 !border-0 !bg-transparent !p-0 text-sm font-bold text-white outline-none"
+                  />
+                </div>
+              </label>
+              <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-500 lg:col-span-2">
+                Nome do anexo
+                <input
+                  value={form.anexoNome}
+                  onChange={(event) =>
+                    setForm({ ...form, anexoNome: event.target.value })
+                  }
+                  placeholder="Ex.: Procedimento operacional em PDF"
+                  className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold normal-case tracking-normal text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
+                />
+              </label>
+            </div>
             <div className="md:col-span-2 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
               <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-200">
                 Grupos liberados
@@ -501,13 +617,16 @@ export default function TreinamentosDinamicos() {
                   <label
                     key={grupo.valor}
                     className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-black ${
-                      form.gruposPermitidos.includes(grupo.valor)
-                        ? "border-blue-400 bg-blue-500 text-white"
-                        : "border-slate-700 bg-slate-900 text-slate-200"
+                      form.acessoPublico
+                        ? "cursor-not-allowed border-slate-800 bg-slate-900/50 text-slate-500"
+                        : form.gruposPermitidos.includes(grupo.valor)
+                          ? "border-blue-400 bg-blue-500 text-white"
+                          : "border-slate-700 bg-slate-900 text-slate-200"
                     }`}
                   >
                     <input
                       type="checkbox"
+                      disabled={form.acessoPublico}
                       checked={form.gruposPermitidos.includes(grupo.valor)}
                       onChange={() => alternarGrupo(grupo.valor)}
                     />
@@ -638,119 +757,133 @@ export default function TreinamentosDinamicos() {
             ))}
           </div>
 
-          <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-xl font-black text-slate-900 dark:text-white">
-                Perguntas
-              </h2>
-              <button
-                type="button"
-                onClick={() =>
-                  setForm({
-                    ...form,
-                    perguntas: [
-                      ...form.perguntas,
-                      {
-                        etapaOrdem: 1,
-                        pergunta: "",
-                        alternativas: [
-                          { texto: "", correta: true },
-                          { texto: "", correta: false },
-                          { texto: "", correta: false },
-                          { texto: "", correta: false },
-                        ],
-                      },
-                    ],
-                  })
-                }
-                className="rounded-xl border border-blue-200 px-3 py-2 text-xs font-black text-blue-700 dark:border-blue-500/30 dark:text-blue-200"
-              >
-                Adicionar pergunta
-              </button>
-            </div>
-            {form.perguntas.map((pergunta, index) => (
-              <div
-                key={index}
-                className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <p className="font-black text-slate-900 dark:text-white">
-                    Pergunta {index + 1}
-                  </p>
-                  {form.perguntas.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setForm({
-                          ...form,
-                          perguntas: form.perguntas.filter(
-                            (_, pos) => pos !== index,
-                          ),
-                        })
-                      }
-                      className="text-red-500"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
-                </div>
-                <div className="grid gap-3">
-                  <select
-                    value={pergunta.etapaOrdem}
-                    onChange={(event) =>
-                      atualizarPergunta(
-                        index,
-                        "etapaOrdem",
-                        Number(event.target.value),
-                      )
-                    }
-                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
-                  >
-                    {form.etapas.map((etapa, etapaIndex) => (
-                      <option key={etapaIndex} value={etapaIndex + 1}>
-                        Etapa {etapaIndex + 1} - {etapa.titulo || "Sem título"}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    value={pergunta.pergunta}
-                    onChange={(event) =>
-                      atualizarPergunta(index, "pergunta", event.target.value)
-                    }
-                    placeholder="Texto da pergunta"
-                    className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
-                  />
-                  <div className="grid gap-2 md:grid-cols-2">
-                    {pergunta.alternativas.map((alternativa, altIndex) => (
-                      <label
-                        key={altIndex}
-                        className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white p-2 dark:border-slate-600"
+          {form.perguntasHabilitadas ? (
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-xl font-black text-slate-900 dark:text-white">
+                  Perguntas
+                </h2>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setForm({
+                      ...form,
+                      perguntas: [
+                        ...form.perguntas,
+                        {
+                          etapaOrdem: 1,
+                          pergunta: "",
+                          alternativas: [
+                            { texto: "", correta: true },
+                            { texto: "", correta: false },
+                            { texto: "", correta: false },
+                            { texto: "", correta: false },
+                          ],
+                        },
+                      ],
+                    })
+                  }
+                  className="rounded-xl border border-blue-200 px-3 py-2 text-xs font-black text-blue-700 dark:border-blue-500/30 dark:text-blue-200"
+                >
+                  Adicionar pergunta
+                </button>
+              </div>
+              {form.perguntas.map((pergunta, index) => (
+                <div
+                  key={index}
+                  className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800"
+                >
+                  <div className="mb-3 flex items-center justify-between">
+                    <p className="font-black text-slate-900 dark:text-white">
+                      Pergunta {index + 1}
+                    </p>
+                    {form.perguntas.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setForm({
+                            ...form,
+                            perguntas: form.perguntas.filter(
+                              (_, pos) => pos !== index,
+                            ),
+                          })
+                        }
+                        className="text-red-500"
                       >
-                        <input
-                          type="radio"
-                          checked={alternativa.correta}
-                          onChange={() => marcarCorreta(index, altIndex)}
-                          className="accent-blue-600"
-                        />
-                        <input
-                          value={alternativa.texto}
-                          onChange={(event) =>
-                            atualizarAlternativa(
-                              index,
-                              altIndex,
-                              event.target.value,
-                            )
-                          }
-                          placeholder={`Alternativa ${altIndex + 1}`}
-                          className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none"
-                        />
-                      </label>
-                    ))}
+                        <Trash2 size={18} />
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid gap-3">
+                    <select
+                      value={pergunta.etapaOrdem}
+                      onChange={(event) =>
+                        atualizarPergunta(
+                          index,
+                          "etapaOrdem",
+                          Number(event.target.value),
+                        )
+                      }
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
+                    >
+                      {form.etapas.map((etapa, etapaIndex) => (
+                        <option key={etapaIndex} value={etapaIndex + 1}>
+                          Etapa {etapaIndex + 1} -{" "}
+                          {etapa.titulo || "Sem título"}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      value={pergunta.pergunta}
+                      onChange={(event) =>
+                        atualizarPergunta(index, "pergunta", event.target.value)
+                      }
+                      placeholder="Texto da pergunta"
+                      className="rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-bold text-slate-950 outline-none focus:border-blue-500 dark:border-slate-600"
+                    />
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {pergunta.alternativas.map((alternativa, altIndex) => (
+                        <label
+                          key={altIndex}
+                          className="flex items-center gap-2 rounded-xl border border-slate-300 bg-white p-2 dark:border-slate-600"
+                        >
+                          <input
+                            type="radio"
+                            checked={alternativa.correta}
+                            onChange={() => marcarCorreta(index, altIndex)}
+                            className="accent-blue-600"
+                          />
+                          <input
+                            value={alternativa.texto}
+                            onChange={(event) =>
+                              atualizarAlternativa(
+                                index,
+                                altIndex,
+                                event.target.value,
+                              )
+                            }
+                            placeholder={`Alternativa ${altIndex + 1}`}
+                            className="min-w-0 flex-1 bg-transparent text-sm font-bold text-slate-950 outline-none"
+                          />
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-950/70 p-4">
+              <p className="text-sm font-black text-white">
+                Perguntas desabilitadas
+              </p>
+              <p className="mt-1 text-sm font-semibold text-slate-300">
+                O participante fará as etapas de conteúdo e seguirá para a
+                avaliação de opinião, declaração, assinatura e emissão do
+                certificado.
+              </p>
+            </div>
+          )}
 
           <div className="mt-6 flex flex-wrap gap-3">
             <button

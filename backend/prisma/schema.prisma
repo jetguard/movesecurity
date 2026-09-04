@@ -1731,6 +1731,11 @@ model TreinamentoModelo {
   nome                 String   @db.Text
   descricao            String?  @db.Text
   subtitulo            String?  @db.Text
+  acessoPublico        Boolean  @default(false)
+  perguntasHabilitadas Boolean  @default(true)
+  videoUrl             String?  @db.Text
+  anexoNome            String?  @db.Text
+  anexoUrl             String?  @db.Text
   notaMinima           Int      @default(80)
   validadeMeses        Int      @default(24)
   textoCertificado     String?  @db.Text
