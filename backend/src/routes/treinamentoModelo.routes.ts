@@ -11,16 +11,19 @@ import {
   concluirEtapaTreinamentoModelo,
   concluirTreinamentoModelo,
   enviarConvitesTreinamentoModelo,
+  enviarConviteVisitanteTreinamentoModelo,
   excluirParticipanteTreinamentoModelo,
   excluirTreinamentoModelo,
   iniciarTreinamentoModelo,
   listarTreinamentosModelo,
   listarUnidadesTreinamentoModelo,
+  listarVisitantesTreinamentoModelo,
   localizarParticipanteTreinamentoModelo,
   reenviarEmailTreinamentoModelo,
   responderQuizTreinamentoModelo,
   salvarAvaliacaoTreinamentoModelo,
   salvarTreinamentoModelo,
+  salvarVisitanteTreinamentoModelo,
   uploadAnexoTreinamentoModelo,
   uploadVideoTreinamentoModelo,
 } from "../controllers/treinamentoModelo.controller";
@@ -161,6 +164,30 @@ router.post(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   enviarConvitesTreinamentoModelo,
+);
+router.get(
+  "/treinamentos-visitantes",
+  autenticarUsuario,
+  autorizarPerfis(acessoTreinamentosTerminal),
+  listarVisitantesTreinamentoModelo,
+);
+router.post(
+  "/treinamentos-visitantes",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  salvarVisitanteTreinamentoModelo,
+);
+router.put(
+  "/treinamentos-visitantes/:id",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  salvarVisitanteTreinamentoModelo,
+);
+router.post(
+  "/treinamentos-visitantes/:id/enviar",
+  autenticarUsuario,
+  autorizarPerfis(acessoTotal),
+  enviarConviteVisitanteTreinamentoModelo,
 );
 router.get(
   "/treinamentos-dinamicos/:id/certificados.zip",

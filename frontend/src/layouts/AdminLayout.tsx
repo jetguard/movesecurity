@@ -587,6 +587,10 @@ export default function AdminLayout() {
                     <FileCheck2 size={16} />
                     Treinamentos Criados
                   </Link>
+                  <Link to="/treinamentos-visitantes" className={subItem}>
+                    <Users size={16} />
+                    Cadastro de Visitantes
+                  </Link>
                 </div>
               )}
               <Link to="/meus-dados" className={item}>
@@ -644,6 +648,10 @@ export default function AdminLayout() {
                       <Link to="/treinamentos-criados" className={subItem}>
                         <FileCheck2 size={16} />
                         Treinamentos Criados
+                      </Link>
+                      <Link to="/treinamentos-visitantes" className={subItem}>
+                        <Users size={16} />
+                        Cadastro de Visitantes
                       </Link>
                     </div>
                   )}
