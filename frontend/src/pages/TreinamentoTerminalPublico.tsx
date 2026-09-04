@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api } from "../services/api";
 import { formatarNomePessoa, nomePessoaValido } from "../utils/nomePessoa";
+import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type Config = {
   titulo: string;
@@ -191,6 +192,7 @@ export default function TreinamentoTerminalPublico() {
       Math.max(0, (duracao || treinamento?.duracaoSegundos || 0) - tempoAtual),
     [duracao, tempoAtual, treinamento],
   );
+  const podePularVideoTeste = perfilAtual() === PERFIS.SUPER_ADMIN;
 
   useEffect(() => {
     if (!treinamento || treinamento.videoConcluido) return;
@@ -409,6 +411,24 @@ export default function TreinamentoTerminalPublico() {
       .then(() => setEtapa(3))
       .catch(() =>
         setMensagem("Não foi possível registrar a conclusão do vídeo."),
+      );
+  }
+
+  function pularVideoParaTeste() {
+    if (!podePularVideoTeste) return;
+    const duracaoAtual = videoRef.current?.duration || duracao || tempoAtual || 1;
+    maiorTempoRef.current = Math.max(maiorTempoRef.current, duracaoAtual);
+    setTempoAtual(duracaoAtual);
+    setDuracao(duracaoAtual);
+    if (videoRef.current) videoRef.current.pause();
+    setTocando(false);
+    salvarProgresso(true)
+      .then(() => {
+        setMensagem("Vídeo pulado pelo super_admin para teste.");
+        setEtapa(3);
+      })
+      .catch(() =>
+        setMensagem("Não foi possível registrar o pulo do vídeo para teste."),
       );
   }
 
@@ -773,6 +793,15 @@ export default function TreinamentoTerminalPublico() {
                   </button>
                 ))}
               </div>
+              {podePularVideoTeste && (
+                <button
+                  type="button"
+                  onClick={pularVideoParaTeste}
+                  className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800 shadow-sm hover:bg-amber-100"
+                >
+                  Pular vídeo teste
+                </button>
+              )}
             </div>
             <p className="mt-3 text-xs font-bold text-slate-600">
               O progresso é salvo automaticamente para continuar depois do ponto

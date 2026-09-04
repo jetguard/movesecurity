@@ -14,6 +14,7 @@ import {
   PlayCircle,
   ShieldCheck,
 } from "lucide-react";
+import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
@@ -302,6 +303,7 @@ export default function TreinamentoDinamicoPublico() {
   const videoAssistido =
     !videoTemControle ||
     (duracaoVideo > 0 && tempoVideo >= Math.max(0, duracaoVideo - 2));
+  const podePularVideoTeste = perfilAtual() === PERFIS.SUPER_ADMIN;
   const indiceAposConteudo = temVideo
     ? indiceVideo
     : temQuiz
@@ -422,6 +424,23 @@ export default function TreinamentoDinamicoPublico() {
   function selecionarVelocidadeVideo(valor: number) {
     setVelocidadeVideo(valor);
     if (videoRef.current) videoRef.current.playbackRate = valor;
+  }
+
+  function pularVideoParaTeste() {
+    if (!podePularVideoTeste) return;
+    const duracaoAtual =
+      videoRef.current?.duration || duracaoVideo || tempoVideo || 1;
+    maiorTempoVideoRef.current = Math.max(
+      maiorTempoVideoRef.current,
+      duracaoAtual,
+    );
+    setTempoVideo(duracaoAtual);
+    setDuracaoVideo(duracaoAtual);
+    setTocandoVideo(false);
+    if (videoRef.current) videoRef.current.pause();
+    setMensagem("Vídeo pulado pelo super_admin para teste.");
+    setIndice(indiceAposVideo);
+    rolarTopo();
   }
 
   function alterarEmail(valor: string) {
@@ -1022,6 +1041,15 @@ export default function TreinamentoDinamicoPublico() {
                           </button>
                         ))}
                       </div>
+                      {podePularVideoTeste && (
+                        <button
+                          type="button"
+                          onClick={pularVideoParaTeste}
+                          className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800 shadow-sm hover:bg-amber-100"
+                        >
+                          Pular vídeo teste
+                        </button>
+                      )}
                     </>
                   )}
                   <button
