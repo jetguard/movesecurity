@@ -54,6 +54,9 @@ const inicial = {
   treinamentoId: "",
 };
 
+const campoModal =
+  "rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-500";
+
 function mascararCpf(valor: string) {
   const digitos = valor.replace(/\D/g, "").slice(0, 11);
   return digitos
@@ -494,58 +497,95 @@ export default function TreinamentosVisitantes() {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <input
-                value={form.nomeCompleto}
-                onChange={(e) => alterar("nomeCompleto", e.target.value)}
-                required
-                placeholder="Nome completo"
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
-              <input
-                value={form.cpf}
-                onChange={(e) => alterar("cpf", e.target.value)}
-                required
-                placeholder="CPF"
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
-              <input
-                value={form.email}
-                onChange={(e) => alterar("email", e.target.value.toLowerCase())}
-                required
-                type="email"
-                placeholder="E-mail"
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
-              <input
-                value={form.dataNascimento}
-                onChange={(e) => alterar("dataNascimento", e.target.value)}
-                type="date"
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-blue-500"
-              />
-              <input
-                value={form.empresa}
-                onChange={(e) => alterar("empresa", e.target.value)}
-                placeholder="Empresa"
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
-              <input
-                value={form.cargo}
-                onChange={(e) => alterar("cargo", e.target.value)}
-                placeholder="Cargo"
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-slate-500 focus:border-blue-500"
-              />
-              <select
-                value={form.treinamentoId}
-                onChange={(e) => alterar("treinamentoId", e.target.value)}
-                className="rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold text-white outline-none focus:border-blue-500 md:col-span-2"
-              >
-                <option value="">Cadastrar sem enviar agora</option>
-                {treinamentos.map((treinamento) => (
-                  <option key={treinamento.id} value={treinamento.id}>
-                    {treinamento.codigo} - {treinamento.nome}
-                  </option>
-                ))}
-              </select>
+              <label className="space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  Nome completo
+                </span>
+                <input
+                  value={form.nomeCompleto}
+                  onChange={(e) => alterar("nomeCompleto", e.target.value)}
+                  required
+                  placeholder="Nome completo do visitante"
+                  className={campoModal}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  CPF
+                </span>
+                <input
+                  value={form.cpf}
+                  onChange={(e) => alterar("cpf", e.target.value)}
+                  required
+                  placeholder="000.000.000-00"
+                  className={campoModal}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  E-mail
+                </span>
+                <input
+                  value={form.email}
+                  onChange={(e) =>
+                    alterar("email", e.target.value.toLowerCase())
+                  }
+                  required
+                  type="email"
+                  placeholder="email@empresa.com.br"
+                  className={campoModal}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  Data de nascimento
+                </span>
+                <input
+                  value={form.dataNascimento}
+                  onChange={(e) => alterar("dataNascimento", e.target.value)}
+                  type="date"
+                  className={campoModal}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  Empresa
+                </span>
+                <input
+                  value={form.empresa}
+                  onChange={(e) => alterar("empresa", e.target.value)}
+                  placeholder="Empresa do visitante"
+                  className={campoModal}
+                />
+              </label>
+              <label className="space-y-1.5">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  Cargo
+                </span>
+                <input
+                  value={form.cargo}
+                  onChange={(e) => alterar("cargo", e.target.value)}
+                  placeholder="Cargo ou função"
+                  className={campoModal}
+                />
+              </label>
+              <label className="space-y-1.5 md:col-span-2">
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-slate-400">
+                  Treinamento
+                </span>
+                <select
+                  value={form.treinamentoId}
+                  onChange={(e) => alterar("treinamentoId", e.target.value)}
+                  className={campoModal}
+                >
+                  <option value="">Cadastrar sem enviar agora</option>
+                  {treinamentos.map((treinamento) => (
+                    <option key={treinamento.id} value={treinamento.id}>
+                      {treinamento.codigo} - {treinamento.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <div className="mt-5 flex flex-wrap justify-end gap-3">
