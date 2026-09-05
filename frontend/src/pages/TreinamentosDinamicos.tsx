@@ -374,9 +374,7 @@ export default function TreinamentosDinamicos() {
     try {
       const dados = new FormData();
       dados.append("anexo", arquivo);
-      const response = await api.post("/treinamentos-dinamicos/anexo", dados, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await api.post("/treinamentos-dinamicos/anexo", dados);
       setForm((atual) => ({
         ...atual,
         anexoNome: response.data?.anexoNome || arquivo.name,
@@ -402,9 +400,7 @@ export default function TreinamentosDinamicos() {
     try {
       const dados = new FormData();
       dados.append("video", arquivo);
-      const response = await api.post("/treinamentos-dinamicos/video", dados, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await api.post("/treinamentos-dinamicos/video", dados);
       setForm((atual) => ({
         ...atual,
         videoUrl: response.data?.videoUrl || atual.videoUrl,
