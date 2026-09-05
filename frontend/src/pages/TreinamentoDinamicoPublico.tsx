@@ -789,7 +789,7 @@ export default function TreinamentoDinamicoPublico() {
         <div className="mb-4 flex items-center justify-between gap-4 rounded-2xl border border-blue-100 bg-white/90 px-4 py-3 shadow-sm backdrop-blur sm:mb-6 sm:px-5 sm:py-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
-              {modelo?.codigo || "Movecta"}
+              Treinamento MoveSecurity
             </p>
             <h1 className="mt-1.5 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
               {modelo?.nome || "Treinamento"}
