@@ -998,6 +998,30 @@ export async function listarVisitantesTreinamentoModelo(
     const [visitantes, treinamentosPublicos] = await Promise.all([
       db.treinamentoModeloVisitante.findMany({
         orderBy: { updatedAt: "desc" },
+        include: {
+          participantes: {
+            orderBy: { conviteEnviadoEm: "desc" },
+            take: 8,
+            select: {
+              id: true,
+              treinamentoId: true,
+              token: true,
+              tokenExpiraEm: true,
+              conviteEnviadoEm: true,
+              status: true,
+              treinamento: {
+                select: {
+                  id: true,
+                  codigo: true,
+                  nome: true,
+                  slug: true,
+                  acessoPublico: true,
+                  status: true,
+                },
+              },
+            },
+          },
+        },
       }),
       db.treinamentoModelo.findMany({
         where: { acessoPublico: true, status: "Publicado" },
