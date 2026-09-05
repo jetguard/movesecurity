@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { NextFunction, Request, Response, Router } from "express";
 import fs from "fs";
 import multer from "multer";
 import path from "path";
@@ -67,6 +67,25 @@ const upload = multer({
   },
 });
 
+function tratarErroUpload(
+  erro: unknown,
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) {
+  if (!erro) return next();
+  if (erro instanceof multer.MulterError && erro.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({
+      error:
+        "Arquivo muito grande para upload. Reduza o tamanho ou compacte o arquivo antes de anexar.",
+    });
+  }
+  if (erro instanceof Error) {
+    return res.status(400).json({ error: erro.message });
+  }
+  return res.status(400).json({ error: "Não foi possível processar o upload." });
+}
+
 const videoStorage = multer.diskStorage({
   destination: videoUploadDir,
   filename: (req, file, cb) => {
@@ -79,7 +98,12 @@ const uploadVideo = multer({
   storage: videoStorage,
   limits: videoUploadLimits,
   fileFilter: (req, file, cb) => {
-    if (!tiposVideoPermitidos.includes(file.mimetype)) {
+    const extensao = path.extname(file.originalname).toLowerCase();
+    const tipoPermitido =
+      tiposVideoPermitidos.includes(file.mimetype) ||
+      (file.mimetype === "application/octet-stream" &&
+        [".mp4", ".webm", ".ogg"].includes(extensao));
+    if (!tipoPermitido) {
       return cb(new Error("Tipo de vídeo não permitido."));
     }
     return cb(null, true);
@@ -145,6 +169,7 @@ router.post(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   upload.single("anexo"),
+  tratarErroUpload,
   uploadAnexoTreinamentoModelo,
 );
 router.post(
@@ -152,6 +177,7 @@ router.post(
   autenticarUsuario,
   autorizarPerfis(acessoTotal),
   uploadVideo.single("video"),
+  tratarErroUpload,
   uploadVideoTreinamentoModelo,
 );
 router.put(
