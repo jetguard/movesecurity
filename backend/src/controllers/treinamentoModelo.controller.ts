@@ -1,5 +1,6 @@
 ﻿import { randomUUID } from "node:crypto";
 import fs from "node:fs";
+import { randomInt } from "node:crypto";
 import path from "node:path";
 import { Request, Response } from "express";
 import archiver = require("archiver");
@@ -58,6 +59,29 @@ function tokenExpiraEm24h() {
 
 function tokenExpirado(data?: Date | string | null) {
   return Boolean(data && new Date(data).getTime() < Date.now());
+}
+
+function normalizarTokenTreinamento(token: unknown) {
+  const valor = texto(token);
+  const digitos = valor.replace(/\D/g, "");
+  return digitos.length ? digitos.slice(0, 6) : valor;
+}
+
+function formatarTokenTreinamento(token: unknown) {
+  const valor = normalizarTokenTreinamento(token);
+  return valor.length === 6 ? valor.split("").join("-") : valor;
+}
+
+async function gerarTokenTreinamentoPublico() {
+  for (let tentativa = 0; tentativa < 20; tentativa += 1) {
+    const token = String(randomInt(0, 1_000_000)).padStart(6, "0");
+    const existente = await db.treinamentoModeloParticipante.findUnique({
+      where: { token },
+      select: { id: true },
+    });
+    if (!existente) return token;
+  }
+  return randomUUID();
 }
 
 const GRUPOS_TREINAMENTO = [
@@ -1113,7 +1137,7 @@ async function enviarConviteVisitanteInterno(treinamentoId: number, visitante: a
     throw new Error("Selecione um treinamento público publicado.");
   }
 
-  const token = randomUUID();
+  const token = await gerarTokenTreinamentoPublico();
   const expiraEm = tokenExpiraEm24h();
   const snapshotAtual = criarSnapshot(modelo);
   const existente = await db.treinamentoModeloParticipante.findFirst({
@@ -1170,7 +1194,7 @@ async function enviarConviteVisitanteInterno(treinamentoId: number, visitante: a
       "Acesse o link abaixo e informe o token para iniciar. Este acesso é válido por 24 horas.",
       "",
       `Link: ${link}`,
-      `Token: ${participante.token}`,
+      `Token: ${formatarTokenTreinamento(participante.token)}`,
       "",
       "Atenciosamente,",
       "Segurança Patrimonial - Movecta",
@@ -1185,7 +1209,7 @@ async function enviarConviteVisitanteInterno(treinamentoId: number, visitante: a
             Acessar treinamento
           </a>
         </p>
-        <p style="font-size: 20px; font-weight: 800; letter-spacing: 0.08em;">Token: ${escaparHtml(participante.token)}</p>
+        <p style="font-size: 20px; font-weight: 800; letter-spacing: 0.08em;">Token: ${escaparHtml(formatarTokenTreinamento(participante.token))}</p>
         <p>Atenciosamente,<br><strong>Segurança Patrimonial - Movecta</strong></p>
       </div>
     `,
@@ -1504,7 +1528,7 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
       return res.status(404).json({ error: "Treinamento não encontrado." });
 
     if (modelo.acessoPublico) {
-      const token = texto(req.body.token);
+      const token = normalizarTokenTreinamento(req.body.token);
       if (!token) {
         return res
           .status(400)

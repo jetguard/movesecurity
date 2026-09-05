@@ -251,6 +251,7 @@ export default function TreinamentoDinamicoPublico() {
   const [tempoVideo, setTempoVideo] = useState(0);
   const [duracaoVideo, setDuracaoVideo] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const tokenRefs = useRef<Array<HTMLInputElement | null>>([]);
   const maiorTempoVideoRef = useRef(0);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
@@ -448,7 +449,45 @@ export default function TreinamentoDinamicoPublico() {
   }
 
   function alterarToken(valor: string) {
-    setForm((atual) => ({ ...atual, token: valor.trim() }));
+    setForm((atual) => ({
+      ...atual,
+      token: valor.replace(/\D/g, "").slice(0, 6),
+    }));
+  }
+
+  function alterarTokenIndice(indice: number, valor: string) {
+    const digitos = valor.replace(/\D/g, "");
+    const atual = form.token.padEnd(6, " ").split("");
+    if (digitos.length > 1) {
+      digitos
+        .slice(0, 6)
+        .split("")
+        .forEach((digito, posicao) => {
+          atual[posicao] = digito;
+        });
+      alterarToken(atual.join(""));
+      tokenRefs.current[Math.min(5, digitos.length - 1)]?.focus();
+      return;
+    }
+    atual[indice] = digitos || " ";
+    alterarToken(atual.join(""));
+    if (digitos && indice < 5) tokenRefs.current[indice + 1]?.focus();
+  }
+
+  function colarToken(event: React.ClipboardEvent<HTMLInputElement>) {
+    event.preventDefault();
+    const digitos = event.clipboardData.getData("text").replace(/\D/g, "");
+    alterarToken(digitos);
+    tokenRefs.current[Math.min(5, Math.max(0, digitos.length - 1))]?.focus();
+  }
+
+  function navegarToken(
+    event: React.KeyboardEvent<HTMLInputElement>,
+    indice: number,
+  ) {
+    if (event.key === "Backspace" && !form.token[indice] && indice > 0) {
+      tokenRefs.current[indice - 1]?.focus();
+    }
   }
 
   function alterarTerceirizado(valor: boolean) {
@@ -787,13 +826,32 @@ export default function TreinamentoDinamicoPublico() {
                   <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm font-bold text-blue-950">
                     O acesso é temporário e válido por 24 horas após o envio do convite.
                   </div>
-                  <input
-                    value={form.token}
-                    onChange={(e) => alterarToken(e.target.value)}
-                    required
-                    placeholder="Digite o token recebido"
-                    className="md:col-span-2 rounded-2xl border border-blue-300 bg-white px-4 py-3.5 text-sm font-black text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
-                  />
+                  <div className="md:col-span-2">
+                    <div className="grid grid-cols-6 gap-2 sm:gap-3">
+                      {Array.from({ length: 6 }).map((_, posicao) => (
+                        <input
+                          key={posicao}
+                          ref={(elemento) => {
+                            tokenRefs.current[posicao] = elemento;
+                          }}
+                          value={form.token[posicao] || ""}
+                          onChange={(e) =>
+                            alterarTokenIndice(posicao, e.target.value)
+                          }
+                          onPaste={colarToken}
+                          onKeyDown={(e) => navegarToken(e, posicao)}
+                          inputMode="numeric"
+                          maxLength={1}
+                          required
+                          aria-label={`Dígito ${posicao + 1} do token`}
+                          className="h-14 rounded-2xl border border-blue-200 bg-white text-center text-xl font-black text-slate-950 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                        />
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs font-bold text-slate-500">
+                      Token no formato 1-2-3-4-5-6.
+                    </p>
+                  </div>
                 </>
               ) : (
                 <>
