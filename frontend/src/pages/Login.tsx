@@ -97,31 +97,25 @@ export default function Login() {
       <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/58 to-white/12" />
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white/80 to-transparent" />
 
-      <section className="relative z-10 flex min-h-screen items-center justify-center px-5 py-8">
+      <section className="relative z-10 flex min-h-screen items-center justify-center px-5 py-8 lg:justify-end lg:pr-[8vw]">
         <form
           onSubmit={handleLogin}
-          className="w-full max-w-[470px] rounded-[32px] border border-slate-200/90 bg-white/88 p-7 shadow-[0_30px_95px_rgba(15,23,42,0.18)] backdrop-blur-xl sm:p-9"
+          className="w-full max-w-[410px] rounded-[28px] border border-slate-200/90 bg-white/88 p-6 shadow-[0_26px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl sm:p-7"
         >
           <div className="text-center">
-            <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/25">
-              <ShieldCheck size={26} />
+            <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/25">
+              <ShieldCheck size={23} />
             </div>
 
-            <img
-              src="/images/movecta-logo.png"
-              alt="Movecta"
-              className="mx-auto h-auto w-48 object-contain"
-            />
-
-            <p className="mt-7 text-xs font-black uppercase tracking-[0.22em] text-blue-600">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">
               Acesso seguro
             </p>
-            <h1 className="mt-3 text-4xl font-black text-slate-950">
+            <h1 className="mt-3 text-3xl font-black text-slate-950">
               MoveSecurity
             </h1>
           </div>
 
-          <div className="mt-9 space-y-5">
+          <div className="mt-7 space-y-4">
             {ssoConfig?.ativo && (
               <button
                 type="button"
@@ -154,8 +148,8 @@ export default function Login() {
                   <span className="mb-2 block text-sm font-black text-slate-700">
                     Email
                   </span>
-                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
-                    <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
+                    <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
                       <Mail size={17} />
                     </span>
                     <input
@@ -168,7 +162,7 @@ export default function Login() {
                         boxShadow: "none",
                         WebkitTextFillColor: "#020617",
                       }}
-                      className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
+                      className="login-input h-8 w-full appearance-none bg-transparent text-sm font-bold outline-none"
                     />
                   </div>
                 </label>
@@ -177,8 +171,8 @@ export default function Login() {
                   <span className="mb-2 block text-sm font-black text-slate-700">
                     Senha
                   </span>
-                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-4 py-3 transition">
-                    <span className="login-input-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
+                    <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
                       <LockKeyhole size={17} />
                     </span>
                     <input
@@ -191,7 +185,7 @@ export default function Login() {
                         boxShadow: "none",
                         WebkitTextFillColor: "#020617",
                       }}
-                      className="login-input h-9 w-full appearance-none bg-transparent text-sm font-bold outline-none"
+                      className="login-input h-8 w-full appearance-none bg-transparent text-sm font-bold outline-none"
                     />
                   </div>
                 </label>
@@ -203,7 +197,7 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-7 w-full rounded-2xl bg-blue-600 px-4 py-3.5 font-black text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
+              className="mt-6 w-full rounded-2xl bg-blue-600 px-4 py-3 font-black text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
               {loading ? "Entrando..." : "Entrar"}
             </button>
