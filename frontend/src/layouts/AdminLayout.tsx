@@ -34,7 +34,6 @@ import {
   PackageSearch,
   Lightbulb,
   Lock,
-  KeyRound,
   Wrench,
 } from "lucide-react";
 import { api } from "../services/api";
@@ -63,7 +62,6 @@ export default function AdminLayout() {
   const [treinamentosOpen, setTreinamentosOpen] = useState(true);
   const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
   const [administracaoOpen, setAdministracaoOpen] = useState(false);
-  const [apisOpen, setApisOpen] = useState(false);
   const [sistemaOpen, setSistemaOpen] = useState(false);
   const [segundosSessao, setSegundosSessao] = useState(0);
   const [notificacoes, setNotificacoes] = useState<
@@ -783,12 +781,6 @@ export default function AdminLayout() {
 
               {administracaoOpen && (
                 <div className={submenuClass}>
-                  {temModulo("usuarios") && (
-                    <Link to="/usuarios" className={subItem}>
-                      <Users size={16} />
-                      Usuários
-                    </Link>
-                  )}
                   {temModulo("cadastros") && (
                     <>
                       <Link to="/naturezas" className={subItem}>
@@ -802,16 +794,10 @@ export default function AdminLayout() {
                     </>
                   )}
                   {temModulo("configuracoes") && (
-                    <>
-                      <Link to="/configuracoes" className={subItem}>
-                        <Settings size={16} />
-                        Configurações
-                      </Link>
-                      <Link to="/sessoes" className={subItem}>
-                        <Lock size={16} />
-                        Sessões Ativas
-                      </Link>
-                    </>
+                    <Link to="/sessoes" className={subItem}>
+                      <Lock size={16} />
+                      Sessões Ativas
+                    </Link>
                   )}
                 </div>
               )}
@@ -820,30 +806,6 @@ export default function AdminLayout() {
 
           {(podeVerSistemaMenu || podeVerLogs() || podeVerNaturezas()) && (
             <>
-              {temModulo("configuracoes") && (
-                <>
-                  <button
-                    onClick={() => setApisOpen(!apisOpen)}
-                    className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
-                  >
-                    <div className="flex items-center gap-3">
-                      <KeyRound size={20} className="shrink-0" />
-                      <span className={menuText}>API's</span>
-                    </div>
-                    <span className={menuToggle}>{apisOpen ? "-" : "+"}</span>
-                  </button>
-
-                  {apisOpen && (
-                    <div className={submenuClass}>
-                      <Link to="/apis/openai" className={subItem}>
-                        <BrainCircuit size={16} />
-                        OpenAI
-                      </Link>
-                    </div>
-                  )}
-                </>
-              )}
-
               <button
                 onClick={() => setSistemaOpen(!sistemaOpen)}
                 className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
@@ -857,6 +819,18 @@ export default function AdminLayout() {
 
               {sistemaOpen && (
                 <div className={submenuClass}>
+                  {temModulo("usuarios") && (
+                    <Link to="/usuarios" className={subItem}>
+                      <Users size={16} />
+                      Usuários
+                    </Link>
+                  )}
+                  {temModulo("configuracoes") && (
+                    <Link to="/configuracoes" className={subItem}>
+                      <Settings size={16} />
+                      Configurações
+                    </Link>
+                  )}
                   {temModulo("configuracoes") && (
                     <Link to="/atualizacoes" className={subItem}>
                       <ScrollText size={16} />

@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  BrainCircuit,
   KeyRound,
   LockKeyhole,
   Mail,
@@ -11,6 +12,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../services/api";
 import { PERFIS, perfilAtual, podeNoModulo } from "../utils/permissoes";
+import APIsOpenAI from "./APIsOpenAI";
 
 type Configuracao = {
   nomeEmpresa: string;
@@ -132,7 +134,9 @@ function Label({
 export default function Configuracoes() {
   const [form, setForm] = useState<Configuracao>(inicial);
   const [salvando, setSalvando] = useState(false);
-  const [aba, setAba] = useState<"geral" | "acesso" | "smtp">("geral");
+  const [aba, setAba] = useState<"geral" | "acesso" | "smtp" | "apis">(
+    "geral",
+  );
   const [mensagemSso, setMensagemSso] = useState("");
   const [mensagemSmtp, setMensagemSmtp] = useState("");
   const [emailTesteSmtp, setEmailTesteSmtp] = useState("");
@@ -228,7 +232,7 @@ export default function Configuracoes() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-600 dark:text-blue-300">
-              Administração
+              Sistema
             </p>
             <h1 className="mt-1 text-2xl font-black text-slate-950 dark:text-white sm:text-3xl">
               Configurações do Sistema
@@ -280,14 +284,29 @@ export default function Configuracoes() {
                 SMTP
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setAba("apis")}
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-black transition ${
+                aba === "apis"
+                  ? "bg-blue-600 text-white shadow"
+                  : "text-slate-600 hover:text-slate-950 dark:text-slate-300 dark:hover:text-white"
+              }`}
+            >
+              <BrainCircuit size={16} />
+              APIs
+            </button>
           </div>
         </div>
       </div>
 
-      <form
-        onSubmit={salvar}
-        className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950"
-      >
+      {aba === "apis" ? (
+        <APIsOpenAI />
+      ) : (
+        <form
+          onSubmit={salvar}
+          className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950"
+        >
         {aba === "geral" && (
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -787,7 +806,8 @@ export default function Configuracoes() {
             {salvando ? "Salvando..." : "Salvar configurações"}
           </button>
         </div>
-      </form>
+        </form>
+      )}
     </div>
   );
 }
