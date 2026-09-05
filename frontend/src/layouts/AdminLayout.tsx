@@ -793,12 +793,6 @@ export default function AdminLayout() {
                       </Link>
                     </>
                   )}
-                  {superAdmin && temModulo("configuracoes") && (
-                    <Link to="/sessoes" className={subItem}>
-                      <Lock size={16} />
-                      Sessões Ativas
-                    </Link>
-                  )}
                 </div>
               )}
             </>
@@ -829,6 +823,12 @@ export default function AdminLayout() {
                     <Link to="/configuracoes" className={subItem}>
                       <Settings size={16} />
                       Configurações
+                    </Link>
+                  )}
+                  {superAdmin && temModulo("configuracoes") && (
+                    <Link to="/sessoes" className={subItem}>
+                      <Lock size={16} />
+                      Sessões Ativas
                     </Link>
                   )}
                   {temModulo("configuracoes") && (
