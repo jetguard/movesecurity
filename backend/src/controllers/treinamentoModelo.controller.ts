@@ -1090,6 +1090,22 @@ export async function salvarVisitanteTreinamentoModelo(
       return res.status(400).json({ error: "Data de nascimento inválida." });
     }
 
+    const duplicado = await db.treinamentoModeloVisitante.findFirst({
+      where: {
+        OR: [{ cpf }, { email }],
+        ...(id ? { NOT: { id } } : {}),
+      },
+      select: { cpf: true, email: true },
+    });
+
+    if (duplicado?.cpf === cpf) {
+      return res.status(409).json({ error: "Já existe visitante cadastrado com este CPF." });
+    }
+
+    if (duplicado?.email === email) {
+      return res.status(409).json({ error: "Já existe visitante cadastrado com este e-mail." });
+    }
+
     const data = {
       nomeCompleto,
       cpf,
@@ -1102,11 +1118,7 @@ export async function salvarVisitanteTreinamentoModelo(
 
     const visitante = id
       ? await db.treinamentoModeloVisitante.update({ where: { id }, data })
-      : await db.treinamentoModeloVisitante.upsert({
-          where: { cpf },
-          update: data,
-          create: data,
-        });
+      : await db.treinamentoModeloVisitante.create({ data });
 
     if (req.body.treinamentoId) {
       await enviarConviteVisitanteInterno(Number(req.body.treinamentoId), visitante);
