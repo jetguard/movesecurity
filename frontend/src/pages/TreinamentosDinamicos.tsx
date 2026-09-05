@@ -7,8 +7,6 @@ import {
   Award,
   BookOpen,
   CheckCircle2,
-  Copy,
-  ExternalLink,
   FileCheck2,
   Image,
   Lightbulb,
@@ -23,7 +21,6 @@ import {
   Video,
 } from "lucide-react";
 import { api } from "../services/api";
-import { cpfVisivelPorPerfil } from "../utils/cpf";
 import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 type AlternativaForm = { texto: string; correta: boolean };
@@ -162,21 +159,6 @@ function normalizarGruposTreinamento(valores?: string[]) {
   );
 }
 
-function data(valor?: string | null) {
-  return valor ? new Date(valor).toLocaleString("pt-BR") : "-";
-}
-
-function concluido(status?: string | null) {
-  return String(status || "")
-    .toLowerCase()
-    .startsWith("conclu");
-}
-
-function copiarLink(link: string) {
-  const absoluto = `${window.location.origin}${link}`;
-  navigator.clipboard?.writeText(absoluto).catch(() => undefined);
-}
-
 export default function TreinamentosDinamicos() {
   const [searchParams] = useSearchParams();
   const [modelos, setModelos] = useState<Modelo[]>([]);
@@ -211,19 +193,6 @@ export default function TreinamentosDinamicos() {
     const modelo = modelos.find((item) => item.id === id);
     if (modelo) editar(modelo);
   }, [modelos, searchParams]);
-
-  const modeloSelecionado = useMemo(
-    () => modelos.find((item) => item.id === selecionadoId) || null,
-    [modelos, selecionadoId],
-  );
-
-  const participantes = modeloSelecionado?.participantes || [];
-  const filtrados = participantes.filter((item) =>
-    [item.nomeCompleto, item.cpf, item.email, item.codigo, item.status]
-      .join(" ")
-      .toLowerCase()
-      .includes(busca.trim().toLowerCase()),
-  );
 
   function editar(modelo: Modelo) {
     setSelecionadoId(modelo.id);
@@ -376,21 +345,6 @@ export default function TreinamentosDinamicos() {
     }
   }
 
-  async function reenviarEmail(item: Participante) {
-    setMensagem("");
-    try {
-      const response = await api.post(
-        `/treinamentos-dinamicos/participantes/${item.id}/reenviar-email`,
-      );
-      setMensagem(response.data?.mensagem || "E-mail enviado com sucesso.");
-      await carregar();
-    } catch (error: any) {
-      setMensagem(
-        error.response?.data?.error || "Não foi possível reenviar o e-mail.",
-      );
-    }
-  }
-
   async function enviarTreinamento(modelo?: Pick<Modelo, "id">) {
     const id = modelo?.id || form.id;
     if (!id || !podeEnviar) return;
@@ -465,16 +419,7 @@ export default function TreinamentosDinamicos() {
     }
   }
 
-  async function excluirModelo(modelo: Modelo) {
-    if (!podeEditar) return;
-    if (!confirm(`Deseja excluir o treinamento ${modelo.codigo}?`)) return;
-    await api.delete(`/treinamentos-dinamicos/${modelo.id}`);
-    setMensagem("Treinamento excluído.");
-    novo();
-    await carregar();
-  }
-
-  const passosCriacao = [
+  const passosCriacao = useMemo(() => [
     {
       numero: 1,
       titulo: "Informações",
@@ -495,7 +440,7 @@ export default function TreinamentosDinamicos() {
       icone: Award,
     },
     { numero: 5, titulo: "Revisão", descricao: "Confira e publique", icone: Search },
-  ];
+  ], []);
   const campoClaro =
     "mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold normal-case tracking-normal text-slate-900 shadow-sm outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100";
   const labelClaro =
@@ -506,7 +451,10 @@ export default function TreinamentosDinamicos() {
   const podeProsseguir = etapaCriacao < 5;
 
   return (
-    <div className="treinamentos-dinamicos-admin min-h-screen bg-slate-50 px-4 py-5 text-slate-950 sm:px-6 lg:px-8">
+    <div
+      className="treinamentos-dinamicos-admin min-h-screen px-4 py-5 text-white sm:px-6 lg:px-8"
+      data-treinamento-id={selecionadoId || undefined}
+    >
       <section className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="relative w-full max-w-xl">
           <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -538,15 +486,15 @@ export default function TreinamentosDinamicos() {
       </section>
 
       <section className="mb-6">
-        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-500">
-          <span className="text-blue-600">Treinamentos</span>
+        <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-400">
+          <span className="text-blue-300">Treinamentos</span>
           <span>&gt;</span>
           <span>{form.id ? "Editar treinamento" : "Novo treinamento"}</span>
         </div>
-        <h1 className="mt-2 text-3xl font-black text-slate-950">
+        <h1 className="mt-2 text-3xl font-black text-white">
           {form.id ? "Editar treinamento" : "Criar novo treinamento"}
         </h1>
-        <p className="mt-1 text-base font-semibold text-slate-500">
+        <p className="mt-1 text-base font-semibold text-slate-300">
           Configure o conteúdo, avaliação e regras de conclusão.
         </p>
       </section>
@@ -1427,250 +1375,6 @@ export default function TreinamentosDinamicos() {
           </div>
         </form>
 
-        <div className="mt-8 grid gap-5 xl:grid-cols-[380px_minmax(0,1fr)]">
-          <aside className={cardClaro}>
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-blue-600">
-                  Biblioteca
-                </p>
-                <h2 className="text-xl font-black text-slate-900">
-                  Treinamentos criados
-                </h2>
-              </div>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
-                {modelos.length}
-              </span>
-            </div>
-            <div className="mt-4 max-h-[520px] space-y-3 overflow-y-auto pr-1">
-              {modelos.map((modelo) => (
-                <div
-                  key={modelo.id}
-                  className={`rounded-2xl border p-3 transition ${
-                    selecionadoId === modelo.id
-                      ? "border-blue-300 bg-blue-50"
-                      : "border-slate-200 bg-white hover:border-blue-200"
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => editar(modelo)}
-                    className="block w-full text-left"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-slate-900">
-                          {modelo.codigo}
-                        </p>
-                        <p className="mt-1 line-clamp-2 text-sm font-semibold text-slate-600">
-                          {modelo.nome || modelo.slug}
-                        </p>
-                      </div>
-                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-600">
-                        {modelo.status || "Publicado"}
-                      </span>
-                    </div>
-                  </button>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <a
-                      href={modelo.publicUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-black text-white"
-                    >
-                      <ExternalLink size={14} /> Abrir
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => copiarLink(modelo.publicUrl)}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-black text-slate-700"
-                    >
-                      <Copy size={14} /> Link
-                    </button>
-                    {podeEnviar && (
-                      <button
-                        type="button"
-                        onClick={() => enviarTreinamento(modelo)}
-                        disabled={enviandoId === modelo.id}
-                        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-black text-blue-700 disabled:opacity-50"
-                      >
-                        <Mail size={14} />{" "}
-                        {enviandoId === modelo.id ? "Enviando" : "Enviar"}
-                      </button>
-                    )}
-                    {podeEditar && (
-                      <button
-                        type="button"
-                        onClick={() => excluirModelo(modelo)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5 text-xs font-black text-red-600"
-                      >
-                        <Trash2 size={14} /> Excluir
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-              {!modelos.length && (
-                <p className="rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">
-                  Nenhum treinamento dinâmico criado.
-                </p>
-              )}
-            </div>
-          </aside>
-
-          <section className={cardClaro}>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-xs font-black uppercase tracking-[0.12em] text-blue-600">
-                  Acompanhamento
-                </p>
-                <h2 className="text-xl font-black text-slate-900">
-                  Participantes
-                </h2>
-              </div>
-              <select
-                value={selecionadoId || ""}
-                onChange={(event) => {
-                  const id = Number(event.target.value);
-                  setSelecionadoId(id || null);
-                }}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-black text-slate-800 shadow-sm outline-none focus:border-blue-500"
-              >
-                <option value="">Selecione um treinamento</option>
-                {modelos.map((modelo) => (
-                  <option key={modelo.id} value={modelo.id}>
-                    {modelo.codigo} - {modelo.nome || modelo.slug}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {modeloSelecionado ? (
-              <>
-                <div className="relative mt-4">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input
-                    value={busca}
-                    onChange={(event) => setBusca(event.target.value)}
-                    placeholder="Buscar por nome, CPF, e-mail ou certificado"
-                    className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500 focus:bg-white"
-                  />
-                </div>
-                <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
-                  <table className="w-full min-w-[900px] text-left text-sm">
-                    <thead className="bg-slate-50 text-xs font-black uppercase tracking-[0.12em] text-slate-500">
-                      <tr>
-                        <th className="px-4 py-3">Participante</th>
-                        <th className="px-4 py-3">CPF / E-mail</th>
-                        <th className="px-4 py-3">Status</th>
-                        <th className="px-4 py-3">Progresso</th>
-                        <th className="px-4 py-3">Nota</th>
-                        <th className="px-4 py-3">Certificado</th>
-                        <th className="px-4 py-3">Último acesso</th>
-                        <th className="px-4 py-3 text-right">Ações</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {filtrados.map((item) => (
-                        <tr key={item.id} className="align-top text-slate-900">
-                          <td className="px-4 py-3">
-                            <div className="flex items-start gap-2">
-                              {concluido(item.status) ? (
-                                <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                              ) : (
-                                <FileCheck2 className="mt-0.5 h-4 w-4 text-blue-500" />
-                              )}
-                              <div>
-                                <p className="font-black">
-                                  {item.nomeCompleto}
-                                </p>
-                                <p className="mt-1 text-xs font-bold text-slate-400">
-                                  Versão {item.versao || 1}
-                                </p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <p className="font-bold">
-                              {cpfVisivelPorPerfil(item.cpf) || "-"}
-                            </p>
-                            <p className="mt-1 text-xs font-semibold text-slate-500">
-                              {item.email}
-                            </p>
-                          </td>
-                          <td className="px-4 py-3 font-black">
-                            {item.status}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="h-2 w-28 overflow-hidden rounded-full bg-slate-200">
-                              <div
-                                className="h-full rounded-full bg-blue-600"
-                                style={{ width: `${item.porcentagem}%` }}
-                              />
-                            </div>
-                            <p className="mt-1 text-xs font-black">
-                              {item.porcentagem}%
-                            </p>
-                          </td>
-                          <td className="px-4 py-3 font-black">
-                            {item.nota ?? "-"}
-                          </td>
-                          <td className="px-4 py-3 font-black">
-                            {item.codigo || "Sem certificado"}
-                          </td>
-                          <td className="px-4 py-3 text-xs font-bold text-slate-500">
-                            {data(item.updatedAt)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
-                              {item.certificadoUrl && (
-                                <a
-                                  href={item.certificadoUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="rounded-lg bg-blue-600 px-2.5 py-1.5 text-xs font-black text-white"
-                                >
-                                  PDF
-                                </a>
-                              )}
-                              {concluido(item.status) && (
-                                <button
-                                  type="button"
-                                  onClick={() => reenviarEmail(item)}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-100 bg-emerald-50 px-2.5 py-1.5 text-xs font-black text-emerald-700"
-                                >
-                                  <Mail size={14} /> Reenviar
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                      {!filtrados.length && (
-                        <tr>
-                          <td
-                            colSpan={8}
-                            className="px-4 py-10 text-center text-sm font-black text-slate-500"
-                          >
-                            Nenhum participante encontrado.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
-                <FileCheck2 className="mx-auto h-8 w-8 text-slate-400" />
-                <p className="mt-3 text-sm font-black text-slate-600">
-                  Selecione um treinamento para ver progresso, certificados e
-                  reenvios.
-                </p>
-              </div>
-            )}
-          </section>
-        </div>
       </section>
     </div>
   );
