@@ -85,6 +85,7 @@ export default function AdminLayout() {
   const [erroDesbloqueio, setErroDesbloqueio] = useState("");
   const [desbloqueando, setDesbloqueando] = useState(false);
   const usuario = usuarioAtual();
+  const superAdmin = usuario?.perfilAcesso === PERFIS.SUPER_ADMIN;
   const portaria = usuario?.perfilAcesso === PERFIS.PORTARIA;
   const cadastro = usuario?.perfilAcesso === PERFIS.CADASTRO;
   const tecnicoManutencao = somenteTecnicoManutencao();
@@ -94,11 +95,10 @@ export default function AdminLayout() {
   const podeVerOperacaoMenu =
     temModulo("operacao") || temModulo("cftv") || temModulo("quadra_seguranca");
   const podeVerAdministracaoMenu =
-    temModulo("usuarios") ||
-    temModulo("cadastros") ||
-    temModulo("configuracoes");
+    temModulo("cadastros") || (superAdmin && temModulo("configuracoes"));
   const podeVerSistemaMenu =
-    temModulo("sistema") || temModulo("logs") || temModulo("configuracoes");
+    temModulo("sistema") ||
+    (superAdmin && (temModulo("usuarios") || temModulo("logs") || temModulo("configuracoes")));
   const podeVerPainelTreinamentos = [
     PERFIS.SUPER_ADMIN,
     PERFIS.ADMINISTRADOR,
@@ -793,7 +793,7 @@ export default function AdminLayout() {
                       </Link>
                     </>
                   )}
-                  {temModulo("configuracoes") && (
+                  {superAdmin && temModulo("configuracoes") && (
                     <Link to="/sessoes" className={subItem}>
                       <Lock size={16} />
                       Sessões Ativas
@@ -819,13 +819,13 @@ export default function AdminLayout() {
 
               {sistemaOpen && (
                 <div className={submenuClass}>
-                  {temModulo("usuarios") && (
+                  {superAdmin && temModulo("usuarios") && (
                     <Link to="/usuarios" className={subItem}>
                       <Users size={16} />
                       Usuários
                     </Link>
                   )}
-                  {temModulo("configuracoes") && (
+                  {superAdmin && temModulo("configuracoes") && (
                     <Link to="/configuracoes" className={subItem}>
                       <Settings size={16} />
                       Configurações
@@ -843,7 +843,7 @@ export default function AdminLayout() {
                       Sugestões
                     </Link>
                   )}
-                  {temModulo("logs") && (
+                  {superAdmin && temModulo("logs") && (
                     <Link to="/logs" className={subItem}>
                       <ScrollText size={16} />
                       Logs

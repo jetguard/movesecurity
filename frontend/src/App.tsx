@@ -577,9 +577,7 @@ export default function App() {
             <Route
               path="configuracoes"
               element={
-                <ProtectedRoute
-                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
-                >
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN]}>
                   <Configuracoes />
                 </ProtectedRoute>
               }
@@ -587,9 +585,7 @@ export default function App() {
             <Route
               path="apis/openai"
               element={
-                <ProtectedRoute
-                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
-                >
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN]}>
                   <APIsOpenAI />
                 </ProtectedRoute>
               }
@@ -637,9 +633,7 @@ export default function App() {
             <Route
               path="logs"
               element={
-                <ProtectedRoute
-                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
-                >
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN]}>
                   <Logs />
                 </ProtectedRoute>
               }
@@ -647,9 +641,7 @@ export default function App() {
             <Route
               path="usuarios"
               element={
-                <ProtectedRoute
-                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR]}
-                >
+                <ProtectedRoute perfis={[PERFIS.SUPER_ADMIN]}>
                   <Usuarios />
                 </ProtectedRoute>
               }
