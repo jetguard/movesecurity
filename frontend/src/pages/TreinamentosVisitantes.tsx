@@ -21,6 +21,16 @@ type TreinamentoPublico = {
   slug: string;
 };
 
+type ConviteVisitante = {
+  id: number;
+  treinamentoId: number;
+  token: string;
+  tokenExpiraEm?: string | null;
+  conviteEnviadoEm?: string | null;
+  status?: string | null;
+  treinamento?: TreinamentoPublico | null;
+};
+
 type Visitante = {
   id: number;
   nomeCompleto: string;
@@ -31,6 +41,7 @@ type Visitante = {
   cargo?: string | null;
   status: string;
   updatedAt: string;
+  participantes?: ConviteVisitante[];
 };
 
 const inicial = {
@@ -65,6 +76,7 @@ export default function TreinamentosVisitantes() {
     Record<number, string>
   >({});
   const [mensagem, setMensagem] = useState("");
+  const [agora, setAgora] = useState(Date.now());
 
   async function carregar() {
     const response = await api.get("/treinamentos-visitantes");
@@ -74,6 +86,11 @@ export default function TreinamentosVisitantes() {
 
   useEffect(() => {
     carregar().catch(() => setMensagem("Erro ao carregar visitantes."));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setAgora(Date.now()), 30000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const filtrados = useMemo(() => {
@@ -130,6 +147,39 @@ export default function TreinamentosVisitantes() {
     setForm(inicial);
   }
 
+  function treinamentoSelecionado(visitanteId: number) {
+    const treinamentoId = envioPorVisitante[visitanteId];
+    return treinamentos.find(
+      (treinamento) => String(treinamento.id) === String(treinamentoId),
+    );
+  }
+
+  function conviteSelecionado(visitante: Visitante) {
+    const treinamentoId = envioPorVisitante[visitante.id];
+    if (treinamentoId) {
+      return visitante.participantes?.find(
+        (convite) => String(convite.treinamentoId) === String(treinamentoId),
+      );
+    }
+    return visitante.participantes?.[0] || null;
+  }
+
+  function tokenEstaAtivo(convite?: ConviteVisitante | null) {
+    if (!convite?.tokenExpiraEm) return false;
+    return new Date(convite.tokenExpiraEm).getTime() > agora;
+  }
+
+  function tempoToken(convite?: ConviteVisitante | null) {
+    if (!convite?.tokenExpiraEm) return "Sem token";
+    const diferenca = new Date(convite.tokenExpiraEm).getTime() - agora;
+    if (diferenca <= 0) return "Expirado";
+    const minutosTotais = Math.ceil(diferenca / 60000);
+    const horas = Math.floor(minutosTotais / 60);
+    const minutos = minutosTotais % 60;
+    if (horas <= 0) return `${minutos}min restantes`;
+    return `${horas}h ${String(minutos).padStart(2, "0")}min restantes`;
+  }
+
   async function salvar(event: FormEvent) {
     event.preventDefault();
     setSalvando(true);
@@ -163,6 +213,16 @@ export default function TreinamentosVisitantes() {
   async function enviar(visitanteId: number) {
     const treinamentoId = envioPorVisitante[visitanteId];
     if (!treinamentoId) return;
+    const visitante = visitantes.find((item) => item.id === visitanteId);
+    const treinamento = treinamentoSelecionado(visitanteId);
+    if (!visitante || !treinamento) return;
+    const convite = conviteSelecionado(visitante);
+    const treinamentoNome = `${treinamento.codigo} - ${treinamento.nome}`;
+    const confirmacao = tokenEstaAtivo(convite)
+      ? `Já existe um token ativo para ${treinamentoNome} enviado para ${visitante.nomeCompleto}. Deseja enviar novamente e gerar um novo token?`
+      : `Deseja enviar o treinamento ${treinamentoNome} para ${visitante.nomeCompleto}?`;
+    if (!window.confirm(confirmacao)) return;
+
     setEnviandoId(visitanteId);
     setMensagem("");
     try {
@@ -259,97 +319,138 @@ export default function TreinamentosVisitantes() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
+          <table className="w-full min-w-[1120px] text-left text-sm">
             <thead className="text-xs uppercase tracking-[0.18em] text-slate-400">
               <tr className="border-b border-slate-800">
                 <th className="px-4 py-3">Visitante</th>
                 <th className="px-4 py-3">Empresa / cargo</th>
                 <th className="px-4 py-3">Nascimento</th>
-                <th className="px-4 py-3">Enviar treinamento</th>
+                <th className="px-4 py-3">Treinamentos</th>
+                <th className="px-4 py-3">Token</th>
                 <th className="px-4 py-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {filtrados.map((visitante) => (
-                <tr key={visitante.id} className="border-b border-slate-800/80">
-                  <td className="px-4 py-4">
-                    <p className="font-black text-white">
-                      {visitante.nomeCompleto}
-                    </p>
-                    <p className="mt-1 text-xs font-bold text-slate-400">
-                      {cpfVisivelPorPerfil(visitante.cpf)} - {visitante.email}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4">
-                    <p className="font-bold text-slate-200">
-                      {visitante.empresa || "-"}
-                    </p>
-                    <p className="mt-1 text-xs font-bold text-slate-500">
-                      {visitante.cargo || "-"}
-                    </p>
-                  </td>
-                  <td className="px-4 py-4 text-xs font-bold text-slate-300">
-                    {visitante.dataNascimento
-                      ? new Date(visitante.dataNascimento).toLocaleDateString(
-                          "pt-BR",
-                        )
-                      : "-"}
-                  </td>
-                  <td className="px-4 py-4">
-                    <select
-                      value={envioPorVisitante[visitante.id] || ""}
-                      onChange={(event) =>
-                        setEnvioPorVisitante((atual) => ({
-                          ...atual,
-                          [visitante.id]: event.target.value,
-                        }))
-                      }
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-bold text-white outline-none focus:border-blue-500"
-                    >
-                      <option value="">Selecionar treinamento</option>
-                      {treinamentos.map((treinamento) => (
-                        <option key={treinamento.id} value={treinamento.id}>
-                          {treinamento.codigo} - {treinamento.nome}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-                  <td className="px-4 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => enviar(visitante.id)}
-                        disabled={
-                          enviandoId === visitante.id ||
-                          !envioPorVisitante[visitante.id]
+              {filtrados.map((visitante) => {
+                const convite = conviteSelecionado(visitante);
+                const ativo = tokenEstaAtivo(convite);
+                return (
+                  <tr
+                    key={visitante.id}
+                    className="border-b border-slate-800/80"
+                  >
+                    <td className="px-4 py-4">
+                      <p className="font-black text-white">
+                        {visitante.nomeCompleto}
+                      </p>
+                      <p className="mt-1 text-xs font-bold text-slate-400">
+                        {cpfVisivelPorPerfil(visitante.cpf)} - {visitante.email}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4">
+                      <p className="font-bold text-slate-200">
+                        {visitante.empresa || "-"}
+                      </p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        {visitante.cargo || "-"}
+                      </p>
+                    </td>
+                    <td className="px-4 py-4 text-xs font-bold text-slate-300">
+                      {visitante.dataNascimento
+                        ? new Date(visitante.dataNascimento).toLocaleDateString(
+                            "pt-BR",
+                          )
+                        : "-"}
+                    </td>
+                    <td className="px-4 py-4">
+                      <select
+                        value={envioPorVisitante[visitante.id] || ""}
+                        onChange={(event) =>
+                          setEnvioPorVisitante((atual) => ({
+                            ...atual,
+                            [visitante.id]: event.target.value,
+                          }))
                         }
-                        title="Enviar treinamento"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-500/50 bg-blue-600/15 text-blue-100 hover:bg-blue-600/25 disabled:opacity-60"
+                        className="w-full rounded-xl border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-bold text-white outline-none focus:border-blue-500"
                       >
-                        <Send size={15} />
-                      </button>
-                      <button
-                        onClick={() => editar(visitante)}
-                        title="Editar visitante"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 text-slate-100 hover:border-blue-500"
-                      >
-                        <Edit3 size={15} />
-                      </button>
-                      <button
-                        onClick={() => excluir(visitante)}
-                        disabled={excluindoId === visitante.id}
-                        title="Excluir visitante"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/50 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20 disabled:opacity-60"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        <option value="">
+                          {treinamentos.length
+                            ? "Selecionar treinamento"
+                            : "Nenhum treinamento público publicado"}
+                        </option>
+                        {treinamentos.map((treinamento) => (
+                          <option key={treinamento.id} value={treinamento.id}>
+                            {treinamento.codigo} - {treinamento.nome}
+                          </option>
+                        ))}
+                      </select>
+                      {convite?.treinamento && (
+                        <p className="mt-2 text-[11px] font-bold text-slate-500">
+                          Último envio: {convite.treinamento.codigo} -{" "}
+                          {convite.treinamento.nome}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div>
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${
+                            ativo
+                              ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                              : convite
+                                ? "border-amber-400/40 bg-amber-400/10 text-amber-200"
+                                : "border-slate-700 bg-slate-900 text-slate-400"
+                          }`}
+                        >
+                          {tempoToken(convite)}
+                        </span>
+                        {convite?.conviteEnviadoEm && (
+                          <p className="mt-2 text-[11px] font-bold text-slate-500">
+                            Enviado em{" "}
+                            {new Date(
+                              convite.conviteEnviadoEm,
+                            ).toLocaleString("pt-BR")}
+                          </p>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => enviar(visitante.id)}
+                          disabled={
+                            enviandoId === visitante.id ||
+                            !envioPorVisitante[visitante.id]
+                          }
+                          title="Enviar treinamento"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-500/50 bg-blue-600/15 text-blue-100 hover:bg-blue-600/25 disabled:opacity-60"
+                        >
+                          <Send size={15} />
+                        </button>
+                        <button
+                          onClick={() => editar(visitante)}
+                          title="Editar visitante"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 text-slate-100 hover:border-blue-500"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() => excluir(visitante)}
+                          disabled={excluindoId === visitante.id}
+                          title="Excluir visitante"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/50 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20 disabled:opacity-60"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
               {!filtrados.length && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm font-bold text-slate-500"
                   >
                     Nenhum visitante encontrado.
