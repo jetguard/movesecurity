@@ -134,6 +134,18 @@ const gruposTreinamento = [
   { valor: "TERCEIRIZADO", label: "Terceirizado" },
 ];
 
+const opcoesValidade = [
+  { valor: 0, label: "Vitalício" },
+  { valor: 6, label: "6 meses" },
+  { valor: 12, label: "12 meses" },
+  { valor: 24, label: "24 meses" },
+  { valor: 36, label: "36 meses" },
+];
+
+function textoValidade(validadeMeses: number) {
+  return Number(validadeMeses) <= 0 ? "Vitalício" : `${validadeMeses} meses`;
+}
+
 function normalizarGrupoTreinamento(valor: string) {
   const semAcento = String(valor || "")
     .normalize("NFD")
@@ -218,7 +230,7 @@ export default function TreinamentosDinamicos() {
       anexoUrl: modelo.anexoUrl || "",
       anexoArquivo: modelo.anexoArquivo || "",
       notaMinima: modelo.notaMinima || 80,
-      validadeMeses: modelo.validadeMeses || 24,
+      validadeMeses: modelo.validadeMeses ?? 24,
       status: modelo.status || "Publicado",
       textoCertificado:
         modelo.textoCertificado || modeloInicial.textoCertificado,
@@ -687,10 +699,11 @@ export default function TreinamentosDinamicos() {
                       }
                       className={campoClaro}
                     >
-                      <option value={6}>6 meses</option>
-                      <option value={12}>12 meses</option>
-                      <option value={24}>24 meses</option>
-                      <option value={36}>36 meses</option>
+                      {opcoesValidade.map((opcao) => (
+                        <option key={opcao.valor} value={opcao.valor}>
+                          {opcao.label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={labelClaro}>
@@ -1164,8 +1177,7 @@ export default function TreinamentosDinamicos() {
                   </label>
                   <label className={labelClaro}>
                     Validade do certificado
-                    <input
-                      type="number"
+                    <select
                       value={form.validadeMeses}
                       onChange={(event) =>
                         setForm({
@@ -1174,7 +1186,13 @@ export default function TreinamentosDinamicos() {
                         })
                       }
                       className={campoClaro}
-                    />
+                    >
+                      {opcoesValidade.map((opcao) => (
+                        <option key={opcao.valor} value={opcao.valor}>
+                          {opcao.label}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                   <label className={`${labelClaro} md:col-span-2`}>
                     Texto do certificado
@@ -1259,7 +1277,7 @@ export default function TreinamentosDinamicos() {
                       "Opinião",
                       form.avaliacaoHabilitada ? "Obrigatória" : "Opcional",
                     ],
-                    ["Validade", `${form.validadeMeses} meses`],
+                    ["Validade", textoValidade(form.validadeMeses)],
                   ].map(([titulo, valor]) => (
                     <div
                       key={titulo}
