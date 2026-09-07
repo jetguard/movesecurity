@@ -184,6 +184,11 @@ function normalizarCodigo(valor: string) {
   return texto(valor).toUpperCase().replace(/\s+/g, "-");
 }
 
+function validadeMesesPayload(valor: unknown) {
+  const numero = Number(valor);
+  return Number.isFinite(numero) && numero >= 0 ? numero : 24;
+}
+
 function gerarTextoCertificado(modelo: any, participante: any) {
   const data = dataPtBr(participante.dataConclusao || new Date());
   const cpfFormatado = formatarCpf(participante.cpf || "");
@@ -859,7 +864,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               anexoUrl: validacao.anexoUrl,
               anexoArquivo: validacao.anexoArquivo,
               notaMinima: Number(req.body.notaMinima) || 80,
-              validadeMeses: Number(req.body.validadeMeses) || 24,
+              validadeMeses: validadeMesesPayload(req.body.validadeMeses),
               textoCertificado: texto(req.body.textoCertificado) || null,
               gruposPermitidosJson: JSON.stringify(validacao.gruposPermitidos),
               versao: { increment: 1 },
@@ -882,7 +887,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               anexoUrl: validacao.anexoUrl,
               anexoArquivo: validacao.anexoArquivo,
               notaMinima: Number(req.body.notaMinima) || 80,
-              validadeMeses: Number(req.body.validadeMeses) || 24,
+              validadeMeses: validadeMesesPayload(req.body.validadeMeses),
               textoCertificado: texto(req.body.textoCertificado) || null,
               gruposPermitidosJson: JSON.stringify(validacao.gruposPermitidos),
               status: validacao.status,
