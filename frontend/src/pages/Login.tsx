@@ -97,7 +97,7 @@ export default function Login() {
       <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-white/58 to-white/12" />
       <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white/80 to-transparent" />
 
-      <section className="relative z-10 flex min-h-screen items-center justify-center px-5 py-8 lg:justify-end lg:pr-[8vw]">
+      <section className="relative z-10 flex min-h-screen items-center justify-center px-5 py-8 lg:justify-end lg:pr-[calc(8vw+75px)]">
         <form
           onSubmit={handleLogin}
           className="w-full max-w-[410px] rounded-[28px] border border-slate-200/90 bg-white/88 p-6 shadow-[0_26px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl sm:p-7"
