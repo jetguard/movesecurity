@@ -13,6 +13,15 @@ import { enviarEmail } from "../services/email.service";
 
 const db = prisma as any;
 
+const assinaturasSegurancaPatrimonial = [
+  path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png"),
+  path.resolve(
+    process.cwd(),
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
+];
+
 function texto(valor: unknown) {
   return String(valor || "").trim();
 }
@@ -240,6 +249,65 @@ function arquivoCertificado(token: string) {
 
 function certificadoUrl(token: string) {
   return `/api/public/treinamentos-dinamicos/${token}/certificado`;
+}
+
+function desenharLinhaAssinatura(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  largura: number,
+  nome: string,
+  cargo: string,
+) {
+  doc
+    .moveTo(x, y)
+    .lineTo(x + largura, y)
+    .strokeColor("#1d4ed8")
+    .lineWidth(1.1)
+    .stroke();
+  doc
+    .fillColor("#111827")
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .text(nome, x, y + 13, { width: largura, align: "center" });
+  doc
+    .fillColor("#334155")
+    .font("Helvetica")
+    .fontSize(8.5)
+    .text(cargo, x, y + 30, { width: largura, align: "center" });
+}
+
+function desenharAssinaturaInstitucional(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  largura: number,
+) {
+  for (const assinatura of assinaturasSegurancaPatrimonial) {
+    if (!fs.existsSync(assinatura)) continue;
+    try {
+      doc.image(assinatura, x + 44, y - 58, {
+        fit: [largura - 88, 54],
+        align: "center",
+        valign: "center",
+      });
+      break;
+    } catch (error) {
+      console.error(
+        "Falha ao inserir assinatura institucional no certificado:",
+        error,
+      );
+    }
+  }
+
+  desenharLinhaAssinatura(
+    doc,
+    x,
+    y,
+    largura,
+    "Segurança Patrimonial",
+    "Movecta S.A",
+  );
 }
 
 async function sincronizarCpfParticipante(participante: any) {
@@ -593,27 +661,20 @@ async function gerarCertificado(modelo: any, participante: any) {
         `assinatura-modelo-${participante.token}.png`,
       );
       fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
-      doc.image(assinaturaPng, 292, 374, { fit: [258, 62], align: "center" });
+      doc.image(assinaturaPng, 176, 374, { fit: [240, 54], align: "center" });
       fs.rmSync(assinaturaPng, { force: true });
     }
   }
 
-  doc
-    .moveTo(256, 448)
-    .lineTo(586, 448)
-    .strokeColor("#1d4ed8")
-    .lineWidth(1.2)
-    .stroke();
-  doc
-    .fillColor("#111827")
-    .font("Helvetica-Bold")
-    .fontSize(10.5)
-    .text(participante.nomeCompleto, 256, 464, { width: 330, align: "center" });
-  doc
-    .fillColor("#334155")
-    .font("Helvetica")
-    .fontSize(9)
-    .text("Participante", 256, 480, { width: 330, align: "center" });
+  desenharLinhaAssinatura(
+    doc,
+    158,
+    448,
+    275,
+    participante.nomeCompleto,
+    "Participante",
+  );
+  desenharAssinaturaInstitucional(doc, 472, 448, 275);
 
   doc
     .fillColor("#64748b")
