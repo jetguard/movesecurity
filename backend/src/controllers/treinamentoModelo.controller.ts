@@ -699,11 +699,39 @@ async function enviarCertificado(
   participante: any,
   certificadoArquivo: string,
 ) {
+  const nomeTreinamento = [modelo.codigo, modelo.nome]
+    .map(texto)
+    .filter(Boolean)
+    .join(" - ");
+  const nomeParticipante = texto(participante.nomeCompleto) || "participante";
+  const certificadoPublicoUrl = `${appPublicUrl()}${certificadoUrl(participante.token)}`;
   return enviarEmail({
     to: participante.email,
-    subject: `Certificado ${modelo.codigo} - ${participante.codigo}`,
-    text: `Olá, ${participante.nomeCompleto}. Segue em anexo o certificado de conclusão do treinamento ${modelo.codigo}.`,
-    html: `<p>Olá, <strong>${participante.nomeCompleto}</strong>.</p><p>Segue em anexo o certificado de conclusão do treinamento <strong>${modelo.codigo} - ${modelo.nome}</strong>.</p>`,
+    subject: `Certificado de conclusão - ${texto(modelo.nome) || texto(modelo.codigo)}`,
+    text: [
+      `Olá, ${nomeParticipante}`,
+      "",
+      `Parabéns pela conclusão do treinamento ${nomeTreinamento}.`,
+      "Segue em anexo o seu certificado de conclusão.",
+      "",
+      `Também é possível validar ou baixar o certificado pelo link: ${certificadoPublicoUrl}`,
+      "",
+      "Atenciosamente,",
+      "Segurança Patrimonial - Movecta",
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+        <p>Olá, <strong>${escaparHtml(nomeParticipante)}</strong></p>
+        <p>Parabéns pela conclusão do treinamento <strong>${escaparHtml(nomeTreinamento)}</strong>.</p>
+        <p>Segue em anexo o seu certificado de conclusão.</p>
+        <p style="margin: 24px 0;">
+          <a href="${escaparHtml(certificadoPublicoUrl)}" style="background: #2563eb; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: 700;">
+            Validar certificado
+          </a>
+        </p>
+        <p>Atenciosamente,<br><strong>Segurança Patrimonial - Movecta</strong></p>
+      </div>
+    `,
     attachments: [
       {
         filename: `certificado-${String(participante.codigo || modelo.codigo).replace("/", "-")}.pdf`,
@@ -1270,9 +1298,11 @@ async function enviarConviteVisitanteInterno(treinamentoId: number, visitante: a
       `Olá, ${visitante.nomeCompleto}`,
       "",
       `Segue o treinamento ${treinamentoCompleto}.`,
-      "Acesse o link abaixo e informe o token para iniciar. Este acesso é válido por 24 horas.",
+      "Leia com atenção todas as etapas e conclua o treinamento para emissão do certificado.",
+      "Acesse o link abaixo e informe o token temporário para iniciar ou continuar.",
+      "Este acesso é válido por 24 horas após o envio deste convite.",
       "",
-      `Link: ${link}`,
+      `URL do treinamento: ${link}`,
       `Token: ${formatarTokenTreinamento(participante.token)}`,
       "",
       "Atenciosamente,",
@@ -1282,12 +1312,15 @@ async function enviarConviteVisitanteInterno(treinamentoId: number, visitante: a
       <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
         <p>Olá, <strong>${escaparHtml(visitante.nomeCompleto)}</strong></p>
         <p>Segue o treinamento <strong>${escaparHtml(treinamentoCompleto)}</strong>.</p>
-        <p>Acesse o link abaixo e informe o token para iniciar. Este acesso é válido por <strong>24 horas</strong>.</p>
+        <p>Leia com atenção todas as etapas e conclua o treinamento para emissão do certificado.</p>
+        <p>Acesse o link abaixo e informe o token temporário para iniciar ou continuar. Este acesso é válido por <strong>24 horas</strong> após o envio deste convite.</p>
         <p style="margin: 24px 0;">
           <a href="${escaparHtml(link)}" style="background: #2563eb; color: #ffffff; padding: 12px 18px; border-radius: 10px; text-decoration: none; font-weight: 700;">
             Acessar treinamento
           </a>
         </p>
+        <p style="margin: 0 0 6px; color: #475569; font-size: 13px;">URL do treinamento:</p>
+        <p style="margin: 0 0 18px;"><a href="${escaparHtml(link)}" style="color: #2563eb;">${escaparHtml(link)}</a></p>
         <p style="font-size: 20px; font-weight: 800; letter-spacing: 0.08em;">Token: ${escaparHtml(formatarTokenTreinamento(participante.token))}</p>
         <p>Atenciosamente,<br><strong>Segurança Patrimonial - Movecta</strong></p>
       </div>
