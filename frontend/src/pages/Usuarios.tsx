@@ -389,51 +389,59 @@ export default function Usuarios() {
   async function salvarUsuario(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!formulario.somenteCadastro && !formulario.perfilAcesso) {
-      alert("Selecione o perfil de acesso do usuário.");
-      return;
+    try {
+      if (!formulario.somenteCadastro && !formulario.perfilAcesso) {
+        alert("Selecione o perfil de acesso do usuário.");
+        return;
+      }
+
+      if (!formulario.re && !apenasDigitos(formulario.cpf)) {
+        alert("Informe o R.E ou o CPF do usuário.");
+        return;
+      }
+
+      if (!formulario.unidadesPermitidas.length) {
+        alert("Selecione ao menos uma unidade permitida.");
+        return;
+      }
+
+      if (
+        !formulario.unidade ||
+        !formulario.unidadesPermitidas.includes(formulario.unidade)
+      ) {
+        alert("Selecione uma unidade preferencial entre as unidades permitidas.");
+        return;
+      }
+
+      const payload = {
+        ...formulario,
+        unidade: formulario.unidade,
+      };
+
+      if (
+        !editando &&
+        !formulario.somenteCadastro &&
+        formulario.senha &&
+        formulario.senha !== formulario.confirmarSenha
+      ) {
+        alert("As senhas não coincidem.");
+        return;
+      }
+
+      if (editando) {
+        await api.put(`/usuarios/${editando.id}`, payload);
+      } else {
+        await api.post("/usuarios", payload);
+      }
+
+      setAbrirFormulario(false);
+      carregarUsuarios();
+    } catch (error: any) {
+      alert(
+        error?.response?.data?.error ||
+          "Não foi possível salvar o usuário. Confira os campos e tente novamente.",
+      );
     }
-
-    if (!formulario.re && !apenasDigitos(formulario.cpf)) {
-      alert("Informe o R.E ou o CPF do usuário.");
-      return;
-    }
-
-    if (!formulario.unidadesPermitidas.length) {
-      alert("Selecione ao menos uma unidade permitida.");
-      return;
-    }
-
-    if (
-      !formulario.unidade ||
-      !formulario.unidadesPermitidas.includes(formulario.unidade)
-    ) {
-      alert("Selecione uma unidade preferencial entre as unidades permitidas.");
-      return;
-    }
-
-    const payload = {
-      ...formulario,
-      unidade: formulario.unidade,
-    };
-
-    if (
-      !editando &&
-      !formulario.somenteCadastro &&
-      formulario.senha !== formulario.confirmarSenha
-    ) {
-      alert("As senhas não coincidem.");
-      return;
-    }
-
-    if (editando) {
-      await api.put(`/usuarios/${editando.id}`, payload);
-    } else {
-      await api.post("/usuarios", payload);
-    }
-
-    setAbrirFormulario(false);
-    carregarUsuarios();
   }
 
   async function alterarStatus(usuario: Usuario, statusUsuario: string) {
@@ -904,21 +912,19 @@ export default function Usuarios() {
               <>
                 <input
                   className="rounded-lg border p-3"
-                  placeholder="Senha provisória"
+                  placeholder="Senha provisória (opcional para SSO)"
                   type="password"
                   value={formulario.senha}
                   onChange={(e) => atualizarCampo("senha", e.target.value)}
-                  required
                 />
                 <input
                   className="rounded-lg border p-3"
-                  placeholder="Confirmação de senha"
+                  placeholder="Confirmação de senha provisória"
                   type="password"
                   value={formulario.confirmarSenha}
                   onChange={(e) =>
                     atualizarCampo("confirmarSenha", e.target.value)
                   }
-                  required
                 />
               </>
             )}

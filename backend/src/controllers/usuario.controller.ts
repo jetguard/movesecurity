@@ -592,7 +592,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       !setor ||
       !cargo ||
       !unidadePrincipal ||
-      (!cadastroSemAcesso && (!perfilAcesso || !senha))
+      (!cadastroSemAcesso && !perfilAcesso)
     ) {
       return res
         .status(400)
@@ -603,7 +603,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "CPF inválido." });
     }
 
-    if (!cadastroSemAcesso && senha !== confirmarSenha) {
+    if (!cadastroSemAcesso && senha && senha !== confirmarSenha) {
       return res.status(400).json({ error: "As senhas não coincidem." });
     }
 
@@ -653,7 +653,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         somenteCadastro: cadastroSemAcesso,
         gruposTreinamentoJson: JSON.stringify(grupos),
         senha: await bcrypt.hash(
-          cadastroSemAcesso ? randomUUID() : String(senha),
+          cadastroSemAcesso || !senha ? randomUUID() : String(senha),
           10,
         ),
       },
