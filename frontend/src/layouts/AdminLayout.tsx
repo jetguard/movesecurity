@@ -96,7 +96,6 @@ export default function AdminLayout() {
     temModulo("treinamentos_criador") ||
     temModulo("treinamentos_criados") ||
     temModulo("treinamentos_visitantes");
-  const podeVerTreinamentosBase = temModulo("treinamentos");
   const podeVerCriadorTreinamentos = temModulo("treinamentos_criador");
   const podeVerTreinamentosCriados = temModulo("treinamentos_criados");
   const podeVerVisitantesTreinamentos = temModulo("treinamentos_visitantes");
@@ -539,10 +538,12 @@ export default function AdminLayout() {
 
               {treinamentosOpen && (
                 <div className={submenuClass}>
-                  <Link to="/integracoes-do-terminal" className={subItem}>
-                    <FileCheck2 size={16} />
-                    Integração de Motorista
-                  </Link>
+                  {podeVerPainelTreinamentos && (
+                    <Link to="/painel-treinamentos" className={subItem}>
+                      <FileBarChart size={16} />
+                      Painel Analítico
+                    </Link>
+                  )}
                 </div>
               )}
               <Link to="/meus-dados" className={item}>
@@ -567,27 +568,11 @@ export default function AdminLayout() {
 
               {treinamentosOpen && (
                 <div className={submenuClass}>
-                  {podeVerTreinamentosBase && (
-                    <>
-                      <Link to="/treinamentos-terminal" className={subItem}>
-                        <FileCheck2 size={16} />
-                        Treinamento Terminal
-                      </Link>
-                      <Link to="/integracoes-do-terminal" className={subItem}>
-                        <FileCheck2 size={16} />
-                        Integração de Motorista
-                      </Link>
-                      {["006", "007"].map((codigo) => (
-                        <Link
-                          key={codigo}
-                          to={`/treinamentos-poc-sep-${codigo}`}
-                          className={subItem}
-                        >
-                          <FileCheck2 size={16} />
-                          POC-SEP-{codigo}
-                        </Link>
-                      ))}
-                    </>
+                  {podeVerPainelTreinamentos && (
+                    <Link to="/painel-treinamentos" className={subItem}>
+                      <FileBarChart size={16} />
+                      Painel Analítico
+                    </Link>
                   )}
                   {podeVerCriadorTreinamentos && (
                     <Link to="/treinamentos-dinamicos" className={subItem}>
@@ -633,35 +618,12 @@ export default function AdminLayout() {
 
                   {treinamentosOpen && (
                     <div className={submenuClass}>
-                      {podeVerTreinamentosBase && (
-                        <>
-                          <Link to="/treinamentos-terminal" className={subItem}>
-                            <FileCheck2 size={16} />
-                            Treinamento Terminal
-                          </Link>
-                          <Link to="/integracoes-do-terminal" className={subItem}>
-                            <FileCheck2 size={16} />
-                            Integração de Motorista
-                          </Link>
-                        </>
-                      )}
                       {podeVerPainelTreinamentos && (
                         <Link to="/painel-treinamentos" className={subItem}>
                           <FileBarChart size={16} />
                           Painel Analítico
                         </Link>
                       )}
-                      {podeVerTreinamentosBase &&
-                        ["006", "007"].map((codigo) => (
-                          <Link
-                            key={codigo}
-                            to={`/treinamentos-poc-sep-${codigo}`}
-                            className={subItem}
-                          >
-                            <FileCheck2 size={16} />
-                            POC-SEP-{codigo}
-                          </Link>
-                        ))}
                       {podeVerCriadorTreinamentos && (
                         <Link to="/treinamentos-dinamicos" className={subItem}>
                           <FileCheck2 size={16} />
