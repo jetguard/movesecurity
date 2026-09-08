@@ -27,6 +27,26 @@ spec:
         # garante que o volume de uploads montado abaixo seja gravável por
         # ele, mesmo sendo um PVC provisionado com dono root por padrão.
         fsGroup: 10001
+      initContainers:
+        - name: seed-uploads
+          image: gru.ocir.io/grs61s2n1sbr/movesecurity-prod:latest
+          imagePullPolicy: Always
+          # Semeia o vídeo fixo de treinamento no PVC de uploads, caso ainda
+          # não esteja lá (não sobrescreve se já existir). O publish-prod.sh
+          # atualiza a tag desta imagem junto com a do container principal,
+          # então ela nunca fica presa numa tag antiga que seja limpa do OCIR.
+          command:
+            - sh
+            - -c
+            - |
+              set -e
+              mkdir -p /app/backend/uploads/treinamentos-dinamicos/videos
+              if [ ! -f /app/backend/uploads/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4 ]; then
+                cp /app/seed/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4 /app/backend/uploads/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4
+              fi
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/backend/uploads
       containers:
         - name: movesecurity-prod
           image: gru.ocir.io/grs61s2n1sbr/movesecurity-prod:latest

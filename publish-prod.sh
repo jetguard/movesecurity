@@ -29,7 +29,9 @@ echo "Enviando a nova imagem Docker para o repositório..."
 docker push "$IMAGE_BASE:$TAG"
 
 echo "Atualizando a imagem no deployment existente..."
-kubectl -n movesecurity-prod set image deployment/movesecurity-prod movesecurity-prod="$IMAGE_BASE:$TAG"
+kubectl -n movesecurity-prod set image deployment/movesecurity-prod \
+  movesecurity-prod="$IMAGE_BASE:$TAG" \
+  seed-uploads="$IMAGE_BASE:$TAG"
 
 echo "Aguardando o rollout terminar..."
 kubectl -n movesecurity-prod rollout status deployment/movesecurity-prod
