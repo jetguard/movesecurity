@@ -848,9 +848,6 @@ export default function TreinamentoDinamicoPublico() {
                         />
                       ))}
                     </div>
-                    <p className="mt-2 text-xs font-bold text-slate-500">
-                      Token no formato 1-2-3-4-5-6.
-                    </p>
                   </div>
                 </>
               ) : (
