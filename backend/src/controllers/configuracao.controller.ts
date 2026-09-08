@@ -291,6 +291,7 @@ export async function atualizarConfiguracao(req: AuthRequest, res: Response) {
         req.body.ssoNomeBotao || "Entrar com conta corporativa";
       data.ssoDominioPermitido = req.body.ssoDominioPermitido || null;
       data.ssoClientId = req.body.ssoClientId || null;
+      data.ssoObjectId = req.body.ssoObjectId || null;
       data.ssoTenantId = req.body.ssoTenantId || null;
       data.ssoCallbackUrl = req.body.ssoCallbackUrl || null;
       data.ssoFrontendUrl = req.body.ssoFrontendUrl || null;

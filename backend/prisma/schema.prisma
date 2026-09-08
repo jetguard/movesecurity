@@ -1429,6 +1429,7 @@ model ConfiguracaoSistema {
   ssoDominioPermitido           String?
   ssoClientId                   String?
   ssoClientSecret               String?
+  ssoObjectId                   String?
   ssoTenantId                   String?
   ssoCallbackUrl                String?
   ssoFrontendUrl                String?
