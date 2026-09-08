@@ -569,6 +569,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       gruposTreinamento,
     } = req.body;
 
+    const emailNormalizado = String(email || "").trim().toLowerCase();
     const unidadesDoUsuario = normalizarUnidadesPermitidas(
       unidadesPermitidas,
       unidade,
@@ -587,7 +588,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
 
     if (
       !nome ||
-      !email ||
+      !emailNormalizado ||
       (!re && !cpfNormalizado) ||
       !setor ||
       !cargo ||
@@ -619,13 +620,16 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
 
     const existe = await prisma.usuario.findFirst({
       where: {
-        OR: [{ email }, ...(cpfNormalizado ? [{ cpf: cpfNormalizado }] : [])],
+        OR: [
+          { email: emailNormalizado },
+          ...(cpfNormalizado ? [{ cpf: cpfNormalizado }] : []),
+        ],
       },
     });
     if (existe) {
       return res.status(400).json({
         error:
-          existe.email === email
+          existe.email === emailNormalizado
             ? "E-mail já cadastrado."
             : "CPF já cadastrado.",
       });
@@ -634,7 +638,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
     const usuario = await prisma.usuario.create({
       data: {
         nome,
-        email,
+        email: emailNormalizado,
         cpf: cpfNormalizado || null,
         re,
         setor,
