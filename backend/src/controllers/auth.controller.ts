@@ -856,8 +856,8 @@ export async function callbackSso(req: Request, res: Response) {
       return redirecionarLoginSso(req, res, config, "Domínio não permitido.");
     }
 
-    let usuario = await prisma.usuario.findFirst({
-      where: { email: { equals: email, mode: "insensitive" } },
+    let usuario = await prisma.usuario.findUnique({
+      where: { email },
     });
 
     if (!usuario) {
