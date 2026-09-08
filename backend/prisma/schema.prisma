@@ -1436,6 +1436,7 @@ model ConfiguracaoSistema {
   ssoDominioPermitido           String?  @db.Text
   ssoClientId                   String?  @db.Text
   ssoClientSecret               String?  @db.Text
+  ssoObjectId                   String?  @db.Text
   ssoTenantId                   String?  @db.Text
   ssoCallbackUrl                String?  @db.Text
   ssoFrontendUrl                String?  @db.Text

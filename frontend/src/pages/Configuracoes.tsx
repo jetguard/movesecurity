@@ -29,6 +29,7 @@ type Configuracao = {
   ssoClientId?: string;
   ssoClientSecret?: string;
   ssoClientSecretConfigurado?: boolean;
+  ssoObjectId?: string;
   ssoTenantId?: string;
   ssoCallbackUrl?: string;
   ssoFrontendUrl?: string;
@@ -68,6 +69,7 @@ const inicial: Configuracao = {
   ssoClientId: "",
   ssoClientSecret: "",
   ssoClientSecretConfigurado: false,
+  ssoObjectId: "",
   ssoTenantId: "",
   ssoCallbackUrl: "https://movecta.jetguard.com.br/api/auth/sso/callback",
   ssoFrontendUrl: "https://movecta.jetguard.com.br",
@@ -445,6 +447,17 @@ export default function Configuracoes() {
                   placeholder="ID da aplicação no provedor"
                   value={form.ssoClientId || ""}
                   onChange={(e) => campo("ssoClientId", e.target.value)}
+                />
+              </Label>
+              <Label
+                titulo="ID do Objeto"
+                ajuda="Campo administrativo enviado pelo T.I; não é obrigatório para autenticar."
+              >
+                <input
+                  className={inputBase}
+                  placeholder="Object ID da aplicação no Entra ID"
+                  value={form.ssoObjectId || ""}
+                  onChange={(e) => campo("ssoObjectId", e.target.value)}
                 />
               </Label>
               <Label
