@@ -16,6 +16,7 @@ import {
   excluirTreinamentoModelo,
   excluirVisitanteTreinamentoModelo,
   iniciarTreinamentoModelo,
+  iniciarTreinamentoModeloTesteSuperAdmin,
   listarTreinamentosModelo,
   listarUnidadesTreinamentoModelo,
   listarVisitantesTreinamentoModelo,
@@ -139,6 +140,12 @@ router.get(
 router.get(
   "/public/treinamentos-dinamicos/:slug/video",
   baixarVideoTreinamentoModelo,
+);
+router.post(
+  "/treinamentos-dinamicos/:slug/teste-super-admin",
+  autenticarUsuario,
+  autorizarPerfis([PERFIS.SUPER_ADMIN]),
+  iniciarTreinamentoModeloTesteSuperAdmin,
 );
 router.post(
   "/public/treinamentos-dinamicos/:slug/iniciar",
