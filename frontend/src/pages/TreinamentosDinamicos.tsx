@@ -126,6 +126,35 @@ const modeloInicial: ModeloForm = {
   ],
 };
 
+const PASTA_VIDEOS_TREINAMENTO = "uploads/treinamentos-dinamicos/videos/";
+
+function nomeVideoServidor(caminho: string) {
+  const normalizado = String(caminho || "").replace(/\\/g, "/");
+  if (normalizado.startsWith(PASTA_VIDEOS_TREINAMENTO)) {
+    return normalizado.slice(PASTA_VIDEOS_TREINAMENTO.length);
+  }
+  return "";
+}
+
+function caminhoVideoServidor(valor: string) {
+  const normalizado = String(valor || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/^\/+/, "");
+  if (!normalizado) return "";
+  const indicePasta = normalizado.indexOf(PASTA_VIDEOS_TREINAMENTO);
+  const arquivoOriginal =
+    indicePasta >= 0
+      ? normalizado.slice(indicePasta + PASTA_VIDEOS_TREINAMENTO.length)
+      : normalizado.split("/").pop() || "";
+  const arquivo = arquivoOriginal.trim();
+  if (!arquivo || arquivo.includes("..")) return "";
+  const comExtensao = /\.(mp4|webm|ogg)$/i.test(arquivo)
+    ? arquivo
+    : `${arquivo}.mp4`;
+  return `${PASTA_VIDEOS_TREINAMENTO}${comExtensao}`;
+}
+
 const gruposTreinamento = [
   { valor: "CCOS", label: "CCOS" },
   { valor: "LIDERANCA", label: "Liderança" },
@@ -181,6 +210,7 @@ export default function TreinamentosDinamicos() {
   const [salvando, setSalvando] = useState(false);
   const [anexando, setAnexando] = useState(false);
   const [videoAnexando, setVideoAnexando] = useState(false);
+  const [videoServidor, setVideoServidor] = useState("");
   const [enviandoId, setEnviandoId] = useState<number | null>(null);
   const [etapaCriacao, setEtapaCriacao] = useState(1);
   const perfil = perfilAtual();
@@ -207,8 +237,10 @@ export default function TreinamentosDinamicos() {
   }, [modelos, searchParams]);
 
   function editar(modelo: Modelo) {
+    const formulario = modeloParaFormulario(modelo);
     setSelecionadoId(modelo.id);
-    setForm(modeloParaFormulario(modelo));
+    setForm(formulario);
+    setVideoServidor(nomeVideoServidor(formulario.videoUrl));
     setEtapaCriacao(1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -245,6 +277,7 @@ export default function TreinamentosDinamicos() {
   function novo() {
     setSelecionadoId(null);
     setForm(modeloInicial);
+    setVideoServidor("");
     setEtapaCriacao(1);
     setMensagem("");
   }
@@ -417,6 +450,7 @@ export default function TreinamentosDinamicos() {
         ...atual,
         videoUrl: response.data?.videoUrl || atual.videoUrl,
       }));
+      setVideoServidor(nomeVideoServidor(response.data?.videoUrl || ""));
       setMensagem("Vídeo anexado. Salve o treinamento para vincular o MP4.");
     } catch (error: any) {
       setMensagem(
@@ -425,6 +459,19 @@ export default function TreinamentosDinamicos() {
     } finally {
       setVideoAnexando(false);
     }
+  }
+
+  function aplicarVideoServidor() {
+    const caminho = caminhoVideoServidor(videoServidor);
+    if (!caminho) {
+      setMensagem(
+        "Informe o nome do vídeo existente no servidor. Exemplo: treinamento_terminal_rfb.mp4",
+      );
+      return;
+    }
+    setForm((atual) => ({ ...atual, videoUrl: caminho }));
+    setVideoServidor(nomeVideoServidor(caminho));
+    setMensagem("Vídeo do servidor vinculado. Salve o treinamento para confirmar.");
   }
 
   const passosCriacao = useMemo(() => [
@@ -907,10 +954,36 @@ export default function TreinamentosDinamicos() {
                       className="sr-only"
                     />
                   </label>
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <label className="text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                      Vídeo existente no servidor
+                    </label>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                      <input
+                        value={videoServidor}
+                        onChange={(event) => setVideoServidor(event.target.value)}
+                        placeholder="treinamento_terminal_rfb.mp4"
+                        className={`${campoClaro} min-w-0 flex-1`}
+                      />
+                      <button
+                        type="button"
+                        onClick={aplicarVideoServidor}
+                        className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-black text-white transition hover:bg-blue-700"
+                      >
+                        Usar vídeo
+                      </button>
+                    </div>
+                    <p className="mt-2 text-xs font-semibold text-slate-500">
+                      Pasta padrão: uploads/treinamentos-dinamicos/videos/
+                    </p>
+                  </div>
                   {form.videoUrl && (
                     <button
                       type="button"
-                      onClick={() => setForm({ ...form, videoUrl: "" })}
+                      onClick={() => {
+                        setForm({ ...form, videoUrl: "" });
+                        setVideoServidor("");
+                      }}
                       className="mt-3 inline-flex items-center gap-2 rounded-lg border border-red-100 px-3 py-2 text-xs font-black text-red-600 hover:bg-red-50"
                     >
                       <Trash2 size={14} /> Remover vídeo
