@@ -74,8 +74,13 @@ function emailValido(email: string) {
 function videoPadrao() {
   return (
     process.env.TREINAMENTO_TERMINAL_VIDEO_URL ||
-    "/videos/treinamento-terminal.mp4"
+    "uploads/treinamentos-dinamicos/videos/treinamento_terminal_rfb.mp4"
   );
+}
+
+function videoTerminalPublicoUrl() {
+  const video = videoPadrao();
+  return video.startsWith("uploads/") ? "/api/public/treinamento-terminal/video" : video;
 }
 
 function appPublicUrl() {
@@ -422,8 +427,63 @@ export function configTreinamentoTerminal(req: Request, res: Response) {
     titulo: "Treinamento de acesso ao Recinto Alfandegado",
     portaria: "Portaria ALF/STS no 205, de 22 de junho de 2026",
     resumo: resumoPortaria,
-    videoUrl: videoPadrao(),
+    videoUrl: videoTerminalPublicoUrl(),
   });
+}
+
+export async function baixarVideoTreinamentoTerminal(
+  req: Request,
+  res: Response,
+) {
+  try {
+    const video = videoPadrao();
+    if (!video.startsWith("uploads/")) {
+      return res.redirect(video);
+    }
+
+    const caminhoAbsoluto = path.resolve(process.cwd(), video);
+    const raizUploads = path.resolve(process.cwd(), "uploads");
+    if (
+      !caminhoAbsoluto.startsWith(raizUploads) ||
+      !fs.existsSync(caminhoAbsoluto)
+    ) {
+      return res.status(404).json({ error: "Vídeo não encontrado." });
+    }
+
+    const tamanho = fs.statSync(caminhoAbsoluto).size;
+    const range = req.headers.range;
+    const contentType = video.endsWith(".webm")
+      ? "video/webm"
+      : video.endsWith(".ogg")
+        ? "video/ogg"
+        : "video/mp4";
+
+    if (range) {
+      const partes = range.replace(/bytes=/, "").split("-");
+      const inicio = parseInt(partes[0], 10);
+      const fim = partes[1] ? parseInt(partes[1], 10) : tamanho - 1;
+      const tamanhoBloco = fim - inicio + 1;
+      res.writeHead(206, {
+        "Content-Range": `bytes ${inicio}-${fim}/${tamanho}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": tamanhoBloco,
+        "Content-Type": contentType,
+      });
+      return fs.createReadStream(caminhoAbsoluto, { start: inicio, end: fim }).pipe(res);
+    }
+
+    res.writeHead(200, {
+      "Content-Length": tamanho,
+      "Content-Type": contentType,
+      "Accept-Ranges": "bytes",
+    });
+    return fs.createReadStream(caminhoAbsoluto).pipe(res);
+  } catch (error: any) {
+    console.error(error);
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao carregar vídeo." });
+  }
 }
 
 export async function iniciarTreinamentoTerminal(req: Request, res: Response) {

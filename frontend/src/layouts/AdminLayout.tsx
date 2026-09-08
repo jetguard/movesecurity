@@ -96,6 +96,7 @@ export default function AdminLayout() {
     temModulo("treinamentos_criador") ||
     temModulo("treinamentos_criados") ||
     temModulo("treinamentos_visitantes");
+  const podeVerTreinamentosBase = temModulo("treinamentos");
   const podeVerCriadorTreinamentos = temModulo("treinamentos_criador");
   const podeVerTreinamentosCriados = temModulo("treinamentos_criados");
   const podeVerVisitantesTreinamentos = temModulo("treinamentos_visitantes");
@@ -538,6 +539,12 @@ export default function AdminLayout() {
 
               {treinamentosOpen && (
                 <div className={submenuClass}>
+                  {podeVerTreinamentosBase && (
+                    <Link to="/treinamentos-terminal" className={subItem}>
+                      <FileCheck2 size={16} />
+                      Treinamento Terminal
+                    </Link>
+                  )}
                   {podeVerPainelTreinamentos && (
                     <Link to="/painel-treinamentos" className={subItem}>
                       <FileBarChart size={16} />
@@ -568,6 +575,12 @@ export default function AdminLayout() {
 
               {treinamentosOpen && (
                 <div className={submenuClass}>
+                  {podeVerTreinamentosBase && (
+                    <Link to="/treinamentos-terminal" className={subItem}>
+                      <FileCheck2 size={16} />
+                      Treinamento Terminal
+                    </Link>
+                  )}
                   {podeVerPainelTreinamentos && (
                     <Link to="/painel-treinamentos" className={subItem}>
                       <FileBarChart size={16} />
@@ -618,6 +631,12 @@ export default function AdminLayout() {
 
                   {treinamentosOpen && (
                     <div className={submenuClass}>
+                      {podeVerTreinamentosBase && (
+                        <Link to="/treinamentos-terminal" className={subItem}>
+                          <FileCheck2 size={16} />
+                          Treinamento Terminal
+                        </Link>
+                      )}
                       {podeVerPainelTreinamentos && (
                         <Link to="/painel-treinamentos" className={subItem}>
                           <FileBarChart size={16} />

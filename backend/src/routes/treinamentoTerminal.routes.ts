@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   atualizarProgressoTreinamento,
   baixarCertificadoTreinamento,
+  baixarVideoTreinamentoTerminal,
   concluirTreinamentoTerminal,
   configTreinamentoTerminal,
   excluirTreinamentoTerminal,
@@ -20,6 +21,7 @@ import {
 const router = Router();
 
 router.get("/public/treinamento-terminal/config", configTreinamentoTerminal);
+router.get("/public/treinamento-terminal/video", baixarVideoTreinamentoTerminal);
 router.post("/public/treinamento-terminal/iniciar", iniciarTreinamentoTerminal);
 router.put(
   "/public/treinamento-terminal/:token/progresso",

@@ -75,8 +75,12 @@ export async function enviarEmail(params: EmailParams) {
     });
 
     return { enviado: true, status: "ENVIADO" };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Falha ao enviar e-mail:", error);
-    return { enviado: false, status: "FALHA_ENVIO" };
+    return {
+      enviado: false,
+      status: "FALHA_ENVIO",
+      erro: error?.message || error?.code || "Falha desconhecida no SMTP.",
+    };
   }
 }

@@ -411,11 +411,15 @@ export async function testarSmtpConfiguracao(req: AuthRequest, res: Response) {
     });
 
     if (!resultado.enviado) {
+      const detalhe =
+        "erro" in resultado && resultado.erro
+          ? ` Detalhe técnico: ${resultado.erro}`
+          : "";
       return res.status(400).json({
         error:
           resultado.status === "SMTP_NAO_CONFIGURADO"
             ? "SMTP não configurado ou inativo."
-            : "Não foi possível enviar o e-mail de teste.",
+            : `Não foi possível enviar o e-mail de teste.${detalhe}`,
         status: resultado.status,
       });
     }
