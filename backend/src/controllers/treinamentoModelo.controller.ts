@@ -22,6 +22,7 @@ const assinaturasSegurancaPatrimonial = [
     "assinatura-seguranca-patrimonial.jpeg",
   ),
 ];
+const pastaVideosTreinamento = "uploads/treinamentos-dinamicos/videos/";
 
 function texto(valor: unknown) {
   return String(valor || "").trim();
@@ -45,6 +46,19 @@ function removerArquivoInterno(caminho?: string | null) {
   const raizUploads = path.resolve(process.cwd(), "uploads");
   if (!absoluto.startsWith(raizUploads)) return;
   fs.rmSync(absoluto, { force: true });
+}
+
+function normalizarVideoInterno(caminho: unknown) {
+  const normalizado = texto(caminho).replace(/\\/g, "/").replace(/^\/+/, "");
+  if (!normalizado) return null;
+  if (
+    !normalizado.startsWith(pastaVideosTreinamento) ||
+    normalizado.includes("..") ||
+    !/\.(mp4|webm|ogg)$/i.test(normalizado)
+  ) {
+    return "";
+  }
+  return normalizado;
 }
 
 function limparCpf(cpf: string) {
@@ -839,9 +853,16 @@ function validarPayloadModelo(body: any) {
       body.gruposTreinamento ??
       body.gruposPermitidosJson,
   );
+  const videoUrl = normalizarVideoInterno(body.videoUrl);
 
   if (!rascunho && (!codigo || !nome || !tipo)) {
     return { error: "Informe tipo, código e nome do treinamento." };
+  }
+  if (videoUrl === "") {
+    return {
+      error:
+        "Informe um vídeo interno válido em uploads/treinamentos-dinamicos/videos/ com extensão MP4, WebM ou OGG.",
+    };
   }
   if (!rascunho && !etapas.length) {
     return { error: "Cadastre pelo menos uma etapa de conteúdo." };
@@ -883,7 +904,7 @@ function validarPayloadModelo(body: any) {
     acessoPublico,
     perguntasHabilitadas,
     avaliacaoHabilitada,
-    videoUrl: texto(body.videoUrl) || null,
+    videoUrl,
     anexoNome: texto(body.anexoNome) || null,
     anexoUrl: texto(body.anexoUrl) || null,
     anexoArquivo: texto(body.anexoArquivo) || null,
