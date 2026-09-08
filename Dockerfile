@@ -50,7 +50,7 @@ RUN mkdir -p /app/backend/uploads \
 # Vídeo fixo de treinamento: fica fora de /app/backend/uploads (que em produção
 # é um PVC montado por cima, escondendo qualquer coisa da imagem) para poder
 # ser copiado ao PVC por um initContainer no primeiro start do Pod.
-COPY backend/uploads/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4 /app/seed/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4
+COPY backend/uploads/treinamentos-dinamicos/videos/treinamento_terminal_rfb.mp4 /app/seed/treinamentos-dinamicos/videos/treinamento_terminal_rfb.mp4
 
 EXPOSE 80 443
 

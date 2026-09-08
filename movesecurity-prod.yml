@@ -41,8 +41,8 @@ spec:
             - |
               set -e
               mkdir -p /app/backend/uploads/treinamentos-dinamicos/videos
-              if [ ! -f /app/backend/uploads/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4 ]; then
-                cp /app/seed/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4 /app/backend/uploads/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4
+              if [ ! -f /app/backend/uploads/treinamentos-dinamicos/videos/treinamento_terminal_rfb.mp4 ]; then
+                cp /app/seed/treinamentos-dinamicos/videos/treinamento_terminal_rfb.mp4 /app/backend/uploads/treinamentos-dinamicos/videos/treinamento_terminal_rfb.mp4
               fi
           volumeMounts:
             - name: uploads

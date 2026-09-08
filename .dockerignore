@@ -10,7 +10,7 @@ backend/uploads/*
 backend/uploads/treinamentos-dinamicos/*
 !backend/uploads/treinamentos-dinamicos/videos
 backend/uploads/treinamentos-dinamicos/videos/*
-!backend/uploads/treinamentos-dinamicos/videos/treinamento-terminal_rfb.mp4
+!backend/uploads/treinamentos-dinamicos/videos/treinamento_terminal_rfb.mp4
 **/backups
 **/*.db
 **/*.db-*
