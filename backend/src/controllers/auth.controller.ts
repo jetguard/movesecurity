@@ -508,6 +508,72 @@ function normalizarEmailSso(claims: Record<string, any>) {
     .toLowerCase();
 }
 
+function textoSso(valor: unknown) {
+  return String(valor || "").trim();
+}
+
+function nomeUsuarioSso(claims: Record<string, any>, email: string) {
+  const nomeCompleto = textoSso(claims.name);
+  if (nomeCompleto) return nomeCompleto;
+
+  const nomes = [claims.given_name, claims.family_name]
+    .map(textoSso)
+    .filter(Boolean)
+    .join(" ");
+  if (nomes) return nomes;
+
+  return email.split("@")[0] || "Usuario corporativo";
+}
+
+async function criarPreCadastroSso(
+  req: Request,
+  email: string,
+  claims: Record<string, any>,
+) {
+  const senhaTemporariaHash = await bcrypt.hash(
+    crypto.randomBytes(32).toString("hex"),
+    10,
+  );
+  const nome = nomeUsuarioSso(claims, email);
+
+  const usuario = await prisma.usuario.create({
+    data: {
+      nome,
+      email,
+      senha: senhaTemporariaHash,
+      perfilAcesso: "",
+      statusUsuario: "INATIVO",
+      somenteCadastro: true,
+      deveAlterarSenha: false,
+      cargo: textoSso(claims.jobTitle || claims.title) || null,
+      setor: textoSso(claims.department) || null,
+      empresa: "Movecta S/A",
+      gruposTreinamentoJson: "[]",
+    },
+  });
+
+  await prisma.logAuditoria.create({
+    data: {
+      usuarioId: usuario.id,
+      usuarioNome: usuario.nome,
+      ip: req.ip,
+      acao: "Pré-cadastro criado via SSO",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosNovos: JSON.stringify({
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email,
+        origem: "sso",
+        statusUsuario: usuario.statusUsuario,
+        somenteCadastro: usuario.somenteCadastro,
+      }),
+    },
+  });
+
+  return usuario;
+}
+
 function urlFrontendSso(
   req: Request,
   config?: Awaited<ReturnType<typeof obterConfiguracaoSso>>,
@@ -790,13 +856,18 @@ export async function callbackSso(req: Request, res: Response) {
       return redirecionarLoginSso(req, res, config, "Domínio não permitido.");
     }
 
-    const usuario = await prisma.usuario.findFirst({
+    let usuario = await prisma.usuario.findFirst({
       where: { email: { equals: email, mode: "insensitive" } },
     });
 
     if (!usuario) {
-      await registrarFalhaAuditoria(req, email, "usuário SSO não cadastrado");
-      return redirecionarLoginSso(req, res, config, "Usuário não cadastrado.");
+      usuario = await criarPreCadastroSso(req, email, claims);
+      return redirecionarLoginSso(
+        req,
+        res,
+        config,
+        "Pré-cadastro criado. Aguarde a liberação do acesso.",
+      );
     }
 
     if (usuario.statusUsuario !== "ATIVO" || usuario.somenteCadastro) {
