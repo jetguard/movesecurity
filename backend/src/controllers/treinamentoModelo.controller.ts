@@ -1803,6 +1803,93 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
   }
 }
 
+export async function iniciarTreinamentoModeloTesteSuperAdmin(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const modelo = await carregarModeloPorSlug(texto(req.params.slug));
+    if (!modelo || modelo.status !== "Publicado")
+      return res.status(404).json({ error: "Treinamento não encontrado." });
+
+    if (!req.usuarioId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+      select: {
+        id: true,
+        nome: true,
+        cpf: true,
+        email: true,
+        cargo: true,
+        setor: true,
+        unidade: true,
+        empresa: true,
+      },
+    });
+
+    if (!usuario?.email) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    const email = texto(usuario.email).toLowerCase();
+    const cpf = limparCpf(usuario.cpf || "");
+    const existente = await db.treinamentoModeloParticipante.findFirst({
+      where: {
+        treinamentoId: modelo.id,
+        usuarioId: usuario.id,
+        email,
+      },
+      orderBy: { updatedAt: "desc" },
+    });
+    const snapshotAtual = existente?.snapshotJson || criarSnapshot(modelo);
+    const token = existente?.token || randomUUID();
+    const data = {
+      usuarioId: usuario.id,
+      nomeCompleto: texto(usuario.nome) || "Super Admin",
+      cpf,
+      email,
+      cargo: usuario.cargo || "Super Admin",
+      departamento: usuario.setor || "Administração",
+      unidade: usuario.unidade || req.unidadeAtiva || "Não informado",
+      empresa: usuario.empresa || "Movecta",
+      token,
+      tokenExpiraEm: null,
+      ultimoAcessoEm: new Date(),
+      navegador: userAgent(req),
+      sistema: userAgent(req),
+      ipInicio: existente?.ipInicio || req.ip,
+      versao: modelo.versao,
+      snapshotJson: snapshotAtual,
+      status: existente?.status || "Em andamento",
+    };
+
+    const participante = existente
+      ? await db.treinamentoModeloParticipante.update({
+          where: { id: existente.id },
+          data,
+        })
+      : await db.treinamentoModeloParticipante.create({
+          data: {
+            treinamentoId: modelo.id,
+            ...data,
+          },
+        });
+
+    return res.status(existente ? 200 : 201).json({
+      treinamento: lerSnapshot(participante, modelo, false),
+      participante: respostaParticipante(participante),
+    });
+  } catch (error: any) {
+    console.error(error);
+    return res.status(500).json({
+      error: error?.message || "Erro ao iniciar treinamento em modo teste.",
+    });
+  }
+}
+
 export async function concluirEtapaTreinamentoModelo(
   req: Request,
   res: Response,

@@ -14,6 +14,7 @@ import {
   PlayCircle,
   ShieldCheck,
 } from "lucide-react";
+import { api } from "../services/api";
 import { PERFIS, perfilAtual } from "../utils/permissoes";
 
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
@@ -493,6 +494,33 @@ export default function TreinamentoDinamicoPublico() {
   function alterarTerceirizado(valor: boolean) {
     setForm((atual) => ({ ...atual, terceirizado: valor }));
   }
+
+  function aplicarInicioTreinamento(data: any) {
+    const treinamentoRecebido = data.treinamento as Modelo;
+    setModelo(treinamentoRecebido);
+    const registro = data.participante as Participante;
+    setParticipante(registro);
+    setResultado(resultadoDoParticipante(registro, treinamentoRecebido));
+    const totalConteudoRecebido = treinamentoRecebido.etapas?.length || 0;
+    const temVideoRecebido = Boolean(treinamentoRecebido.videoUrl);
+    const temQuizRecebido =
+      treinamentoRecebido.perguntasHabilitadas !== false &&
+      (treinamentoRecebido.perguntas?.length || 0) > 0;
+    const temOpiniaoRecebida = treinamentoRecebido.avaliacaoHabilitada !== false;
+    const totalFluxoRecebido =
+      totalConteudoRecebido +
+      (temVideoRecebido ? 1 : 0) +
+      (temQuizRecebido ? 2 : 0) +
+      (temOpiniaoRecebida ? 1 : 0) +
+      1;
+    setIndice(
+      Math.max(
+        0,
+        Math.min(totalFluxoRecebido - 1, (registro.etapaAtual || 1) - 1),
+      ),
+    );
+  }
+
   async function iniciar(event: FormEvent) {
     event.preventDefault();
     if (modelo?.acessoPublico) {
@@ -511,34 +539,30 @@ export default function TreinamentoDinamicoPublico() {
         `/api/public/treinamentos-dinamicos/${slug}/iniciar`,
         form,
       );
-      const treinamentoRecebido = response.data.treinamento as Modelo;
-      setModelo(treinamentoRecebido);
-      const registro = response.data.participante as Participante;
-      setParticipante(registro);
-      setResultado(resultadoDoParticipante(registro, treinamentoRecebido));
-      const totalConteudoRecebido = treinamentoRecebido.etapas?.length || 0;
-      const temVideoRecebido = Boolean(treinamentoRecebido.videoUrl);
-      const temQuizRecebido =
-        treinamentoRecebido.perguntasHabilitadas !== false &&
-        (treinamentoRecebido.perguntas?.length || 0) > 0;
-      const temOpiniaoRecebida =
-        treinamentoRecebido.avaliacaoHabilitada !== false;
-      const totalFluxoRecebido =
-        totalConteudoRecebido +
-        (temVideoRecebido ? 1 : 0) +
-        (temQuizRecebido ? 2 : 0) +
-        (temOpiniaoRecebida ? 1 : 0) +
-        1;
-      setIndice(
-        Math.max(
-          0,
-          Math.min(totalFluxoRecebido - 1, (registro.etapaAtual || 1) - 1),
-        ),
-      );
+      aplicarInicioTreinamento(response.data);
     } catch (error: any) {
       setMensagem(
         error.response?.data?.error ||
           "Não foi possível iniciar o treinamento.",
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  async function iniciarTesteSuperAdmin() {
+    setCarregando(true);
+    setMensagem("");
+    try {
+      const response = await api.post(
+        `/treinamentos-dinamicos/${slug}/teste-super-admin`,
+      );
+      aplicarInicioTreinamento(response.data);
+      setMensagem("Modo teste iniciado pelo super_admin.");
+    } catch (error: any) {
+      setMensagem(
+        error.response?.data?.error ||
+          "Não foi possível iniciar o modo teste do super_admin.",
       );
     } finally {
       setCarregando(false);
@@ -848,6 +872,17 @@ export default function TreinamentoDinamicoPublico() {
                         />
                       ))}
                     </div>
+                    {podePularVideoTeste && (
+                      <button
+                        type="button"
+                        onClick={iniciarTesteSuperAdmin}
+                        disabled={carregando}
+                        className="mt-3 inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-xs font-black text-blue-700 transition hover:border-blue-300 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        <ShieldCheck size={15} />
+                        Entrar como super_admin sem token
+                      </button>
+                    )}
                   </div>
                 </>
               ) : (
