@@ -42,6 +42,9 @@ export const MODULOS_ACESSO = [
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },
+  { chave: "treinamentos_criador", nome: "Criador de Treinamentos" },
+  { chave: "treinamentos_criados", nome: "Treinamentos Criados" },
+  { chave: "treinamentos_visitantes", nome: "Cadastro de Visitantes" },
   { chave: "operacao", nome: "Operação" },
   { chave: "cftv", nome: "Câmeras e manutenção" },
   { chave: "quadra_seguranca", nome: "Quadra de Segurança" },
@@ -148,6 +151,14 @@ export function permissoesModulosAtual() {
   return PERFIS_POR_MODULO[usuario.perfilAcesso || ""] || [];
 }
 
+function moduloCorresponde(permissaoModulo: string, moduloSolicitado: string) {
+  return (
+    permissaoModulo === moduloSolicitado ||
+    (permissaoModulo === "treinamentos" &&
+      moduloSolicitado.startsWith("treinamentos_"))
+  );
+}
+
 export function permissoesAcoesAtual() {
   const usuario = usuarioAtual();
   if (!usuario) return [];
@@ -166,14 +177,17 @@ export function permissoesAcoesAtual() {
 export function temModulo(modulo: string) {
   if (perfilAtual() === PERFIS.SUPER_ADMIN || perfilAtual() === PERFIS.TI)
     return true;
-  return permissoesModulosAtual().includes(modulo);
+  return permissoesModulosAtual().some((permissaoModulo) =>
+    moduloCorresponde(permissaoModulo, modulo),
+  );
 }
 
 export function podeNoModulo(modulo: string, acao: AcaoAcesso = "leitura") {
   if (perfilAtual() === PERFIS.SUPER_ADMIN || perfilAtual() === PERFIS.TI)
     return true;
   return permissoesAcoesAtual().some(
-    (permissao) => permissao.modulo === modulo && Boolean(permissao[acao]),
+    (permissao) =>
+      moduloCorresponde(permissao.modulo, modulo) && Boolean(permissao[acao]),
   );
 }
 
