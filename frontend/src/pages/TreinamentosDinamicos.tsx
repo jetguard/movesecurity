@@ -126,6 +126,22 @@ const modeloInicial: ModeloForm = {
   ],
 };
 
+const VIDEO_MAX_MB = 700;
+const VIDEO_MAX_BYTES = VIDEO_MAX_MB * 1024 * 1024;
+const TIPOS_VIDEO_ACEITOS = ["video/mp4", "video/webm", "video/ogg"];
+
+function mensagemUploadIndisponivel(error: any, tipo: "arquivo" | "vídeo") {
+  if (error.response?.status === 413) {
+    return `O ${tipo} ultrapassou o limite permitido pelo servidor. Para vídeos, confirme com o T.I. o limite de upload do Ingress/Proxy.`;
+  }
+
+  if (!error.response && error.request) {
+    return `Não foi possível anexar o ${tipo}. A conexão foi interrompida antes de chegar ao sistema; verifique o limite de upload do ambiente Movecta.`;
+  }
+
+  return error.response?.data?.error || `Não foi possível anexar o ${tipo}.`;
+}
+
 const gruposTreinamento = [
   { valor: "CCOS", label: "CCOS" },
   { valor: "LIDERANCA", label: "Liderança" },
@@ -386,7 +402,10 @@ export default function TreinamentosDinamicos() {
     try {
       const dados = new FormData();
       dados.append("anexo", arquivo);
-      const response = await api.post("/treinamentos-dinamicos/anexo", dados);
+      const response = await api.post("/treinamentos-dinamicos/anexo", dados, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
+      });
       setForm((atual) => ({
         ...atual,
         anexoNome: response.data?.anexoNome || arquivo.name,
@@ -397,9 +416,7 @@ export default function TreinamentosDinamicos() {
         "Arquivo anexado. Salve o treinamento para vincular o anexo.",
       );
     } catch (error: any) {
-      setMensagem(
-        error.response?.data?.error || "Não foi possível anexar o arquivo.",
-      );
+      setMensagem(mensagemUploadIndisponivel(error, "arquivo"));
     } finally {
       setAnexando(false);
     }
@@ -407,21 +424,31 @@ export default function TreinamentosDinamicos() {
 
   async function anexarVideo(arquivo?: File | null) {
     if (!arquivo) return;
+    const extensaoValida = /\.(mp4|webm|ogg)$/i.test(arquivo.name);
+    if (!TIPOS_VIDEO_ACEITOS.includes(arquivo.type) && !extensaoValida) {
+      setMensagem("Tipo de vídeo não permitido. Anexe um arquivo MP4, WebM ou OGG.");
+      return;
+    }
+    if (arquivo.size > VIDEO_MAX_BYTES) {
+      setMensagem(`Vídeo muito grande. O limite atual do sistema é ${VIDEO_MAX_MB}MB.`);
+      return;
+    }
     setVideoAnexando(true);
     setMensagem("");
     try {
       const dados = new FormData();
       dados.append("video", arquivo);
-      const response = await api.post("/treinamentos-dinamicos/video", dados);
+      const response = await api.post("/treinamentos-dinamicos/video", dados, {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 20 * 60 * 1000,
+      });
       setForm((atual) => ({
         ...atual,
         videoUrl: response.data?.videoUrl || atual.videoUrl,
       }));
       setMensagem("Vídeo anexado. Salve o treinamento para vincular o MP4.");
     } catch (error: any) {
-      setMensagem(
-        error.response?.data?.error || "Não foi possível anexar o vídeo.",
-      );
+      setMensagem(mensagemUploadIndisponivel(error, "vídeo"));
     } finally {
       setVideoAnexando(false);
     }

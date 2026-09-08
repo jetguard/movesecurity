@@ -74,13 +74,26 @@ function tratarErroUpload(
   next: NextFunction,
 ) {
   if (!erro) return next();
-  if (erro instanceof multer.MulterError && erro.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({
-      error:
-        "Arquivo muito grande para upload. Reduza o tamanho ou compacte o arquivo antes de anexar.",
-    });
+  if (erro instanceof multer.MulterError) {
+    if (erro.code === "LIMIT_FILE_SIZE") {
+      return res.status(413).json({
+        error:
+          "Arquivo muito grande para upload. Reduza o tamanho ou solicite ao T.I. o aumento do limite de upload do servidor.",
+      });
+    }
+    if (erro.code === "LIMIT_UNEXPECTED_FILE") {
+      return res.status(400).json({
+        error: "Campo de upload inválido. Atualize a página e tente anexar novamente.",
+      });
+    }
   }
   if (erro instanceof Error) {
+    if (/EACCES|EPERM|EROFS/i.test(erro.message)) {
+      return res.status(500).json({
+        error:
+          "O servidor não tem permissão para gravar uploads. Solicite ao T.I. a configuração de volume/pasta persistente para anexos.",
+      });
+    }
     return res.status(400).json({ error: erro.message });
   }
   return res.status(400).json({ error: "Não foi possível processar o upload." });
