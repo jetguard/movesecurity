@@ -130,18 +130,29 @@ function acaoDaRequisicao(req: AuthRequest) {
   return "leitura";
 }
 
-function moduloDaRota(req: AuthRequest) {
+function modulosDaRota(req: AuthRequest) {
   const rota = req.originalUrl || req.path || "";
-  if (rota.startsWith("/api/usuarios")) return "usuarios";
+  if (rota.startsWith("/api/usuarios")) return ["usuarios"];
   if (rota.startsWith("/api/auth")) return undefined;
-  if (rota.startsWith("/api/treinamentos") || rota.includes("treinamento")) return "treinamentos";
-  if (rota.startsWith("/api/riscos")) return "analise_riscos";
-  if (rota.startsWith("/api/planos-acao")) return "plano_acao";
-  if (rota.startsWith("/api/cameras") || rota.startsWith("/api/ordens-servico")) return "cftv";
-  if (rota.startsWith("/api/quadra")) return "quadra_seguranca";
-  if (rota.startsWith("/api/naturezas") || rota.startsWith("/api/locais")) return "cadastros";
-  if (rota.startsWith("/api/logs") || rota.startsWith("/api/sessoes")) return "logs";
-  if (rota.startsWith("/api/configuracoes") || rota.startsWith("/api/apis")) return "configuracoes";
+  if (rota.startsWith("/api/treinamentos-visitantes")) return ["treinamentos_visitantes"];
+  if (
+    rota.startsWith("/api/treinamentos-dinamicos/anexo") ||
+    rota.startsWith("/api/treinamentos-dinamicos/video") ||
+    (rota.startsWith("/api/treinamentos-dinamicos") && req.method !== "GET")
+  ) {
+    return ["treinamentos_criador"];
+  }
+  if (rota.startsWith("/api/treinamentos-dinamicos")) {
+    return ["treinamentos_criados", "treinamentos_criador"];
+  }
+  if (rota.startsWith("/api/treinamentos") || rota.includes("treinamento")) return ["treinamentos"];
+  if (rota.startsWith("/api/riscos")) return ["analise_riscos"];
+  if (rota.startsWith("/api/planos-acao")) return ["plano_acao"];
+  if (rota.startsWith("/api/cameras") || rota.startsWith("/api/ordens-servico")) return ["cftv"];
+  if (rota.startsWith("/api/quadra")) return ["quadra_seguranca"];
+  if (rota.startsWith("/api/naturezas") || rota.startsWith("/api/locais")) return ["cadastros"];
+  if (rota.startsWith("/api/logs") || rota.startsWith("/api/sessoes")) return ["logs"];
+  if (rota.startsWith("/api/configuracoes") || rota.startsWith("/api/apis")) return ["configuracoes"];
   if (
     rota.startsWith("/api/ocorrencias") ||
     rota.startsWith("/api/eventos") ||
@@ -149,9 +160,17 @@ function moduloDaRota(req: AuthRequest) {
     rota.startsWith("/api/relatorios") ||
     rota.startsWith("/api/relatos-campo")
   ) {
-    return "relatorios";
+    return ["relatorios"];
   }
   return undefined;
+}
+
+function moduloCorresponde(permissaoModulo: string, moduloRota: string) {
+  return (
+    permissaoModulo === moduloRota ||
+    (permissaoModulo === "treinamentos" &&
+      moduloRota.startsWith("treinamentos_"))
+  );
 }
 
 export async function autenticarUsuario(
@@ -306,17 +325,19 @@ export function autorizarPerfis(perfisPermitidos: string[]) {
       });
     }
 
-    const moduloRota = moduloDaRota(req);
+    const modulosRota = modulosDaRota(req);
     const acessoPorPerfil =
-      !moduloRota && req.usuarioPerfil
+      !modulosRota && req.usuarioPerfil
         ? perfisPermitidos.includes(req.usuarioPerfil)
         : false;
     const acao = acaoDaRequisicao(req);
     const acessoPorModulo =
-      Boolean(moduloRota) &&
+      Boolean(modulosRota?.length) &&
       (req.usuarioPermissoesAcoes || []).some(
         (permissao) =>
-          permissao.modulo === moduloRota &&
+          modulosRota?.some((moduloRota) =>
+            moduloCorresponde(permissao.modulo, moduloRota),
+          ) &&
           Boolean(permissao[acao as keyof PermissaoModulo]),
       );
 
@@ -349,6 +370,9 @@ export const MODULOS_ACESSO = [
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },
+  { chave: "treinamentos_criador", nome: "Criador de Treinamentos" },
+  { chave: "treinamentos_criados", nome: "Treinamentos Criados" },
+  { chave: "treinamentos_visitantes", nome: "Cadastro de Visitantes" },
   { chave: "operacao", nome: "Operação" },
   { chave: "cftv", nome: "Câmeras e manutenção" },
   { chave: "quadra_seguranca", nome: "Quadra de Segurança" },

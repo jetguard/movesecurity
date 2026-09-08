@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { api } from "../services/api";
 import { cpfVisivelPorPerfil } from "../utils/cpf";
+import { podeNoModulo } from "../utils/permissoes";
 
 type TreinamentoPublico = {
   id: number;
@@ -80,6 +81,9 @@ export default function TreinamentosVisitantes() {
   >({});
   const [mensagem, setMensagem] = useState("");
   const [agora, setAgora] = useState(Date.now());
+  const podeCadastrar = podeNoModulo("treinamentos_visitantes", "criar");
+  const podeEditar = podeNoModulo("treinamentos_visitantes", "editar");
+  const podeExcluir = podeNoModulo("treinamentos_visitantes", "excluir");
 
   async function carregar() {
     const response = await api.get("/treinamentos-visitantes");
@@ -122,12 +126,14 @@ export default function TreinamentosVisitantes() {
   }
 
   function abrirNovo() {
+    if (!podeCadastrar) return;
     setEditandoId(null);
     setForm(inicial);
     setModalAberto(true);
   }
 
   function editar(visitante: Visitante) {
+    if (!podeEditar) return;
     setEditandoId(visitante.id);
     setForm({
       nomeCompleto: visitante.nomeCompleto || "",
@@ -214,6 +220,7 @@ export default function TreinamentosVisitantes() {
   }
 
   async function enviar(visitanteId: number) {
+    if (!podeCadastrar) return;
     const treinamentoId = envioPorVisitante[visitanteId];
     if (!treinamentoId) return;
     const visitante = visitantes.find((item) => item.id === visitanteId);
@@ -242,6 +249,7 @@ export default function TreinamentosVisitantes() {
   }
 
   async function excluir(visitante: Visitante) {
+    if (!podeExcluir) return;
     if (
       !window.confirm(
         `Deseja excluir o visitante ${visitante.nomeCompleto}? O acompanhamento de treinamentos já enviados permanece na tela de Treinamentos Criados.`,
@@ -277,13 +285,15 @@ export default function TreinamentosVisitantes() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <button
-            onClick={abrirNovo}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500"
-          >
-            <Plus size={17} />
-            Novo visitante
-          </button>
+          {podeCadastrar && (
+            <button
+              onClick={abrirNovo}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-600/20 hover:bg-blue-500"
+            >
+              <Plus size={17} />
+              Novo visitante
+            </button>
+          )}
           <button
             onClick={() => carregar()}
             className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-black text-slate-100 hover:border-blue-500"
@@ -419,32 +429,38 @@ export default function TreinamentosVisitantes() {
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => enviar(visitante.id)}
-                          disabled={
-                            enviandoId === visitante.id ||
-                            !envioPorVisitante[visitante.id]
-                          }
-                          title="Enviar treinamento"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-500/50 bg-blue-600/15 text-blue-100 hover:bg-blue-600/25 disabled:opacity-60"
-                        >
-                          <Send size={15} />
-                        </button>
-                        <button
-                          onClick={() => editar(visitante)}
-                          title="Editar visitante"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 text-slate-100 hover:border-blue-500"
-                        >
-                          <Edit3 size={15} />
-                        </button>
-                        <button
-                          onClick={() => excluir(visitante)}
-                          disabled={excluindoId === visitante.id}
-                          title="Excluir visitante"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/50 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20 disabled:opacity-60"
-                        >
-                          <Trash2 size={15} />
-                        </button>
+                        {podeCadastrar && (
+                          <button
+                            onClick={() => enviar(visitante.id)}
+                            disabled={
+                              enviandoId === visitante.id ||
+                              !envioPorVisitante[visitante.id]
+                            }
+                            title="Enviar treinamento"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-blue-500/50 bg-blue-600/15 text-blue-100 hover:bg-blue-600/25 disabled:opacity-60"
+                          >
+                            <Send size={15} />
+                          </button>
+                        )}
+                        {podeEditar && (
+                          <button
+                            onClick={() => editar(visitante)}
+                            title="Editar visitante"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-600 bg-slate-900 text-slate-100 hover:border-blue-500"
+                          >
+                            <Edit3 size={15} />
+                          </button>
+                        )}
+                        {podeExcluir && (
+                          <button
+                            onClick={() => excluir(visitante)}
+                            disabled={excluindoId === visitante.id}
+                            title="Excluir visitante"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-500/50 bg-rose-500/10 text-rose-100 hover:bg-rose-500/20 disabled:opacity-60"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
