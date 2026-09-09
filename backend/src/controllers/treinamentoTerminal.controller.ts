@@ -315,12 +315,7 @@ async function gerarCertificadoPdf(treinamento: any) {
   const destino = arquivoCertificado(treinamento.token);
   const destinoTemporario = `${destino}.tmp`;
   fs.rmSync(destinoTemporario, { force: true });
-  const doc = new PDFDocument({
-    size: "A4",
-    layout: "landscape",
-    margin: 0,
-    bufferPages: true,
-  });
+  const doc = new PDFDocument({ size: [1440, 810], margin: 0 });
   const stream = fs.createWriteStream(destinoTemporario);
   doc.pipe(stream);
 
@@ -329,49 +324,64 @@ async function gerarCertificadoPdf(treinamento: any) {
   const concluidoEm = new Date(treinamento.concluidoEm || new Date());
   const validacaoUrl = urlValidacaoCertificado(treinamento.token);
   const qrCodeDataUrl = await QRCode.toDataURL(validacaoUrl, {
-    width: 220,
+    width: 260,
     margin: 1,
     color: { dark: "#0f172a", light: "#ffffff" },
   });
   const qrCode = Buffer.from(String(qrCodeDataUrl).split(",")[1], "base64");
 
   doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
-  doc.rect(0, 0, pageWidth, 142).fill("#356bad");
-  doc.save();
+  doc.rect(0, 0, 468, 245).fill("#09052a");
+  doc.rect(468, 0, pageWidth - 468, 245).fill("#0877f2");
+  doc
+    .fillColor("#113d96")
+    .path("M468 0 L875 0 L465 245 L0 245 L0 0 Z")
+    .fillOpacity(0.58)
+    .fill()
+    .fillOpacity(1);
   doc
     .fillColor("#ffffff")
     .path(
-      "M300 142 L430 30 C472 -8 534 15 536 78 L536 132 C536 139 542 144 548 138 L674 32 C720 -7 783 17 785 80 L785 142 Z",
+      "M466 245 L744 34 C830 -32 936 32 941 135 L941 230 C941 244 954 252 965 241 L1218 38 C1300 -28 1408 36 1416 137 L1416 245 Z",
     )
     .fill();
-  doc.restore();
+  doc
+    .strokeColor("#ffffff")
+    .lineWidth(1.4)
+    .moveTo(55, 0)
+    .lineTo(55, 106)
+    .stroke();
+  doc.circle(55, 106, 12).fill("#8cf300");
 
   doc
     .fillColor("#ffffff")
     .font("Helvetica-Bold")
-    .fontSize(34)
-    .text("CERTIFICADO", 44, 58, { width: 270, lineBreak: false });
+    .fontSize(43)
+    .text("certificado", 82, 78, { width: 310, lineBreak: false });
   doc
-    .roundedRect(pageWidth - 218, 34, 174, 34, 10)
-    .fillAndStroke("#ffffff", "#bfdbfe");
-  doc
-    .fillColor("#1d4ed8")
+    .fillColor("#ffffff")
     .font("Helvetica-Bold")
-    .fontSize(15)
-    .text(treinamento.codigo, pageWidth - 204, 44, {
-      width: 146,
-      align: "center",
+    .fontSize(43)
+    .text("certificado", 82, 128, { width: 310, lineBreak: false });
+
+  const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu o Curso Básico de Conhecimentos Aduaneiros, atendendo ao requisito para credenciamento de pessoas para ingresso em recintos alfandegados, conforme a PORTARIA ALF/STS Nº 205, DE 22 DE JUNHO DE 2026 e demais normas aplicáveis, em ${dataCurta(concluidoEm)}.`;
+  doc
+    .fillColor("#07142f")
+    .font("Helvetica")
+    .fontSize(26)
+    .text(textoPrincipal, 82, 326, {
+      width: pageWidth - 164,
+      align: "left",
+      lineGap: 9,
     });
 
-  const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu o Curso Básico de Conhecimentos Aduaneiros, atendendo ao requisito para o credenciamento de pessoas para ingresso em recintos alfandegados, conforme a PORTARIA ALF/STS Nº 205, DE 22 DE JUNHO DE 2026 e demais normas aplicáveis, em ${dataCurta(concluidoEm)}.`;
   doc
-    .fillColor("#111827")
+    .fillColor("#07142f")
     .font("Helvetica")
-    .fontSize(15.5)
-    .text(textoPrincipal, 160, 184, {
-      width: 540,
+    .fontSize(26)
+    .text(`Guarujá, ${dataPorExtenso(concluidoEm)}.`, 0, 482, {
+      width: pageWidth,
       align: "center",
-      lineGap: 6,
     });
 
   if (treinamento.assinaturaDataUrl) {
@@ -386,8 +396,8 @@ async function gerarCertificadoPdf(treinamento: any) {
       );
       try {
         fs.writeFileSync(assinaturaArquivo, buffer);
-        doc.image(assinaturaArquivo, 176, 356, {
-          fit: [240, 52],
+        doc.image(assinaturaArquivo, 335, 536, {
+          fit: [250, 58],
           align: "center",
         });
       } catch (error) {
@@ -403,36 +413,40 @@ async function gerarCertificadoPdf(treinamento: any) {
 
   desenharLinhaAssinatura(
     doc,
-    158,
-    415,
-    275,
-    treinamento.nomeCompleto,
+    309,
+    622,
+    330,
     "Participante",
+    treinamento.nomeCompleto,
   );
-  desenharAssinaturaInstitucional(doc, 472, 415, 275);
+  desenharAssinaturaInstitucional(doc, 800, 622, 330);
 
-  doc.image(qrCode, 58, 424, { width: 72, height: 72 });
+  doc.image(qrCode, 671, 671, { width: 100, height: 100 });
   doc
-    .fillColor("#334155")
-    .font("Helvetica-Bold")
-    .fontSize(7)
-    .text("VALIDAÇÃO", 49, 502, { width: 90, align: "center" });
+    .fillColor("#07142f")
+    .font("Helvetica")
+    .fontSize(14)
+    .text(treinamento.codigo || "CERTIFICADO", 626, 783, {
+      width: 190,
+      align: "center",
+    });
 
   doc
-    .moveTo(206, 505)
-    .lineTo(580, 505)
-    .strokeColor("#86b91d")
-    .lineWidth(1)
-    .stroke();
-  doc.circle(206, 505, 3).fill("#86b91d");
-  doc.circle(580, 505, 3).fill("#86b91d");
+    .fillColor("#1d4ed8")
+    .font("Helvetica")
+    .fontSize(8.5)
+    .text(`Validação: ${validacaoUrl}`, 470, pageHeight - 17, {
+      width: 500,
+      align: "center",
+      ellipsis: true,
+    });
 
   const logoMovecta = primeiroArquivoExistente(logosMovecta);
   let logoInserida = false;
   try {
     if (logoMovecta) {
-      doc.image(logoMovecta, 610, 488, {
-        fit: [150, 46],
+      doc.image(logoMovecta, 1164, 715, {
+        fit: [190, 52],
         align: "center",
         valign: "center",
       });
@@ -444,30 +458,20 @@ async function gerarCertificadoPdf(treinamento: any) {
   if (!logoInserida) {
     doc
       .save()
-      .roundedRect(610, 488, 150, 35, 8)
+      .roundedRect(1164, 715, 190, 52, 8)
       .fill("#ffffff")
       .restore();
     doc
       .fillColor("#0b74ff")
       .font("Helvetica-Bold")
-      .fontSize(24)
-      .text("M", 620, 491, { width: 28, align: "center" });
+      .fontSize(38)
+      .text("M", 1168, 718, { width: 54, align: "center" });
     doc
       .fillColor("#111827")
       .font("Helvetica-Bold")
-      .fontSize(19)
-      .text("Movecta", 648, 494, { width: 102, align: "left" });
+      .fontSize(31)
+      .text("Movecta", 1224, 724, { width: 128, align: "left" });
   }
-
-  doc
-    .fillColor("#64748b")
-    .font("Helvetica")
-    .fontSize(7)
-    .text(`Validação: ${validacaoUrl}`, 44, pageHeight - 26, {
-      width: pageWidth - 88,
-      align: "center",
-      ellipsis: true,
-    });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
