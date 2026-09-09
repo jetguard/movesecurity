@@ -80,7 +80,12 @@
       "Bash(kubectl --context context-producao -n movesecurity-prod logs -l app=movesecurity-prod --tail=30)",
       "Bash(xargs -I{} echo {})",
       "Bash(npx tsc *)",
-      "Bash(node node_modules/typescript/bin/tsc -b --noEmit)"
+      "Bash(node node_modules/typescript/bin/tsc -b --noEmit)",
+      "Bash(git stash *)",
+      "Bash(git fetch *)",
+      "Bash(git pull *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ],
     "additionalDirectories": [
       "/home/marcelo/moveplanner"
