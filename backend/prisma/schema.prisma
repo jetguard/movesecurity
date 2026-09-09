@@ -1741,6 +1741,7 @@ model TreinamentoModelo {
   descricao            String?  @db.Text
   subtitulo            String?  @db.Text
   acessoPublico        Boolean  @default(false)
+  acessoPublicoModo    String   @default("TOKEN")
   perguntasHabilitadas Boolean  @default(true)
   avaliacaoHabilitada  Boolean  @default(true)
   videoUrl             String?  @db.Text

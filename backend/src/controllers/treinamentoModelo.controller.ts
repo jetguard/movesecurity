@@ -102,6 +102,11 @@ function emailCorporativoMovecta(email: string) {
   return texto(email).toLowerCase().endsWith("@movecta.com.br");
 }
 
+function modoAcessoPublico(valor: unknown) {
+  const normalizado = texto(valor).toUpperCase();
+  return normalizado === "FORMULARIO" ? "FORMULARIO" : "TOKEN";
+}
+
 function tokenExpiraEm24h() {
   return new Date(Date.now() + 24 * 60 * 60 * 1000);
 }
@@ -492,6 +497,7 @@ function serializarModelo(modelo: any, incluirCorretas = true) {
     ...modelo,
     publicUrl: `/treinamento/${modelo.slug}`,
     acessoPublico: Boolean(modelo.acessoPublico),
+    acessoPublicoModo: modoAcessoPublico(modelo.acessoPublicoModo),
     perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
     avaliacaoHabilitada: modelo.avaliacaoHabilitada !== false,
     videoUrl: videoPublico,
@@ -541,6 +547,7 @@ function aplicarConfiguracaoAtual(snapshot: any, modeloAtual?: any) {
   return {
     ...snapshot,
     acessoPublico: atual.acessoPublico,
+    acessoPublicoModo: atual.acessoPublicoModo,
     perguntasHabilitadas: atual.perguntasHabilitadas,
     avaliacaoHabilitada: atual.avaliacaoHabilitada,
     videoUrl: atualPublico.videoUrl,
@@ -858,6 +865,9 @@ function validarPayloadModelo(body: any) {
   const status = texto(body.status) || "Rascunho";
   const rascunho = status !== "Publicado";
   const acessoPublico = Boolean(body.acessoPublico);
+  const acessoPublicoModo = acessoPublico
+    ? modoAcessoPublico(body.acessoPublicoModo)
+    : "TOKEN";
   const perguntasHabilitadas = body.perguntasHabilitadas !== false;
   const avaliacaoHabilitada = body.avaliacaoHabilitada !== false;
   const codigo =
@@ -940,6 +950,7 @@ function validarPayloadModelo(body: any) {
     gruposPermitidos: acessoPublico ? [] : gruposPermitidos,
     status,
     acessoPublico,
+    acessoPublicoModo,
     perguntasHabilitadas,
     avaliacaoHabilitada,
     videoUrl,
@@ -1004,6 +1015,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               descricao: texto(req.body.descricao) || null,
               subtitulo: texto(req.body.subtitulo) || null,
               acessoPublico: validacao.acessoPublico,
+              acessoPublicoModo: validacao.acessoPublicoModo,
               perguntasHabilitadas: validacao.perguntasHabilitadas,
               avaliacaoHabilitada: validacao.avaliacaoHabilitada,
               videoUrl: validacao.videoUrl,
@@ -1027,6 +1039,7 @@ export async function salvarTreinamentoModelo(req: AuthRequest, res: Response) {
               descricao: texto(req.body.descricao) || null,
               subtitulo: texto(req.body.subtitulo) || null,
               acessoPublico: validacao.acessoPublico,
+              acessoPublicoModo: validacao.acessoPublicoModo,
               perguntasHabilitadas: validacao.perguntasHabilitadas,
               avaliacaoHabilitada: validacao.avaliacaoHabilitada,
               videoUrl: validacao.videoUrl,
@@ -1691,6 +1704,56 @@ export async function localizarParticipanteTreinamentoModelo(
   });
 }
 
+async function salvarVisitantePublicoDireto(dados: {
+  nomeCompleto: string;
+  cpf: string;
+  email: string;
+  dataNascimento: Date | null;
+  empresa: string | null;
+  cargo: string | null;
+}) {
+  const existente = await db.treinamentoModeloVisitante.findFirst({
+    where: {
+      OR: [{ cpf: dados.cpf }, { email: dados.email }],
+    },
+  });
+
+  if (
+    existente &&
+    (existente.cpf !== dados.cpf || texto(existente.email).toLowerCase() !== dados.email)
+  ) {
+    throw new Error(
+      "Já existe visitante cadastrado com este CPF ou e-mail. Confira os dados informados.",
+    );
+  }
+
+  if (existente) {
+    return db.treinamentoModeloVisitante.update({
+      where: { id: existente.id },
+      data: {
+        nomeCompleto: dados.nomeCompleto,
+        email: dados.email,
+        dataNascimento: dados.dataNascimento,
+        empresa: dados.empresa,
+        cargo: dados.cargo,
+        status: "Ativo",
+      },
+    });
+  }
+
+  return db.treinamentoModeloVisitante.create({
+    data: {
+      nomeCompleto: dados.nomeCompleto,
+      cpf: dados.cpf,
+      email: dados.email,
+      dataNascimento: dados.dataNascimento,
+      empresa: dados.empresa,
+      cargo: dados.cargo,
+      status: "Ativo",
+    },
+  });
+}
+
 export async function iniciarTreinamentoModelo(req: Request, res: Response) {
   try {
     const modelo = await carregarModeloPorSlug(texto(req.params.slug));
@@ -1698,6 +1761,87 @@ export async function iniciarTreinamentoModelo(req: Request, res: Response) {
       return res.status(404).json({ error: "Treinamento não encontrado." });
 
     if (modelo.acessoPublico) {
+      if (modoAcessoPublico(modelo.acessoPublicoModo) === "FORMULARIO") {
+        const nomeCompleto = texto(req.body.nomeCompleto);
+        const cpf = limparCpf(req.body.cpf || "");
+        const email = texto(req.body.email).toLowerCase();
+        const dataNascimentoTexto = texto(req.body.dataNascimento);
+        const dataNascimento = dataNascimentoTexto
+          ? new Date(`${dataNascimentoTexto}T00:00:00`)
+          : null;
+        const empresa = texto(req.body.empresa) || null;
+        const cargo = texto(req.body.cargo) || null;
+
+        if (
+          !nomeCompleto ||
+          cpf.length !== 11 ||
+          !emailValido(email) ||
+          !dataNascimento ||
+          Number.isNaN(dataNascimento.getTime()) ||
+          !empresa ||
+          !cargo
+        ) {
+          return res.status(400).json({
+            error:
+              "Informe nome completo, CPF, data de nascimento, empresa, cargo e e-mail para iniciar.",
+          });
+        }
+
+        const visitante = await salvarVisitantePublicoDireto({
+          nomeCompleto,
+          cpf,
+          email,
+          dataNascimento,
+          empresa,
+          cargo,
+        });
+        const existente = await db.treinamentoModeloParticipante.findFirst({
+          where: {
+            treinamentoId: modelo.id,
+            OR: [{ visitanteId: visitante.id }, { email }, { cpf }],
+          },
+          orderBy: { updatedAt: "desc" },
+        });
+        const snapshotAtual = existente?.snapshotJson || criarSnapshot(modelo);
+        const data = {
+          visitanteId: visitante.id,
+          usuarioId: null,
+          nomeCompleto,
+          cpf,
+          email,
+          cargo,
+          departamento: "Visitante",
+          unidade: "Visitante",
+          empresa,
+          tokenExpiraEm: null,
+          ultimoAcessoEm: new Date(),
+          navegador: userAgent(req),
+          sistema: userAgent(req),
+          ipInicio: existente?.ipInicio || req.ip,
+          versao: modelo.versao,
+          snapshotJson: snapshotAtual,
+        };
+
+        const participante = existente
+          ? await db.treinamentoModeloParticipante.update({
+              where: { id: existente.id },
+              data,
+            })
+          : await db.treinamentoModeloParticipante.create({
+              data: {
+                treinamentoId: modelo.id,
+                token: randomUUID(),
+                status: "Em andamento",
+                ...data,
+              },
+            });
+
+        return res.status(existente ? 200 : 201).json({
+          treinamento: lerSnapshot(participante, modelo, false),
+          participante: respostaParticipante(participante),
+        });
+      }
+
       const token = normalizarTokenTreinamento(req.body.token);
       if (!token) {
         return res

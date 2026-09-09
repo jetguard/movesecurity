@@ -542,7 +542,7 @@ export default function AdminLayout() {
                   {podeVerTreinamentosBase && (
                     <Link to="/treinamentos-terminal" className={subItem}>
                       <FileCheck2 size={16} />
-                      Treinamento Terminal
+                      Alfandega Portaria 205
                     </Link>
                   )}
                   {podeVerPainelTreinamentos && (
@@ -578,7 +578,7 @@ export default function AdminLayout() {
                   {podeVerTreinamentosBase && (
                     <Link to="/treinamentos-terminal" className={subItem}>
                       <FileCheck2 size={16} />
-                      Treinamento Terminal
+                      Alfandega Portaria 205
                     </Link>
                   )}
                   {podeVerPainelTreinamentos && (
@@ -634,7 +634,7 @@ export default function AdminLayout() {
                       {podeVerTreinamentosBase && (
                         <Link to="/treinamentos-terminal" className={subItem}>
                           <FileCheck2 size={16} />
-                          Treinamento Terminal
+                          Alfandega Portaria 205
                         </Link>
                       )}
                       {podeVerPainelTreinamentos && (

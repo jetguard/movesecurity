@@ -45,6 +45,7 @@ type ModeloForm = {
   descricao: string;
   subtitulo: string;
   acessoPublico: boolean;
+  acessoPublicoModo: "TOKEN" | "FORMULARIO";
   perguntasHabilitadas: boolean;
   avaliacaoHabilitada: boolean;
   videoUrl: string;
@@ -91,6 +92,7 @@ const modeloInicial: ModeloForm = {
   descricao: "",
   subtitulo: "",
   acessoPublico: false,
+  acessoPublicoModo: "TOKEN",
   perguntasHabilitadas: true,
   avaliacaoHabilitada: true,
   videoUrl: "",
@@ -270,6 +272,7 @@ export default function TreinamentosDinamicos() {
       descricao: modelo.descricao || "",
       subtitulo: modelo.subtitulo || "",
       acessoPublico: Boolean(modelo.acessoPublico),
+      acessoPublicoModo: modelo.acessoPublicoModo === "FORMULARIO" ? "FORMULARIO" : "TOKEN",
       perguntasHabilitadas: modelo.perguntasHabilitadas !== false,
       avaliacaoHabilitada: modelo.avaliacaoHabilitada !== false,
       videoUrl: modelo.videoUrl || "",
@@ -707,6 +710,10 @@ export default function TreinamentosDinamicos() {
                         setForm({
                           ...form,
                           acessoPublico: event.target.value === "PUBLICO",
+                          acessoPublicoModo:
+                            event.target.value === "PUBLICO"
+                              ? form.acessoPublicoModo
+                              : "TOKEN",
                           gruposPermitidos:
                             event.target.value === "PUBLICO"
                               ? []
@@ -719,6 +726,27 @@ export default function TreinamentosDinamicos() {
                       <option value="PUBLICO">Treinamento público</option>
                     </select>
                   </label>
+                  {form.acessoPublico && (
+                    <label className={labelClaro}>
+                      Acesso público
+                      <select
+                        value={form.acessoPublicoModo}
+                        onChange={(event) =>
+                          setForm({
+                            ...form,
+                            acessoPublicoModo:
+                              event.target.value === "FORMULARIO"
+                                ? "FORMULARIO"
+                                : "TOKEN",
+                          })
+                        }
+                        className={campoClaro}
+                      >
+                        <option value="TOKEN">Requer token</option>
+                        <option value="FORMULARIO">Formulário direto</option>
+                      </select>
+                    </label>
+                  )}
                   <label className={labelClaro}>
                     Link público
                     <input
@@ -1360,7 +1388,9 @@ export default function TreinamentosDinamicos() {
                     [
                       "Acesso",
                       form.acessoPublico
-                        ? "Público"
+                        ? form.acessoPublicoModo === "FORMULARIO"
+                          ? "Público - formulário direto"
+                          : "Público - requer token"
                         : form.gruposPermitidos.length
                           ? form.gruposPermitidos.join(", ")
                           : "Sem grupo selecionado",

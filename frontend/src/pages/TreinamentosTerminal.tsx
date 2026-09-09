@@ -169,7 +169,7 @@ export default function TreinamentosTerminal() {
             Acesso ao terminal
           </p>
           <h1 className="mt-2 text-3xl font-black text-slate-900 dark:text-white">
-            Treinamentos publicos
+            Alfandega Portaria 205
           </h1>
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
             Acompanhe participantes, progresso do video, certificados e envio
@@ -177,7 +177,7 @@ export default function TreinamentosTerminal() {
           </p>
         </div>
         <a
-          href="/treinamento-terminal"
+          href="/portaria-alfandega-205"
           target="_blank"
           rel="noreferrer"
           className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-black text-white hover:bg-blue-700"
