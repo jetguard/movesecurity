@@ -9,6 +9,8 @@ import { AuthRequest } from "../middlewares/auth";
 import { pdfAssets } from "../services/documentoPdfBase.service";
 import { enviarEmail } from "../services/email.service";
 
+const APP_PUBLIC_URL_PADRAO = "https://movesecurity.movecta.com.br";
+
 const resumoPortaria = [
   "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdição da Alfândega da Receita Federal do Brasil do Porto de Santos à conclusão do curso básico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
 ];
@@ -17,9 +19,37 @@ const assinaturasSegurancaPatrimonial = [
   path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png"),
   path.resolve(
     process.cwd(),
+    "backend",
+    "assets",
+    "assinatura-seguranca-patrimonial.png",
+  ),
+  path.resolve(
+    __dirname,
+    "..",
+    "..",
+    "assets",
+    "assinatura-seguranca-patrimonial.png",
+  ),
+  path.resolve(
+    process.cwd(),
     "assets",
     "assinatura-seguranca-patrimonial.jpeg",
   ),
+  path.resolve(
+    process.cwd(),
+    "backend",
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
+  path.resolve(
+    __dirname,
+    "..",
+    "..",
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
+  path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.png"),
+  path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.jpeg"),
 ];
 
 const logosMovecta = [
@@ -89,12 +119,13 @@ function videoPadrao() {
 }
 
 function appPublicUrl() {
-  return String(
+  const url = String(
     process.env.PUBLIC_APP_URL ||
       process.env.APP_URL ||
       process.env.FRONTEND_URL ||
-      "https://movecta.jetguard.com.br",
+      APP_PUBLIC_URL_PADRAO,
   ).replace(/\/$/, "");
+  return url.includes("movecta.jetguard.com.br") ? APP_PUBLIC_URL_PADRAO : url;
 }
 
 function urlValidacaoCertificado(token: string) {
