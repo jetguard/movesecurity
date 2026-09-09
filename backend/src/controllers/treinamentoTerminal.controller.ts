@@ -242,6 +242,7 @@ function desenharAssinaturaInstitucional(
   y: number,
   largura: number,
 ) {
+  let assinaturaInserida = false;
   for (const assinatura of assinaturasSegurancaPatrimonial) {
     if (!fs.existsSync(assinatura)) continue;
     try {
@@ -250,6 +251,7 @@ function desenharAssinaturaInstitucional(
         align: "center",
         valign: "center",
       });
+      assinaturaInserida = true;
       break;
     } catch (error) {
       console.error(
@@ -257,6 +259,16 @@ function desenharAssinaturaInstitucional(
         error,
       );
     }
+  }
+  if (!assinaturaInserida) {
+    doc
+      .fillColor("#0f172a")
+      .font("Helvetica-Oblique")
+      .fontSize(16)
+      .text("Segurança Patrimonial", x + 18, y - 42, {
+        width: largura - 36,
+        align: "center",
+      });
   }
 
   doc
