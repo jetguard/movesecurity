@@ -68,6 +68,12 @@ const logosMovecta = [
   pdfAssets.logo,
 ];
 
+const templatesCertificadoFixo = [
+  path.resolve(process.cwd(), "assets", "certificado-treinamento-fixo-template.png"),
+  path.resolve(process.cwd(), "backend", "assets", "certificado-treinamento-fixo-template.png"),
+  path.resolve(__dirname, "..", "..", "assets", "certificado-treinamento-fixo-template.png"),
+];
+
 function primeiroArquivoExistente(caminhos: string[]) {
   return caminhos.find((arquivo) => fs.existsSync(arquivo)) || "";
 }
@@ -339,41 +345,31 @@ async function gerarCertificadoPdf(treinamento: any) {
   const qrCode = Buffer.from(String(qrCodeDataUrl).split(",")[1], "base64");
 
   doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
-  doc.rect(0, 0, 468, 245).fill("#09052a");
-  doc.rect(468, 0, pageWidth - 468, 245).fill("#0877f2");
-  doc
-    .fillColor("#113d96")
-    .path("M468 0 L875 0 L465 245 L0 245 L0 0 Z")
-    .fillOpacity(0.58)
-    .fill()
-    .fillOpacity(1);
-  doc
-    .fillColor("#ffffff")
-    .path(
-      "M466 245 L744 34 C830 -32 936 32 941 135 L941 230 C941 244 954 252 965 241 L1218 38 C1300 -28 1408 36 1416 137 L1416 245 Z",
-    )
-    .fill();
-  doc
-    .strokeColor("#ffffff")
-    .lineWidth(1.4)
-    .moveTo(55, 0)
-    .lineTo(55, 106)
-    .stroke();
-  doc.circle(55, 106, 12).fill("#8cf300");
-
-  doc
-    .fillColor("#ffffff")
-    .font("Helvetica-Bold")
-    .fontSize(43)
-    .text("certificado", 82, 78, { width: 310, lineBreak: false });
-  doc
-    .fillColor("#ffffff")
-    .font("Helvetica-Bold")
-    .fontSize(43)
-    .text("certificado", 82, 128, { width: 310, lineBreak: false });
+  const templateCertificado = primeiroArquivoExistente(templatesCertificadoFixo);
+  if (templateCertificado) {
+    doc.image(templateCertificado, 0, 0, {
+      width: pageWidth,
+      height: pageHeight,
+    });
+  } else {
+    doc.rect(0, 0, 468, 245).fill("#09052a");
+    doc.rect(468, 0, pageWidth - 468, 245).fill("#0877f2");
+    doc
+      .fillColor("#ffffff")
+      .font("Helvetica-Bold")
+      .fontSize(43)
+      .text("certificado", 82, 78, { width: 310, lineBreak: false });
+    doc
+      .fillColor("#ffffff")
+      .font("Helvetica-Bold")
+      .fontSize(43)
+      .text("certificado", 82, 128, { width: 310, lineBreak: false });
+  }
 
   const textoPrincipal = `Certificamos que ${treinamento.nomeCompleto}, portador(a) do CPF nº ${formatarCpf(treinamento.cpf)}, concluiu o Curso Básico de Conhecimentos Aduaneiros, atendendo ao requisito para credenciamento de pessoas para ingresso em recintos alfandegados, conforme a PORTARIA ALF/STS Nº 205, DE 22 DE JUNHO DE 2026 e demais normas aplicáveis, em ${dataCurta(concluidoEm)}.`;
   doc
+    .rect(80, 320, pageWidth - 160, 155)
+    .fill("#ffffff")
     .fillColor("#07142f")
     .font("Helvetica")
     .fontSize(26)
@@ -384,6 +380,8 @@ async function gerarCertificadoPdf(treinamento: any) {
     });
 
   doc
+    .rect(520, 474, 400, 44)
+    .fill("#ffffff")
     .fillColor("#07142f")
     .font("Helvetica")
     .fontSize(26)
@@ -419,16 +417,18 @@ async function gerarCertificadoPdf(treinamento: any) {
     }
   }
 
-  desenharLinhaAssinatura(
-    doc,
-    309,
-    622,
-    330,
-    "Participante",
-    treinamento.nomeCompleto,
-  );
-  desenharAssinaturaInstitucional(doc, 800, 622, 330);
+  doc.rect(400, 652, 170, 28).fill("#ffffff");
+  doc
+    .fillColor("#07142f")
+    .font("Helvetica")
+    .fontSize(16)
+    .text(treinamento.nomeCompleto, 350, 652, {
+      width: 250,
+      align: "center",
+      ellipsis: true,
+    });
 
+  doc.rect(656, 664, 130, 134).fill("#ffffff");
   doc.image(qrCode, 671, 671, { width: 100, height: 100 });
   doc
     .fillColor("#07142f")
@@ -440,6 +440,8 @@ async function gerarCertificadoPdf(treinamento: any) {
     });
 
   doc
+    .rect(430, pageHeight - 20, 580, 18)
+    .fill("#ffffff")
     .fillColor("#1d4ed8")
     .font("Helvetica")
     .fontSize(8.5)
@@ -448,38 +450,6 @@ async function gerarCertificadoPdf(treinamento: any) {
       align: "center",
       ellipsis: true,
     });
-
-  const logoMovecta = primeiroArquivoExistente(logosMovecta);
-  let logoInserida = false;
-  try {
-    if (logoMovecta) {
-      doc.image(logoMovecta, 1164, 715, {
-        fit: [190, 52],
-        align: "center",
-        valign: "center",
-      });
-      logoInserida = true;
-    }
-  } catch (error) {
-    console.error("Falha ao inserir logo da Movecta no certificado:", error);
-  }
-  if (!logoInserida) {
-    doc
-      .save()
-      .roundedRect(1164, 715, 190, 52, 8)
-      .fill("#ffffff")
-      .restore();
-    doc
-      .fillColor("#0b74ff")
-      .font("Helvetica-Bold")
-      .fontSize(38)
-      .text("M", 1168, 718, { width: 54, align: "center" });
-    doc
-      .fillColor("#111827")
-      .font("Helvetica-Bold")
-      .fontSize(31)
-      .text("Movecta", 1224, 724, { width: 128, align: "left" });
-  }
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
