@@ -1,6 +1,12 @@
 ﻿import { Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import bcrypt from "bcryptjs";
+import QRCode from "qrcode";
+import {
+  generateSecret as gerarSegredoOtp,
+  generateURI as gerarUriOtp,
+  verify as verificarOtp,
+} from "otplib";
 import { randomUUID } from "node:crypto";
 import { AuthRequest } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
@@ -13,6 +19,10 @@ import {
   validarFormatoPin,
   validarPinOperacional,
 } from "../services/pinOperacional.service";
+import {
+  criptografarSegredo,
+  descriptografarSegredo,
+} from "../utils/secretCrypto";
 
 const selectUsuario = {
   id: true,
@@ -39,6 +49,8 @@ const selectUsuario = {
   pinOperacionalCriadoEm: true,
   pinOperacionalAtualizadoEm: true,
   doisFatoresAtivo: true,
+  doisFatoresMetodo: true,
+  doisFatoresTotpConfirmadoEm: true,
   ultimoAcesso: true,
   createdAt: true,
 };
@@ -63,6 +75,8 @@ function formatarUsuario(usuario: any) {
         usuario.pinOperacionalAtualizadoEm,
     ),
     doisFatoresAtivo: Boolean(usuario.doisFatoresAtivo),
+    doisFatoresMetodo: usuario.doisFatoresMetodo || null,
+    doisFatoresTotpConfigurado: Boolean(usuario.doisFatoresTotpConfirmadoEm),
   };
 }
 
@@ -1215,9 +1229,12 @@ export async function atualizarDoisFatores(req: AuthRequest, res: Response) {
       where: { id: usuario.id },
       data: {
         doisFatoresAtivo: ativo,
+        doisFatoresMetodo: ativo ? "EMAIL" : null,
         doisFatoresCodigoHash: null,
         doisFatoresExpiraEm: null,
         doisFatoresTentativas: 0,
+        doisFatoresTotpSecret: ativo ? undefined : null,
+        doisFatoresTotpConfirmadoEm: ativo ? undefined : null,
       },
       select: selectUsuario,
     });
@@ -1228,7 +1245,7 @@ export async function atualizarDoisFatores(req: AuthRequest, res: Response) {
       tipoRegistro: "Usuario",
       registroId: usuario.id,
       dadosAnteriores: { doisFatoresAtivo: usuario.doisFatoresAtivo },
-      dadosNovos: { doisFatoresAtivo: ativo },
+      dadosNovos: { doisFatoresAtivo: ativo, doisFatoresMetodo: ativo ? "EMAIL" : null },
     });
 
     return res.json(formatarUsuario(atualizado));
@@ -1236,6 +1253,177 @@ export async function atualizarDoisFatores(req: AuthRequest, res: Response) {
     return res
       .status(500)
       .json({ error: error?.message || "Erro ao atualizar 2FA." });
+  }
+}
+
+export async function prepararDoisFatoresAutenticador(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const senhaAtual = String(req.body.senhaAtual || "");
+
+    if (!senhaAtual) {
+      return res.status(400).json({
+        error: "Informe sua senha atual para configurar o aplicativo autenticador.",
+      });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        senha: true,
+        perfilAcesso: true,
+      },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    if (usuario.perfilAcesso !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        error:
+          "A autenticação por aplicativo está disponível somente para Super Admin.",
+      });
+    }
+
+    const senhaValida = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaValida) {
+      return res.status(400).json({ error: "Senha atual inválida." });
+    }
+
+    const segredo = gerarSegredoOtp();
+    const otpauthUrl = gerarUriOtp({
+      issuer: "MoveSecurity",
+      label: usuario.email,
+      secret: segredo,
+    });
+    const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl, {
+      margin: 1,
+      width: 220,
+      color: {
+        dark: "#0f172a",
+        light: "#ffffff",
+      },
+    });
+
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        doisFatoresAtivo: false,
+        doisFatoresMetodo: "AUTHENTICATOR",
+        doisFatoresCodigoHash: null,
+        doisFatoresExpiraEm: null,
+        doisFatoresTentativas: 0,
+        doisFatoresTotpSecret: criptografarSegredo(segredo),
+        doisFatoresTotpConfirmadoEm: null,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Preparação de 2FA por autenticador",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosNovos: { doisFatoresMetodo: "AUTHENTICATOR" },
+    });
+
+    return res.json({
+      qrCodeDataUrl,
+      chaveManual: segredo,
+      issuer: "MoveSecurity",
+      conta: usuario.email,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error?.message || "Erro ao preparar aplicativo autenticador.",
+    });
+  }
+}
+
+export async function confirmarDoisFatoresAutenticador(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const codigo = String(req.body.codigo || "").replace(/\D/g, "").slice(0, 6);
+
+    if (codigo.length !== 6) {
+      return res
+        .status(400)
+        .json({ error: "Informe o código de 6 dígitos do aplicativo." });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        senha: true,
+        perfilAcesso: true,
+        doisFatoresTotpSecret: true,
+      },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    if (usuario.perfilAcesso !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        error:
+          "A autenticação por aplicativo está disponível somente para Super Admin.",
+      });
+    }
+
+    const segredo = descriptografarSegredo(usuario.doisFatoresTotpSecret);
+    if (!segredo) {
+      return res.status(400).json({
+        error: "Configure o aplicativo autenticador antes de confirmar.",
+      });
+    }
+
+    const resultadoOtp = await verificarOtp({
+      secret: segredo,
+      token: codigo,
+      epochTolerance: 30,
+    });
+    const codigoValido = resultadoOtp.valid;
+    if (!codigoValido) {
+      return res.status(400).json({ error: "Código de verificação inválido." });
+    }
+
+    const atualizado = await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        doisFatoresAtivo: true,
+        doisFatoresMetodo: "AUTHENTICATOR",
+        doisFatoresCodigoHash: null,
+        doisFatoresExpiraEm: null,
+        doisFatoresTentativas: 0,
+        doisFatoresTotpConfirmadoEm: new Date(),
+      },
+      select: selectUsuario,
+    });
+
+    await registrarLog({
+      req,
+      acao: "Ativação de 2FA por autenticador",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosNovos: { doisFatoresAtivo: true, doisFatoresMetodo: "AUTHENTICATOR" },
+    });
+
+    return res.json(formatarUsuario(atualizado));
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error?.message || "Erro ao confirmar aplicativo autenticador.",
+    });
   }
 }
 

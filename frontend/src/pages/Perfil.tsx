@@ -18,6 +18,8 @@ type UsuarioPerfil = {
   pinOperacionalCriadoEm?: string;
   pinOperacionalAtualizadoEm?: string;
   doisFatoresAtivo?: boolean;
+  doisFatoresMetodo?: string | null;
+  doisFatoresTotpConfigurado?: boolean;
 };
 
 export default function Perfil() {
@@ -34,6 +36,9 @@ export default function Perfil() {
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [senhaAtual2fa, setSenhaAtual2fa] = useState("");
   const [salvando2fa, setSalvando2fa] = useState(false);
+  const [qrCode2fa, setQrCode2fa] = useState("");
+  const [chaveManual2fa, setChaveManual2fa] = useState("");
+  const [codigoApp2fa, setCodigoApp2fa] = useState("");
 
   function normalizarPin(valor: string) {
     return valor.replace(/\D/g, "").slice(0, 4);
@@ -157,9 +162,13 @@ export default function Perfil() {
           JSON.stringify({
             ...JSON.parse(usuarioLocal),
             doisFatoresAtivo: response.data.doisFatoresAtivo,
+            doisFatoresMetodo: response.data.doisFatoresMetodo,
           }),
         );
       }
+      setQrCode2fa("");
+      setChaveManual2fa("");
+      setCodigoApp2fa("");
       alert(
         ativo
           ? "Autenticação em 2 etapas ativada."
@@ -168,6 +177,67 @@ export default function Perfil() {
     } catch (error: unknown) {
       const apiError = error as { response?: { data?: { error?: string } } };
       alert(apiError.response?.data?.error || "Erro ao atualizar 2FA.");
+    } finally {
+      setSalvando2fa(false);
+    }
+  }
+
+  async function prepararAutenticador2fa() {
+    if (!senhaAtual2fa) {
+      alert("Informe sua senha atual para configurar o autenticador.");
+      return;
+    }
+
+    try {
+      setSalvando2fa(true);
+      const response = await api.post("/usuarios/me/2fa/authenticator/setup", {
+        senhaAtual: senhaAtual2fa,
+      });
+      setQrCode2fa(response.data.qrCodeDataUrl || "");
+      setChaveManual2fa(response.data.chaveManual || "");
+      setCodigoApp2fa("");
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      alert(apiError.response?.data?.error || "Erro ao gerar QR Code do 2FA.");
+    } finally {
+      setSalvando2fa(false);
+    }
+  }
+
+  async function confirmarAutenticador2fa() {
+    if (codigoApp2fa.replace(/\D/g, "").length !== 6) {
+      alert("Informe o código de 6 dígitos do aplicativo autenticador.");
+      return;
+    }
+
+    try {
+      setSalvando2fa(true);
+      const response = await api.post("/usuarios/me/2fa/authenticator/confirm", {
+        codigo: codigoApp2fa,
+      });
+      setPerfil(response.data);
+      setSenhaAtual2fa("");
+      setQrCode2fa("");
+      setChaveManual2fa("");
+      setCodigoApp2fa("");
+      const usuarioLocal = localStorage.getItem("usuario");
+      if (usuarioLocal) {
+        localStorage.setItem(
+          "usuario",
+          JSON.stringify({
+            ...JSON.parse(usuarioLocal),
+            doisFatoresAtivo: response.data.doisFatoresAtivo,
+            doisFatoresMetodo: response.data.doisFatoresMetodo,
+          }),
+        );
+      }
+      alert("Autenticação por aplicativo ativada.");
+    } catch (error: unknown) {
+      const apiError = error as { response?: { data?: { error?: string } } };
+      alert(
+        apiError.response?.data?.error ||
+          "Erro ao confirmar código do autenticador.",
+      );
     } finally {
       setSalvando2fa(false);
     }
@@ -482,7 +552,8 @@ export default function Perfil() {
               </h2>
               <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-slate-400">
                 Quando estiver ativa, o login do Super Admin exige senha e um
-                código temporário enviado por e-mail.
+                código temporário do Microsoft Authenticator, Google
+                Authenticator ou e-mail.
               </p>
             </div>
             <span
@@ -492,11 +563,15 @@ export default function Perfil() {
                   : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
               }`}
             >
-              {perfil.doisFatoresAtivo ? "2FA ativo" : "2FA inativo"}
+              {perfil.doisFatoresAtivo
+                ? perfil.doisFatoresMetodo === "AUTHENTICATOR"
+                  ? "2FA por app"
+                  : "2FA por e-mail"
+                : "2FA inativo"}
             </span>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-end">
             <label className="space-y-2">
               <span className="text-sm font-semibold text-gray-700 dark:text-slate-200">
                 Senha atual
@@ -513,20 +588,86 @@ export default function Perfil() {
             <button
               type="button"
               disabled={salvando2fa}
-              onClick={() => alterar2fa(!perfil.doisFatoresAtivo)}
-              className={`rounded-lg px-5 py-3 font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-500 ${
-                perfil.doisFatoresAtivo
-                  ? "bg-red-600 hover:bg-red-700"
-                  : "bg-blue-600 hover:bg-blue-700"
-              }`}
+              onClick={prepararAutenticador2fa}
+              className="rounded-lg bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-500"
             >
-              {salvando2fa
-                ? "Salvando..."
-                : perfil.doisFatoresAtivo
-                  ? "Desativar 2FA"
-                  : "Ativar 2FA"}
+              {salvando2fa ? "Gerando..." : "Configurar app"}
             </button>
+
+            {perfil.doisFatoresAtivo ? (
+              <button
+                type="button"
+                disabled={salvando2fa}
+                onClick={() => alterar2fa(false)}
+                className="rounded-lg bg-red-600 px-5 py-3 font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-slate-500"
+              >
+                Desativar 2FA
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={salvando2fa}
+                onClick={() => alterar2fa(true)}
+                className="rounded-lg bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-500 dark:bg-slate-700 dark:hover:bg-slate-600"
+              >
+                Ativar por e-mail
+              </button>
+            )}
           </div>
+
+          {qrCode2fa && (
+            <div className="mt-6 grid gap-5 rounded-xl border border-blue-100 bg-blue-50/70 p-5 dark:border-blue-500/20 dark:bg-blue-500/10 md:grid-cols-[auto_minmax(0,1fr)]">
+              <img
+                src={qrCode2fa}
+                alt="QR Code para configurar autenticação em 2 etapas"
+                className="h-44 w-44 rounded-xl border border-white bg-white p-2 shadow"
+              />
+              <div className="space-y-4">
+                <div>
+                  <h3 className="font-bold text-slate-900 dark:text-white">
+                    Escaneie o QR Code no aplicativo autenticador
+                  </h3>
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    Depois de cadastrar a conta no Microsoft Authenticator ou
+                    Google Authenticator, informe o código de 6 dígitos para
+                    concluir a ativação.
+                  </p>
+                </div>
+
+                {chaveManual2fa && (
+                  <div className="rounded-lg bg-white p-3 text-xs font-semibold text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                    Chave manual:{" "}
+                    <span className="break-all font-mono text-slate-900 dark:text-white">
+                      {chaveManual2fa}
+                    </span>
+                  </div>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+                  <input
+                    inputMode="numeric"
+                    value={codigoApp2fa}
+                    onChange={(e) =>
+                      setCodigoApp2fa(
+                        e.target.value.replace(/\D/g, "").slice(0, 6),
+                      )
+                    }
+                    className="w-full rounded-lg border border-blue-200 bg-white p-3 text-center font-mono text-lg font-bold tracking-[0.35em] text-slate-900 dark:border-blue-500/30 dark:bg-slate-950 dark:text-white"
+                    placeholder="000000"
+                    maxLength={6}
+                  />
+                  <button
+                    type="button"
+                    disabled={salvando2fa}
+                    onClick={confirmarAutenticador2fa}
+                    className="rounded-lg bg-emerald-600 px-5 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-500"
+                  >
+                    Confirmar app
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </div>

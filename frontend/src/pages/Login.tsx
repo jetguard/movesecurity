@@ -32,6 +32,7 @@ export default function Login() {
   const [loadingSso, setLoadingSso] = useState(false);
   const [ssoConfig, setSsoConfig] = useState<SsoConfig | null>(null);
   const [twoFactorToken, setTwoFactorToken] = useState("");
+  const [twoFactorMethod, setTwoFactorMethod] = useState("");
   const [codigo2fa, setCodigo2fa] = useState("");
   const [mensagem2fa, setMensagem2fa] = useState("");
 
@@ -93,6 +94,7 @@ export default function Login() {
 
       if (response.data.twoFactorRequired) {
         setTwoFactorToken(response.data.twoFactorToken || "");
+        setTwoFactorMethod(response.data.twoFactorMethod || "EMAIL");
         setMensagem2fa(
           response.data.mensagem ||
             "Código de verificação enviado para seu e-mail.",
@@ -117,6 +119,7 @@ export default function Login() {
 
   function voltarLoginSenha() {
     setTwoFactorToken("");
+    setTwoFactorMethod("");
     setCodigo2fa("");
     setMensagem2fa("");
   }
@@ -186,6 +189,11 @@ export default function Login() {
                     <label className="block">
                       <span className="mb-2 block text-sm font-black text-slate-700">
                         Código de verificação
+                      </span>
+                      <span className="mb-2 block text-xs font-bold text-slate-500">
+                        {twoFactorMethod === "AUTHENTICATOR"
+                          ? "Abra o Microsoft Authenticator ou Google Authenticator."
+                          : "Confira o código enviado para seu e-mail."}
                       </span>
                       <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
                         <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">

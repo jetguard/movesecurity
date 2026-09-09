@@ -42,9 +42,12 @@ model Usuario {
   pinTentativasInvalidas     Int       @default(0)
   pinBloqueadoAte            DateTime?
   doisFatoresAtivo           Boolean   @default(false)
+  doisFatoresMetodo          String?   @default("EMAIL")
   doisFatoresCodigoHash      String?
   doisFatoresExpiraEm        DateTime?
   doisFatoresTentativas      Int       @default(0)
+  doisFatoresTotpSecret      String?
+  doisFatoresTotpConfirmadoEm DateTime?
   ultimoAcesso               DateTime?
   createdAt                  DateTime  @default(now())
 

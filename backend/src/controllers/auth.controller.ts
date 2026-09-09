@@ -2,6 +2,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { verify as verificarOtp } from "otplib";
 import { prisma } from "../lib/prisma";
 import {
   jwtExpiresIn,
@@ -28,6 +29,7 @@ import {
   validarPinOperacional,
 } from "../services/pinOperacional.service";
 import { enviarEmail } from "../services/email.service";
+import { descriptografarSegredo } from "../utils/secretCrypto";
 
 type TentativaLogin = {
   quantidade: number;
@@ -398,6 +400,8 @@ type UsuarioAutenticado = {
   deveAlterarSenha: boolean;
   pinOperacionalHash: string | null;
   doisFatoresAtivo?: boolean;
+  doisFatoresMetodo?: string | null;
+  doisFatoresTotpSecret?: string | null;
 };
 
 async function criarSessaoAutenticada(
@@ -485,6 +489,7 @@ async function criarSessaoAutenticada(
     deveAlterarSenha: usuario.deveAlterarSenha,
     possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
     doisFatoresAtivo: Boolean(usuario.doisFatoresAtivo),
+    doisFatoresMetodo: usuario.doisFatoresMetodo || null,
   };
 }
 
@@ -817,25 +822,49 @@ export async function login(req: Request, res: Response) {
     limparTentativas(emailLogin, req.ip);
 
     if (usuario.perfilAcesso === "SUPER_ADMIN" && usuario.doisFatoresAtivo) {
-      await enviarCodigo2fa(usuario);
+      const metodo2fa = usuario.doisFatoresMetodo || "EMAIL";
+      const mensagem =
+        metodo2fa === "AUTHENTICATOR"
+          ? "Informe o código do aplicativo autenticador."
+          : "Código de verificação enviado para o e-mail cadastrado.";
+
+      if (metodo2fa === "AUTHENTICATOR" && !usuario.doisFatoresTotpSecret) {
+        return res.status(400).json({
+          error:
+            "2FA por aplicativo está incompleto. Desative e configure novamente.",
+        });
+      }
+
+      if (metodo2fa !== "AUTHENTICATOR") {
+        await enviarCodigo2fa(usuario);
+      }
+
       await prisma.logAuditoria.create({
         data: {
           usuarioId: usuario.id,
           usuarioNome: usuario.nome,
           ip: req.ip,
-          acao: "Código 2FA enviado",
+          acao:
+            metodo2fa === "AUTHENTICATOR"
+              ? "Desafio 2FA por autenticador iniciado"
+              : "Código 2FA enviado",
           tipoRegistro: "Auth",
           registroId: usuario.id,
           dadosNovos: JSON.stringify({
             email: usuario.email,
-            expiraEm: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+            metodo: metodo2fa,
+            expiraEm:
+              metodo2fa === "AUTHENTICATOR"
+                ? null
+                : new Date(Date.now() + 10 * 60 * 1000).toISOString(),
           }),
         },
       });
       return res.json({
         twoFactorRequired: true,
         twoFactorToken: criarToken2fa(usuario.id, String(deviceId || "")),
-        mensagem: "Código de verificação enviado para o e-mail cadastrado.",
+        twoFactorMethod: metodo2fa,
+        mensagem,
       });
     }
 
@@ -875,6 +904,52 @@ export async function confirmarLogin2fa(req: Request, res: Response) {
       return res.status(400).json({ error: "2FA não está ativo para este usuário." });
     }
 
+    if (usuario.doisFatoresTentativas >= 5) {
+      return res.status(429).json({
+        error: "Muitas tentativas inválidas. Faça login novamente para gerar outro código.",
+      });
+    }
+
+    if (usuario.doisFatoresMetodo === "AUTHENTICATOR") {
+      const segredo = descriptografarSegredo(usuario.doisFatoresTotpSecret);
+      if (!segredo) {
+        return res.status(400).json({
+          error:
+            "2FA por aplicativo está incompleto. Desative e configure novamente.",
+        });
+      }
+
+      const resultadoOtp = await verificarOtp({
+        secret: segredo,
+        token: codigo,
+        epochTolerance: 30,
+      });
+      const codigoValido = resultadoOtp.valid;
+      if (!codigoValido) {
+        await prisma.usuario.update({
+          where: { id: usuario.id },
+          data: { doisFatoresTentativas: { increment: 1 } },
+        });
+        return res.status(400).json({ error: "Código de verificação inválido." });
+      }
+
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { doisFatoresTentativas: 0 },
+      });
+
+      const usuarioSessao = await criarSessaoAutenticada(
+        req,
+        res,
+        usuario,
+        "senha",
+      );
+
+      return res.json({
+        usuario: usuarioSessao,
+      });
+    }
+
     if (!usuario.doisFatoresCodigoHash || !usuario.doisFatoresExpiraEm) {
       return res.status(400).json({
         error: "Código de verificação não solicitado. Faça login novamente.",
@@ -893,12 +968,6 @@ export async function confirmarLogin2fa(req: Request, res: Response) {
       return res
         .status(403)
         .json({ error: "Código expirado. Faça login novamente." });
-    }
-
-    if (usuario.doisFatoresTentativas >= 5) {
-      return res.status(429).json({
-        error: "Muitas tentativas inválidas. Faça login novamente para gerar outro código.",
-      });
     }
 
     const codigoValido = await bcrypt.compare(
