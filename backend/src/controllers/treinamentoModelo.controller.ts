@@ -55,6 +55,16 @@ const assinaturasSegurancaPatrimonial = [
   path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.png"),
   path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.jpeg"),
 ];
+const logosMovecta = [
+  path.resolve(process.cwd(), "assets", "movecta-logo.png"),
+  path.resolve(process.cwd(), "backend", "assets", "movecta-logo.png"),
+  path.resolve(process.cwd(), "frontend", "public", "images", "movecta-logo.png"),
+  path.resolve(process.cwd(), "frontend", "dist", "images", "movecta-logo.png"),
+  path.resolve(__dirname, "..", "..", "assets", "movecta-logo.png"),
+  path.resolve(__dirname, "..", "..", "frontend", "public", "images", "movecta-logo.png"),
+  path.resolve(__dirname, "..", "..", "frontend", "dist", "images", "movecta-logo.png"),
+  pdfAssets.logo,
+];
 const pastaVideosTreinamento = "uploads/treinamentos-dinamicos/videos/";
 
 function texto(valor: unknown) {
@@ -430,6 +440,43 @@ function caminhoFundoCertificado() {
   return caminhos.find((item) => fs.existsSync(item));
 }
 
+function primeiroArquivoExistente(caminhos: string[]) {
+  return caminhos.find((arquivo) => fs.existsSync(arquivo)) || "";
+}
+
+function desenharLogoMovecta(
+  doc: PDFKit.PDFDocument,
+  x: number,
+  y: number,
+  largura: number,
+  altura: number,
+) {
+  const logo = primeiroArquivoExistente(logosMovecta);
+  if (logo) {
+    try {
+      doc.image(logo, x, y, {
+        fit: [largura, altura],
+        align: "center",
+        valign: "center",
+      });
+      return;
+    } catch (error) {
+      console.error("Falha ao inserir logo da Movecta no certificado:", error);
+    }
+  }
+
+  doc
+    .fillColor("#0b74ff")
+    .font("Helvetica-Bold")
+    .fontSize(34)
+    .text("M", x, y + 3, { width: 42, align: "center" });
+  doc
+    .fillColor("#070b2a")
+    .font("Helvetica-Bold")
+    .fontSize(28)
+    .text("Movecta", x + 44, y + 9, { width: largura - 44 });
+}
+
 function porcentagem(
   etapaAtual: number,
   totalEtapas: number,
@@ -632,92 +679,116 @@ async function gerarCertificado(modelo: any, participante: any) {
   const temporario = `${destino}.tmp`;
   fs.rmSync(temporario, { force: true });
 
-  const doc = new PDFDocument({ size: "A4", layout: "landscape", margin: 0 });
+  const doc = new PDFDocument({ size: [960, 540], margin: 0 });
   const stream = fs.createWriteStream(temporario);
   doc.pipe(stream);
 
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
-  const fundo = caminhoFundoCertificado();
   const validacaoUrl = `${appPublicUrl()}${certificadoUrl(participante.token)}`;
   const qrDataUrl = await QRCode.toDataURL(validacaoUrl, {
-    width: 220,
+    width: 260,
     margin: 1,
     color: { dark: "#0f172a", light: "#ffffff" },
   });
   const qrCode = Buffer.from(String(qrDataUrl).split(",")[1], "base64");
+  const textoCertificado = gerarTextoCertificado(modelo, participante);
 
   doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
-  if (fundo) {
-    doc.save();
-    doc.opacity(0.12);
-    doc.image(fundo, 0, 0, { width: pageWidth, height: pageHeight });
-    doc.restore();
-  }
+
+  doc.rect(0, 0, 255, 157).fill("#07052a");
+  doc.rect(255, 0, pageWidth - 255, 157).fill("#0877f2");
+  doc
+    .fillColor("#0b2f84")
+    .path("M255 0 L540 0 L365 157 L255 157 Z")
+    .fillOpacity(0.52)
+    .fill()
+    .fillOpacity(1);
 
   doc
-    .roundedRect(42, 38, pageWidth - 84, pageHeight - 76, 26)
-    .lineWidth(1.4)
-    .strokeColor("#93c5fd")
-    .stroke();
-  doc
-    .roundedRect(54, 50, pageWidth - 108, pageHeight - 100, 20)
-    .lineWidth(0.7)
-    .strokeColor("#dbeafe")
-    .stroke();
-
-  doc
-    .fillColor("#1d4ed8")
+    .fillColor("#ffffff")
     .font("Helvetica-Bold")
-    .fontSize(11)
-    .text(participante.codigo || "CERTIFICADO", pageWidth - 220, 64, {
-      width: 158,
-      align: "right",
-    });
+    .fontSize(41)
+    .text("certi", 62, 31, { width: 94, lineBreak: false });
   doc
-    .fillColor("#07142f")
+    .fillColor("#ffffff")
+    .font("Helvetica")
+    .fontSize(41)
+    .text("ficado", 154, 31, { width: 124, lineBreak: false });
+  doc
+    .strokeColor("#ffffff")
+    .lineWidth(0.8)
+    .font("Helvetica")
+    .fontSize(41)
+    .text("certi", 62, 73, { width: 94, lineBreak: false });
+  doc
+    .fillColor("#ffffff")
+    .font("Helvetica-Bold")
+    .fontSize(41)
+    .text("ficado", 154, 73, { width: 124, lineBreak: false });
+
+  doc.circle(555, 78, 61).fill("#8cf300");
+  doc.circle(555, 78, 33).fill("#0877f2");
+  doc
+    .fillColor("#ffffff")
     .font("Helvetica-Bold")
     .fontSize(34)
-    .text(modelo.codigo, 92, 86, { width: pageWidth - 184, align: "center" });
+    .text("M", 535, 58, { width: 42, align: "center" });
+
   doc
-    .fillColor("#1d4ed8")
+    .fillColor("#ffffff")
     .font("Helvetica-Bold")
-    .fontSize(15)
-    .text(modelo.nome, 110, 132, { width: pageWidth - 220, align: "center" });
-  if (modelo.subtitulo) {
-    doc
-      .fillColor("#334155")
-      .font("Helvetica-Bold")
-      .fontSize(11)
-      .text(modelo.subtitulo, 118, 156, {
-        width: pageWidth - 236,
-        align: "center",
-      });
-  }
-
-  doc
-    .moveTo(190, 184)
-    .lineTo(pageWidth - 190, 184)
-    .strokeColor("#7ed321")
-    .lineWidth(2)
-    .stroke();
-
-  doc
-    .fillColor("#111827")
-    .font("Helvetica")
-    .fontSize(19)
-    .text(gerarTextoCertificado(modelo, participante), 104, 220, {
-      width: pageWidth - 208,
-      align: "center",
-      lineGap: 8,
+    .fontSize(38)
+    .text("eu\nmovo a\nMovecta.", 670, 10, {
+      width: 220,
+      lineGap: -4,
     });
+  doc
+    .moveTo(586, 126)
+    .lineTo(680, 126)
+    .strokeColor("#8cf300")
+    .lineWidth(1.2)
+    .stroke();
+  doc.circle(676, 126, 7).fill("#8cf300");
+  doc.rect(695, 117, 118, 20).fill("#8cf300");
+  doc
+    .fillColor("#07142f")
+    .font("Helvetica")
+    .fontSize(18)
+    .text("com ", 702, 118, { width: 48, lineBreak: false });
+  doc
+    .fillColor("#0877f2")
+    .font("Helvetica-Bold")
+    .fontSize(18)
+    .text("atitude", 742, 118, { width: 65, lineBreak: false });
 
-  doc.image(qrCode, 82, 464, { width: 56, height: 56 });
+  doc
+    .save()
+    .fillColor("#eaf2ff")
+    .font("Helvetica-Bold")
+    .fontSize(68)
+    .opacity(0.55)
+    .text("moover\nmoover\nmoover", -2, 402, {
+      width: 280,
+      lineGap: -7,
+    })
+    .restore();
+
   doc
     .fillColor("#0f172a")
-    .font("Helvetica-Bold")
-    .fontSize(7)
-    .text("VALIDAÇÃO", 65, 524, { width: 90, align: "center" });
+    .font("Helvetica")
+    .fontSize(20)
+    .text(modelo.codigo, 390, 183, { width: 180, align: "center" });
+
+  doc
+    .fillColor("#07142f")
+    .font("Helvetica")
+    .fontSize(18)
+    .text(textoCertificado, 108, 235, {
+      width: 744,
+      align: "center",
+      lineGap: 6,
+    });
 
   if (participante.assinaturaDataUrl) {
     const assinaturaBase64 = String(participante.assinaturaDataUrl).split(
@@ -729,28 +800,41 @@ async function gerarCertificado(modelo: any, participante: any) {
         `assinatura-modelo-${participante.token}.png`,
       );
       fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
-      doc.image(assinaturaPng, 204, 374, { fit: [240, 54], align: "center" });
+      doc.image(assinaturaPng, 208, 334, { fit: [210, 42], align: "center" });
       fs.rmSync(assinaturaPng, { force: true });
     }
   }
 
   desenharLinhaAssinatura(
     doc,
-    190,
-    448,
-    270,
+    206,
+    391,
+    220,
+    "Assinatura do Participante",
     participante.nomeCompleto,
-    "Participante",
   );
-  desenharAssinaturaInstitucional(doc, 488, 448, 270);
+  desenharAssinaturaInstitucional(doc, 533, 391, 220);
+
+  doc.image(qrCode, 435, 421, { width: 98, height: 98 });
+  doc
+    .fillColor("#07142f")
+    .font("Helvetica")
+    .fontSize(10)
+    .text(participante.codigo || modelo.codigo || "CERTIFICADO", 405, 523, {
+      width: 158,
+      align: "center",
+    });
+
+  desenharLogoMovecta(doc, 784, 482, 130, 34);
 
   doc
-    .fillColor("#64748b")
+    .fillColor("#1d4ed8")
     .font("Helvetica")
-    .fontSize(7.5)
-    .text(`Validação: ${validacaoUrl}`, 190, pageHeight - 54, {
-      width: pageWidth - 380,
+    .fontSize(8)
+    .text(`Validação: ${validacaoUrl}`, 268, pageHeight - 15, {
+      width: pageWidth - 536,
       align: "center",
+      ellipsis: true,
     });
   doc.end();
 
