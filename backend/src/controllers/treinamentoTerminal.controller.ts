@@ -9,6 +9,7 @@ import { travarSequencia } from "../utils/lockSequencia";
 import { AuthRequest } from "../middlewares/auth";
 import { pdfAssets } from "../services/documentoPdfBase.service";
 import { enviarEmail } from "../services/email.service";
+import { certificadoTreinamentoFixoTemplateBase64 } from "../assets/certificadoTreinamentoFixoTemplate";
 
 const APP_PUBLIC_URL_PADRAO = "https://movesecurity.movecta.com.br";
 const VIDEO_TERMINAL_PADRAO =
@@ -76,6 +77,12 @@ const templatesCertificadoFixo = [
 
 function primeiroArquivoExistente(caminhos: string[]) {
   return caminhos.find((arquivo) => fs.existsSync(arquivo)) || "";
+}
+
+function templateCertificadoFixo() {
+  const arquivo = primeiroArquivoExistente(templatesCertificadoFixo);
+  if (arquivo) return arquivo;
+  return Buffer.from(certificadoTreinamentoFixoTemplateBase64, "base64");
 }
 
 function limparCpf(cpf: string) {
@@ -345,7 +352,7 @@ async function gerarCertificadoPdf(treinamento: any) {
   const qrCode = Buffer.from(String(qrCodeDataUrl).split(",")[1], "base64");
 
   doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
-  const templateCertificado = primeiroArquivoExistente(templatesCertificadoFixo);
+  const templateCertificado = templateCertificadoFixo();
   if (templateCertificado) {
     doc.image(templateCertificado, 0, 0, {
       width: pageWidth,
