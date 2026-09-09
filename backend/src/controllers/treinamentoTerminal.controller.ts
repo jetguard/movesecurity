@@ -22,6 +22,17 @@ const assinaturasSegurancaPatrimonial = [
   ),
 ];
 
+const logosMovecta = [
+  path.resolve(process.cwd(), "assets", "movecta-logo.png"),
+  path.resolve(process.cwd(), "backend", "assets", "movecta-logo.png"),
+  path.resolve(__dirname, "..", "..", "assets", "movecta-logo.png"),
+  pdfAssets.logo,
+];
+
+function primeiroArquivoExistente(caminhos: string[]) {
+  return caminhos.find((arquivo) => fs.existsSync(arquivo)) || "";
+}
+
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
 }
@@ -357,18 +368,21 @@ async function gerarCertificadoPdf(treinamento: any) {
   doc.circle(206, 505, 3).fill("#86b91d");
   doc.circle(580, 505, 3).fill("#86b91d");
 
+  const logoMovecta = primeiroArquivoExistente(logosMovecta);
+  let logoInserida = false;
   try {
-    if (fs.existsSync(pdfAssets.logo)) {
-      doc.image(pdfAssets.logo, 610, 488, { fit: [150, 46], align: "center" });
-    } else {
-      doc
-        .fillColor("#356bad")
-        .font("Helvetica-Bold")
-        .fontSize(22)
-        .text("Movecta", 618, 492, { width: 140, align: "center" });
+    if (logoMovecta) {
+      doc.image(logoMovecta, 610, 488, {
+        fit: [150, 46],
+        align: "center",
+        valign: "center",
+      });
+      logoInserida = true;
     }
   } catch (error) {
-    console.error("Falha ao inserir logo no certificado:", error);
+    console.error("Falha ao inserir logo da Movecta no certificado:", error);
+  }
+  if (!logoInserida) {
     doc
       .fillColor("#356bad")
       .font("Helvetica-Bold")
