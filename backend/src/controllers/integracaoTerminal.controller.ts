@@ -10,16 +10,49 @@ import { AuthRequest } from "../middlewares/auth";
 import { pdfAssets } from "../services/documentoPdfBase.service";
 import { enviarEmail } from "../services/email.service";
 
+const APP_PUBLIC_URL_PADRAO = "https://movesecurity.movecta.com.br";
+
 const resumoPortaria = [
   "Integracao operacional para motoristas que acessam os Terminais Movecta Guaruja, com orientacoes de seguranca, circulacao, conduta no patio e conformidade operacional.",
 ];
 
 const respostasQuiz = [false, false, false, true, true];
-const assinaturaSegurancaPatrimonial = path.resolve(
-  process.cwd(),
-  "assets",
-  "assinatura-seguranca-patrimonial.png",
-);
+const assinaturasSegurancaPatrimonial = [
+  path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png"),
+  path.resolve(
+    process.cwd(),
+    "backend",
+    "assets",
+    "assinatura-seguranca-patrimonial.png",
+  ),
+  path.resolve(
+    __dirname,
+    "..",
+    "..",
+    "assets",
+    "assinatura-seguranca-patrimonial.png",
+  ),
+  path.resolve(
+    process.cwd(),
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
+  path.resolve(
+    process.cwd(),
+    "backend",
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
+  path.resolve(
+    __dirname,
+    "..",
+    "..",
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
+  path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.png"),
+  path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.jpeg"),
+];
 
 function limparCpf(cpf: string) {
   return String(cpf || "").replace(/\D/g, "");
@@ -76,12 +109,13 @@ function videoPadrao() {
 }
 
 function appPublicUrl() {
-  return String(
+  const url = String(
     process.env.PUBLIC_APP_URL ||
       process.env.APP_URL ||
       process.env.FRONTEND_URL ||
-      "https://movecta.jetguard.com.br",
+      APP_PUBLIC_URL_PADRAO,
   ).replace(/\/$/, "");
+  return url.includes("movecta.jetguard.com.br") ? APP_PUBLIC_URL_PADRAO : url;
 }
 
 function urlValidacaoCertificado(token: string) {
@@ -193,12 +227,33 @@ function desenharAssinaturaInstitucional(
   y: number,
   largura: number,
 ) {
-  if (fs.existsSync(assinaturaSegurancaPatrimonial)) {
-    doc.image(assinaturaSegurancaPatrimonial, x + 45, y - 58, {
-      fit: [largura - 90, 54],
-      align: "center",
-      valign: "center",
-    });
+  let assinaturaInserida = false;
+  for (const assinatura of assinaturasSegurancaPatrimonial) {
+    if (!fs.existsSync(assinatura)) continue;
+    try {
+      doc.image(assinatura, x + 45, y - 58, {
+        fit: [largura - 90, 54],
+        align: "center",
+        valign: "center",
+      });
+      assinaturaInserida = true;
+      break;
+    } catch (error) {
+      console.error(
+        "Falha ao inserir assinatura institucional no certificado:",
+        error,
+      );
+    }
+  }
+  if (!assinaturaInserida) {
+    doc
+      .fillColor("#0f172a")
+      .font("Helvetica-Oblique")
+      .fontSize(16)
+      .text("Segurança Patrimonial", x + 18, y - 42, {
+        width: largura - 36,
+        align: "center",
+      });
   }
 
   doc

@@ -11,21 +11,27 @@ import { travarSequencia } from "../utils/lockSequencia";
 import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
 import { enviarEmail } from "../services/email.service";
+import { pdfAssets } from "../services/documentoPdfBase.service";
 
 const db = prisma as any;
+const APP_PUBLIC_URL_PADRAO = "https://movesecurity.movecta.com.br";
 
 const assinaturasSegurancaPatrimonial = [
-  path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png"),
   path.resolve(
     process.cwd(),
     "assets",
-    "assinatura-seguranca-patrimonial.jpeg",
+    "assinatura-seguranca-patrimonial.png",
   ),
   path.resolve(
     process.cwd(),
     "backend",
     "assets",
     "assinatura-seguranca-patrimonial.png",
+  ),
+  path.resolve(
+    process.cwd(),
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
   ),
   path.resolve(
     process.cwd(),
@@ -47,6 +53,8 @@ const assinaturasSegurancaPatrimonial = [
     "assets",
     "assinatura-seguranca-patrimonial.jpeg",
   ),
+  path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.png"),
+  path.resolve(path.dirname(pdfAssets.logo), "assinatura-seguranca-patrimonial.jpeg"),
 ];
 const pastaVideosTreinamento = "uploads/treinamentos-dinamicos/videos/";
 
@@ -208,12 +216,13 @@ function userAgent(req: Request) {
 }
 
 function appPublicUrl() {
-  return String(
+  const url = String(
     process.env.PUBLIC_APP_URL ||
       process.env.APP_URL ||
       process.env.FRONTEND_URL ||
-      "https://movecta.jetguard.com.br",
+      APP_PUBLIC_URL_PADRAO,
   ).replace(/\/$/, "");
+  return url.includes("movecta.jetguard.com.br") ? APP_PUBLIC_URL_PADRAO : url;
 }
 
 function escaparHtml(valor: unknown) {
@@ -702,12 +711,12 @@ async function gerarCertificado(modelo: any, participante: any) {
       lineGap: 8,
     });
 
-  doc.image(qrCode, 82, 458, { width: 62, height: 62 });
+  doc.image(qrCode, 82, 464, { width: 56, height: 56 });
   doc
     .fillColor("#0f172a")
     .font("Helvetica-Bold")
     .fontSize(7)
-    .text("VALIDAÇÃO", 68, 524, { width: 90, align: "center" });
+    .text("VALIDAÇÃO", 65, 524, { width: 90, align: "center" });
 
   if (participante.assinaturaDataUrl) {
     const assinaturaBase64 = String(participante.assinaturaDataUrl).split(

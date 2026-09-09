@@ -71,8 +71,8 @@ const inicial: Configuracao = {
   ssoClientSecretConfigurado: false,
   ssoObjectId: "",
   ssoTenantId: "",
-  ssoCallbackUrl: "https://movecta.jetguard.com.br/api/auth/sso/callback",
-  ssoFrontendUrl: "https://movecta.jetguard.com.br",
+  ssoCallbackUrl: "https://movesecurity.movecta.com.br/api/auth/sso/callback",
+  ssoFrontendUrl: "https://movesecurity.movecta.com.br",
   ssoAuthorizationUrl: "",
   ssoTokenUrl: "",
   ssoUserInfoUrl: "",
@@ -519,7 +519,7 @@ export default function Configuracoes() {
               <Label titulo="URL do sistema">
                 <input
                   className={inputBase}
-                  placeholder="https://movecta.jetguard.com.br"
+                  placeholder="https://movesecurity.movecta.com.br"
                   value={form.ssoFrontendUrl || ""}
                   onChange={(e) => campo("ssoFrontendUrl", e.target.value)}
                 />
@@ -527,7 +527,7 @@ export default function Configuracoes() {
               <Label titulo="URL de callback" className="xl:col-span-2">
                 <input
                   className={inputBase}
-                  placeholder="https://movecta.jetguard.com.br/api/auth/sso/callback"
+                  placeholder="https://movesecurity.movecta.com.br/api/auth/sso/callback"
                   value={form.ssoCallbackUrl || ""}
                   onChange={(e) => campo("ssoCallbackUrl", e.target.value)}
                 />
