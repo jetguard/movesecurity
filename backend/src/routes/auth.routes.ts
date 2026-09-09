@@ -3,6 +3,7 @@
 import {
   register,
   login,
+  confirmarLogin2fa,
   logout,
   renovarSessao,
   emitirCsrf,
@@ -18,6 +19,7 @@ const router = Router();
 
 router.post("/register", autenticarUsuario, autorizarPerfis(acessoTotal), register);
 router.post("/login", login);
+router.post("/login/2fa", confirmarLogin2fa);
 router.get("/sso/config", configuracaoSsoPublica);
 router.get("/sso/iniciar", iniciarSso);
 router.get("/sso/callback", callbackSso);

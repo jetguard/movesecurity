@@ -27,6 +27,7 @@ import {
   validarFormatoPin,
   validarPinOperacional,
 } from "../services/pinOperacional.service";
+import { enviarEmail } from "../services/email.service";
 
 type TentativaLogin = {
   quantidade: number;
@@ -118,6 +119,43 @@ function criarAccessToken(usuarioId: number, sessaoId: string) {
 
 function criarRefreshToken() {
   return crypto.randomBytes(48).toString("hex");
+}
+
+function gerarCodigo2fa() {
+  return String(crypto.randomInt(0, 1_000_000)).padStart(6, "0");
+}
+
+function criarToken2fa(usuarioId: number, deviceId: string) {
+  return jwt.sign(
+    { id: usuarioId, deviceId, finalidade: "login_2fa" },
+    jwtSecret(),
+    { expiresIn: "10m" },
+  );
+}
+
+function validarToken2fa(token: string) {
+  const payload = jwt.verify(token, jwtSecret()) as {
+    id?: number;
+    deviceId?: string;
+    finalidade?: string;
+  };
+  if (payload.finalidade !== "login_2fa" || !payload.id) {
+    throw new Error("Token de validação inválido.");
+  }
+  return payload;
+}
+
+function formatarCodigo2fa(codigo: string) {
+  return codigo.split("").join(" ");
+}
+
+function escaparHtml(valor: unknown) {
+  return String(valor || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function refreshExpiraEm() {
@@ -359,6 +397,7 @@ type UsuarioAutenticado = {
   unidadesPermitidas: string | null;
   deveAlterarSenha: boolean;
   pinOperacionalHash: string | null;
+  doisFatoresAtivo?: boolean;
 };
 
 async function criarSessaoAutenticada(
@@ -445,7 +484,48 @@ async function criarSessaoAutenticada(
     ),
     deveAlterarSenha: usuario.deveAlterarSenha,
     possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
+    doisFatoresAtivo: Boolean(usuario.doisFatoresAtivo),
   };
+}
+
+async function enviarCodigo2fa(usuario: { id: number; nome: string; email: string }) {
+  const codigo = gerarCodigo2fa();
+  const expiraEm = new Date(Date.now() + 10 * 60 * 1000);
+
+  await prisma.usuario.update({
+    where: { id: usuario.id },
+    data: {
+      doisFatoresCodigoHash: await bcrypt.hash(codigo, 10),
+      doisFatoresExpiraEm: expiraEm,
+      doisFatoresTentativas: 0,
+    },
+  });
+
+  await enviarEmail({
+    to: usuario.email,
+    subject: "Código de acesso MoveSecurity",
+    text: [
+      `Olá, ${usuario.nome}`,
+      "",
+      "Use o código abaixo para concluir seu acesso ao MoveSecurity.",
+      "",
+      `Código: ${formatarCodigo2fa(codigo)}`,
+      "",
+      "Este código é válido por 10 minutos.",
+      "",
+      "Atenciosamente,",
+      "Segurança Patrimonial - Movecta",
+    ].join("\n"),
+    html: `
+      <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
+        <p>Olá, <strong>${escaparHtml(usuario.nome)}</strong></p>
+        <p>Use o código abaixo para concluir seu acesso ao <strong>MoveSecurity</strong>.</p>
+        <p style="font-size: 28px; font-weight: 800; letter-spacing: 0.24em; color: #2563eb;">${formatarCodigo2fa(codigo)}</p>
+        <p>Este código é válido por <strong>10 minutos</strong>.</p>
+        <p>Atenciosamente,<br><strong>Segurança Patrimonial - Movecta</strong></p>
+      </div>
+    `,
+  });
 }
 
 async function obterConfiguracaoSso() {
@@ -678,7 +758,7 @@ export async function register(req: Request, res: Response) {
 
 export async function login(req: Request, res: Response) {
   try {
-    const { email, senha } = req.body;
+    const { email, senha, deviceId } = req.body;
     const emailLogin = String(email || "");
     const bloqueadoAte = obterBloqueio(emailLogin, req.ip);
 
@@ -736,6 +816,29 @@ export async function login(req: Request, res: Response) {
 
     limparTentativas(emailLogin, req.ip);
 
+    if (usuario.perfilAcesso === "SUPER_ADMIN" && usuario.doisFatoresAtivo) {
+      await enviarCodigo2fa(usuario);
+      await prisma.logAuditoria.create({
+        data: {
+          usuarioId: usuario.id,
+          usuarioNome: usuario.nome,
+          ip: req.ip,
+          acao: "Código 2FA enviado",
+          tipoRegistro: "Auth",
+          registroId: usuario.id,
+          dadosNovos: JSON.stringify({
+            email: usuario.email,
+            expiraEm: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+          }),
+        },
+      });
+      return res.json({
+        twoFactorRequired: true,
+        twoFactorToken: criarToken2fa(usuario.id, String(deviceId || "")),
+        mensagem: "Código de verificação enviado para o e-mail cadastrado.",
+      });
+    }
+
     const usuarioSessao = await criarSessaoAutenticada(req, res, usuario, "senha");
 
     return res.json({
@@ -745,6 +848,90 @@ export async function login(req: Request, res: Response) {
     console.error("Erro ao fazer login:", error);
     return res.status(500).json({
       error: "Erro ao fazer login",
+    });
+  }
+}
+
+export async function confirmarLogin2fa(req: Request, res: Response) {
+  try {
+    const codigo = String(req.body.codigo || "").replace(/\D/g, "").slice(0, 6);
+    const token2fa = String(req.body.twoFactorToken || "");
+    if (!codigo || codigo.length !== 6 || !token2fa) {
+      return res
+        .status(400)
+        .json({ error: "Informe o código de verificação de 6 dígitos." });
+    }
+
+    const payload = validarToken2fa(token2fa);
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: Number(payload.id) },
+    });
+
+    if (!usuario || usuario.statusUsuario !== "ATIVO") {
+      return res.status(403).json({ error: "Usuário bloqueado ou inativo." });
+    }
+
+    if (usuario.perfilAcesso !== "SUPER_ADMIN" || !usuario.doisFatoresAtivo) {
+      return res.status(400).json({ error: "2FA não está ativo para este usuário." });
+    }
+
+    if (!usuario.doisFatoresCodigoHash || !usuario.doisFatoresExpiraEm) {
+      return res.status(400).json({
+        error: "Código de verificação não solicitado. Faça login novamente.",
+      });
+    }
+
+    if (usuario.doisFatoresExpiraEm.getTime() < Date.now()) {
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: {
+          doisFatoresCodigoHash: null,
+          doisFatoresExpiraEm: null,
+          doisFatoresTentativas: 0,
+        },
+      });
+      return res
+        .status(403)
+        .json({ error: "Código expirado. Faça login novamente." });
+    }
+
+    if (usuario.doisFatoresTentativas >= 5) {
+      return res.status(429).json({
+        error: "Muitas tentativas inválidas. Faça login novamente para gerar outro código.",
+      });
+    }
+
+    const codigoValido = await bcrypt.compare(
+      codigo,
+      usuario.doisFatoresCodigoHash,
+    );
+
+    if (!codigoValido) {
+      await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: { doisFatoresTentativas: { increment: 1 } },
+      });
+      return res.status(400).json({ error: "Código de verificação inválido." });
+    }
+
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        doisFatoresCodigoHash: null,
+        doisFatoresExpiraEm: null,
+        doisFatoresTentativas: 0,
+      },
+    });
+
+    const usuarioSessao = await criarSessaoAutenticada(req, res, usuario, "senha");
+
+    return res.json({
+      usuario: usuarioSessao,
+    });
+  } catch (error) {
+    console.error("Erro ao confirmar 2FA:", error);
+    return res.status(400).json({
+      error: "Não foi possível confirmar o código de verificação.",
     });
   }
 }

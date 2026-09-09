@@ -1,5 +1,5 @@
 import type { AxiosError } from "axios";
-import { Building2, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import { Building2, KeyRound, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../services/api";
 
@@ -31,6 +31,9 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [loadingSso, setLoadingSso] = useState(false);
   const [ssoConfig, setSsoConfig] = useState<SsoConfig | null>(null);
+  const [twoFactorToken, setTwoFactorToken] = useState("");
+  const [codigo2fa, setCodigo2fa] = useState("");
+  const [mensagem2fa, setMensagem2fa] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -45,16 +48,42 @@ export default function Login() {
       .catch(() => setSsoConfig({ ativo: false, loginLocalEmergencia: true }));
   }, []);
 
+  function concluirLogin(usuario: any) {
+    localStorage.setItem("usuario", JSON.stringify(usuario));
+    localStorage.setItem("jetguardUltimaAtividade", String(Date.now()));
+    sessionStorage.setItem("loginInicio", String(Date.now()));
+
+    if (localStorage.getItem("bloquearAposProximoLogin") === "true") {
+      localStorage.setItem("sistemaBloqueado", "true");
+      localStorage.removeItem("bloquearAposProximoLogin");
+    }
+
+    window.location.href = usuario?.deveAlterarSenha ? "/alterar-senha" : "/";
+  }
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!email || !password) {
-      alert("Preencha email e senha");
-      return;
-    }
-
     try {
       setLoading(true);
+
+      if (twoFactorToken) {
+        if (codigo2fa.replace(/\D/g, "").length !== 6) {
+          alert("Informe o código de 6 dígitos enviado por e-mail.");
+          return;
+        }
+        const response = await api.post("/auth/login/2fa", {
+          twoFactorToken,
+          codigo: codigo2fa,
+        });
+        concluirLogin(response.data.usuario);
+        return;
+      }
+
+      if (!email || !password) {
+        alert("Preencha email e senha");
+        return;
+      }
 
       const response = await api.post("/auth/login", {
         email,
@@ -62,18 +91,17 @@ export default function Login() {
         deviceId: obterDeviceId(),
       });
 
-      localStorage.setItem("usuario", JSON.stringify(response.data.usuario));
-      localStorage.setItem("jetguardUltimaAtividade", String(Date.now()));
-      sessionStorage.setItem("loginInicio", String(Date.now()));
-
-      if (localStorage.getItem("bloquearAposProximoLogin") === "true") {
-        localStorage.setItem("sistemaBloqueado", "true");
-        localStorage.removeItem("bloquearAposProximoLogin");
+      if (response.data.twoFactorRequired) {
+        setTwoFactorToken(response.data.twoFactorToken || "");
+        setMensagem2fa(
+          response.data.mensagem ||
+            "Código de verificação enviado para seu e-mail.",
+        );
+        setCodigo2fa("");
+        return;
       }
 
-      window.location.href = response.data.usuario?.deveAlterarSenha
-        ? "/alterar-senha"
-        : "/";
+      concluirLogin(response.data.usuario);
     } catch (error) {
       const apiError = error as AxiosError<ApiError>;
       alert(apiError.response?.data?.error || "Erro ao fazer login");
@@ -85,6 +113,12 @@ export default function Login() {
   function iniciarLoginCorporativo() {
     setLoadingSso(true);
     window.location.href = "/api/auth/sso/iniciar";
+  }
+
+  function voltarLoginSenha() {
+    setTwoFactorToken("");
+    setCodigo2fa("");
+    setMensagem2fa("");
   }
 
   const exibirLoginLocal = ssoConfig?.loginLocalEmergencia !== false;
@@ -144,51 +178,93 @@ export default function Login() {
 
             {exibirLoginLocal && (
               <>
-                <label className="block">
-                  <span className="mb-2 block text-sm font-black text-slate-700">
-                    Email
-                  </span>
-                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
-                    <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
-                      <Mail size={17} />
-                    </span>
-                    <input
-                      type="email"
-                      placeholder="nome@empresa.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      style={{
-                        backgroundColor: "transparent",
-                        boxShadow: "none",
-                        WebkitTextFillColor: "#020617",
-                      }}
-                      className="login-input h-8 w-full appearance-none bg-transparent text-sm font-bold outline-none"
-                    />
-                  </div>
-                </label>
+                {twoFactorToken ? (
+                  <>
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-bold text-blue-900">
+                      {mensagem2fa}
+                    </div>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-black text-slate-700">
+                        Código de verificação
+                      </span>
+                      <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
+                        <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
+                          <KeyRound size={17} />
+                        </span>
+                        <input
+                          inputMode="numeric"
+                          placeholder="000000"
+                          value={codigo2fa}
+                          onChange={(e) =>
+                            setCodigo2fa(e.target.value.replace(/\D/g, "").slice(0, 6))
+                          }
+                          maxLength={6}
+                          style={{
+                            backgroundColor: "transparent",
+                            boxShadow: "none",
+                            WebkitTextFillColor: "#020617",
+                          }}
+                          className="login-input h-8 w-full appearance-none bg-transparent text-sm font-bold tracking-[0.3em] outline-none"
+                        />
+                      </div>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={voltarLoginSenha}
+                      className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-600 transition hover:bg-slate-50"
+                    >
+                      Voltar para login
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-black text-slate-700">
+                        Email
+                      </span>
+                      <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
+                        <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
+                          <Mail size={17} />
+                        </span>
+                        <input
+                          type="email"
+                          placeholder="nome@empresa.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          style={{
+                            backgroundColor: "transparent",
+                            boxShadow: "none",
+                            WebkitTextFillColor: "#020617",
+                          }}
+                          className="login-input h-8 w-full appearance-none bg-transparent text-sm font-bold outline-none"
+                        />
+                      </div>
+                    </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm font-black text-slate-700">
-                    Senha
-                  </span>
-                  <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
-                    <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
-                      <LockKeyhole size={17} />
-                    </span>
-                    <input
-                      type="password"
-                      placeholder="Digite sua senha"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      style={{
-                        backgroundColor: "transparent",
-                        boxShadow: "none",
-                        WebkitTextFillColor: "#020617",
-                      }}
-                      className="login-input h-8 w-full appearance-none bg-transparent text-sm font-bold outline-none"
-                    />
-                  </div>
-                </label>
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-black text-slate-700">
+                        Senha
+                      </span>
+                      <div className="login-input-shell flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition">
+                        <span className="login-input-icon flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
+                          <LockKeyhole size={17} />
+                        </span>
+                        <input
+                          type="password"
+                          placeholder="Digite sua senha"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          style={{
+                            backgroundColor: "transparent",
+                            boxShadow: "none",
+                            WebkitTextFillColor: "#020617",
+                          }}
+                          className="login-input h-8 w-full appearance-none bg-transparent text-sm font-bold outline-none"
+                        />
+                      </div>
+                    </label>
+                  </>
+                )}
               </>
             )}
           </div>
@@ -199,7 +275,13 @@ export default function Login() {
               disabled={loading}
               className="mt-6 w-full rounded-2xl bg-blue-600 px-4 py-3 font-black text-white shadow-lg shadow-blue-600/25 transition hover:-translate-y-0.5 hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-400"
             >
-              {loading ? "Entrando..." : "Entrar"}
+              {loading
+                ? twoFactorToken
+                  ? "Validando..."
+                  : "Entrando..."
+                : twoFactorToken
+                  ? "Validar código"
+                  : "Entrar"}
             </button>
           )}
 

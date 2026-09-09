@@ -4,6 +4,7 @@ import multer from "multer";
 import {
   atualizarPerfilAcesso,
   atualizarPerfil,
+  atualizarDoisFatores,
   alterarStatusUsuario,
   buscarPerfil,
   criarPerfilAcesso,
@@ -65,6 +66,7 @@ router.post(
 );
 router.get("/me", autenticarUsuario, buscarPerfil);
 router.put("/me", autenticarUsuario, upload.single("fotoPerfil"), atualizarPerfil);
+router.put("/me/2fa", autenticarUsuario, atualizarDoisFatores);
 router.put("/me/pin", autenticarUsuario, atualizarPinOperacional);
 router.put(
   "/perfis-acesso/:id",
