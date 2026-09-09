@@ -571,7 +571,7 @@ export default function AdminLayout() {
                     <>
                       <Link to="/treinamentos-terminal" className={subItem}>
                         <FileCheck2 size={16} />
-                        Treinamento Terminal
+                        Alfandega Portaria 205
                       </Link>
                       <Link to="/integracoes-do-terminal" className={subItem}>
                         <FileCheck2 size={16} />
@@ -637,7 +637,7 @@ export default function AdminLayout() {
                         <>
                           <Link to="/treinamentos-terminal" className={subItem}>
                             <FileCheck2 size={16} />
-                            Treinamento Terminal
+                            Alfandega Portaria 205
                           </Link>
                           <Link to="/integracoes-do-terminal" className={subItem}>
                             <FileCheck2 size={16} />

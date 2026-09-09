@@ -1734,6 +1734,7 @@ model TreinamentoModelo {
   descricao            String?
   subtitulo            String?
   acessoPublico        Boolean  @default(false)
+  acessoPublicoModo    String   @default("TOKEN")
   perguntasHabilitadas Boolean  @default(true)
   avaliacaoHabilitada  Boolean  @default(true)
   videoUrl             String?

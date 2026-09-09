@@ -49,6 +49,7 @@ type Modelo = {
   tipo: string;
   descricao?: string | null;
   acessoPublico?: boolean;
+  acessoPublicoModo?: "TOKEN" | "FORMULARIO";
   perguntasHabilitadas?: boolean;
   avaliacaoHabilitada?: boolean;
   videoUrl?: string | null;
@@ -76,6 +77,11 @@ type Participante = {
 };
 
 const formInicial = {
+  nomeCompleto: "",
+  cpf: "",
+  dataNascimento: "",
+  empresa: "",
+  cargo: "",
   email: "",
   token: "",
   terceirizado: false,
@@ -155,6 +161,18 @@ const perguntasAvaliacaoTreinamento = [
 
 function emailValido(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
+}
+
+function apenasDigitos(valor: string) {
+  return valor.replace(/\D/g, "");
+}
+
+function mascararCpf(valor: string) {
+  const digitos = apenasDigitos(valor).slice(0, 11);
+  return digitos
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
 }
 
 function avaliacaoTreinamentoPadrao() {
@@ -449,6 +467,16 @@ export default function TreinamentoDinamicoPublico() {
     setForm((atual) => ({ ...atual, email: valor.trim().toLowerCase() }));
   }
 
+  function alterarCampoFormulario(
+    campo: "nomeCompleto" | "cpf" | "dataNascimento" | "empresa" | "cargo",
+    valor: string,
+  ) {
+    setForm((atual) => ({
+      ...atual,
+      [campo]: campo === "cpf" ? mascararCpf(valor) : valor,
+    }));
+  }
+
   function alterarToken(valor: string) {
     setForm((atual) => ({
       ...atual,
@@ -524,7 +552,21 @@ export default function TreinamentoDinamicoPublico() {
   async function iniciar(event: FormEvent) {
     event.preventDefault();
     if (modelo?.acessoPublico) {
-      if (!form.token.trim()) {
+      if (modelo.acessoPublicoModo === "FORMULARIO") {
+        if (
+          !form.nomeCompleto.trim() ||
+          apenasDigitos(form.cpf).length !== 11 ||
+          !form.dataNascimento ||
+          !form.empresa.trim() ||
+          !form.cargo.trim() ||
+          !emailValido(form.email)
+        ) {
+          setMensagem(
+            "Informe nome completo, CPF, data de nascimento, empresa, cargo e e-mail para iniciar.",
+          );
+          return;
+        }
+      } else if (!form.token.trim()) {
         setMensagem("Informe o token recebido por e-mail para iniciar.");
         return;
       }
@@ -837,15 +879,20 @@ export default function TreinamentoDinamicoPublico() {
               Acesso ao treinamento
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">
-              {modelo.acessoPublico ? "Token de acesso" : "Identificação do participante"}
+              {modelo.acessoPublico
+                ? modelo.acessoPublicoModo === "FORMULARIO"
+                  ? "Identificação do participante"
+                  : "Token de acesso"
+                : "Identificação do participante"}
             </h2>
             <p className="mt-2 text-sm font-extrabold leading-6 text-slate-800">
-              {modelo.acessoPublico
+              {modelo.acessoPublico && modelo.acessoPublicoModo !== "FORMULARIO"
                 ? "Informe o token temporário recebido por e-mail para iniciar ou continuar."
                 : "Preencha seus dados para iniciar ou continuar este treinamento."}
             </p>
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {modelo.acessoPublico ? (
+              {modelo.acessoPublico &&
+              modelo.acessoPublicoModo !== "FORMULARIO" ? (
                 <>
                   <div className="md:col-span-2 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm font-bold text-blue-950">
                     O acesso é temporário e válido por 24 horas após o envio do convite.
@@ -884,6 +931,77 @@ export default function TreinamentoDinamicoPublico() {
                       </button>
                     )}
                   </div>
+                </>
+              ) : modelo.acessoPublico ? (
+                <>
+                  <label className="text-sm font-black text-slate-800">
+                    Nome completo
+                    <input
+                      value={form.nomeCompleto}
+                      onChange={(e) =>
+                        alterarCampoFormulario("nomeCompleto", e.target.value)
+                      }
+                      required
+                      className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </label>
+                  <label className="text-sm font-black text-slate-800">
+                    CPF
+                    <input
+                      value={form.cpf}
+                      onChange={(e) =>
+                        alterarCampoFormulario("cpf", e.target.value)
+                      }
+                      inputMode="numeric"
+                      maxLength={14}
+                      required
+                      className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </label>
+                  <label className="text-sm font-black text-slate-800">
+                    Data de nascimento
+                    <input
+                      type="date"
+                      value={form.dataNascimento}
+                      onChange={(e) =>
+                        alterarCampoFormulario("dataNascimento", e.target.value)
+                      }
+                      required
+                      className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none focus:border-blue-500"
+                    />
+                  </label>
+                  <label className="text-sm font-black text-slate-800">
+                    Empresa
+                    <input
+                      value={form.empresa}
+                      onChange={(e) =>
+                        alterarCampoFormulario("empresa", e.target.value)
+                      }
+                      required
+                      className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </label>
+                  <label className="text-sm font-black text-slate-800">
+                    Função/Cargo
+                    <input
+                      value={form.cargo}
+                      onChange={(e) =>
+                        alterarCampoFormulario("cargo", e.target.value)
+                      }
+                      required
+                      className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </label>
+                  <label className="text-sm font-black text-slate-800">
+                    E-mail
+                    <input
+                      value={form.email}
+                      onChange={(e) => alterarEmail(e.target.value)}
+                      type="email"
+                      required
+                      className="mt-2 w-full rounded-2xl border border-blue-200 bg-white px-4 py-3.5 text-sm font-bold text-slate-950 outline-none placeholder:text-slate-500 focus:border-blue-500"
+                    />
+                  </label>
                 </>
               ) : (
                 <>

@@ -140,6 +140,10 @@ export default function App() {
           <Route path="/coleta-dados/:token" element={<ColetaDados />} />
           <Route
             path="/treinamento-terminal"
+            element={<Navigate to="/portaria-alfandega-205" replace />}
+          />
+          <Route
+            path="/portaria-alfandega-205"
             element={<TreinamentoTerminalPublico />}
           />
           <Route
