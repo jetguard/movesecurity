@@ -5,6 +5,7 @@ import {
   atualizarPerfilAcesso,
   atualizarPerfil,
   atualizarDoisFatores,
+  confirmarDoisFatoresAutenticador,
   alterarStatusUsuario,
   buscarPerfil,
   criarPerfilAcesso,
@@ -13,6 +14,7 @@ import {
   excluirUsuario,
   listarPerfisAcesso,
   listarUsuarios,
+  prepararDoisFatoresAutenticador,
   redefinirSenhaUsuario,
   resetarDispositivoUsuario,
   resetarPinUsuario,
@@ -67,6 +69,16 @@ router.post(
 router.get("/me", autenticarUsuario, buscarPerfil);
 router.put("/me", autenticarUsuario, upload.single("fotoPerfil"), atualizarPerfil);
 router.put("/me/2fa", autenticarUsuario, atualizarDoisFatores);
+router.post(
+  "/me/2fa/authenticator/setup",
+  autenticarUsuario,
+  prepararDoisFatoresAutenticador,
+);
+router.post(
+  "/me/2fa/authenticator/confirm",
+  autenticarUsuario,
+  confirmarDoisFatoresAutenticador,
+);
 router.put("/me/pin", autenticarUsuario, atualizarPinOperacional);
 router.put(
   "/perfis-acesso/:id",
