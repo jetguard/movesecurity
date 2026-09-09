@@ -55,6 +55,15 @@ const portariaPdfUrl = "/docs/portaria-alf-sts-205-2026.pdf";
 const fundoMobileUrl = "/images/treinamento-terminal/fundo-para-movel.png";
 const fundoDesktopUrl = "/images/treinamento-terminal/fundo-para-desktop.jpeg";
 const velocidadesVideo = [1, 1.25, 1.5];
+const videoTerminalFallbackUrl = "/api/public/treinamento-terminal/video";
+
+function resolverVideoTerminalUrl(url?: string | null) {
+  const valor = String(url || videoTerminalFallbackUrl).trim();
+  if (!valor) return videoTerminalFallbackUrl;
+  if (/^https?:\/\//i.test(valor)) return valor;
+  if (valor.startsWith("/")) return `${window.location.origin}${valor}`;
+  return `${window.location.origin}/${valor}`;
+}
 
 function campoClasse() {
   return "terminal-input w-full rounded-2xl border px-4 py-3.5 text-[15px] font-semibold outline-none transition";
@@ -192,7 +201,19 @@ export default function TreinamentoTerminalPublico() {
       Math.max(0, (duracao || treinamento?.duracaoSegundos || 0) - tempoAtual),
     [duracao, tempoAtual, treinamento],
   );
+  const videoTerminalUrl = useMemo(
+    () => resolverVideoTerminalUrl(config?.videoUrl),
+    [config?.videoUrl],
+  );
   const podePularVideoTeste = perfilAtual() === PERFIS.SUPER_ADMIN;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || etapa !== 2) return;
+    setVideoErro(false);
+    setVideoCarregando(true);
+    video.load();
+  }, [etapa, videoTerminalUrl]);
 
   useEffect(() => {
     if (!treinamento || treinamento.videoConcluido) return;
@@ -702,8 +723,8 @@ export default function TreinamentoTerminalPublico() {
             </div>
             <div className="terminal-video-frame relative mt-5 overflow-hidden rounded-2xl border border-slate-800 bg-slate-950">
               <video
+                key={videoTerminalUrl}
                 ref={videoRef}
-                src={config?.videoUrl}
                 className="aspect-video w-full bg-slate-950 object-contain"
                 preload="auto"
                 playsInline
@@ -738,7 +759,9 @@ export default function TreinamentoTerminalPublico() {
                     videoRef.current.currentTime = maiorTempoRef.current;
                   }
                 }}
-              />
+              >
+                <source src={videoTerminalUrl} type="video/mp4" />
+              </video>
               {(videoCarregando || videoErro) && (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-slate-950/72 px-4 text-center text-sm font-black text-white">
                   {videoErro
