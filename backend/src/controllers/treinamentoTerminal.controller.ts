@@ -10,6 +10,7 @@ import { pdfAssets } from "../services/documentoPdfBase.service";
 import { enviarEmail } from "../services/email.service";
 
 const APP_PUBLIC_URL_PADRAO = "https://movesecurity.movecta.com.br";
+const VIDEO_TERMINAL_PADRAO = "/videos/treinamento_terminal_rfb.mp4";
 
 const resumoPortaria = [
   "A Portaria ALF/STS no 205, de 22 de junho de 2026, condiciona o credenciamento de pessoas para ingresso em recintos alfandegados sob jurisdição da Alfândega da Receita Federal do Brasil do Porto de Santos à conclusão do curso básico de conhecimentos aduaneiros previsto na Portaria Coana no 185/2026.",
@@ -17,6 +18,8 @@ const resumoPortaria = [
 
 const assinaturasSegurancaPatrimonial = [
   path.resolve(process.cwd(), "assets", "assinatura-seguranca-patrimonial.png"),
+  path.resolve(process.cwd(), "frontend", "public", "images", "assinatura-seguranca-patrimonial.png"),
+  path.resolve(process.cwd(), "frontend", "dist", "images", "assinatura-seguranca-patrimonial.png"),
   path.resolve(
     process.cwd(),
     "backend",
@@ -54,8 +57,12 @@ const assinaturasSegurancaPatrimonial = [
 
 const logosMovecta = [
   path.resolve(process.cwd(), "assets", "movecta-logo.png"),
+  path.resolve(process.cwd(), "frontend", "public", "images", "movecta-logo.png"),
+  path.resolve(process.cwd(), "frontend", "dist", "images", "movecta-logo.png"),
   path.resolve(process.cwd(), "backend", "assets", "movecta-logo.png"),
   path.resolve(__dirname, "..", "..", "assets", "movecta-logo.png"),
+  path.resolve(__dirname, "..", "..", "frontend", "public", "images", "movecta-logo.png"),
+  path.resolve(__dirname, "..", "..", "frontend", "dist", "images", "movecta-logo.png"),
   pdfAssets.logo,
 ];
 
@@ -114,7 +121,7 @@ function emailValido(email: string) {
 function videoPadrao() {
   return (
     process.env.TREINAMENTO_TERMINAL_VIDEO_URL ||
-    "/videos/treinamento-terminal.mp4"
+    VIDEO_TERMINAL_PADRAO
   );
 }
 
@@ -242,6 +249,15 @@ function desenharAssinaturaInstitucional(
   y: number,
   largura: number,
 ) {
+  doc
+    .fillColor("#0f172a")
+    .font("Helvetica-Oblique")
+    .fontSize(13)
+    .text("Segurança Patrimonial", x + 18, y - 32, {
+      width: largura - 36,
+      align: "center",
+    });
+
   let assinaturaInserida = false;
   for (const assinatura of assinaturasSegurancaPatrimonial) {
     if (!fs.existsSync(assinatura)) continue;
@@ -264,8 +280,8 @@ function desenharAssinaturaInstitucional(
     doc
       .fillColor("#0f172a")
       .font("Helvetica-Oblique")
-      .fontSize(16)
-      .text("Segurança Patrimonial", x + 18, y - 42, {
+      .fontSize(18)
+      .text("MoveSecurity", x + 18, y - 56, {
         width: largura - 36,
         align: "center",
       });
@@ -427,10 +443,20 @@ async function gerarCertificadoPdf(treinamento: any) {
   }
   if (!logoInserida) {
     doc
-      .fillColor("#356bad")
+      .save()
+      .roundedRect(610, 488, 150, 35, 8)
+      .fill("#ffffff")
+      .restore();
+    doc
+      .fillColor("#0b74ff")
       .font("Helvetica-Bold")
-      .fontSize(22)
-      .text("Movecta", 618, 492, { width: 140, align: "center" });
+      .fontSize(24)
+      .text("M", 620, 491, { width: 28, align: "center" });
+    doc
+      .fillColor("#111827")
+      .font("Helvetica-Bold")
+      .fontSize(19)
+      .text("Movecta", 648, 494, { width: 102, align: "left" });
   }
 
   doc
