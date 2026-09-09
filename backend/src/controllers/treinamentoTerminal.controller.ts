@@ -446,17 +446,6 @@ async function gerarCertificadoPdf(treinamento: any) {
       align: "center",
     });
 
-  doc
-    .rect(430, pageHeight - 20, 580, 18)
-    .fill("#ffffff")
-    .fillColor("#1d4ed8")
-    .font("Helvetica")
-    .fontSize(8.5)
-    .text(`Validação: ${validacaoUrl}`, 470, pageHeight - 17, {
-      width: 500,
-      align: "center",
-      ellipsis: true,
-    });
   doc.end();
 
   await new Promise<void>((resolve, reject) => {
