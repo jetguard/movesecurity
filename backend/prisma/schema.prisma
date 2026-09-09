@@ -34,6 +34,10 @@ model Usuario {
   pinOperacionalAtualizadoEm DateTime?
   pinTentativasInvalidas     Int       @default(0)
   pinBloqueadoAte            DateTime?
+  doisFatoresAtivo           Boolean   @default(false)
+  doisFatoresCodigoHash      String?
+  doisFatoresExpiraEm        DateTime?
+  doisFatoresTentativas      Int       @default(0)
   ultimoAcesso               DateTime?
   createdAt                  DateTime  @default(now())
 

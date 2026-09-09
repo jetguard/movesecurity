@@ -38,6 +38,7 @@ const selectUsuario = {
   pinOperacionalHash: true,
   pinOperacionalCriadoEm: true,
   pinOperacionalAtualizadoEm: true,
+  doisFatoresAtivo: true,
   ultimoAcesso: true,
   createdAt: true,
 };
@@ -61,6 +62,7 @@ function formatarUsuario(usuario: any) {
         usuario.pinOperacionalCriadoEm ||
         usuario.pinOperacionalAtualizadoEm,
     ),
+    doisFatoresAtivo: Boolean(usuario.doisFatoresAtivo),
   };
 }
 
@@ -1168,6 +1170,72 @@ export async function atualizarPerfil(req: AuthRequest, res: Response) {
     return res.status(500).json({
       error: "Erro ao atualizar perfil",
     });
+  }
+}
+
+export async function atualizarDoisFatores(req: AuthRequest, res: Response) {
+  try {
+    const ativo = Boolean(req.body.ativo);
+    const senhaAtual = String(req.body.senhaAtual || "");
+
+    if (!senhaAtual) {
+      return res.status(400).json({
+        error: "Informe sua senha atual para alterar a autenticação em 2 etapas.",
+      });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        senha: true,
+        perfilAcesso: true,
+        doisFatoresAtivo: true,
+      },
+    });
+
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado." });
+    }
+
+    if (usuario.perfilAcesso !== "SUPER_ADMIN") {
+      return res.status(403).json({
+        error: "A autenticação em 2 etapas está disponível somente para Super Admin.",
+      });
+    }
+
+    const senhaValida = await bcrypt.compare(senhaAtual, usuario.senha);
+    if (!senhaValida) {
+      return res.status(400).json({ error: "Senha atual inválida." });
+    }
+
+    const atualizado = await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        doisFatoresAtivo: ativo,
+        doisFatoresCodigoHash: null,
+        doisFatoresExpiraEm: null,
+        doisFatoresTentativas: 0,
+      },
+      select: selectUsuario,
+    });
+
+    await registrarLog({
+      req,
+      acao: ativo ? "Ativação de 2FA" : "Desativação de 2FA",
+      tipoRegistro: "Usuario",
+      registroId: usuario.id,
+      dadosAnteriores: { doisFatoresAtivo: usuario.doisFatoresAtivo },
+      dadosNovos: { doisFatoresAtivo: ativo },
+    });
+
+    return res.json(formatarUsuario(atualizado));
+  } catch (error: any) {
+    return res
+      .status(500)
+      .json({ error: error?.message || "Erro ao atualizar 2FA." });
   }
 }
 
