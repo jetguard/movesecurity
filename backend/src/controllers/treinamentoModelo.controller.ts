@@ -21,6 +21,32 @@ const assinaturasSegurancaPatrimonial = [
     "assets",
     "assinatura-seguranca-patrimonial.jpeg",
   ),
+  path.resolve(
+    process.cwd(),
+    "backend",
+    "assets",
+    "assinatura-seguranca-patrimonial.png",
+  ),
+  path.resolve(
+    process.cwd(),
+    "backend",
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
+  path.resolve(
+    __dirname,
+    "..",
+    "..",
+    "assets",
+    "assinatura-seguranca-patrimonial.png",
+  ),
+  path.resolve(
+    __dirname,
+    "..",
+    "..",
+    "assets",
+    "assinatura-seguranca-patrimonial.jpeg",
+  ),
 ];
 const pastaVideosTreinamento = "uploads/treinamentos-dinamicos/videos/";
 
@@ -298,14 +324,16 @@ function desenharAssinaturaInstitucional(
   y: number,
   largura: number,
 ) {
+  let assinaturaInserida = false;
   for (const assinatura of assinaturasSegurancaPatrimonial) {
     if (!fs.existsSync(assinatura)) continue;
     try {
-      doc.image(assinatura, x + 44, y - 58, {
+      doc.image(assinatura, x + 42, y - 60, {
         fit: [largura - 88, 54],
         align: "center",
         valign: "center",
       });
+      assinaturaInserida = true;
       break;
     } catch (error) {
       console.error(
@@ -313,6 +341,16 @@ function desenharAssinaturaInstitucional(
         error,
       );
     }
+  }
+  if (!assinaturaInserida) {
+    doc
+      .fillColor("#0f172a")
+      .font("Helvetica-Oblique")
+      .fontSize(17)
+      .text("Segurança Patrimonial", x + 18, y - 42, {
+        width: largura - 36,
+        align: "center",
+      });
   }
 
   desenharLinhaAssinatura(
@@ -657,12 +695,12 @@ async function gerarCertificado(modelo: any, participante: any) {
       lineGap: 8,
     });
 
-  doc.image(qrCode, 84, 424, { width: 78, height: 78 });
+  doc.image(qrCode, 82, 458, { width: 62, height: 62 });
   doc
     .fillColor("#0f172a")
     .font("Helvetica-Bold")
     .fontSize(7)
-    .text("VALIDAÇÃO", 70, 508, { width: 102, align: "center" });
+    .text("VALIDAÇÃO", 68, 524, { width: 90, align: "center" });
 
   if (participante.assinaturaDataUrl) {
     const assinaturaBase64 = String(participante.assinaturaDataUrl).split(
@@ -674,27 +712,27 @@ async function gerarCertificado(modelo: any, participante: any) {
         `assinatura-modelo-${participante.token}.png`,
       );
       fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
-      doc.image(assinaturaPng, 176, 374, { fit: [240, 54], align: "center" });
+      doc.image(assinaturaPng, 204, 374, { fit: [240, 54], align: "center" });
       fs.rmSync(assinaturaPng, { force: true });
     }
   }
 
   desenharLinhaAssinatura(
     doc,
-    158,
+    190,
     448,
-    275,
+    270,
     participante.nomeCompleto,
     "Participante",
   );
-  desenharAssinaturaInstitucional(doc, 472, 448, 275);
+  desenharAssinaturaInstitucional(doc, 488, 448, 270);
 
   doc
     .fillColor("#64748b")
     .font("Helvetica")
     .fontSize(7.5)
-    .text(`Validação: ${validacaoUrl}`, 170, pageHeight - 70, {
-      width: pageWidth - 340,
+    .text(`Validação: ${validacaoUrl}`, 190, pageHeight - 54, {
+      width: pageWidth - 380,
       align: "center",
     });
   doc.end();
