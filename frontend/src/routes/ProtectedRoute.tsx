@@ -81,6 +81,7 @@ function moduloDaRota(pathname: string) {
   if (pathname.startsWith("/sessoes")) return "logs";
   if (pathname.startsWith("/logs")) return "logs";
   if (pathname.startsWith("/naturezas") || pathname.startsWith("/locais")) return "cadastros";
+  if (pathname.startsWith("/solicitacoes/imagens")) return "solicitacoes_imagens";
   if (pathname.startsWith("/cameras") || pathname.startsWith("/ordens-servico")) return "cftv";
   if (pathname.startsWith("/quadra-seguranca")) return "quadra_seguranca";
   if (pathname.startsWith("/documentos") || pathname.startsWith("/evidencias")) return "documentos";

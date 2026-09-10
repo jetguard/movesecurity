@@ -193,9 +193,9 @@ export default function SolicitacoesImagens() {
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
-  const podeCriar = podeNoModulo("cftv", "criar");
-  const podeEditar = podeNoModulo("cftv", "editar");
-  const podeExcluir = podeNoModulo("cftv", "excluir");
+  const podeCriar = podeNoModulo("solicitacoes_imagens", "criar");
+  const podeEditar = podeNoModulo("solicitacoes_imagens", "editar");
+  const podeExcluir = podeNoModulo("solicitacoes_imagens", "excluir");
 
   async function carregarSolicitacoes() {
     setCarregando(true);

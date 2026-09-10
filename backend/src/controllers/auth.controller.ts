@@ -203,6 +203,7 @@ const TODOS_MODULOS_ACESSO = [
   "treinamentos_visitantes",
   "operacao",
   "cftv",
+  "solicitacoes_imagens",
   "quadra_seguranca",
   "analise_riscos",
   "plano_acao",

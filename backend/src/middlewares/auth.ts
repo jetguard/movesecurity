@@ -148,14 +148,14 @@ function modulosDaRota(req: AuthRequest) {
   if (rota.startsWith("/api/treinamentos") || rota.includes("treinamento")) return ["treinamentos"];
   if (rota.startsWith("/api/riscos")) return ["analise_riscos"];
   if (rota.startsWith("/api/planos-acao")) return ["plano_acao"];
+  if (rota.startsWith("/api/solicitacoes-imagens")) return ["solicitacoes_imagens"];
   if (
     rota.startsWith("/api/cameras") ||
-    rota.startsWith("/api/ordens-servico") ||
-    rota.startsWith("/api/solicitacoes-imagens")
+    rota.startsWith("/api/ordens-servico")
   ) return ["cftv"];
   if (rota.startsWith("/api/quadra")) return ["quadra_seguranca"];
   if (rota.startsWith("/api/locais") && req.method === "GET") {
-    return ["cadastros", "cftv", "relatorios", "analise_riscos"];
+    return ["cadastros", "cftv", "solicitacoes_imagens", "relatorios", "analise_riscos"];
   }
   if (rota.startsWith("/api/naturezas") || rota.startsWith("/api/locais")) return ["cadastros"];
   if (rota.startsWith("/api/logs") || rota.startsWith("/api/sessoes")) return ["logs"];
@@ -382,6 +382,7 @@ export const MODULOS_ACESSO = [
   { chave: "treinamentos_visitantes", nome: "Cadastro de Visitantes" },
   { chave: "operacao", nome: "Operação" },
   { chave: "cftv", nome: "Câmeras e manutenção" },
+  { chave: "solicitacoes_imagens", nome: "Solicitações de Imagens" },
   { chave: "quadra_seguranca", nome: "Quadra de Segurança" },
   { chave: "analise_riscos", nome: "Análise de riscos" },
   { chave: "plano_acao", nome: "Plano de ação" },
@@ -401,6 +402,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
     "treinamentos",
     "operacao",
     "cftv",
+    "solicitacoes_imagens",
     "quadra_seguranca",
     "analise_riscos",
     "plano_acao",
@@ -430,6 +432,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
     "treinamentos",
     "operacao",
     "cftv",
+    "solicitacoes_imagens",
     "quadra_seguranca",
     "analise_riscos",
     "plano_acao",
@@ -443,6 +446,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
     "documentos",
     "operacao",
     "cftv",
+    "solicitacoes_imagens",
     "quadra_seguranca",
     "cadastros",
     "sistema",

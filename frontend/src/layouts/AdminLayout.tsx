@@ -103,7 +103,7 @@ export default function AdminLayout() {
   const podeVerVisitantesTreinamentos = temModulo("treinamentos_visitantes");
   const podeVerOperacaoMenu =
     temModulo("operacao") || temModulo("cftv") || temModulo("quadra_seguranca");
-  const podeVerSolicitacoesMenu = temModulo("cftv") && !tecnicoManutencao;
+  const podeVerSolicitacoesMenu = temModulo("solicitacoes_imagens") && !tecnicoManutencao;
   const podeVerAdministracaoMenu =
     temModulo("cadastros") || (superAdmin && temModulo("configuracoes"));
   const podeVerSistemaMenu =
