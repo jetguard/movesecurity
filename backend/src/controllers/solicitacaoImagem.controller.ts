@@ -54,6 +54,33 @@ function dataOpcional(valor: unknown) {
   return Number.isNaN(data.getTime()) ? null : data;
 }
 
+function montarDataHora(data: Date | null, hora: string | null) {
+  if (!data || !hora) return null;
+  const dataIso = data.toISOString().slice(0, 10);
+  const dataHora = new Date(`${dataIso}T${hora}:00`);
+  return Number.isNaN(dataHora.getTime()) ? null : dataHora;
+}
+
+function validarPeriodoOcorrencia(
+  dataInicial: Date | null,
+  horaInicial: string | null,
+  dataFinal: Date | null,
+  horaFinal: string | null,
+) {
+  const inicio = montarDataHora(dataInicial, horaInicial);
+  const fim = montarDataHora(dataFinal || dataInicial, horaFinal);
+
+  if ((horaInicial && !dataInicial) || (horaFinal && !dataInicial)) {
+    return "Informe a data da ocorrência para usar os horários.";
+  }
+
+  if (inicio && fim && fim.getTime() <= inicio.getTime()) {
+    return "A data e hora final devem ser maiores que a data e hora inicial.";
+  }
+
+  return null;
+}
+
 function protocoloImagem(numero: number, ano: number) {
   return `IMG-${ano}-${String(numero).padStart(4, "0")}`;
 }
@@ -237,6 +264,18 @@ export async function criarSolicitacaoImagem(req: AuthRequest, res: Response) {
 
     const arquivos = (req.files as Express.Multer.File[]) || [];
     const ano = new Date().getFullYear();
+    const dataOcorrencia = dataOpcional(req.body.dataOcorrencia);
+    const dataFinalOcorrencia =
+      dataOpcional(req.body.dataFinalOcorrencia) || dataOcorrencia;
+    const horaInicial = textoOpcional(req.body.horaInicial);
+    const horaFinal = textoOpcional(req.body.horaFinal);
+    const erroPeriodo = validarPeriodoOcorrencia(
+      dataOcorrencia,
+      horaInicial,
+      dataFinalOcorrencia,
+      horaFinal,
+    );
+    if (erroPeriodo) return res.status(400).json({ error: erroPeriodo });
 
     const solicitacao = await prisma.$transaction(async (tx) => {
       const numero = await proximaSequencia(tx, ano);
@@ -253,9 +292,10 @@ export async function criarSolicitacaoImagem(req: AuthRequest, res: Response) {
           solicitanteSetor: textoOpcional(req.body.setor || req.body.solicitanteSetor),
           solicitanteCargo: textoOpcional(req.body.cargo || req.body.solicitanteCargo),
           local,
-          dataOcorrencia: dataOpcional(req.body.dataOcorrencia),
-          horaInicial: textoOpcional(req.body.horaInicial),
-          horaFinal: textoOpcional(req.body.horaFinal),
+          dataOcorrencia,
+          dataFinalOcorrencia,
+          horaInicial,
+          horaFinal,
           descricao: textoOpcional(req.body.descricao),
           prioridade,
           status: STATUS.AGUARDANDO_ATENDIMENTO,
@@ -347,6 +387,21 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
     }
 
     const arquivos = (req.files as Express.Multer.File[]) || [];
+    const dataOcorrencia = dataOpcional(req.body.dataOcorrencia) ?? atual.dataOcorrencia;
+    const dataFinalOcorrencia =
+      dataOpcional(req.body.dataFinalOcorrencia) ||
+      atual.dataFinalOcorrencia ||
+      dataOcorrencia;
+    const horaInicial = textoOpcional(req.body.horaInicial) ?? atual.horaInicial;
+    const horaFinal = textoOpcional(req.body.horaFinal) ?? atual.horaFinal;
+    const erroPeriodo = validarPeriodoOcorrencia(
+      dataOcorrencia,
+      horaInicial,
+      dataFinalOcorrencia,
+      horaFinal,
+    );
+    if (erroPeriodo) return res.status(400).json({ error: erroPeriodo });
+
     const solicitacao = await prisma.$transaction(async (tx) => {
       const atualizada = await tx.solicitacaoImagem.update({
         where: { id },
@@ -357,9 +412,10 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
           solicitanteSetor: textoOpcional(req.body.setor || req.body.solicitanteSetor) ?? atual.solicitanteSetor,
           solicitanteCargo: textoOpcional(req.body.cargo || req.body.solicitanteCargo) ?? atual.solicitanteCargo,
           local: local ?? atual.local,
-          dataOcorrencia: dataOpcional(req.body.dataOcorrencia) ?? atual.dataOcorrencia,
-          horaInicial: textoOpcional(req.body.horaInicial) ?? atual.horaInicial,
-          horaFinal: textoOpcional(req.body.horaFinal) ?? atual.horaFinal,
+          dataOcorrencia,
+          dataFinalOcorrencia,
+          horaInicial,
+          horaFinal,
           descricao: textoOpcional(req.body.descricao) ?? atual.descricao,
           prioridade: novaPrioridade,
           status: statusFinal,
@@ -662,6 +718,18 @@ export async function criarSolicitacaoImagemPublica(req: AuthRequest, res: Respo
     const token = texto(req.params.token);
     const arquivos = (req.files as Express.Multer.File[]) || [];
     const ano = new Date().getFullYear();
+    const dataOcorrencia = dataOpcional(req.body.dataOcorrencia);
+    const dataFinalOcorrencia =
+      dataOpcional(req.body.dataFinalOcorrencia) || dataOcorrencia;
+    const horaInicial = textoOpcional(req.body.horaInicial);
+    const horaFinal = textoOpcional(req.body.horaFinal);
+    const erroPeriodo = validarPeriodoOcorrencia(
+      dataOcorrencia,
+      horaInicial,
+      dataFinalOcorrencia,
+      horaFinal,
+    );
+    if (erroPeriodo) return res.status(400).json({ error: erroPeriodo });
 
     const solicitacao = await prisma.$transaction(async (tx) => {
       const registro = await tx.tokenSolicitacaoImagem.findUnique({
@@ -686,9 +754,10 @@ export async function criarSolicitacaoImagemPublica(req: AuthRequest, res: Respo
           solicitanteSetor: textoOpcional(req.body.setor),
           solicitanteCargo: textoOpcional(req.body.cargo),
           local: textoOpcional(req.body.local),
-          dataOcorrencia: dataOpcional(req.body.dataOcorrencia),
-          horaInicial: textoOpcional(req.body.horaInicial),
-          horaFinal: textoOpcional(req.body.horaFinal),
+          dataOcorrencia,
+          dataFinalOcorrencia,
+          horaInicial,
+          horaFinal,
           descricao: textoOpcional(req.body.descricao),
           prioridade: "Não Classificada",
           status: STATUS.AGUARDANDO_CLASSIFICACAO,

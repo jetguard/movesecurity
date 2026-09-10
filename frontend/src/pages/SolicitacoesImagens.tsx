@@ -73,6 +73,7 @@ type SolicitacaoImagem = {
   solicitanteCargo?: string | null;
   local?: string | null;
   dataOcorrencia?: string | null;
+  dataFinalOcorrencia?: string | null;
   horaInicial?: string | null;
   horaFinal?: string | null;
   descricao?: string | null;
@@ -109,6 +110,7 @@ const formInicial = {
   cargo: "",
   local: "",
   dataOcorrencia: "",
+  dataFinalOcorrencia: "",
   horaInicial: "",
   horaFinal: "",
   descricao: "",
@@ -129,6 +131,26 @@ function formatarData(valor?: string | null) {
 function formatarDataInput(valor?: string | null) {
   if (!valor) return "";
   return new Date(valor).toISOString().slice(0, 10);
+}
+
+function formatarDataCurta(valor?: string | null) {
+  if (!valor) return "";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+  }).format(new Date(valor));
+}
+
+function formatarPeriodoOcorrencia(item: SolicitacaoImagem) {
+  if (!item.dataOcorrencia) return "-";
+
+  const dataInicial = formatarDataCurta(item.dataOcorrencia);
+  const dataFinal = formatarDataCurta(
+    item.dataFinalOcorrencia || item.dataOcorrencia,
+  );
+  const inicio = [dataInicial, item.horaInicial].filter(Boolean).join(" ");
+  const fim = [dataFinal, item.horaFinal].filter(Boolean).join(" ");
+
+  return fim ? `${inicio} a ${fim}` : inicio;
 }
 
 function formatarTempo(segundos = 0) {
@@ -231,6 +253,9 @@ export default function SolicitacoesImagens() {
       cargo: item.solicitanteCargo || "",
       local: item.local || "",
       dataOcorrencia: formatarDataInput(item.dataOcorrencia),
+      dataFinalOcorrencia: formatarDataInput(
+        item.dataFinalOcorrencia || item.dataOcorrencia,
+      ),
       horaInicial: item.horaInicial || "",
       horaFinal: item.horaFinal || "",
       descricao: item.descricao || "",
@@ -603,6 +628,18 @@ function FormularioModal({
   onSubmit: (event: FormEvent) => void;
   salvando: boolean;
 }) {
+  function alterarDataInicial(dataOcorrencia: string) {
+    setForm({
+      ...form,
+      dataOcorrencia,
+      dataFinalOcorrencia:
+        !form.dataFinalOcorrencia ||
+        form.dataFinalOcorrencia === form.dataOcorrencia
+          ? dataOcorrencia
+          : form.dataFinalOcorrencia,
+    });
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
       <form onSubmit={onSubmit} className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-xl border border-slate-800 bg-slate-950 p-5">
@@ -638,16 +675,17 @@ function FormularioModal({
             />
           </Campo>
           <Campo label="Data da ocorrência">
-            <input type="date" value={form.dataOcorrencia} onChange={(e) => setForm({ ...form, dataOcorrencia: e.target.value })} className="input-dark" />
+            <input type="date" value={form.dataOcorrencia} onChange={(e) => alterarDataInicial(e.target.value)} className="input-dark" />
           </Campo>
-          <div className="grid grid-cols-2 gap-3">
-            <Campo label="Hora inicial">
-              <input type="time" value={form.horaInicial} onChange={(e) => setForm({ ...form, horaInicial: e.target.value })} className="input-dark" />
-            </Campo>
-            <Campo label="Hora final">
-              <input type="time" value={form.horaFinal} onChange={(e) => setForm({ ...form, horaFinal: e.target.value })} className="input-dark" />
-            </Campo>
-          </div>
+          <Campo label="Data final">
+            <input type="date" value={form.dataFinalOcorrencia} min={form.dataOcorrencia || undefined} onChange={(e) => setForm({ ...form, dataFinalOcorrencia: e.target.value })} className="input-dark" />
+          </Campo>
+          <Campo label="Hora inicial">
+            <input type="time" value={form.horaInicial} onChange={(e) => setForm({ ...form, horaInicial: e.target.value })} className="input-dark" />
+          </Campo>
+          <Campo label="Hora final">
+            <input type="time" value={form.horaFinal} onChange={(e) => setForm({ ...form, horaFinal: e.target.value })} className="input-dark" />
+          </Campo>
           <Campo label="Prioridade">
             <select value={form.prioridade} onChange={(e) => setForm({ ...form, prioridade: e.target.value })} className="input-dark">
               {prioridades.filter(Boolean).map((item) => <option key={item}>{item}</option>)}
@@ -748,7 +786,7 @@ function DetalheSolicitacao({
         <p><b>Tempo acumulado:</b> {formatarTempo(detalhe.tempoTotalAtendimento)}</p>
         <p><b>Origem:</b> {detalhe.origem}</p>
         <p><b>Local:</b> {detalhe.local || "-"}</p>
-        <p><b>Ocorrência:</b> {detalhe.dataOcorrencia ? formatarData(detalhe.dataOcorrencia) : "-"} {detalhe.horaInicial || ""} {detalhe.horaFinal ? `até ${detalhe.horaFinal}` : ""}</p>
+        <p><b>Ocorrência:</b> {formatarPeriodoOcorrencia(detalhe)}</p>
         <p><b>Descrição:</b> {detalhe.descricao || "-"}</p>
       </div>
 

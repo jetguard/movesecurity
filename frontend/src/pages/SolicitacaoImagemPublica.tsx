@@ -14,6 +14,7 @@ const formInicial = {
   cargo: "",
   titulo: "",
   dataOcorrencia: "",
+  dataFinalOcorrencia: "",
   horaInicial: "",
   horaFinal: "",
   local: "",
@@ -46,6 +47,18 @@ export default function SolicitacaoImagemPublica() {
     Object.entries(form).forEach(([chave, valor]) => dados.append(chave, valor));
     Array.from(anexos || []).forEach((arquivo) => dados.append("anexos", arquivo));
     return dados;
+  }
+
+  function alterarDataInicial(dataOcorrencia: string) {
+    setForm({
+      ...form,
+      dataOcorrencia,
+      dataFinalOcorrencia:
+        !form.dataFinalOcorrencia ||
+        form.dataFinalOcorrencia === form.dataOcorrencia
+          ? dataOcorrencia
+          : form.dataFinalOcorrencia,
+    });
   }
 
   async function enviar(event: FormEvent) {
@@ -135,16 +148,17 @@ export default function SolicitacaoImagemPublica() {
               <input value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} className={campo} />
             </Label>
             <Label texto="Data da ocorrência">
-              <input type="date" value={form.dataOcorrencia} onChange={(e) => setForm({ ...form, dataOcorrencia: e.target.value })} className={campo} />
+              <input type="date" value={form.dataOcorrencia} onChange={(e) => alterarDataInicial(e.target.value)} className={campo} />
             </Label>
-            <div className="grid grid-cols-2 gap-3">
-              <Label texto="Hora inicial">
-                <input type="time" value={form.horaInicial} onChange={(e) => setForm({ ...form, horaInicial: e.target.value })} className={campo} />
-              </Label>
-              <Label texto="Hora final">
-                <input type="time" value={form.horaFinal} onChange={(e) => setForm({ ...form, horaFinal: e.target.value })} className={campo} />
-              </Label>
-            </div>
+            <Label texto="Data final">
+              <input type="date" value={form.dataFinalOcorrencia} min={form.dataOcorrencia || undefined} onChange={(e) => setForm({ ...form, dataFinalOcorrencia: e.target.value })} className={campo} />
+            </Label>
+            <Label texto="Hora inicial">
+              <input type="time" value={form.horaInicial} onChange={(e) => setForm({ ...form, horaInicial: e.target.value })} className={campo} />
+            </Label>
+            <Label texto="Hora final">
+              <input type="time" value={form.horaFinal} onChange={(e) => setForm({ ...form, horaFinal: e.target.value })} className={campo} />
+            </Label>
           </div>
           <Label texto="Descrição">
             <textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className={`${campo} min-h-32`} required />

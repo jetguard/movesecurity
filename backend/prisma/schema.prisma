@@ -1446,6 +1446,7 @@ model SolicitacaoImagem {
   solicitanteCargo    String?   @db.Text
   local               String?   @db.Text
   dataOcorrencia      DateTime?
+  dataFinalOcorrencia DateTime?
   horaInicial         String?
   horaFinal           String?
   descricao           String?   @db.Text
