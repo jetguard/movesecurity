@@ -1,6 +1,7 @@
 ﻿import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { Request, Response } from "express";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
@@ -190,6 +191,55 @@ function extensaoAssinaturaDataUrl(dataUrl: string) {
   if (dataUrl.startsWith("data:image/jpeg;base64,")) return "jpg";
   if (dataUrl.startsWith("data:image/png;base64,")) return "png";
   return null;
+}
+
+function validarPng(buffer: Buffer) {
+  const assinatura = Buffer.from("89504e470d0a1a0a", "hex");
+  if (buffer.length < 12 || !buffer.subarray(0, 8).equals(assinatura)) {
+    return false;
+  }
+
+  let offset = 8;
+  const idatChunks: Buffer[] = [];
+  while (offset + 12 <= buffer.length) {
+    const tamanho = buffer.readUInt32BE(offset);
+    const tipo = buffer.subarray(offset + 4, offset + 8).toString("ascii");
+    const dadosInicio = offset + 8;
+    const dadosFim = dadosInicio + tamanho;
+    const proximoOffset = dadosFim + 4;
+
+    if (dadosFim > buffer.length || proximoOffset > buffer.length) {
+      return false;
+    }
+    if (tipo === "IDAT") {
+      idatChunks.push(buffer.subarray(dadosInicio, dadosFim));
+    }
+    offset = proximoOffset;
+    if (tipo === "IEND") break;
+  }
+
+  if (!idatChunks.length) return false;
+
+  try {
+    zlib.inflateSync(Buffer.concat(idatChunks));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validarImagemAssinatura(buffer: Buffer, extensao: string) {
+  if (extensao === "png") return validarPng(buffer);
+  if (extensao === "jpg") {
+    return (
+      buffer.length > 4 &&
+      buffer[0] === 0xff &&
+      buffer[1] === 0xd8 &&
+      buffer[buffer.length - 2] === 0xff &&
+      buffer[buffer.length - 1] === 0xd9
+    );
+  }
+  return false;
 }
 
 async function proximoCodigo(tx: any) {
@@ -408,11 +458,17 @@ async function gerarCertificadoPdf(treinamento: any) {
         `assinatura-${treinamento.token}.${extensao}`,
       );
       try {
-        fs.writeFileSync(assinaturaArquivo, buffer);
-        doc.image(assinaturaArquivo, 335, 536, {
-          fit: [250, 58],
-          align: "center",
-        });
+        if (validarImagemAssinatura(buffer, extensao)) {
+          fs.writeFileSync(assinaturaArquivo, buffer);
+          doc.image(assinaturaArquivo, 335, 536, {
+            fit: [250, 58],
+            align: "center",
+          });
+        } else {
+          console.error(
+            "Assinatura do participante ignorada: imagem inválida ou corrompida.",
+          );
+        }
       } catch (error) {
         console.error(
           "Falha ao inserir assinatura do participante no certificado:",
@@ -435,8 +491,8 @@ async function gerarCertificadoPdf(treinamento: any) {
       ellipsis: true,
     });
 
-  doc.rect(430, pageHeight - 20, 580, 18).fill("#ffffff");
-  doc.rect(656, 664, 130, 134).fill("#ffffff");
+  doc.rect(430, pageHeight - 70, 580, 50).fill("#ffffff");
+  doc.rect(650, 654, 142, 144).fill("#ffffff");
   doc.image(qrCode, 671, 671, { width: 100, height: 100 });
   doc
     .fillColor("#07142f")
