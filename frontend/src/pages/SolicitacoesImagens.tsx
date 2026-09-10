@@ -373,10 +373,34 @@ export default function SolicitacoesImagens() {
             atendimento e linha do tempo.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full flex-wrap items-start justify-start gap-2 lg:w-auto lg:justify-end">
+          {podeCriar && (
+            <form
+              onSubmit={enviarFormulario}
+              className="flex w-full flex-wrap gap-2 sm:w-auto"
+            >
+              <label className="flex h-10 w-full items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 sm:w-72">
+                <Mail size={16} className="shrink-0 text-slate-400" />
+                <input
+                  type="email"
+                  value={emailFormulario}
+                  onChange={(e) => setEmailFormulario(e.target.value)}
+                  className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
+                  placeholder="E-mail do formulário"
+                  required
+                />
+              </label>
+              <button
+                disabled={salvando}
+                className="h-10 rounded-lg bg-slate-800 px-3 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-60"
+              >
+                Enviar
+              </button>
+            </form>
+          )}
           <button
             onClick={carregarSolicitacoes}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm font-bold text-slate-200 hover:border-sky-500 hover:text-white"
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-slate-700 px-4 text-sm font-bold text-slate-200 hover:border-sky-500 hover:text-white"
           >
             <RefreshCcw size={16} />
             Atualizar
@@ -384,11 +408,16 @@ export default function SolicitacoesImagens() {
           {podeCriar && (
             <button
               onClick={abrirCriacao}
-              className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-4 py-2 text-sm font-bold text-white hover:bg-sky-500"
+              className="inline-flex h-10 items-center gap-2 rounded-lg bg-sky-600 px-4 text-sm font-bold text-white hover:bg-sky-500"
             >
               <Plus size={16} />
               Nova solicitação
             </button>
+          )}
+          {linkGerado && (
+            <p className="w-full break-all text-right text-xs font-bold text-emerald-300">
+              Link gerado: {linkGerado}
+            </p>
           )}
         </div>
       </section>
@@ -531,32 +560,6 @@ export default function SolicitacoesImagens() {
           </table>
         </div>
       </section>
-
-      {podeCriar && (
-        <section className="rounded-xl border border-slate-800 bg-slate-950/70 p-4">
-          <form onSubmit={enviarFormulario} className="grid gap-3 lg:grid-cols-[1fr_auto]">
-            <label className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950 px-3 py-2">
-              <Mail size={16} className="text-slate-400" />
-              <input
-                type="email"
-                value={emailFormulario}
-                onChange={(e) => setEmailFormulario(e.target.value)}
-                className="w-full bg-transparent text-sm text-white outline-none placeholder:text-slate-500"
-                placeholder="E-mail para enviar formulário externo"
-                required
-              />
-            </label>
-            <button disabled={salvando} className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-bold text-white hover:bg-slate-700 disabled:opacity-60">
-              Enviar Formulário
-            </button>
-          </form>
-          {linkGerado && (
-            <p className="mt-3 break-all text-sm text-emerald-300">
-              Link gerado: {linkGerado}
-            </p>
-          )}
-        </section>
-      )}
 
       {modalForm && (
         <FormularioModal
