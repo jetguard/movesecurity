@@ -427,6 +427,7 @@ async function gerarCertificadoPdf(treinamento: any) {
       ellipsis: true,
     });
 
+  doc.rect(430, pageHeight - 20, 580, 18).fill("#ffffff");
   doc.rect(656, 664, 130, 134).fill("#ffffff");
   doc.image(qrCode, 671, 671, { width: 100, height: 100 });
   doc
