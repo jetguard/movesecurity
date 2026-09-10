@@ -141,6 +141,19 @@ function validarCamposBase(body: any, externo = false) {
   return null;
 }
 
+async function validarLocalAtivo(local: string | null, unidade?: string) {
+  if (!local) return null;
+
+  return prisma.localTerminal.findFirst({
+    where: {
+      nome: local,
+      unidade,
+      status: "Ativo",
+    },
+    select: { nome: true },
+  });
+}
+
 export async function listarSolicitacoesImagem(req: AuthRequest, res: Response) {
   try {
     const busca = texto(req.query.busca);
@@ -212,6 +225,16 @@ export async function criarSolicitacaoImagem(req: AuthRequest, res: Response) {
       return res.status(400).json({ error: "Prioridade inválida." });
     }
 
+    const local = textoOpcional(req.body.local);
+    if (local) {
+      const localCadastro = await validarLocalAtivo(local, req.unidadeAtiva);
+      if (!localCadastro) {
+        return res.status(400).json({
+          error: "Selecione um local ativo cadastrado para esta unidade.",
+        });
+      }
+    }
+
     const arquivos = (req.files as Express.Multer.File[]) || [];
     const ano = new Date().getFullYear();
 
@@ -229,7 +252,7 @@ export async function criarSolicitacaoImagem(req: AuthRequest, res: Response) {
           solicitanteEmail: textoOpcional(req.body.email || req.body.solicitanteEmail),
           solicitanteSetor: textoOpcional(req.body.setor || req.body.solicitanteSetor),
           solicitanteCargo: textoOpcional(req.body.cargo || req.body.solicitanteCargo),
-          local: textoOpcional(req.body.local),
+          local,
           dataOcorrencia: dataOpcional(req.body.dataOcorrencia),
           horaInicial: textoOpcional(req.body.horaInicial),
           horaFinal: textoOpcional(req.body.horaFinal),
@@ -304,6 +327,16 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
       return res.status(400).json({ error: "Informe o motivo para anular." });
     }
 
+    const local = textoOpcional(req.body.local);
+    if (local) {
+      const localCadastro = await validarLocalAtivo(local, req.unidadeAtiva);
+      if (!localCadastro) {
+        return res.status(400).json({
+          error: "Selecione um local ativo cadastrado para esta unidade.",
+        });
+      }
+    }
+
     let statusFinal = novoStatus;
     if (
       atual.status === STATUS.AGUARDANDO_CLASSIFICACAO &&
@@ -323,7 +356,7 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
           solicitanteEmail: textoOpcional(req.body.email || req.body.solicitanteEmail) ?? atual.solicitanteEmail,
           solicitanteSetor: textoOpcional(req.body.setor || req.body.solicitanteSetor) ?? atual.solicitanteSetor,
           solicitanteCargo: textoOpcional(req.body.cargo || req.body.solicitanteCargo) ?? atual.solicitanteCargo,
-          local: textoOpcional(req.body.local) ?? atual.local,
+          local: local ?? atual.local,
           dataOcorrencia: dataOpcional(req.body.dataOcorrencia) ?? atual.dataOcorrencia,
           horaInicial: textoOpcional(req.body.horaInicial) ?? atual.horaInicial,
           horaFinal: textoOpcional(req.body.horaFinal) ?? atual.horaFinal,

@@ -154,6 +154,9 @@ function modulosDaRota(req: AuthRequest) {
     rota.startsWith("/api/solicitacoes-imagens")
   ) return ["cftv"];
   if (rota.startsWith("/api/quadra")) return ["quadra_seguranca"];
+  if (rota.startsWith("/api/locais") && req.method === "GET") {
+    return ["cadastros", "cftv", "relatorios", "analise_riscos"];
+  }
   if (rota.startsWith("/api/naturezas") || rota.startsWith("/api/locais")) return ["cadastros"];
   if (rota.startsWith("/api/logs") || rota.startsWith("/api/sessoes")) return ["logs"];
   if (rota.startsWith("/api/configuracoes") || rota.startsWith("/api/apis")) return ["configuracoes"];

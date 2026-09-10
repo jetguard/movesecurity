@@ -22,6 +22,14 @@ type UsuarioResumo = {
   email?: string;
 };
 
+type LocalTerminal = {
+  id: number;
+  nome: string;
+  tipo?: string | null;
+  status: string;
+  unidade: string;
+};
+
 type Anexo = {
   id: number;
   nomeOriginal: string;
@@ -147,6 +155,7 @@ function classePrioridade(prioridade: string) {
 
 export default function SolicitacoesImagens() {
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoImagem[]>([]);
+  const [locais, setLocais] = useState<LocalTerminal[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("");
@@ -182,8 +191,14 @@ export default function SolicitacoesImagens() {
     }
   }
 
+  async function carregarLocais() {
+    const resposta = await api.get("/locais", { params: { status: "ativo" } });
+    setLocais(resposta.data || []);
+  }
+
   useEffect(() => {
     carregarSolicitacoes();
+    carregarLocais().catch(() => setLocais([]));
   }, []);
 
   const resumo = useMemo(() => {
@@ -523,6 +538,7 @@ export default function SolicitacoesImagens() {
           modo={modalForm}
           form={form}
           setForm={setForm}
+          locais={locais}
           setAnexos={setAnexos}
           onClose={() => setModalForm(null)}
           onSubmit={salvarFormulario}
@@ -572,6 +588,7 @@ function FormularioModal({
   modo,
   form,
   setForm,
+  locais,
   setAnexos,
   onClose,
   onSubmit,
@@ -580,6 +597,7 @@ function FormularioModal({
   modo: "criar" | "editar";
   form: typeof formInicial;
   setForm: (form: typeof formInicial) => void;
+  locais: LocalTerminal[];
   setAnexos: (files: FileList | null) => void;
   onClose: () => void;
   onSubmit: (event: FormEvent) => void;
@@ -613,7 +631,11 @@ function FormularioModal({
             <input value={form.cargo} onChange={(e) => setForm({ ...form, cargo: e.target.value })} className="input-dark" />
           </Campo>
           <Campo label="Local">
-            <input value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} className="input-dark" />
+            <LocalComFiltro
+              valor={form.local}
+              locais={locais}
+              onChange={(local) => setForm({ ...form, local })}
+            />
           </Campo>
           <Campo label="Data da ocorrência">
             <input type="date" value={form.dataOcorrencia} onChange={(e) => setForm({ ...form, dataOcorrencia: e.target.value })} className="input-dark" />
@@ -660,6 +682,44 @@ function FormularioModal({
         </button>
       </form>
     </div>
+  );
+}
+
+function LocalComFiltro({
+  valor,
+  locais,
+  onChange,
+}: {
+  valor: string;
+  locais: LocalTerminal[];
+  onChange: (valor: string) => void;
+}) {
+  const listaId = "locais-solicitacao-imagem";
+  const locaisFiltrados = locais.filter((local) => local.status === "Ativo");
+
+  return (
+    <>
+      <input
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        list={listaId}
+        className="input-dark"
+        placeholder="Digite para filtrar um local cadastrado"
+        autoComplete="off"
+      />
+      <datalist id={listaId}>
+        {locaisFiltrados.map((local) => (
+          <option key={local.id} value={local.nome}>
+            {local.tipo ? `${local.tipo} · ${local.unidade}` : local.unidade}
+          </option>
+        ))}
+      </datalist>
+      {locaisFiltrados.length === 0 && (
+        <span className="mt-1 block text-xs font-medium text-amber-300">
+          Nenhum local ativo encontrado para a unidade atual.
+        </span>
+      )}
+    </>
   );
 }
 
