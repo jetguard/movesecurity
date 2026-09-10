@@ -59,6 +59,7 @@ export default function AdminLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
   const [operacaoOpen, setOperacaoOpen] = useState(true);
+  const [solicitacoesOpen, setSolicitacoesOpen] = useState(true);
   const [treinamentosOpen, setTreinamentosOpen] = useState(true);
   const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
   const [administracaoOpen, setAdministracaoOpen] = useState(false);
@@ -102,6 +103,7 @@ export default function AdminLayout() {
   const podeVerVisitantesTreinamentos = temModulo("treinamentos_visitantes");
   const podeVerOperacaoMenu =
     temModulo("operacao") || temModulo("cftv") || temModulo("quadra_seguranca");
+  const podeVerSolicitacoesMenu = temModulo("cftv") && !tecnicoManutencao;
   const podeVerAdministracaoMenu =
     temModulo("cadastros") || (superAdmin && temModulo("configuracoes"));
   const podeVerSistemaMenu =
@@ -724,6 +726,32 @@ export default function AdminLayout() {
                     </>
                   )}
                 </div>
+              )}
+
+              {podeVerSolicitacoesMenu && (
+                <>
+                  <button
+                    onClick={() => setSolicitacoesOpen(!solicitacoesOpen)}
+                    className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Paperclip size={20} className="shrink-0" />
+                      <span className={menuText}>Solicitações</span>
+                    </div>
+                    <span className={menuToggle}>
+                      {solicitacoesOpen ? "-" : "+"}
+                    </span>
+                  </button>
+
+                  {solicitacoesOpen && (
+                    <div className={submenuClass}>
+                      <Link to="/solicitacoes/imagens" className={subItem}>
+                        <Video size={16} />
+                        Imagens
+                      </Link>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

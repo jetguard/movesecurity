@@ -63,6 +63,9 @@ const Tarefas = lazyWithReload(() => import("./pages/Tarefas"));
 const Historico = lazyWithReload(() => import("./pages/Historico"));
 const Cameras = lazyWithReload(() => import("./pages/Cameras"));
 const OrdensServico = lazyWithReload(() => import("./pages/OrdensServico"));
+const SolicitacoesImagens = lazyWithReload(
+  () => import("./pages/SolicitacoesImagens"),
+);
 const Configuracoes = lazyWithReload(() => import("./pages/Configuracoes"));
 const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
@@ -104,6 +107,9 @@ const ValidarCertificadoTreinamento = lazyWithReload(
 );
 const ValidarCertificadoIntegracao = lazyWithReload(
   () => import("./pages/ValidarCertificadoIntegracao"),
+);
+const SolicitacaoImagemPublica = lazyWithReload(
+  () => import("./pages/SolicitacaoImagemPublica"),
 );
 const TreinamentosTerminal = lazyWithReload(
   () => import("./pages/TreinamentosTerminal"),
@@ -175,6 +181,10 @@ export default function App() {
             element={<ValidarCertificadoIntegracao />}
           />
           <Route
+            path="/solicitacao/imagens/:token"
+            element={<SolicitacaoImagemPublica />}
+          />
+          <Route
             path="/alterar-senha"
             element={
               <ProtectedRoute>
@@ -213,6 +223,21 @@ export default function App() {
               element={<Navigate to="/documentos" replace />}
             />
             <Route path="cameras" element={<Cameras />} />
+            <Route
+              path="solicitacoes/imagens"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                  ]}
+                >
+                  <SolicitacoesImagens />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="ordens-servico"
               element={

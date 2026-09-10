@@ -148,7 +148,11 @@ function modulosDaRota(req: AuthRequest) {
   if (rota.startsWith("/api/treinamentos") || rota.includes("treinamento")) return ["treinamentos"];
   if (rota.startsWith("/api/riscos")) return ["analise_riscos"];
   if (rota.startsWith("/api/planos-acao")) return ["plano_acao"];
-  if (rota.startsWith("/api/cameras") || rota.startsWith("/api/ordens-servico")) return ["cftv"];
+  if (
+    rota.startsWith("/api/cameras") ||
+    rota.startsWith("/api/ordens-servico") ||
+    rota.startsWith("/api/solicitacoes-imagens")
+  ) return ["cftv"];
   if (rota.startsWith("/api/quadra")) return ["quadra_seguranca"];
   if (rota.startsWith("/api/naturezas") || rota.startsWith("/api/locais")) return ["cadastros"];
   if (rota.startsWith("/api/logs") || rota.startsWith("/api/sessoes")) return ["logs"];

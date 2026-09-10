@@ -46,6 +46,22 @@
 }
 
 @layer utilities {
+  .input-dark {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid #334155;
+    background-color: #020617;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #ffffff;
+    outline: none;
+  }
+
+  .input-dark:focus {
+    border-color: #0ea5e9;
+    box-shadow: 0 0 0 2px rgb(14 165 233 / 0.18);
+  }
+
   .dark .bg-white {
     background-color: #0f172a;
   }

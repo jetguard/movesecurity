@@ -88,6 +88,15 @@ model Usuario {
   assinaturasDocumentos        AssinaturaDocumento[]
   rascunhosFormulario          RascunhoFormulario[]
   relatoriosCftvEmitidos       RelatorioCftv[]                @relation("RelatorioCftvResponsavel")
+  solicitacoesImagemCriadas     SolicitacaoImagem[]           @relation("SolicitacaoImagemCriadaPor")
+  solicitacoesImagemAtendidas   SolicitacaoImagem[]           @relation("SolicitacaoImagemAtendente")
+  solicitacoesImagemConcluidas  SolicitacaoImagem[]           @relation("SolicitacaoImagemConcluidaPor")
+  solicitacoesImagemAnuladas    SolicitacaoImagem[]           @relation("SolicitacaoImagemAnuladaPor")
+  solicitacoesImagemExcluidas   SolicitacaoImagem[]           @relation("SolicitacaoImagemExcluidaPor")
+  atendimentosImagem            AtendimentoSolicitacaoImagem[] @relation("AtendimentoSolicitacaoImagemAtendente")
+  historicosSolicitacaoImagem   HistoricoSolicitacaoImagem[]  @relation("HistoricoSolicitacaoImagemUsuario")
+  anexosSolicitacaoImagem       AnexoSolicitacaoImagem[]      @relation("AnexoSolicitacaoImagemUsuario")
+  tokensSolicitacaoImagem       TokenSolicitacaoImagem[]      @relation("TokenSolicitacaoImagemCriadoPor")
   relatosCampoGerados          RelatoCampo[]
 }
 
@@ -1421,6 +1430,125 @@ model RelatorioCftv {
   responsavel Usuario? @relation("RelatorioCftvResponsavel", fields: [responsavelId], references: [id])
 
   @@unique([codigo, unidade])
+}
+
+model SolicitacaoImagem {
+  id                  Int       @id @default(autoincrement())
+  numero              Int
+  ano                 Int
+  protocolo           String    @unique
+  unidade             String    @default("GJA-T1")
+  origem              String    @default("Interna")
+  titulo              String    @db.Text
+  solicitanteNome     String    @db.Text
+  solicitanteEmail    String?   @db.Text
+  solicitanteSetor    String?   @db.Text
+  solicitanteCargo    String?   @db.Text
+  local               String?   @db.Text
+  dataOcorrencia      DateTime?
+  horaInicial         String?
+  horaFinal           String?
+  descricao           String?   @db.Text
+  prioridade          String    @default("Não Classificada")
+  status              String    @default("Aguardando Atendimento")
+  atendenteId         Int?
+  atendimentoIniciadoEm DateTime?
+  tempoTotalAtendimento Int     @default(0)
+  criadoPorId         Int?
+  descricaoConclusao  String?   @db.Text
+  concluidoPorId      Int?
+  concluidoEm         DateTime?
+  motivoAnulacao      String?   @db.Text
+  anuladoPorId        Int?
+  anuladoEm           DateTime?
+  excluidoPorId       Int?
+  excluidoEm          DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  criadoPor    Usuario?                         @relation("SolicitacaoImagemCriadaPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  atendente    Usuario?                         @relation("SolicitacaoImagemAtendente", fields: [atendenteId], references: [id], onDelete: SetNull)
+  concluidoPor Usuario?                         @relation("SolicitacaoImagemConcluidaPor", fields: [concluidoPorId], references: [id], onDelete: SetNull)
+  anuladoPor   Usuario?                         @relation("SolicitacaoImagemAnuladaPor", fields: [anuladoPorId], references: [id], onDelete: SetNull)
+  excluidoPor  Usuario?                         @relation("SolicitacaoImagemExcluidaPor", fields: [excluidoPorId], references: [id], onDelete: SetNull)
+  atendimentos AtendimentoSolicitacaoImagem[]
+  historico    HistoricoSolicitacaoImagem[]
+  anexos       AnexoSolicitacaoImagem[]
+
+  @@unique([numero, ano])
+  @@index([status, prioridade])
+  @@index([unidade, status])
+  @@index([atendenteId, status])
+  @@index([excluidoEm])
+}
+
+model AtendimentoSolicitacaoImagem {
+  id              Int       @id @default(autoincrement())
+  solicitacaoId   Int
+  atendenteId     Int
+  iniciadoEm      DateTime  @default(now())
+  pausadoEm       DateTime?
+  tempoSegundos   Int?
+  motivoPausa     String?   @db.Text
+  andamento       String?   @db.Text
+  createdAt       DateTime  @default(now())
+
+  solicitacao SolicitacaoImagem @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+  atendente   Usuario           @relation("AtendimentoSolicitacaoImagemAtendente", fields: [atendenteId], references: [id])
+
+  @@index([solicitacaoId, pausadoEm])
+  @@index([atendenteId, iniciadoEm])
+}
+
+model HistoricoSolicitacaoImagem {
+  id             Int      @id @default(autoincrement())
+  solicitacaoId  Int
+  usuarioId      Int?
+  usuarioNome    String?  @db.Text
+  tipoEvento     String
+  descricao      String   @db.Text
+  statusAnterior String?
+  statusNovo     String?
+  dadosJson      String?  @db.Text
+  createdAt      DateTime @default(now())
+
+  solicitacao SolicitacaoImagem @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+  usuario     Usuario?          @relation("HistoricoSolicitacaoImagemUsuario", fields: [usuarioId], references: [id], onDelete: SetNull)
+
+  @@index([solicitacaoId, createdAt])
+  @@index([tipoEvento])
+}
+
+model AnexoSolicitacaoImagem {
+  id             Int      @id @default(autoincrement())
+  solicitacaoId  Int
+  nomeOriginal   String   @db.Text
+  nomeArquivo    String   @db.Text
+  caminho        String   @db.Text
+  tipoArquivo    String
+  tamanho        Int
+  origem         String   @default("Interna")
+  enviadoPorId   Int?
+  createdAt      DateTime @default(now())
+
+  solicitacao SolicitacaoImagem @relation(fields: [solicitacaoId], references: [id], onDelete: Cascade)
+  enviadoPor  Usuario?          @relation("AnexoSolicitacaoImagemUsuario", fields: [enviadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([solicitacaoId])
+}
+
+model TokenSolicitacaoImagem {
+  id            Int       @id @default(autoincrement())
+  tokenHash     String    @unique
+  email         String    @db.Text
+  expiraEm      DateTime
+  usadoEm       DateTime?
+  criadoPorId   Int?
+  createdAt     DateTime  @default(now())
+
+  criadoPor Usuario? @relation("TokenSolicitacaoImagemCriadoPor", fields: [criadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([expiraEm, usadoEm])
 }
 
 model ConfiguracaoSistema {
