@@ -2,6 +2,7 @@
 import fs from "node:fs";
 import { randomInt } from "node:crypto";
 import path from "node:path";
+import zlib from "node:zlib";
 import { Request, Response } from "express";
 import archiver = require("archiver");
 import PDFDocument from "pdfkit";
@@ -12,6 +13,7 @@ import { AuthRequest } from "../middlewares/auth";
 import { UNIDADES_SISTEMA } from "../config/unidades";
 import { enviarEmail } from "../services/email.service";
 import { pdfAssets } from "../services/documentoPdfBase.service";
+import { certificadoTreinamentoFixoTemplateBase64 } from "../assets/certificadoTreinamentoFixoTemplate";
 
 const db = prisma as any;
 const APP_PUBLIC_URL_PADRAO = "https://movesecurity.movecta.com.br";
@@ -65,6 +67,11 @@ const logosMovecta = [
   path.resolve(__dirname, "..", "..", "frontend", "public", "images", "movecta-logo.png"),
   path.resolve(__dirname, "..", "..", "frontend", "dist", "images", "movecta-logo.png"),
   pdfAssets.logo,
+];
+const templatesCertificadoFixo = [
+  path.resolve(process.cwd(), "assets", "certificado-treinamento-fixo-template.png"),
+  path.resolve(process.cwd(), "backend", "assets", "certificado-treinamento-fixo-template.png"),
+  path.resolve(__dirname, "..", "..", "assets", "certificado-treinamento-fixo-template.png"),
 ];
 const pastaVideosTreinamento = "uploads/treinamentos-dinamicos/videos/";
 
@@ -296,6 +303,70 @@ function dataPtBr(data?: Date | string | null) {
   });
 }
 
+function dataPorExtenso(data: Date) {
+  return data.toLocaleDateString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function extensaoAssinaturaDataUrl(dataUrl: string) {
+  if (dataUrl.startsWith("data:image/jpeg;base64,")) return "jpg";
+  if (dataUrl.startsWith("data:image/png;base64,")) return "png";
+  return null;
+}
+
+function validarPng(buffer: Buffer) {
+  const assinatura = Buffer.from("89504e470d0a1a0a", "hex");
+  if (buffer.length < 12 || !buffer.subarray(0, 8).equals(assinatura)) {
+    return false;
+  }
+
+  let offset = 8;
+  const idatChunks: Buffer[] = [];
+  while (offset + 12 <= buffer.length) {
+    const tamanho = buffer.readUInt32BE(offset);
+    const tipo = buffer.subarray(offset + 4, offset + 8).toString("ascii");
+    const dadosInicio = offset + 8;
+    const dadosFim = dadosInicio + tamanho;
+    const proximoOffset = dadosFim + 4;
+
+    if (dadosFim > buffer.length || proximoOffset > buffer.length) {
+      return false;
+    }
+    if (tipo === "IDAT") {
+      idatChunks.push(buffer.subarray(dadosInicio, dadosFim));
+    }
+    offset = proximoOffset;
+    if (tipo === "IEND") break;
+  }
+
+  if (!idatChunks.length) return false;
+
+  try {
+    zlib.inflateSync(Buffer.concat(idatChunks));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function validarImagemAssinatura(buffer: Buffer, extensao: string) {
+  if (extensao === "png") return validarPng(buffer);
+  if (extensao === "jpg") {
+    return (
+      buffer.length > 4 &&
+      buffer[0] === 0xff &&
+      buffer[1] === 0xd8 &&
+      buffer[buffer.length - 2] === 0xff &&
+      buffer[buffer.length - 1] === 0xd9
+    );
+  }
+  return false;
+}
+
 function parseJsonArray(valor: unknown) {
   if (Array.isArray(valor)) return valor;
   try {
@@ -443,6 +514,12 @@ function caminhoFundoCertificado() {
 
 function primeiroArquivoExistente(caminhos: string[]) {
   return caminhos.find((arquivo) => fs.existsSync(arquivo)) || "";
+}
+
+function templateCertificadoFixo() {
+  const arquivo = primeiroArquivoExistente(templatesCertificadoFixo);
+  if (arquivo) return arquivo;
+  return Buffer.from(certificadoTreinamentoFixoTemplateBase64, "base64");
 }
 
 function desenharLogoMovecta(
@@ -678,12 +755,13 @@ async function gerarCertificado(modelo: any, participante: any) {
   const temporario = `${destino}.tmp`;
   fs.rmSync(temporario, { force: true });
 
-  const doc = new PDFDocument({ size: [960, 540], margin: 0 });
+  const doc = new PDFDocument({ size: [1440, 810], margin: 0 });
   const stream = fs.createWriteStream(temporario);
   doc.pipe(stream);
 
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
+  const concluidoEm = new Date(participante.dataConclusao || new Date());
   const validacaoUrl = `${appPublicUrl()}${certificadoUrl(participante.token)}`;
   const qrDataUrl = await QRCode.toDataURL(validacaoUrl, {
     width: 260,
@@ -694,146 +772,110 @@ async function gerarCertificado(modelo: any, participante: any) {
   const textoCertificado = gerarTextoCertificado(modelo, participante);
 
   doc.rect(0, 0, pageWidth, pageHeight).fill("#ffffff");
-
-  doc.rect(0, 0, 255, 157).fill("#07052a");
-  doc.rect(255, 0, pageWidth - 255, 157).fill("#0877f2");
-  doc
-    .fillColor("#0b2f84")
-    .path("M255 0 L540 0 L365 157 L255 157 Z")
-    .fillOpacity(0.52)
-    .fill()
-    .fillOpacity(1);
-
-  doc
-    .fillColor("#ffffff")
-    .font("Helvetica-Bold")
-    .fontSize(41)
-    .text("certi", 62, 31, { width: 94, lineBreak: false });
-  doc
-    .fillColor("#ffffff")
-    .font("Helvetica")
-    .fontSize(41)
-    .text("ficado", 154, 31, { width: 124, lineBreak: false });
-  doc
-    .strokeColor("#ffffff")
-    .lineWidth(0.8)
-    .font("Helvetica")
-    .fontSize(41)
-    .text("certi", 62, 73, { width: 94, lineBreak: false });
-  doc
-    .fillColor("#ffffff")
-    .font("Helvetica-Bold")
-    .fontSize(41)
-    .text("ficado", 154, 73, { width: 124, lineBreak: false });
-
-  doc.circle(555, 78, 61).fill("#8cf300");
-  doc.circle(555, 78, 33).fill("#0877f2");
-  doc
-    .fillColor("#ffffff")
-    .font("Helvetica-Bold")
-    .fontSize(34)
-    .text("M", 535, 58, { width: 42, align: "center" });
-
-  doc
-    .fillColor("#ffffff")
-    .font("Helvetica-Bold")
-    .fontSize(38)
-    .text("eu\nmovo a\nMovecta.", 670, 10, {
-      width: 220,
-      lineGap: -4,
+  const templateCertificado = templateCertificadoFixo();
+  if (templateCertificado) {
+    doc.image(templateCertificado, 0, 0, {
+      width: pageWidth,
+      height: pageHeight,
     });
+  }
+
+  const nomeTreinamento = [modelo.codigo, modelo.nome]
+    .map(texto)
+    .filter(Boolean)
+    .join(" - ");
   doc
-    .moveTo(586, 126)
-    .lineTo(680, 126)
-    .strokeColor("#8cf300")
-    .lineWidth(1.2)
-    .stroke();
-  doc.circle(676, 126, 7).fill("#8cf300");
-  doc.rect(695, 117, 118, 20).fill("#8cf300");
-  doc
+    .rect(80, 304, pageWidth - 160, 182)
+    .fill("#ffffff")
     .fillColor("#07142f")
     .font("Helvetica")
-    .fontSize(18)
-    .text("com ", 702, 118, { width: 48, lineBreak: false });
-  doc
-    .fillColor("#0877f2")
-    .font("Helvetica-Bold")
-    .fontSize(18)
-    .text("atitude", 742, 118, { width: 65, lineBreak: false });
+    .fontSize(textoCertificado.length > 360 ? 23 : 26)
+    .text(textoCertificado, 82, 316, {
+      width: pageWidth - 164,
+      align: "left",
+      lineGap: 8,
+      ellipsis: true,
+    });
+
+  if (nomeTreinamento) {
+    doc
+      .rect(420, 255, 600, 42)
+      .fill("#ffffff")
+      .fillColor("#1d4ed8")
+      .font("Helvetica-Bold")
+      .fontSize(20)
+      .text(nomeTreinamento, 420, 262, {
+        width: 600,
+        align: "center",
+        ellipsis: true,
+      });
+  }
 
   doc
-    .save()
-    .fillColor("#eaf2ff")
-    .font("Helvetica-Bold")
-    .fontSize(68)
-    .opacity(0.55)
-    .text("moover\nmoover\nmoover", -2, 402, {
-      width: 280,
-      lineGap: -7,
-    })
-    .restore();
-
-  doc
-    .fillColor("#0f172a")
-    .font("Helvetica")
-    .fontSize(20)
-    .text(modelo.codigo, 390, 183, { width: 180, align: "center" });
-
-  doc
+    .rect(520, 486, 400, 44)
+    .fill("#ffffff")
     .fillColor("#07142f")
     .font("Helvetica")
-    .fontSize(18)
-    .text(textoCertificado, 108, 235, {
-      width: 744,
+    .fontSize(26)
+    .text(`Guarujá, ${dataPorExtenso(concluidoEm)}.`, 0, 494, {
+      width: pageWidth,
       align: "center",
-      lineGap: 6,
     });
 
   if (participante.assinaturaDataUrl) {
-    const assinaturaBase64 = String(participante.assinaturaDataUrl).split(
-      ",",
-    )[1];
+    const assinaturaDataUrl = String(participante.assinaturaDataUrl);
+    const assinaturaBase64 = assinaturaDataUrl.split(",")[1];
+    const extensao = extensaoAssinaturaDataUrl(assinaturaDataUrl) || "png";
     if (assinaturaBase64) {
-      const assinaturaPng = path.join(
+      const buffer = Buffer.from(assinaturaBase64, "base64");
+      const assinaturaArquivo = path.join(
         path.dirname(destino),
-        `assinatura-modelo-${participante.token}.png`,
+        `assinatura-modelo-${participante.token}.${extensao}`,
       );
-      fs.writeFileSync(assinaturaPng, Buffer.from(assinaturaBase64, "base64"));
-      doc.image(assinaturaPng, 208, 334, { fit: [210, 42], align: "center" });
-      fs.rmSync(assinaturaPng, { force: true });
+      try {
+        if (validarImagemAssinatura(buffer, extensao)) {
+          fs.writeFileSync(assinaturaArquivo, buffer);
+          doc.image(assinaturaArquivo, 335, 536, {
+            fit: [250, 58],
+            align: "center",
+          });
+        } else {
+          console.error(
+            "Assinatura do participante ignorada: imagem inválida ou corrompida.",
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Falha ao inserir assinatura do participante no certificado:",
+          error,
+        );
+      } finally {
+        fs.rmSync(assinaturaArquivo, { force: true });
+      }
     }
   }
 
-  desenharLinhaAssinatura(
-    doc,
-    206,
-    391,
-    220,
-    "Assinatura do Participante",
-    participante.nomeCompleto,
-  );
-  desenharAssinaturaInstitucional(doc, 533, 391, 220);
-
-  doc.image(qrCode, 435, 421, { width: 98, height: 98 });
+  doc.rect(400, 652, 170, 28).fill("#ffffff");
   doc
     .fillColor("#07142f")
     .font("Helvetica")
-    .fontSize(10)
-    .text(participante.codigo || modelo.codigo || "CERTIFICADO", 405, 523, {
-      width: 158,
-      align: "center",
-    });
-
-  desenharLogoMovecta(doc, 784, 482, 130, 34);
-
-  doc
-    .fillColor("#1d4ed8")
-    .font("Helvetica")
-    .fontSize(8)
-    .text(`Validação: ${validacaoUrl}`, 268, pageHeight - 15, {
-      width: pageWidth - 536,
+    .fontSize(16)
+    .text(participante.nomeCompleto, 350, 652, {
+      width: 250,
       align: "center",
       ellipsis: true,
+    });
+
+  doc.rect(430, pageHeight - 70, 580, 50).fill("#ffffff");
+  doc.rect(650, 654, 142, 144).fill("#ffffff");
+  doc.image(qrCode, 671, 671, { width: 100, height: 100 });
+  doc
+    .fillColor("#07142f")
+    .font("Helvetica")
+    .fontSize(14)
+    .text(participante.codigo || modelo.codigo || "CERTIFICADO", 626, 783, {
+      width: 190,
+      align: "center",
     });
   doc.end();
 
