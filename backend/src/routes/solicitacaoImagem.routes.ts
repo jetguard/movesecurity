@@ -5,6 +5,7 @@ import path from "path";
 import multer from "multer";
 import {
   atualizarSolicitacaoImagem,
+  assumirAtendimentoSolicitacaoImagem,
   buscarSolicitacaoImagem,
   criarSolicitacaoImagem,
   criarSolicitacaoImagemPublica,
@@ -53,6 +54,7 @@ router.post("/formularios", enviarFormularioSolicitacaoImagem);
 router.get("/:id", buscarSolicitacaoImagem);
 router.put("/:id", upload.array("anexos"), atualizarSolicitacaoImagem);
 router.post("/:id/atendimento/iniciar", iniciarAtendimentoSolicitacaoImagem);
+router.post("/:id/atendimento/assumir", assumirAtendimentoSolicitacaoImagem);
 router.post("/:id/atendimento/pausar", pausarAtendimentoSolicitacaoImagem);
 router.delete("/:id", excluirSolicitacaoImagem);
 

@@ -535,6 +535,107 @@ export async function iniciarAtendimentoSolicitacaoImagem(req: AuthRequest, res:
   }
 }
 
+export async function assumirAtendimentoSolicitacaoImagem(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const motivo = texto(req.body.motivo);
+    const descricao = texto(req.body.descricao);
+    if (!motivo || !descricao) {
+      return res.status(400).json({ error: "Informe o motivo e a descrição para assumir." });
+    }
+
+    const agora = new Date();
+    const solicitacao = await prisma.$transaction(async (tx) => {
+      const atual = await tx.solicitacaoImagem.findFirst({
+        where: { id, excluidoEm: null, unidade: req.unidadeAtiva },
+        include: { atendente: { select: { id: true, nome: true, email: true } } },
+      });
+
+      if (!atual) throw new Error("NAO_ENCONTRADA");
+      if (atual.status !== STATUS.EM_ATENDIMENTO || !atual.atendenteId) {
+        throw new Error("NAO_EM_ATENDIMENTO");
+      }
+      if (atual.atendenteId === req.usuarioId) {
+        throw new Error("MESMO_ATENDENTE");
+      }
+
+      const atendimentoAnterior = await tx.atendimentoSolicitacaoImagem.findFirst({
+        where: { solicitacaoId: id, atendenteId: atual.atendenteId, pausadoEm: null },
+        orderBy: { iniciadoEm: "desc" },
+      });
+      if (!atendimentoAnterior) throw new Error("ATENDIMENTO_NAO_ENCONTRADO");
+
+      const tempoSegundos = Math.max(
+        0,
+        Math.floor((agora.getTime() - atendimentoAnterior.iniciadoEm.getTime()) / 1000),
+      );
+
+      await tx.atendimentoSolicitacaoImagem.update({
+        where: { id: atendimentoAnterior.id },
+        data: {
+          pausadoEm: agora,
+          tempoSegundos,
+          motivoPausa: `Atendimento assumido por outro usuário. Motivo: ${motivo}`,
+          andamento: descricao,
+        },
+      });
+
+      await tx.solicitacaoImagem.update({
+        where: { id },
+        data: {
+          atendenteId: req.usuarioId,
+          atendimentoIniciadoEm: agora,
+          tempoTotalAtendimento: { increment: tempoSegundos },
+        },
+      });
+
+      await tx.atendimentoSolicitacaoImagem.create({
+        data: {
+          solicitacaoId: id,
+          atendenteId: req.usuarioId || 0,
+          iniciadoEm: agora,
+        },
+      });
+
+      await registrarHistorico(
+        tx,
+        id,
+        req,
+        "ASSUMIU_ATENDIMENTO",
+        `Atendimento assumido de ${atual.atendente?.nome || "outro usuário"}. Motivo: ${motivo}`,
+        STATUS.EM_ATENDIMENTO,
+        STATUS.EM_ATENDIMENTO,
+        {
+          motivo,
+          descricao,
+          atendenteAnteriorId: atual.atendenteId,
+          atendenteAnteriorNome: atual.atendente?.nome || null,
+          tempoSegundos,
+        },
+      );
+
+      return tx.solicitacaoImagem.findUniqueOrThrow({
+        where: { id },
+        include: includeSolicitacao,
+      });
+    });
+
+    return res.json(solicitacao);
+  } catch (error: any) {
+    if (error?.message === "NAO_ENCONTRADA") {
+      return res.status(404).json({ error: "Solicitação de imagens não encontrada." });
+    }
+    if (error?.message === "MESMO_ATENDENTE") {
+      return res.status(409).json({ error: "Você já é o atendente atual desta solicitação." });
+    }
+    if (error?.message === "NAO_EM_ATENDIMENTO" || error?.message === "ATENDIMENTO_NAO_ENCONTRADO") {
+      return res.status(409).json({ error: "Não há atendimento ativo para assumir." });
+    }
+    console.error("Erro ao assumir atendimento:", error);
+    return res.status(500).json({ error: "Erro ao assumir atendimento." });
+  }
+}
+
 export async function pausarAtendimentoSolicitacaoImagem(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);

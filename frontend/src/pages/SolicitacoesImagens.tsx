@@ -11,10 +11,11 @@ import {
   RefreshCcw,
   Search,
   Trash2,
+  UserCheck,
   X,
 } from "lucide-react";
 import { api } from "../services/api";
-import { podeNoModulo } from "../utils/permissoes";
+import { podeNoModulo, usuarioAtual } from "../utils/permissoes";
 
 type UsuarioResumo = {
   id: number;
@@ -184,15 +185,18 @@ export default function SolicitacoesImagens() {
   const [prioridadeFiltro, setPrioridadeFiltro] = useState("");
   const [modalForm, setModalForm] = useState<"criar" | "editar" | null>(null);
   const [modalPausa, setModalPausa] = useState<SolicitacaoImagem | null>(null);
+  const [modalAssumir, setModalAssumir] = useState<SolicitacaoImagem | null>(null);
   const [detalhe, setDetalhe] = useState<SolicitacaoImagem | null>(null);
   const [form, setForm] = useState(formInicial);
   const [anexos, setAnexos] = useState<FileList | null>(null);
   const [emailFormulario, setEmailFormulario] = useState("");
   const [linkGerado, setLinkGerado] = useState("");
   const [pausa, setPausa] = useState({ motivo: "", andamento: "" });
+  const [assumir, setAssumir] = useState({ motivo: "", descricao: "" });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
 
+  const usuarioLogado = usuarioAtual();
   const podeCriar = podeNoModulo("solicitacoes_imagens", "criar");
   const podeEditar = podeNoModulo("solicitacoes_imagens", "editar");
   const podeExcluir = podeNoModulo("solicitacoes_imagens", "excluir");
@@ -327,6 +331,27 @@ export default function SolicitacoesImagens() {
       if (detalhe?.id === modalPausa.id) await atualizarDetalhe(modalPausa.id);
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Não foi possível pausar.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function assumirAtendimento(event: FormEvent) {
+    event.preventDefault();
+    if (!modalAssumir) return;
+    setErro("");
+    setSalvando(true);
+    try {
+      await api.post(
+        `/solicitacoes-imagens/${modalAssumir.id}/atendimento/assumir`,
+        assumir,
+      );
+      setModalAssumir(null);
+      setAssumir({ motivo: "", descricao: "" });
+      await carregarSolicitacoes();
+      if (detalhe?.id === modalAssumir.id) await atualizarDetalhe(modalAssumir.id);
+    } catch (error: any) {
+      setErro(error?.response?.data?.error || "Não foi possível assumir.");
     } finally {
       setSalvando(false);
     }
@@ -541,9 +566,14 @@ export default function SolicitacoesImagens() {
                             <PlayCircle size={16} />
                           </button>
                         )}
-                        {podeEditar && item.status === "Em Atendimento" && (
+                        {podeEditar && item.status === "Em Atendimento" && item.atendente?.id === usuarioLogado?.id && (
                           <button title="Pausar" onClick={() => setModalPausa(item)} className="rounded-lg border border-slate-700 p-2 text-amber-300 hover:border-amber-500">
                             <PauseCircle size={16} />
+                          </button>
+                        )}
+                        {podeEditar && item.status === "Em Atendimento" && item.atendente?.id !== usuarioLogado?.id && (
+                          <button title="Assumir" onClick={() => setModalAssumir(item)} className="rounded-lg border border-slate-700 p-2 text-emerald-300 hover:border-emerald-500">
+                            <UserCheck size={16} />
                           </button>
                         )}
                         {podeExcluir && (
@@ -591,6 +621,31 @@ export default function SolicitacoesImagens() {
             </Campo>
             <button disabled={salvando} className="mt-4 w-full rounded-lg bg-amber-600 px-4 py-2 font-bold text-white hover:bg-amber-500 disabled:opacity-60">
               Salvar pausa
+            </button>
+          </form>
+        </div>
+      )}
+
+      {modalAssumir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
+          <form onSubmit={assumirAtendimento} className="w-full max-w-lg rounded-xl border border-slate-800 bg-slate-950 p-5">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-black text-white">Assumir atendimento</h2>
+              <button type="button" onClick={() => setModalAssumir(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900/70 px-3 py-2 text-sm text-slate-300">
+              Atendimento atual: <b className="text-white">{modalAssumir.atendente?.nome || "Outro usuário"}</b>
+            </div>
+            <Campo label="Motivo">
+              <input value={assumir.motivo} onChange={(e) => setAssumir({ ...assumir, motivo: e.target.value })} className="input-dark" required />
+            </Campo>
+            <Campo label="Descrição">
+              <textarea value={assumir.descricao} onChange={(e) => setAssumir({ ...assumir, descricao: e.target.value })} className="input-dark min-h-28" required />
+            </Campo>
+            <button disabled={salvando} className="mt-4 w-full rounded-lg bg-emerald-600 px-4 py-2 font-bold text-white hover:bg-emerald-500 disabled:opacity-60">
+              Assumir atendimento
             </button>
           </form>
         </div>
