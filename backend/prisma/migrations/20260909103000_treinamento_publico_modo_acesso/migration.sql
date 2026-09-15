@@ -1,2 +1,2 @@
-ALTER TABLE `TreinamentoModelo`
-ADD COLUMN `acessoPublicoModo` VARCHAR(191) NOT NULL DEFAULT 'TOKEN';
+ALTER TABLE "TreinamentoModelo"
+ADD COLUMN "acessoPublicoModo" TEXT NOT NULL DEFAULT 'TOKEN';

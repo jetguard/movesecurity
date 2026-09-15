@@ -1,4 +1,4 @@
-ALTER TABLE `Usuario`
-ADD COLUMN `doisFatoresMetodo` VARCHAR(191) NULL DEFAULT 'EMAIL',
-ADD COLUMN `doisFatoresTotpSecret` VARCHAR(191) NULL,
-ADD COLUMN `doisFatoresTotpConfirmadoEm` DATETIME(3) NULL;
+ALTER TABLE "Usuario"
+ADD COLUMN "doisFatoresMetodo" TEXT DEFAULT 'EMAIL',
+ADD COLUMN "doisFatoresTotpSecret" TEXT,
+ADD COLUMN "doisFatoresTotpConfirmadoEm" TIMESTAMP(3);

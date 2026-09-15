@@ -1,2 +1,2 @@
-ALTER TABLE `ConfiguracaoSistema`
-ADD COLUMN `ssoObjectId` TEXT NULL;
+ALTER TABLE "ConfiguracaoSistema"
+ADD COLUMN "ssoObjectId" TEXT;

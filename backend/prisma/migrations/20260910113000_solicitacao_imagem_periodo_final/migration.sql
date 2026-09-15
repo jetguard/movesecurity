@@ -1,1 +1,1 @@
-ALTER TABLE `SolicitacaoImagem` ADD COLUMN `dataFinalOcorrencia` DATETIME(3) NULL;
+ALTER TABLE "SolicitacaoImagem" ADD COLUMN "dataFinalOcorrencia" TIMESTAMP(3);
