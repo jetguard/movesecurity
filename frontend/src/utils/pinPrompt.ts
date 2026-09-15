@@ -14,11 +14,13 @@ export function solicitarPinOperacional(mensagem: string) {
           <input
             id="jetguard-pin-operacional"
             type="password"
+            value=""
             inputmode="numeric"
             maxlength="4"
-            autocomplete="off"
+            autocomplete="new-password"
+            name="jetguard-pin-${Date.now()}"
             class="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-center text-xl font-bold tracking-[0.5em] text-white outline-none transition placeholder:tracking-normal placeholder:text-sm placeholder:font-normal placeholder:text-slate-500 focus:border-blue-400 focus:ring-2 focus:ring-blue-500/30"
-            placeholder="****"
+            placeholder=""
           />
         </label>
         <div class="mt-5 grid grid-cols-2 gap-3">

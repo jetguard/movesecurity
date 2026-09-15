@@ -646,11 +646,10 @@ export default function SolicitacoesImagens() {
     if (!pinOperacional) return;
     setSalvando(true);
     try {
-      await api.post(`/solicitacoes-imagens/${item.id}/atendimento/iniciar`, {
+      const resposta = await api.post(`/solicitacoes-imagens/${item.id}/atendimento/iniciar`, {
         pinOperacional,
       });
-      await carregarSolicitacoes();
-      if (detalhe?.id === item.id) await atualizarDetalhe(item.id);
+      aplicarSolicitacaoAtualizada(resposta.data);
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Não foi possível iniciar.");
     } finally {
