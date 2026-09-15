@@ -136,7 +136,8 @@ function dadosScannerPassagem(body: any) {
       indisponibilidadeFim,
     ),
     acoesContingencia: textoOpcional(body.acoesContingencia),
-    total: leituraSatisfatoria + insatisfatoria + falhasEquipamento,
+    total:
+      leituraComFalha + leituraSatisfatoria + insatisfatoria + falhasEquipamento,
   };
 }
 

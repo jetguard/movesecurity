@@ -176,7 +176,15 @@ export default function Scanner() {
 
   const totalFormulario = useMemo(
     () =>
+      numero(form.leituraComFalha) +
       numero(form.leituraSatisfatoria) +
+      numero(form.insatisfatoria) +
+      numero(form.falhasEquipamento),
+    [form],
+  );
+  const reprocessamentoSugerido = useMemo(
+    () =>
+      numero(form.leituraComFalha) +
       numero(form.insatisfatoria) +
       numero(form.falhasEquipamento),
     [form],
@@ -1064,6 +1072,7 @@ export default function Scanner() {
               />
               <CampoNumero
                 label="Quantidade de reprocessamento"
+                detalhe={`sugerido: ${reprocessamentoSugerido}`}
                 value={form.reprocessamentos}
                 onChange={(valor) => atualizarCampo("reprocessamentos", valor)}
               />
@@ -1148,9 +1157,6 @@ export default function Scanner() {
                 <p className="mt-1 text-3xl font-bold text-white">
                   {totalFormulario}
                 </p>
-                <p className="mt-1 text-xs text-blue-100/80">
-                  Soma de leitura satisfatória + leitura insatisfatória + falhas no equipamento.
-                </p>
               </div>
             </div>
 
@@ -1224,16 +1230,25 @@ function ResumoTemporal({
 
 function CampoNumero({
   label,
+  detalhe,
   value,
   onChange,
 }: {
   label: string;
+  detalhe?: string;
   value: string;
   onChange: (value: string) => void;
 }) {
   return (
     <label className="space-y-2 text-sm font-bold text-slate-200">
-      {label}
+      <span className="flex flex-wrap items-center justify-between gap-2">
+        <span>{label}</span>
+        {detalhe && (
+          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-2 py-0.5 text-[11px] font-black text-blue-200">
+            {detalhe}
+          </span>
+        )}
+      </span>
       <input
         type="number"
         min="0"
