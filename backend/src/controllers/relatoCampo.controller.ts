@@ -18,8 +18,22 @@ import { validarPinOperacional } from "../services/pinOperacional.service";
 import { calcularHashArquivo } from "../utils/arquivoHash";
 
 function urlBase(req: AuthRequest) {
-  const origem = req.headers.origin || `${req.protocol}://${req.get("host")}`;
-  return String(origem).replace(/\/$/, "");
+  const candidatos = [
+    process.env.APP_PUBLIC_URL,
+    process.env.PUBLIC_APP_URL,
+    process.env.FRONTEND_URL,
+    process.env.CORS_ORIGIN,
+    process.env.APP_URL,
+    req.headers.origin,
+    `${req.protocol}://${req.get("host")}`,
+  ];
+  const origem =
+    candidatos.find(
+      (valor): valor is string =>
+        typeof valor === "string" && valor.trim() !== "" && valor.trim() !== "*",
+    ) || "";
+
+  return origem.split(",")[0].trim().replace(/\/+$/, "");
 }
 
 function parseJson<T>(valor: unknown, fallback: T): T {

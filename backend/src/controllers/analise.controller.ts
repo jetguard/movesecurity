@@ -11,6 +11,61 @@ function normalizarBrl(valor: unknown) {
   return String(valor || "0,00").trim() || "0,00";
 }
 
+function normalizarOpcao(valor: unknown) {
+  return String(valor || "").trim();
+}
+
+function impactoFinanceiroDaAnalise(body: any) {
+  const houveDanoPrejuizoBruto = normalizarOpcao(body.houveDanoPrejuizo);
+  const houveDanoPrejuizo =
+    houveDanoPrejuizoBruto === "Não"
+      ? "Sem alteração"
+      : houveDanoPrejuizoBruto === "Sim"
+        ? "Dano/Prejuízo"
+        : houveDanoPrejuizoBruto;
+
+  if (!["Sem alteração", "Recuperado", "Dano/Prejuízo"].includes(houveDanoPrejuizo)) {
+    throw Object.assign(
+      new Error("Informe a situação do impacto financeiro da análise."),
+      { status: 400 },
+    );
+  }
+
+  if (houveDanoPrejuizo === "Sem alteração") {
+    return {
+      houveDanoPrejuizo,
+      tipoImpactoFinanceiro: null,
+      valorPrejuizo: "0,00",
+      valorRecuperado: "0,00",
+    };
+  }
+
+  const tipoImpactoFinanceiro = normalizarOpcao(body.tipoImpactoFinanceiro);
+  if (!["Total", "Parcial"].includes(tipoImpactoFinanceiro)) {
+    throw Object.assign(
+      new Error("Informe se o impacto financeiro foi total ou parcial."),
+      { status: 400 },
+    );
+  }
+
+  const valorPrejuizo =
+    houveDanoPrejuizo === "Dano/Prejuízo" ||
+    tipoImpactoFinanceiro === "Parcial"
+      ? normalizarBrl(body.valorPrejuizo)
+      : "0,00";
+  const valorRecuperado =
+    houveDanoPrejuizo === "Recuperado" || tipoImpactoFinanceiro === "Parcial"
+      ? normalizarBrl(body.valorRecuperado)
+      : "0,00";
+
+  return {
+    houveDanoPrejuizo,
+    tipoImpactoFinanceiro,
+    valorPrejuizo,
+    valorRecuperado,
+  };
+}
+
 function statusRelatorioAposAnalise(
   concluindo: boolean,
   investigacao?: { status?: string | null } | null,
@@ -112,6 +167,7 @@ export async function atualizarAnaliseOcorrencia(
 
     const status = req.body.status || anterior.status;
     const concluindo = status === "Concluído";
+    const impactoFinanceiro = impactoFinanceiroDaAnalise(req.body);
     if (concluindo) await exigirSenhaAssinatura(req);
 
     const { analise, ocorrencia } = await prisma.$transaction(async (tx) => {
@@ -119,7 +175,8 @@ export async function atualizarAnaliseOcorrencia(
         where: { id: Number(id) },
         data: {
           status,
-          prejuizoFinanceiro: normalizarBrl(req.body.prejuizoFinanceiro),
+          prejuizoFinanceiro: impactoFinanceiro.valorPrejuizo,
+          ...impactoFinanceiro,
           conclusaoAnalise: req.body.conclusaoAnalise,
           concluidoEm: concluindo ? new Date() : null,
           concluidoPorId: concluindo ? req.usuarioId : null,
@@ -263,6 +320,7 @@ export async function atualizarAnaliseEvento(req: AuthRequest, res: Response) {
 
     const status = req.body.status || anterior.status;
     const concluindo = status === "Concluído";
+    const impactoFinanceiro = impactoFinanceiroDaAnalise(req.body);
     if (concluindo) await exigirSenhaAssinatura(req);
 
     const { analise, evento } = await prisma.$transaction(async (tx) => {
@@ -270,7 +328,7 @@ export async function atualizarAnaliseEvento(req: AuthRequest, res: Response) {
         where: { id: Number(id) },
         data: {
           status,
-          valorRecuperado: normalizarBrl(req.body.valorRecuperado),
+          ...impactoFinanceiro,
           conclusaoAnalise: req.body.conclusaoAnalise,
           concluidoEm: concluindo ? new Date() : null,
           concluidoPorId: concluindo ? req.usuarioId : null,

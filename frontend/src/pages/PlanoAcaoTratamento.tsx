@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
+  CheckCircle2,
   ClipboardCheck,
   FileUp,
   LoaderCircle,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../services/api";
+import { usuarioAtual } from "../utils/permissoes";
 
 type Plano = {
   id: number;
@@ -21,11 +23,32 @@ type Plano = {
   fatorRiscoNome?: string | null;
   prioridade: string;
   status: string;
+  tratamentoExecucaoStatus?: string | null;
   percentual: number;
   responsavelNome?: string | null;
+  responsaveis?: { id: number; nome: string }[];
   prazo: string;
   comentarios?: string | null;
   anexosTratamento?: AnexoTratamento[];
+  mediadores?: MediadorPlano[];
+  conclusoesMediadores?: ConclusaoMediador[];
+  tratamentoCustos?: TratamentoCustos;
+};
+
+type MediadorPlano = {
+  id: number;
+  nome: string;
+  email?: string | null;
+  setor?: string | null;
+  cargo?: string | null;
+  conclusao?: ConclusaoMediador;
+};
+
+type ConclusaoMediador = {
+  mediadorId: number;
+  mediadorNome: string;
+  conclusao: string;
+  concluidoEm: string;
 };
 
 type Arc = {
@@ -51,7 +74,16 @@ type AnexoTratamento = {
   criadoEm: string;
 };
 
-function normalizarStatus(status?: string) {
+type TratamentoCustos = {
+  houveCusto: boolean;
+  tipo?: string | null;
+  valorEstimado?: string | null;
+  valorRealizado?: string | null;
+  observacao?: string | null;
+  atualizadoEm?: string | null;
+};
+
+function normalizarStatus(status?: string | null) {
   if (status === "Concluído") return "Concluido";
   if (status === "Em Andamento") return "Em andamento";
   if (["Pendente", "Em andamento", "Concluido"].includes(status || "")) {
@@ -60,13 +92,13 @@ function normalizarStatus(status?: string) {
   return "Pendente";
 }
 
-function statusExibicao(status?: string) {
+function statusExibicao(status?: string | null) {
   return normalizarStatus(status) === "Concluido"
     ? "Concluído"
     : normalizarStatus(status);
 }
 
-function classeStatus(status?: string) {
+function classeStatus(status?: string | null) {
   const atual = normalizarStatus(status);
   if (atual === "Concluido") return "bg-emerald-400 text-slate-950";
   if (atual === "Em andamento") return "bg-blue-500 text-white";
@@ -83,9 +115,16 @@ export default function PlanoAcaoTratamento() {
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
   const [popupAberto, setPopupAberto] = useState(false);
+  const [popupMediadorAberto, setPopupMediadorAberto] = useState(false);
+  const [conclusaoMediador, setConclusaoMediador] = useState("");
   const [form, setForm] = useState({
     status: "Pendente",
     comentarios: "",
+    houveCusto: false,
+    tipoCusto: "",
+    valorEstimado: "",
+    valorRealizado: "",
+    observacaoCusto: "",
   });
   const [arquivos, setArquivos] = useState<File[]>([]);
 
@@ -98,8 +137,19 @@ export default function PlanoAcaoTratamento() {
       setPlano(resposta.data.plano);
       setArc(resposta.data.arc);
       setForm({
-        status: normalizarStatus(resposta.data.plano.status),
+        status: normalizarStatus(
+          resposta.data.plano.tratamentoExecucaoStatus ||
+            resposta.data.plano.status,
+        ),
         comentarios: resposta.data.plano.comentarios || "",
+        houveCusto: Boolean(resposta.data.plano.tratamentoCustos?.houveCusto),
+        tipoCusto: resposta.data.plano.tratamentoCustos?.tipo || "",
+        valorEstimado:
+          resposta.data.plano.tratamentoCustos?.valorEstimado || "",
+        valorRealizado:
+          resposta.data.plano.tratamentoCustos?.valorRealizado || "",
+        observacaoCusto:
+          resposta.data.plano.tratamentoCustos?.observacao || "",
       });
     } catch (error: any) {
       setErro(
@@ -118,7 +168,15 @@ export default function PlanoAcaoTratamento() {
     if (!plano?.prazo) return "-";
     return new Date(plano.prazo).toLocaleString("pt-BR");
   }, [plano?.prazo]);
-
+  const usuario = usuarioAtual();
+  const mediadorAtual = plano?.mediadores?.find(
+    (mediador) => mediador.id === usuario?.id,
+  );
+  const podeTratarPlano = Boolean(
+    usuario?.id &&
+      plano?.responsaveis?.some((responsavel) => responsavel.id === usuario.id),
+  );
+  const podeConcluirMediador = Boolean(plano?.mediadores?.length && mediadorAtual);
   function alterarStatus(status: string) {
     setForm((atual) => ({
       ...atual,
@@ -136,20 +194,57 @@ export default function PlanoAcaoTratamento() {
       const dados = new FormData();
       dados.append("status", form.status);
       dados.append("comentarios", form.comentarios);
+      dados.append("houveCusto", String(form.houveCusto));
+      dados.append("tipoCusto", form.tipoCusto);
+      dados.append("valorEstimado", form.valorEstimado);
+      dados.append("valorRealizado", form.valorRealizado);
+      dados.append("observacaoCusto", form.observacaoCusto);
       arquivos.forEach((arquivo) => dados.append("anexos", arquivo));
       const resposta = await api.post(`/planos-acao/${id}/tratamento`, dados, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setPlano(resposta.data);
       setForm({
-        status: normalizarStatus(resposta.data.status),
+        status: normalizarStatus(
+          resposta.data.tratamentoExecucaoStatus || resposta.data.status,
+        ),
         comentarios: resposta.data.comentarios || "",
+        houveCusto: Boolean(resposta.data.tratamentoCustos?.houveCusto),
+        tipoCusto: resposta.data.tratamentoCustos?.tipo || "",
+        valorEstimado: resposta.data.tratamentoCustos?.valorEstimado || "",
+        valorRealizado: resposta.data.tratamentoCustos?.valorRealizado || "",
+        observacaoCusto: resposta.data.tratamentoCustos?.observacao || "",
       });
       setArquivos([]);
       setPopupAberto(false);
       setSucesso("Tratamento salvo com sucesso.");
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Erro ao salvar tratamento.");
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  async function salvarConclusaoMediador(evento: React.FormEvent) {
+    evento.preventDefault();
+    if (!id) return;
+    setSalvando(true);
+    setErro("");
+    setSucesso("");
+    try {
+      const resposta = await api.post(`/planos-acao/${id}/mediadores/concluir`, {
+        conclusao: conclusaoMediador,
+        comentarios: form.comentarios,
+      });
+      setPlano(resposta.data);
+      setConclusaoMediador("");
+      setPopupMediadorAberto(false);
+      setSucesso("Análise do mediador concluída com sucesso.");
+    } catch (error: any) {
+      setErro(
+        error?.response?.data?.error ||
+          "Erro ao concluir análise do mediador.",
+      );
     } finally {
       setSalvando(false);
     }
@@ -225,13 +320,26 @@ export default function PlanoAcaoTratamento() {
                 </span>
               </div>
             </div>
-            <button
-              onClick={() => setPopupAberto(true)}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-400"
-            >
-              <ClipboardCheck size={18} />
-              Tratar plano de ação
-            </button>
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+              {podeConcluirMediador && (
+                <button
+                  onClick={() => setPopupMediadorAberto(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-5 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/20 transition hover:bg-blue-400"
+                >
+                  <CheckCircle2 size={18} />
+                  Concluir minha análise
+                </button>
+              )}
+              {podeTratarPlano && (
+                <button
+                  onClick={() => setPopupAberto(true)}
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-black text-slate-950 shadow-lg shadow-emerald-950/20 transition hover:bg-emerald-400"
+                >
+                  <ClipboardCheck size={18} />
+                  Tratar execução
+                </button>
+              )}
+            </div>
           </div>
         </section>
 
@@ -263,13 +371,86 @@ export default function PlanoAcaoTratamento() {
               </div>
               <div className="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
                 <p className="text-xs font-black uppercase text-slate-400">
-                  Responsável
+                  Responsáveis
                 </p>
                 <p className="mt-2 font-black">
-                  {plano.responsavelNome || "Não informado"}
+                  {plano.responsaveis?.length
+                    ? plano.responsaveis
+                        .map((responsavel) => responsavel.nome)
+                        .join(", ")
+                    : plano.responsavelNome || "Não informado"}
                 </p>
               </div>
             </div>
+            {!!plano.mediadores?.length && (
+              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-black uppercase text-slate-400">
+                      Progresso da execução e validação
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-slate-200">
+                      Execução + {plano.mediadores.length} mediador(es)
+                    </p>
+                  </div>
+                  <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-sm font-black text-blue-100">
+                    {plano.percentual || 0}%
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-2">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="font-black text-slate-100">
+                        Tratamento da execução
+                      </p>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-black ${
+                          normalizarStatus(plano.tratamentoExecucaoStatus) ===
+                          "Concluido"
+                            ? "bg-emerald-400 text-slate-950"
+                            : normalizarStatus(
+                                  plano.tratamentoExecucaoStatus,
+                                ) === "Em andamento"
+                              ? "bg-blue-500 text-white"
+                              : "bg-amber-300 text-slate-950"
+                        }`}
+                      >
+                        {statusExibicao(plano.tratamentoExecucaoStatus)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-sm font-semibold text-slate-400">
+                      Conta como 1 etapa do percentual total.
+                    </p>
+                  </div>
+                  {plano.mediadores.map((mediador) => (
+                    <div
+                      key={mediador.id}
+                      className="rounded-xl border border-slate-800 bg-slate-900/80 p-3"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-black text-slate-100">
+                          {mediador.nome}
+                        </p>
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-black ${
+                            mediador.conclusao
+                              ? "bg-emerald-400 text-slate-950"
+                              : "bg-amber-300 text-slate-950"
+                          }`}
+                        >
+                          {mediador.conclusao ? "Concluído" : "Pendente"}
+                        </span>
+                      </div>
+                      {mediador.conclusao && (
+                        <p className="mt-2 text-sm font-semibold leading-6 text-slate-300">
+                          {mediador.conclusao.conclusao}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
               <p className="text-xs font-black uppercase text-slate-400">
                 Observações registradas
@@ -277,6 +458,64 @@ export default function PlanoAcaoTratamento() {
               <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-6 text-slate-200">
                 {plano.comentarios || "Nenhuma observação registrada."}
               </p>
+            </div>
+            <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase text-slate-400">
+                    Custos e investimento
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-slate-400">
+                    Informado pelos responsáveis pela execução.
+                  </p>
+                </div>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-black ${
+                    plano.tratamentoCustos?.houveCusto
+                      ? "bg-amber-300 text-slate-950"
+                      : "bg-slate-800 text-slate-200"
+                  }`}
+                >
+                  {plano.tratamentoCustos?.houveCusto
+                    ? "Com custo"
+                    : "Sem custo informado"}
+                </span>
+              </div>
+              {plano.tratamentoCustos?.houveCusto ? (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <p className="text-xs font-black uppercase text-slate-500">
+                      Tipo
+                    </p>
+                    <p className="mt-1 font-bold">
+                      {plano.tratamentoCustos.tipo || "Não informado"}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-3">
+                    <p className="text-xs font-black uppercase text-slate-500">
+                      Valores
+                    </p>
+                    <p className="mt-1 font-bold">
+                      Estimado:{" "}
+                      {plano.tratamentoCustos.valorEstimado || "Não informado"}
+                    </p>
+                    <p className="text-sm font-semibold text-slate-300">
+                      Realizado:{" "}
+                      {plano.tratamentoCustos.valorRealizado ||
+                        "Não informado"}
+                    </p>
+                  </div>
+                  {plano.tratamentoCustos.observacao && (
+                    <p className="rounded-xl border border-slate-800 bg-slate-900/80 p-3 text-sm font-semibold leading-6 text-slate-300 sm:col-span-2">
+                      {plano.tratamentoCustos.observacao}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-4 text-sm font-semibold text-slate-400">
+                  Nenhum custo ou investimento registrado para este tratamento.
+                </p>
+              )}
             </div>
           </section>
 
@@ -373,7 +612,7 @@ export default function PlanoAcaoTratamento() {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-300">
-                  Tratar plano de ação
+                  Tratamento da execução
                 </p>
                 <h2 className="mt-1 text-2xl font-black">{plano.codigo}</h2>
                 <p className="mt-1 text-sm font-semibold text-amber-100">
@@ -420,6 +659,91 @@ export default function PlanoAcaoTratamento() {
               />
             </label>
 
+            <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-950/60 p-4">
+              <label className="flex items-center gap-3 text-sm font-bold text-slate-100">
+                <input
+                  type="checkbox"
+                  checked={form.houveCusto}
+                  onChange={(evento) =>
+                    setForm((atual) => ({
+                      ...atual,
+                      houveCusto: evento.target.checked,
+                    }))
+                  }
+                  className="h-5 w-5 rounded border-slate-600 bg-slate-950"
+                />
+                Houve custo ou investimento para resolução
+              </label>
+
+              {form.houveCusto && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-1 text-sm font-bold text-slate-200">
+                    Tipo
+                    <select
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-400"
+                      value={form.tipoCusto}
+                      onChange={(evento) =>
+                        setForm((atual) => ({
+                          ...atual,
+                          tipoCusto: evento.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Selecione</option>
+                      <option value="Custo operacional">Custo operacional</option>
+                      <option value="Investimento">Investimento</option>
+                      <option value="Manutenção">Manutenção</option>
+                      <option value="Contratação">Contratação</option>
+                      <option value="Compra">Compra</option>
+                      <option value="Outro">Outro</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-sm font-bold text-slate-200">
+                    Valor estimado
+                    <input
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-400"
+                      placeholder="R$ 0,00"
+                      value={form.valorEstimado}
+                      onChange={(evento) =>
+                        setForm((atual) => ({
+                          ...atual,
+                          valorEstimado: evento.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm font-bold text-slate-200">
+                    Valor realizado
+                    <input
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-400"
+                      placeholder="R$ 0,00"
+                      value={form.valorRealizado}
+                      onChange={(evento) =>
+                        setForm((atual) => ({
+                          ...atual,
+                          valorRealizado: evento.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                  <label className="space-y-1 text-sm font-bold text-slate-200 sm:col-span-2">
+                    Observação do custo/investimento
+                    <textarea
+                      className="min-h-24 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-400"
+                      placeholder="Descreva o motivo, fornecedor, compra, investimento ou detalhe financeiro"
+                      value={form.observacaoCusto}
+                      onChange={(evento) =>
+                        setForm((atual) => ({
+                          ...atual,
+                          observacaoCusto: evento.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+
             <label className="mt-4 flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-400/40 bg-blue-500/10 p-5 text-center text-sm font-bold text-blue-100 transition hover:bg-blue-500/15">
               <FileUp size={24} />
               Anexar imagens ou arquivos PDF
@@ -459,7 +783,65 @@ export default function PlanoAcaoTratamento() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <Save size={16} />
-                {salvando ? "Salvando..." : "Salvar tratamento"}
+                {salvando ? "Salvando..." : "Salvar tratamento da execução"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {popupMediadorAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={salvarConclusaoMediador}
+            className="w-full max-w-xl rounded-3xl border border-slate-700 bg-slate-900 p-5 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.25em] text-blue-300">
+                  Conclusão do mediador
+                </p>
+                <h2 className="mt-1 text-2xl font-black">{plano.codigo}</h2>
+                <p className="mt-1 text-sm font-semibold text-slate-300">
+                  {mediadorAtual
+                    ? `Mediador: ${mediadorAtual.nome}`
+                    : "Somente mediadores vinculados podem concluir"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPopupMediadorAberto(false)}
+                className="rounded-xl border border-slate-700 p-2 text-slate-300 transition hover:border-red-300 hover:text-red-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <label className="mt-5 block space-y-1 text-sm font-bold text-slate-200">
+              Conclusão da análise
+              <textarea
+                className="min-h-36 w-full rounded-xl border border-slate-700 bg-slate-950 p-3 text-white outline-none focus:border-blue-400"
+                placeholder="Descreva sua conclusão sobre este plano de ação"
+                value={conclusaoMediador}
+                onChange={(evento) => setConclusaoMediador(evento.target.value)}
+                required
+              />
+            </label>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setPopupMediadorAberto(false)}
+                className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-black text-slate-100 transition hover:bg-slate-800"
+              >
+                Cancelar
+              </button>
+              <button
+                disabled={salvando}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <CheckCircle2 size={16} />
+                {salvando ? "Salvando..." : "Concluir análise"}
               </button>
             </div>
           </form>

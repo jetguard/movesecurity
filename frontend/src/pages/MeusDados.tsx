@@ -4,11 +4,13 @@ import { AtSign, ClipboardList, UserCircle } from "lucide-react";
 import Perfil from "./Perfil";
 import MinhaJornada from "./MinhaJornada";
 import Mencoes from "./Mencoes";
+import Tarefas from "./Tarefas";
 
 const abas = [
   { id: "perfil", label: "Meu Perfil", icon: UserCircle },
   { id: "jornada", label: "Minha Jornada", icon: ClipboardList },
   { id: "mencoes", label: "Minhas Menções", icon: AtSign },
+  { id: "tarefas", label: "Minhas Tarefas", icon: ClipboardList },
 ];
 
 export default function MeusDados() {
@@ -64,6 +66,7 @@ export default function MeusDados() {
       {abaAtiva === "perfil" && <Perfil />}
       {abaAtiva === "jornada" && <MinhaJornada />}
       {abaAtiva === "mencoes" && <Mencoes />}
+      {abaAtiva === "tarefas" && <Tarefas />}
     </div>
   );
 }

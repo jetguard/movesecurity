@@ -7,9 +7,11 @@ import {
   atualizarSolicitacaoImagem,
   assumirAtendimentoSolicitacaoImagem,
   buscarSolicitacaoImagem,
+  coletarEvidenciasSolicitacaoImagem,
   criarSolicitacaoImagem,
   criarSolicitacaoImagemPublica,
   enviarFormularioSolicitacaoImagem,
+  excluirEvidenciaSolicitacaoImagem,
   excluirSolicitacaoImagem,
   iniciarAtendimentoSolicitacaoImagem,
   listarSolicitacoesImagem,
@@ -56,6 +58,8 @@ router.put("/:id", upload.array("anexos"), atualizarSolicitacaoImagem);
 router.post("/:id/atendimento/iniciar", iniciarAtendimentoSolicitacaoImagem);
 router.post("/:id/atendimento/assumir", assumirAtendimentoSolicitacaoImagem);
 router.post("/:id/atendimento/pausar", pausarAtendimentoSolicitacaoImagem);
+router.post("/:id/evidencias", upload.array("evidencias"), coletarEvidenciasSolicitacaoImagem);
+router.delete("/:id/evidencias/:anexoId", excluirEvidenciaSolicitacaoImagem);
 router.delete("/:id", excluirSolicitacaoImagem);
 
 publicRouter.get("/:token", validarTokenSolicitacaoImagem);

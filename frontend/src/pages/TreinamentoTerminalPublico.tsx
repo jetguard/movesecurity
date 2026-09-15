@@ -822,7 +822,7 @@ export default function TreinamentoTerminalPublico() {
                   onClick={pularVideoParaTeste}
                   className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm font-black text-amber-800 shadow-sm hover:bg-amber-100"
                 >
-                  Pular vídeo teste
+                  Pular vídeo
                 </button>
               )}
             </div>

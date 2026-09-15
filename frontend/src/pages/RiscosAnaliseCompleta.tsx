@@ -138,6 +138,7 @@ type Formulario = {
   riscoId: string;
   fatoresIds: string[];
   estrategiaTratamento: string;
+  finalizacaoAprovadorId: string;
   sc: number;
   fe: number;
   intervalo: number;
@@ -147,6 +148,15 @@ type Formulario = {
   adm: number;
   img: number;
   lc: number;
+};
+
+type Responsavel = {
+  id: number;
+  nome: string;
+  email?: string | null;
+  setor?: string | null;
+  cargo?: string | null;
+  perfilAcesso?: string | null;
 };
 
 type CampoNota = keyof Pick<
@@ -188,6 +198,7 @@ const formularioInicial: Formulario = {
   riscoId: "",
   fatoresIds: [],
   estrategiaTratamento: "",
+  finalizacaoAprovadorId: "",
   sc: 1,
   fe: 1,
   intervalo: 1,
@@ -386,6 +397,7 @@ export default function RiscosAnaliseCompleta() {
   const navigate = useNavigate();
   const [cadastro, setCadastro] = useState<CadastroGeral>(cadastroVazio);
   const [analises, setAnalises] = useState<AnaliseCompleta[]>([]);
+  const [responsaveis, setResponsaveis] = useState<Responsavel[]>([]);
   const [form, setForm] = useState<Formulario>(formularioInicial);
   const [formularioAnaliseAberto, setFormularioAnaliseAberto] = useState(false);
   const [analiseEditando, setAnaliseEditando] =
@@ -423,12 +435,15 @@ export default function RiscosAnaliseCompleta() {
 
   async function carregar() {
     setCarregando(true);
-    const [cadastroResponse, analisesResponse] = await Promise.all([
+    const [cadastroResponse, analisesResponse, responsaveisResponse] =
+      await Promise.all([
       api.get("/riscos/cadastro-geral"),
       api.get("/riscos/analise-completa"),
+      api.get("/riscos/responsaveis"),
     ]);
     setCadastro(cadastroResponse.data);
     setAnalises(analisesResponse.data);
+    setResponsaveis(responsaveisResponse.data);
     setCarregando(false);
   }
 
@@ -541,6 +556,15 @@ export default function RiscosAnaliseCompleta() {
     () =>
       cadastro.riscos.find((item) => String(item.id) === form.riscoId) || null,
     [cadastro.riscos, form.riscoId],
+  );
+  const aprovadores = useMemo(
+    () =>
+      responsaveis.filter((usuario) =>
+        ["ADMINISTRADOR", "SUPER_ADMIN"].includes(
+          String(usuario.perfilAcesso || "").toUpperCase(),
+        ),
+      ),
+    [responsaveis],
   );
 
   const resumoAnalises = useMemo(() => {
@@ -679,6 +703,7 @@ export default function RiscosAnaliseCompleta() {
       riscoId: Number(form.riscoId),
       fatoresRisco: fatoresSelecionados(),
       estrategiaTratamento: form.estrategiaTratamento || null,
+      finalizacaoAprovadorId: Number(form.finalizacaoAprovadorId),
       sc: form.sc,
       fe: form.fe,
       intervalo: form.intervalo,
@@ -1092,11 +1117,6 @@ export default function RiscosAnaliseCompleta() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span
-                className={`inline-flex w-fit rounded-full px-3 py-1 text-xs font-black ${previa.cor}`}
-              >
-                Prévia: {previa.nivel} / NRI {previa.resultado}
-              </span>
               <ChevronDown
                 className={`text-blue-200 transition-transform duration-200 ${
                   formularioAnaliseAberto ? "rotate-180" : ""
@@ -1180,6 +1200,36 @@ export default function RiscosAnaliseCompleta() {
                       </option>
                     ))}
                   </select>
+                </label>
+
+                <label className="text-sm font-black text-slate-200">
+                  Aprovador da Segurança Patrimonial
+                  <select
+                    className={`${inputClass} mt-2 w-full`}
+                    value={form.finalizacaoAprovadorId}
+                    onChange={(event) =>
+                      setForm((atual) => ({
+                        ...atual,
+                        finalizacaoAprovadorId: event.target.value,
+                      }))
+                    }
+                    required
+                  >
+                    <option value="">Selecione o aprovador</option>
+                    {aprovadores.map((usuario) => (
+                      <option key={usuario.id} value={usuario.id}>
+                        {usuario.nome}
+                        {usuario.setor ? ` | ${usuario.setor}` : ""}
+                        {usuario.cargo ? ` | ${usuario.cargo}` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  {!aprovadores.length && (
+                    <span className="mt-2 block rounded-xl border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-xs text-amber-100">
+                      Cadastre ou ative um usuário Administrador para aprovar
+                      as análises de risco.
+                    </span>
+                  )}
                 </label>
               </div>
 

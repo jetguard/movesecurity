@@ -10,11 +10,11 @@ import { acessoRelatorios, autenticarUsuario, autorizarPerfis } from "../middlew
 
 const router = Router();
 
-router.get("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), minhasMencoes);
-router.get("/contador", autenticarUsuario, autorizarPerfis(acessoRelatorios), contarMencoes);
+router.get("/", autenticarUsuario, minhasMencoes);
+router.get("/contador", autenticarUsuario, contarMencoes);
 router.get("/usuarios", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarUsuariosMencao);
 router.post("/", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarMencao);
-router.put("/:id/lida", autenticarUsuario, autorizarPerfis(acessoRelatorios), marcarMencaoLida);
+router.put("/:id/lida", autenticarUsuario, marcarMencaoLida);
 
 export default router;
 

@@ -2,12 +2,16 @@ import { Router } from "express";
 import {
   adicionarInformacaoPassagem,
   atualizarPassagemTurno,
+  atualizarScannerPassagem,
   criarPassagemTurno,
   criarRegistroOperacional,
+  criarScannerPassagem,
   excluirPassagemTurno,
+  excluirScannerPassagem,
   finalizarPassagemTurno,
   gerarPdfPassagemTurno,
   listarPassagensTurno,
+  listarScannerPassagens,
   listarUsuariosMesmaEquipe,
   ultimoChecklistEquipamentosPassagem,
   painelOperacionalSoc,
@@ -25,6 +29,10 @@ const router = Router();
 router.get("/soc", autenticarUsuario, autorizarPerfis(acessoRelatorios), painelOperacionalSoc);
 router.post("/registros", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarRegistroOperacional);
 router.get("/usuarios-equipe", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarUsuariosMesmaEquipe);
+router.get("/scanner", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarScannerPassagens);
+router.post("/scanner", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarScannerPassagem);
+router.put("/scanner/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), atualizarScannerPassagem);
+router.delete("/scanner/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirScannerPassagem);
 router.get("/passagens-turno", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarPassagensTurno);
 router.get("/passagens-turno/ultimo-checklist-equipamentos", autenticarUsuario, autorizarPerfis(acessoRelatorios), ultimoChecklistEquipamentosPassagem);
 router.post("/passagens-turno", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarPassagemTurno);

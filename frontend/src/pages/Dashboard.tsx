@@ -26,11 +26,18 @@ import { SkeletonDashboard } from "../components/ui/Skeleton";
 
 type AnaliseOcorrencia = {
   prejuizoFinanceiro?: string;
+  houveDanoPrejuizo?: string | null;
+  tipoImpactoFinanceiro?: string | null;
+  valorPrejuizo?: string;
+  valorRecuperado?: string;
   status?: string;
 };
 
 type AnaliseEvento = {
   valorRecuperado?: string;
+  houveDanoPrejuizo?: string | null;
+  tipoImpactoFinanceiro?: string | null;
+  valorPrejuizo?: string;
   status?: string;
 };
 
@@ -40,6 +47,7 @@ type RelatorioBase = {
   assunto: string;
   local: string;
   natureza: string;
+  subNatureza?: string;
   status: string;
 };
 
@@ -833,6 +841,7 @@ export default function Dashboard() {
   const [ano, setAno] = useState("");
   const [status, setStatus] = useState("");
   const [local, setLocal] = useState("");
+  const [tipoDadosPdf, setTipoDadosPdf] = useState("ambos");
   const usuario = usuarioAtual();
   const isOperador = usuario?.perfilAcesso === PERFIS.OPERADOR;
 
@@ -982,14 +991,50 @@ export default function Dashboard() {
     );
   });
 
-  const totalPrejuizo = ocorrenciasFiltradas.reduce(
-    (total, item) => total + moedaParaNumero(item.analise?.prejuizoFinanceiro),
-    0,
-  );
-  const totalRecuperado = eventosFiltrados.reduce(
-    (total, item) => total + moedaParaNumero(item.analise?.valorRecuperado),
-    0,
-  );
+  function valorPrejuizoAnalise(
+    analise?: AnaliseOcorrencia | AnaliseEvento | null,
+  ) {
+    if (
+      !analise ||
+      analise.houveDanoPrejuizo === "Não" ||
+      analise.houveDanoPrejuizo === "Sem alteração"
+    )
+      return 0;
+    const valorLegado =
+      "prejuizoFinanceiro" in analise ? analise.prejuizoFinanceiro : "0,00";
+    return moedaParaNumero(analise.valorPrejuizo || valorLegado);
+  }
+
+  function valorRecuperadoAnaliseDashboard(
+    analise?: AnaliseOcorrencia | AnaliseEvento | null,
+  ) {
+    if (
+      !analise ||
+      analise.houveDanoPrejuizo === "Não" ||
+      analise.houveDanoPrejuizo === "Sem alteração"
+    )
+      return 0;
+    return moedaParaNumero(analise.valorRecuperado);
+  }
+
+  const totalPrejuizo =
+    ocorrenciasFiltradas.reduce(
+      (total, item) => total + valorPrejuizoAnalise(item.analise),
+      0,
+    ) +
+    eventosFiltrados.reduce(
+      (total, item) => total + valorPrejuizoAnalise(item.analise),
+      0,
+    );
+  const totalRecuperado =
+    ocorrenciasFiltradas.reduce(
+      (total, item) => total + valorRecuperadoAnaliseDashboard(item.analise),
+      0,
+    ) +
+    eventosFiltrados.reduce(
+      (total, item) => total + valorRecuperadoAnaliseDashboard(item.analise),
+      0,
+    );
   const diferenca = totalPrejuizo - totalRecuperado;
 
   const temporal = useMemo(() => {
@@ -1139,52 +1184,361 @@ export default function Dashboard() {
     },
   ];
 
+  function textoPeriodoPdf() {
+    if (periodo === "30") return "Últimos 30 dias";
+    if (periodo === "90") return "Últimos 90 dias";
+    if (periodo === "ano") return "Ano atual";
+    return "Todo período";
+  }
+
+  function esc(valor?: string | number | null) {
+    return String(valor ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function rankearPorCampo<T extends RelatorioBase>(
+    itens: T[],
+    campo: "local" | "natureza" | "subNatureza",
+    limite = 8,
+  ) {
+    const mapa = new Map<string, number>();
+    itens.forEach((item) => {
+      const chave = String(item[campo] || "Não informado").trim();
+      mapa.set(chave, (mapa.get(chave) || 0) + 1);
+    });
+    return Array.from(mapa.entries())
+      .map(([nome, total]) => ({ nome, total }))
+      .sort((a, b) => b.total - a.total || a.nome.localeCompare(b.nome))
+      .slice(0, limite);
+  }
+
+  function contarStatusPdf<T extends RelatorioBase>(itens: T[]) {
+    const mapa = new Map<string, number>();
+    itens.forEach((item) => {
+      const chave = normalizarStatus(item.status);
+      mapa.set(chave, (mapa.get(chave) || 0) + 1);
+    });
+    return Array.from(mapa.entries()).map(([nome, total]) => ({ nome, total }));
+  }
+
+  function graficoBarrasPdf(
+    titulo: string,
+    dados: { nome: string; total: number }[],
+    cor = "#2563eb",
+  ) {
+    const maximo = Math.max(1, ...dados.map((item) => item.total));
+    const linhas = dados.length
+      ? dados
+          .map(
+            (item) => `
+              <div class="bar-row">
+                <div class="bar-label">${esc(item.nome)}</div>
+                <div class="bar-track">
+                  <div class="bar-fill" style="width:${Math.max(10, (item.total / maximo) * 100)}%; background:${cor};"></div>
+                </div>
+                <div class="bar-value">${item.total}</div>
+              </div>
+            `,
+          )
+          .join("")
+      : `<div class="empty">Sem dados para este filtro.</div>`;
+
+    return `
+      <section class="panel">
+        <h2>${esc(titulo)}</h2>
+        <div class="bars">${linhas}</div>
+      </section>
+    `;
+  }
+
+  function tabelaRegistrosPdf<
+    T extends RelatorioBase & {
+      analise?: AnaliseOcorrencia | AnaliseEvento | null;
+      dataOcorrencia?: string;
+      dataEvento?: string;
+    },
+  >(
+    titulo: string,
+    itens: T[],
+    dataCampo: "dataOcorrencia" | "dataEvento",
+  ) {
+    const linhas = itens.length
+      ? itens
+          .map((item) => {
+            const data = new Date(String(item[dataCampo] || ""));
+            const dataFormatada = Number.isNaN(data.getTime())
+              ? "-"
+              : data.toLocaleString("pt-BR");
+            return `
+              <tr>
+                <td>${esc(item.codigo)}</td>
+                <td>${esc(item.assunto)}</td>
+                <td>${esc(item.local || "Não informado")}</td>
+                <td>${esc(item.natureza || "Não informado")}</td>
+                <td>${esc(item.subNatureza || "Não informado")}</td>
+                <td>${esc(normalizarStatus(item.status))}</td>
+                <td>${esc(dataFormatada)}</td>
+                ${
+                  isOperador
+                    ? ""
+                    : `
+                      <td>${formatarMoeda(valorPrejuizoAnalise(item.analise))}</td>
+                      <td>${formatarMoeda(valorRecuperadoAnaliseDashboard(item.analise))}</td>
+                    `
+                }
+              </tr>
+            `;
+          })
+          .join("")
+      : `<tr><td colspan="${isOperador ? 7 : 9}">Sem registros para o filtro selecionado.</td></tr>`;
+
+    return `
+      <section class="page-break-avoid">
+        <h2>${esc(titulo)}</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Assunto</th>
+              <th>Local</th>
+              <th>Natureza</th>
+              <th>Subnatureza</th>
+              <th>Status</th>
+              <th>Data</th>
+              ${isOperador ? "" : "<th>Dano/Prejuízo</th><th>Recuperado</th>"}
+            </tr>
+          </thead>
+          <tbody>${linhas}</tbody>
+        </table>
+      </section>
+    `;
+  }
+
   function gerarRelatorioPdf() {
     const janela = window.open("", "_blank");
     if (!janela) return;
 
+    const incluirOcorrencias = tipoDadosPdf !== "eventos";
+    const incluirEventos = tipoDadosPdf !== "ocorrencias";
+    const ocorrenciasPdf = incluirOcorrencias ? ocorrenciasFiltradas : [];
+    const eventosPdf = incluirEventos ? eventosFiltrados : [];
+    const todosRegistrosPdf = [...ocorrenciasPdf, ...eventosPdf];
+    const totalPrejuizoPdf =
+      ocorrenciasPdf.reduce(
+        (total, item) => total + valorPrejuizoAnalise(item.analise),
+        0,
+      ) +
+      eventosPdf.reduce(
+        (total, item) => total + valorPrejuizoAnalise(item.analise),
+        0,
+      );
+    const totalRecuperadoPdf =
+      ocorrenciasPdf.reduce(
+        (total, item) => total + valorRecuperadoAnaliseDashboard(item.analise),
+        0,
+      ) +
+      eventosPdf.reduce(
+        (total, item) => total + valorRecuperadoAnaliseDashboard(item.analise),
+        0,
+      );
+    const diferencaPdf = totalPrejuizoPdf - totalRecuperadoPdf;
+    const temporalPdf = temporal.map((item) => ({
+      mes: item.mes,
+      ocorrencias: incluirOcorrencias ? item.ocorrencias : 0,
+      eventos: incluirEventos ? item.eventos : 0,
+      total:
+        (incluirOcorrencias ? item.ocorrencias : 0) +
+        (incluirEventos ? item.eventos : 0),
+    }));
+    const statusPdf = contarStatusPdf(todosRegistrosPdf);
+    const naturezasPdf = rankearPorCampo(todosRegistrosPdf, "natureza");
+    const subNaturezasPdf = rankearPorCampo(todosRegistrosPdf, "subNatureza");
+    const locaisPdf = rankearPorCampo(todosRegistrosPdf, "local");
+    const escopoPdf =
+      tipoDadosPdf === "ocorrencias"
+        ? "Somente ocorrências"
+        : tipoDadosPdf === "eventos"
+          ? "Somente eventos"
+          : "Ocorrências e eventos";
+
     janela.document.write(`
       <html>
         <head>
-          <title>Relatório de Análise</title>
+          <title>Relatório Executivo do Dashboard</title>
           <style>
-            body { font-family: Arial, sans-serif; padding: 32px; color: #0f172a; }
-            header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #cbd5e1; padding-bottom: 16px; margin-bottom: 24px; }
-            img { width: 180px; }
-            h1 { font-size: 24px; margin: 0; }
-            .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
-            .card { border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; }
-            .label { color: #64748b; font-size: 12px; }
-            .value { font-size: 22px; font-weight: 700; margin-top: 6px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-            th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; font-size: 12px; }
-            th { background: #f8fafc; }
+            * { box-sizing: border-box; }
+            html, body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { size: A4 landscape; margin: 10mm; }
+            body { margin: 0; background: #e8edf5; color: #111827; font-family: Arial, sans-serif; }
+            main { margin: 0 auto; max-width: 1180px; background: #fff; padding: 0 26px 22px; }
+            header { margin: 0 -26px 22px; padding: 24px 28px; color: #fff; background: linear-gradient(135deg, #071225 0%, #12326b 58%, #0b7285 100%); }
+            .header-row { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+            .logo-box { display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: #fff; padding: 10px 14px; box-shadow: 0 10px 24px rgba(2, 6, 23, .22); }
+            img { width: 164px; display: block; }
+            h1 { margin: 0; font-size: 28px; letter-spacing: 0; }
+            h2 { margin: 0 0 11px; font-size: 15px; color: #0f172a; }
+            h3 { margin: 0 0 8px; font-size: 12px; color: #334155; text-transform: uppercase; letter-spacing: .08em; }
+            p { margin: 5px 0; color: #475569; font-size: 11px; line-height: 1.42; }
+            .meta { text-align: right; }
+            .meta p { color: #dbeafe; font-size: 11px; }
+            .badge { display: inline-block; margin-bottom: 9px; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; padding: 5px 10px; color: #e0f2fe; background: rgba(255,255,255,.10); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+            .section { margin-top: 16px; }
+            .filters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 10px; }
+            .filter { border: 1px solid #d8e2ee; border-radius: 8px; padding: 9px 10px; background: #f8fafc; }
+            .label { color: #64748b; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+            .value { margin-top: 4px; color: #0f172a; font-size: 13px; font-weight: 700; }
+            .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; margin: 12px 0 6px; }
+            .card { min-height: 76px; border: 1px solid #d8e2ee; border-left: 5px solid #2563eb; border-radius: 10px; padding: 12px; background: #ffffff; box-shadow: 0 8px 20px rgba(15, 23, 42, .06); }
+            .card:nth-child(4) { border-left-color: #ef4444; }
+            .card:nth-child(5) { border-left-color: #10b981; }
+            .card:nth-child(6) { border-left-color: #f59e0b; }
+            .card .value { font-size: 22px; line-height: 1.1; }
+            .panel { border: 1px solid #d8e2ee; border-radius: 10px; padding: 13px; margin-top: 14px; background: #fff; break-inside: avoid; box-shadow: 0 7px 18px rgba(15, 23, 42, .05); }
+            .two-col { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .bars { display: grid; gap: 7px; }
+            .bar-row { display: grid; grid-template-columns: 150px 1fr 36px; align-items: center; gap: 9px; font-size: 10px; }
+            .bar-label { color: #334155; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .bar-track { height: 13px; border-radius: 999px; background: #e2e8f0; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(148,163,184,.20); }
+            .bar-fill { display: block; height: 100%; border-radius: 999px; }
+            .bar-value { text-align: right; color: #0f172a; font-weight: 700; }
+            .temporal { display: grid; gap: 8px; }
+            .temporal-row { display: grid; grid-template-columns: 72px 1fr 48px; align-items: center; gap: 10px; font-size: 10px; }
+            .temporal-stack { display: flex; height: 18px; overflow: hidden; border-radius: 999px; background: #e2e8f0; box-shadow: inset 0 0 0 1px rgba(148,163,184,.20); }
+            .occ { display: block; height: 100%; background: #ef4444; }
+            .evt { display: block; height: 100%; background: #0ea5e9; }
+            .legend { display: flex; gap: 14px; margin-top: 9px; font-size: 10px; color: #475569; }
+            .dot { display: inline-block; width: 9px; height: 9px; border-radius: 999px; margin-right: 5px; vertical-align: -1px; }
+            table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 9px; border: 1px solid #d8e2ee; border-radius: 8px; overflow: hidden; }
+            th, td { border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; padding: 6px 7px; text-align: left; font-size: 9px; vertical-align: top; }
+            th:last-child, td:last-child { border-right: 0; }
+            tr:last-child td { border-bottom: 0; }
+            th { background: #10213d; color: #fff; font-size: 8px; text-transform: uppercase; letter-spacing: .06em; }
+            tbody tr:nth-child(even) { background: #f8fafc; }
+            .empty { color: #64748b; font-size: 11px; padding: 10px; background: #f8fafc; border-radius: 8px; }
+            .page-break-avoid { break-inside: avoid; margin-top: 18px; }
+            footer { margin-top: 20px; padding-top: 10px; border-top: 1px solid #cbd5e1; color: #64748b; font-size: 9px; }
+            @media print {
+              body { background: #fff; }
+              main { max-width: none; padding: 0 0 8px; }
+              header { margin: 0 0 16px; border-radius: 0; }
+              .panel, .card, .filter, table { break-inside: avoid; }
+            }
           </style>
         </head>
         <body>
-          <header>
-            <img src="/images/movecta-logo.png" />
-            <div><h1>Relatório de Análise</h1><p>Gerado em ${new Date().toLocaleString()}</p></div>
-          </header>
-          <p><strong>Filtros:</strong> período ${periodo}, mês ${mes || "todos"}, ano ${ano || "todos"}, status ${status || "todos"}, local ${local || "todos"}</p>
-          <div class="grid">
-            <div class="card"><div class="label">Ocorrências</div><div class="value">${ocorrenciasFiltradas.length}</div></div>
-            <div class="card"><div class="label">Eventos</div><div class="value">${eventosFiltrados.length}</div></div>
-            <div class="card"><div class="label">Investigações</div><div class="value">${investigacoesFiltradas.length}</div></div>
+          <main>
+            <header>
+              <div class="header-row">
+                <div class="logo-box"><img src="/images/movecta-logo.png" /></div>
+                <div class="meta">
+                  <div class="badge">${esc(escopoPdf)}</div>
+                  <h1>Relatório Executivo do Dashboard</h1>
+                  <p>Gerado em ${new Date().toLocaleString("pt-BR")}</p>
+                </div>
+              </div>
+            </header>
+
+            <section class="section">
+              <h2>Filtros Aplicados</h2>
+              <div class="filters">
+                <div class="filter"><div class="label">Período</div><div class="value">${esc(textoPeriodoPdf())}</div></div>
+                <div class="filter"><div class="label">Mês</div><div class="value">${esc(mes || "Todos")}</div></div>
+                <div class="filter"><div class="label">Ano</div><div class="value">${esc(ano || "Todos")}</div></div>
+                <div class="filter"><div class="label">Status</div><div class="value">${esc(status || "Todos")}</div></div>
+                <div class="filter"><div class="label">Local</div><div class="value">${esc(local || "Todos")}</div></div>
+              </div>
+            </section>
+
+            <section class="section">
+              <h2>Resumo Executivo</h2>
+              <p>Documento elaborado com os dados filtrados no dashboard no momento da geração. Os indicadores financeiros consolidam danos/prejuízos e valores recuperados informados nas análises de ocorrências e eventos.</p>
+              <div class="grid">
+                <div class="card"><div class="label">Ocorrências</div><div class="value">${ocorrenciasPdf.length}</div><p>Relatórios filtrados</p></div>
+                <div class="card"><div class="label">Eventos</div><div class="value">${eventosPdf.length}</div><p>Registros operacionais</p></div>
+                <div class="card"><div class="label">Registros analisados</div><div class="value">${todosRegistrosPdf.length}</div><p>Base deste relatório</p></div>
+                ${
+                  isOperador
+                    ? ""
+                    : `
+                      <div class="card"><div class="label">Dano/Prejuízo</div><div class="value">${formatarMoeda(totalPrejuizoPdf)}</div><p>Total declarado</p></div>
+                      <div class="card"><div class="label">Valor recuperado</div><div class="value">${formatarMoeda(totalRecuperadoPdf)}</div><p>Recuperação registrada</p></div>
+                      <div class="card"><div class="label">Saldo a recuperar</div><div class="value">${formatarMoeda(diferencaPdf)}</div><p>Diferença consolidada</p></div>
+                    `
+                }
+              </div>
+            </section>
+
+            <section class="panel">
+              <h2>Análise Temporal</h2>
+              <div class="temporal">
+                ${
+                  temporalPdf.length
+                    ? temporalPdf
+                        .map((item) => {
+                          const total = Math.max(1, item.total);
+                          const occ =
+                            item.ocorrencias > 0
+                              ? Math.max(8, (item.ocorrencias / total) * 100)
+                              : 0;
+                          const evt =
+                            item.eventos > 0
+                              ? Math.max(8, (item.eventos / total) * 100)
+                              : 0;
+                          return `
+                            <div class="temporal-row">
+                              <div>${esc(item.mes)}</div>
+                              <div class="temporal-stack">
+                                ${incluirOcorrencias ? `<div class="occ" style="width:${occ}%"></div>` : ""}
+                                ${incluirEventos ? `<div class="evt" style="width:${evt}%"></div>` : ""}
+                              </div>
+                              <div><strong>${item.total}</strong></div>
+                            </div>
+                          `;
+                        })
+                        .join("")
+                    : `<div class="empty">Sem histórico para montar a análise temporal.</div>`
+                }
+              </div>
+              <div class="legend">
+                ${incluirOcorrencias ? `<span><i class="dot occ"></i>Ocorrências</span>` : ""}
+                ${incluirEventos ? `<span><i class="dot evt"></i>Eventos</span>` : ""}
+              </div>
+            </section>
+
+            <section class="section two-col">
+              ${graficoBarrasPdf("Naturezas com maior índice", naturezasPdf, "#2563eb")}
+              ${graficoBarrasPdf("Subnaturezas com maior índice", subNaturezasPdf, "#7c3aed")}
+              ${graficoBarrasPdf("Locais com maior volume", locaisPdf, "#0891b2")}
+              ${graficoBarrasPdf("Distribuição por status", statusPdf, "#f59e0b")}
+            </section>
+
             ${
-              isOperador
-                ? ""
-                : `
-              <div class="card"><div class="label">Prejuízo total</div><div class="value">${formatarMoeda(totalPrejuizo)}</div></div>
-              <div class="card"><div class="label">Valor recuperado</div><div class="value">${formatarMoeda(totalRecuperado)}</div></div>
-              <div class="card"><div class="label">Diferença</div><div class="value">${formatarMoeda(diferenca)}</div></div>
-            `
+              incluirOcorrencias
+                ? tabelaRegistrosPdf(
+                    "Dados filtrados - Ocorrências",
+                    ocorrenciasPdf,
+                    "dataOcorrencia",
+                  )
+                : ""
             }
-          </div>
-          <table>
-            <thead><tr><th>Mês</th><th>Ocorrências</th><th>Eventos</th></tr></thead>
-            <tbody>${temporal.map((item) => `<tr><td>${item.mes}</td><td>${item.ocorrencias}</td><td>${item.eventos}</td></tr>`).join("")}</tbody>
-          </table>
+            ${
+              incluirEventos
+                ? tabelaRegistrosPdf(
+                    "Dados filtrados - Eventos",
+                    eventosPdf,
+                    "dataEvento",
+                  )
+                : ""
+            }
+
+            <footer>
+              Relatório gerado pelo MoveSecurity com base nos filtros ativos do dashboard. Valores não informados permanecem considerados como R$ 0,00.
+            </footer>
+          </main>
           <script>window.print();</script>
         </body>
       </html>
@@ -1212,7 +1566,17 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
+          <select
+            value={tipoDadosPdf}
+            onChange={(e) => setTipoDadosPdf(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100"
+            title="Dados do PDF"
+          >
+            <option value="ambos">PDF: Ocorrências e eventos</option>
+            <option value="ocorrencias">PDF: Somente ocorrências</option>
+            <option value="eventos">PDF: Somente eventos</option>
+          </select>
           <button
             type="button"
             onClick={gerarRelatorioPdf}

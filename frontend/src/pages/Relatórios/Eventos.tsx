@@ -75,6 +75,9 @@ type AnaliseEvento = {
   id: number;
   status: string;
   valorRecuperado: string;
+  houveDanoPrejuizo?: string | null;
+  tipoImpactoFinanceiro?: string | null;
+  valorPrejuizo?: string;
   conclusaoAnalise?: string;
 };
 
@@ -259,7 +262,10 @@ export default function Eventos() {
   const [anexos, setAnexos] = useState<File[]>([]);
   const [analiseAtual, setAnaliseAtual] = useState<AnaliseEvento | null>(null);
   const [statusAnalise, setStatusAnalise] = useState("Em Análise");
-  const [valorRecuperado, setValorRecuperado] = useState("0,00");
+  const [houveDanoPrejuizo, setHouveDanoPrejuizo] = useState("");
+  const [tipoImpactoFinanceiro, setTipoImpactoFinanceiro] = useState("");
+  const [valorPrejuizo, setValorPrejuizo] = useState("0,00");
+  const [valorRecuperadoAnalise, setValorRecuperadoAnalise] = useState("0,00");
   const [conclusaoAnalise, setConclusaoAnalise] = useState("");
 
   const [assunto, setAssunto] = useState("");
@@ -291,7 +297,10 @@ export default function Eventos() {
       quantidadeEnvolvidos,
       envolvidos,
       statusAnalise,
-      valorRecuperado,
+      houveDanoPrejuizo,
+      tipoImpactoFinanceiro,
+      valorPrejuizo,
+      valorRecuperado: valorRecuperadoAnalise,
       conclusaoAnalise,
     }),
     [
@@ -307,7 +316,10 @@ export default function Eventos() {
       quantidadeEnvolvidos,
       envolvidos,
       statusAnalise,
-      valorRecuperado,
+      houveDanoPrejuizo,
+      tipoImpactoFinanceiro,
+      valorPrejuizo,
+      valorRecuperadoAnalise,
       conclusaoAnalise,
     ],
   );
@@ -335,7 +347,10 @@ export default function Eventos() {
         dados.quantidadeEnvolvidos || envolvidosRestaurados.length || 1,
       );
       setStatusAnalise(dados.statusAnalise || "Em Análise");
-      setValorRecuperado(dados.valorRecuperado || "0,00");
+      setHouveDanoPrejuizo(dados.houveDanoPrejuizo || "");
+      setTipoImpactoFinanceiro(dados.tipoImpactoFinanceiro || "");
+      setValorPrejuizo(dados.valorPrejuizo || "0,00");
+      setValorRecuperadoAnalise(dados.valorRecuperado || "0,00");
       setConclusaoAnalise(dados.conclusaoAnalise || "");
     },
   });
@@ -574,7 +589,10 @@ export default function Eventos() {
     setAnexosRemover([]);
     setAnaliseAtual(null);
     setStatusAnalise("Em Análise");
-    setValorRecuperado("0,00");
+    setHouveDanoPrejuizo("");
+    setTipoImpactoFinanceiro("");
+    setValorPrejuizo("0,00");
+    setValorRecuperadoAnalise("0,00");
     setConclusaoAnalise("");
     setAssunto("");
     setLocal("");
@@ -654,7 +672,10 @@ export default function Eventos() {
     setAnexosRemover([]);
     setAnaliseAtual(evento.analise || null);
     setStatusAnalise(evento.analise?.status || "Em Análise");
-    setValorRecuperado(evento.analise?.valorRecuperado || "0,00");
+    setHouveDanoPrejuizo(evento.analise?.houveDanoPrejuizo || "");
+    setTipoImpactoFinanceiro(evento.analise?.tipoImpactoFinanceiro || "");
+    setValorPrejuizo(evento.analise?.valorPrejuizo || "0,00");
+    setValorRecuperadoAnalise(evento.analise?.valorRecuperado || "0,00");
     setConclusaoAnalise(evento.analise?.conclusaoAnalise || "");
   }
 
@@ -673,7 +694,10 @@ export default function Eventos() {
     setEventoAnaliseModal(evento);
     setAnaliseAtual(evento.analise || null);
     setStatusAnalise(evento.analise?.status || "Em Análise");
-    setValorRecuperado(evento.analise?.valorRecuperado || "0,00");
+    setHouveDanoPrejuizo(evento.analise?.houveDanoPrejuizo || "");
+    setTipoImpactoFinanceiro(evento.analise?.tipoImpactoFinanceiro || "");
+    setValorPrejuizo(evento.analise?.valorPrejuizo || "0,00");
+    setValorRecuperadoAnalise(evento.analise?.valorRecuperado || "0,00");
     setConclusaoAnalise(evento.analise?.conclusaoAnalise || "");
   }
 
@@ -681,7 +705,10 @@ export default function Eventos() {
     setEventoAnaliseModal(null);
     setAnaliseAtual(null);
     setStatusAnalise("Em Análise");
-    setValorRecuperado("0,00");
+    setHouveDanoPrejuizo("");
+    setTipoImpactoFinanceiro("");
+    setValorPrejuizo("0,00");
+    setValorRecuperadoAnalise("0,00");
     setConclusaoAnalise("");
   }
 
@@ -689,7 +716,10 @@ export default function Eventos() {
     const response = await api.post(`/analises/eventos/${id}`);
     setAnaliseAtual(response.data);
     setStatusAnalise(response.data.status);
-    setValorRecuperado(response.data.valorRecuperado || "0,00");
+    setHouveDanoPrejuizo(response.data.houveDanoPrejuizo || "");
+    setTipoImpactoFinanceiro(response.data.tipoImpactoFinanceiro || "");
+    setValorPrejuizo(response.data.valorPrejuizo || "0,00");
+    setValorRecuperadoAnalise(response.data.valorRecuperado || "0,00");
     setConclusaoAnalise(response.data.conclusaoAnalise || "");
     if (abrirModal) {
       setEventoAnaliseModal((atual) =>
@@ -709,6 +739,15 @@ export default function Eventos() {
 
   async function salvarAnaliseEvento() {
     if (!analiseAtual) return;
+    if (!houveDanoPrejuizo) {
+      alert("Informe a situação do impacto financeiro.");
+      return;
+    }
+    if (houveDanoPrejuizo !== "Sem alteração" && !tipoImpactoFinanceiro) {
+      alert("Informe se o impacto financeiro foi total ou parcial.");
+      return;
+    }
+
     const pinOperacional =
       statusAnalise === "Concluído"
         ? await solicitarPinOperacional(
@@ -719,7 +758,19 @@ export default function Eventos() {
 
     const response = await api.put(`/analises/eventos/${analiseAtual.id}`, {
       status: statusAnalise,
-      valorRecuperado,
+      houveDanoPrejuizo,
+      tipoImpactoFinanceiro:
+        houveDanoPrejuizo !== "Sem alteração" ? tipoImpactoFinanceiro : "",
+      valorPrejuizo:
+        houveDanoPrejuizo === "Dano/Prejuízo" ||
+        tipoImpactoFinanceiro === "Parcial"
+          ? valorPrejuizo
+          : "0,00",
+      valorRecuperado:
+        houveDanoPrejuizo === "Recuperado" ||
+        tipoImpactoFinanceiro === "Parcial"
+          ? valorRecuperadoAnalise
+          : "0,00",
       conclusaoAnalise,
       pinOperacional,
     });
@@ -1768,24 +1819,120 @@ export default function Eventos() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <select
-                  className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                  value={statusAnalise}
-                  onChange={(e) => setStatusAnalise(e.target.value)}
-                >
-                  <option value="Em Análise">Em Análise</option>
-                  <option value="Concluído">Concluído</option>
-                </select>
+                <label className="space-y-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                  Status da análise
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 bg-white p-3 font-normal text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                    value={statusAnalise}
+                    onChange={(e) => setStatusAnalise(e.target.value)}
+                  >
+                    <option value="Em Análise">Em Análise</option>
+                    <option value="Concluído">Concluído</option>
+                  </select>
+                </label>
 
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-white p-3 text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
-                  value={valorRecuperado}
-                  onChange={(e) =>
-                    setValorRecuperado(formatarBrl(e.target.value))
-                  }
-                  placeholder="Valor recuperado em BRL"
-                  inputMode="numeric"
-                />
+                <label className="space-y-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                  Situação do impacto financeiro
+                  <select
+                    className="w-full rounded-2xl border border-slate-200 bg-white p-3 font-normal text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                    value={houveDanoPrejuizo}
+                    onChange={(e) => {
+                      setHouveDanoPrejuizo(e.target.value);
+                      if (e.target.value === "Sem alteração") {
+                        setTipoImpactoFinanceiro("");
+                        setValorPrejuizo("0,00");
+                        setValorRecuperadoAnalise("0,00");
+                      }
+                    }}
+                    required
+                  >
+                    <option value="">Selecione</option>
+                    <option value="Sem alteração">Sem alteração</option>
+                    <option value="Recuperado">Recuperado</option>
+                    <option value="Dano/Prejuízo">Dano/Prejuízo</option>
+                  </select>
+                </label>
+
+                {houveDanoPrejuizo !== "" &&
+                  houveDanoPrejuizo !== "Sem alteração" && (
+                  <>
+                    <label className="space-y-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                      Tipo do impacto financeiro
+                      <select
+                        className="w-full rounded-2xl border border-slate-200 bg-white p-3 font-normal text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                        value={tipoImpactoFinanceiro}
+                        onChange={(e) => {
+                          setTipoImpactoFinanceiro(e.target.value);
+                          if (e.target.value === "Total") {
+                            setValorRecuperadoAnalise("0,00");
+                          }
+                        }}
+                        required
+                      >
+                        <option value="">Selecione</option>
+                        <option value="Total">Total</option>
+                        <option value="Parcial">Parcial</option>
+                      </select>
+                    </label>
+
+                    {tipoImpactoFinanceiro === "Total" && (
+                      <label className="space-y-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                        {houveDanoPrejuizo === "Recuperado"
+                          ? "Valor total recuperado"
+                          : "Valor total do dano/prejuízo"}
+                        <input
+                          className="w-full rounded-2xl border border-slate-200 bg-white p-3 font-normal text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                          value={
+                            houveDanoPrejuizo === "Recuperado"
+                              ? valorRecuperadoAnalise
+                              : valorPrejuizo
+                          }
+                          onChange={(e) =>
+                            houveDanoPrejuizo === "Recuperado"
+                              ? setValorRecuperadoAnalise(
+                                  formatarBrl(e.target.value),
+                                )
+                              : setValorPrejuizo(formatarBrl(e.target.value))
+                          }
+                          placeholder="R$ 0,00"
+                          inputMode="numeric"
+                        />
+                      </label>
+                    )}
+
+                    {tipoImpactoFinanceiro === "Parcial" && (
+                      <>
+                        <label className="space-y-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                          Valor perdido/dano
+                          <input
+                            className="w-full rounded-2xl border border-slate-200 bg-white p-3 font-normal text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                            value={valorPrejuizo}
+                            onChange={(e) =>
+                              setValorPrejuizo(formatarBrl(e.target.value))
+                            }
+                            placeholder="R$ 0,00"
+                            inputMode="numeric"
+                          />
+                        </label>
+
+                        <label className="space-y-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                          Valor recuperado
+                          <input
+                            className="w-full rounded-2xl border border-slate-200 bg-white p-3 font-normal text-slate-900 dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                            value={valorRecuperadoAnalise}
+                            onChange={(e) =>
+                              setValorRecuperadoAnalise(
+                                formatarBrl(e.target.value),
+                              )
+                            }
+                            placeholder="R$ 0,00"
+                            inputMode="numeric"
+                          />
+                        </label>
+                      </>
+                    )}
+                  </>
+                )}
               </div>
 
               <LexicalEditor

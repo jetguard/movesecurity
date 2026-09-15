@@ -85,8 +85,10 @@ function moduloDaRota(pathname: string) {
   if (pathname.startsWith("/cameras") || pathname.startsWith("/ordens-servico")) return "cftv";
   if (pathname.startsWith("/quadra-seguranca")) return "quadra_seguranca";
   if (pathname.startsWith("/documentos") || pathname.startsWith("/evidencias")) return "documentos";
+  if (pathname.startsWith("/notificacoes")) return "relatorios";
   if (pathname.startsWith("/ocorrencias") || pathname.startsWith("/eventos") || pathname.startsWith("/investigacao") || pathname.startsWith("/relatos-campo")) return "relatorios";
-  if (pathname.startsWith("/relatorio-diario")) return "relatorios";
+  if (pathname.startsWith("/scanner")) return "operacao";
+  if (pathname.startsWith("/relatorio-diario") || pathname.startsWith("/operacao-soc")) return "relatorios";
   if (pathname === "/") return "dashboard";
   return undefined;
 }

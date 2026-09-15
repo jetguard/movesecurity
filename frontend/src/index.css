@@ -241,6 +241,76 @@
     transition: background-color 9999s ease-in-out 0s;
   }
 
+  .solicitacao-imagem-publica,
+  .dark .solicitacao-imagem-publica {
+    color-scheme: light;
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.bg-white) {
+    background-color: #ffffff !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.bg-slate-50) {
+    background-color: #f8fafc !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.bg-slate-100) {
+    background-color: #f1f5f9 !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.text-slate-950, .text-slate-900, .text-slate-800) {
+    color: #0f172a !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.text-slate-700) {
+    color: #334155 !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.text-slate-600, .text-slate-500) {
+    color: #475569 !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(label, legend) {
+    color: #334155 !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.border-slate-200) {
+    border-color: #e2e8f0 !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(.border-slate-300) {
+    border-color: #cbd5e1 !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(input, textarea, select) {
+    background-color: #ffffff !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  .solicitacao-imagem-publica :where(input, textarea, select),
+  .dark .solicitacao-imagem-publica :where(input, textarea, select) {
+    font-weight: 400 !important;
+  }
+
+  .solicitacao-imagem-publica :where(input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus),
+  .dark .solicitacao-imagem-publica :where(input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus) {
+    box-shadow: inset 0 0 0 1000px #ffffff !important;
+    -webkit-text-fill-color: #0f172a !important;
+    font-weight: 400 !important;
+    transition: background-color 9999s ease-in-out 0s;
+  }
+
+  .dark .solicitacao-imagem-publica :where(input::placeholder, textarea::placeholder) {
+    color: #94a3b8 !important;
+  }
+
+  .dark .solicitacao-imagem-publica :where(input[type="date"]::-webkit-calendar-picker-indicator, input[type="time"]::-webkit-calendar-picker-indicator) {
+    filter: none !important;
+  }
+
   .treinamento-terminal-publico,
   .dark .treinamento-terminal-publico {
     color: #07132f !important;

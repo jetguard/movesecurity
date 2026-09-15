@@ -9,6 +9,8 @@ import {
 
 export type AuthRequest = Request & {
   usuarioId?: number;
+  usuarioNome?: string | null;
+  usuarioEmail?: string | null;
   usuarioPerfil?: string;
   usuarioPermissoes?: string[];
   usuarioPermissoesAcoes?: PermissaoModulo[];
@@ -123,6 +125,14 @@ async function permissoesDoPerfil(codigo?: string | null) {
 }
 
 function acaoDaRequisicao(req: AuthRequest) {
+  const rota = req.originalUrl || req.path || "";
+  if (
+    req.method === "POST" &&
+    rota.startsWith("/api/planos-acao/") &&
+    (rota.includes("/tratamento") || rota.includes("/mediadores/concluir"))
+  ) {
+    return "editar";
+  }
   if (req.method === "GET") return "leitura";
   if (req.method === "POST") return "criar";
   if (req.method === "PUT" || req.method === "PATCH") return "editar";
@@ -153,6 +163,7 @@ function modulosDaRota(req: AuthRequest) {
     rota.startsWith("/api/cameras") ||
     rota.startsWith("/api/ordens-servico")
   ) return ["cftv"];
+  if (rota.startsWith("/api/operacao")) return ["operacao"];
   if (rota.startsWith("/api/quadra")) return ["quadra_seguranca"];
   if (rota.startsWith("/api/locais") && req.method === "GET") {
     return ["cadastros", "cftv", "solicitacoes_imagens", "relatorios", "analise_riscos"];
@@ -206,6 +217,8 @@ export async function autenticarUsuario(
       },
       select: {
         id: true,
+        nome: true,
+        email: true,
         perfilAcesso: true,
         statusUsuario: true,
         unidade: true,
@@ -261,6 +274,8 @@ export async function autenticarUsuario(
     }
 
     req.usuarioId = usuario.id;
+    req.usuarioNome = usuario.nome;
+    req.usuarioEmail = usuario.email;
     req.usuarioPerfil = usuario.perfilAcesso;
     req.usuarioPermissoesAcoes = await permissoesDoPerfil(usuario.perfilAcesso);
     req.usuarioPermissoes = req.usuarioPermissoesAcoes.map(

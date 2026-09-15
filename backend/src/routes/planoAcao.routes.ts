@@ -5,6 +5,7 @@ import { tiposAnexoPermitidos, uploadLimits } from "../config/security";
 import {
   atualizarPlanoAcao,
   buscarPlanoAcao,
+  concluirAnaliseMediadorPlanoAcao,
   criarPlanoAcao,
   excluirPlanoAcao,
   listarOrigensPlanoAcao,
@@ -77,6 +78,12 @@ router.post(
   autorizarPerfis(acessoAnalise),
   upload.array("anexos"),
   tratarPlanoAcao,
+);
+router.post(
+  "/:id/mediadores/concluir",
+  autenticarUsuario,
+  autorizarPerfis(acessoAnalise),
+  concluirAnaliseMediadorPlanoAcao,
 );
 router.put(
   "/:id",

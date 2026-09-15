@@ -1414,6 +1414,8 @@ export async function renovarSessao(req: Request, res: Response) {
     });
 
     aplicarCookiesSessao(req, res, novoAccessToken, novoRefreshToken);
+    const permissoesAcoes = await permissoesPerfil(sessao.usuario.perfilAcesso);
+    const permissoesModulos = permissoesAcoes.map((permissao) => permissao.modulo);
 
     return res.json({
       usuario: {
@@ -1423,6 +1425,8 @@ export async function renovarSessao(req: Request, res: Response) {
         fotoPerfil: sessao.usuario.fotoPerfil,
         email: sessao.usuario.email,
         perfilAcesso: sessao.usuario.perfilAcesso,
+        permissoesModulos,
+        permissoesAcoes,
         equipe: sessao.usuario.equipe,
         unidade: sessao.usuario.unidade,
         unidadesPermitidas: normalizarUnidadesPermitidas(

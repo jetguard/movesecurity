@@ -83,6 +83,24 @@ function chaveLimitLogin(req: express.Request) {
   return `${ipKeyGenerator(req.ip || "sem-ip")}::${email}`;
 }
 
+function urlPublicaFrontend(req: express.Request) {
+  const candidatos = [
+    process.env.APP_PUBLIC_URL,
+    process.env.PUBLIC_APP_URL,
+    process.env.FRONTEND_URL,
+    process.env.CORS_ORIGIN,
+    process.env.APP_URL,
+    String(req.headers.origin || ""),
+  ];
+  const origem =
+    candidatos.find(
+      (valor): valor is string =>
+        typeof valor === "string" && valor.trim() !== "" && valor.trim() !== "*",
+    ) || "";
+
+  return origem.split(",")[0].trim().replace(/\/+$/, "");
+}
+
 const loginLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   limit: Number(process.env.LOGIN_RATE_LIMIT || 20),
@@ -208,6 +226,22 @@ app.get("/", (req, res) => {
     status: "online",
     realtime: "/ws",
   });
+});
+
+app.get("/coleta-dados/:token", (req, res) => {
+  const base = urlPublicaFrontend(req);
+
+  if (!base) {
+    return res
+      .status(404)
+      .json({ error: "URL pública do frontend não configurada." });
+  }
+
+  const destino = `${base}/coleta-dados/${encodeURIComponent(
+    req.params.token,
+  )}`;
+
+  return res.redirect(302, destino);
 });
 
 app.get("/api/health", (req, res) => {

@@ -66,17 +66,6 @@ const equipes = [
   "Equipe D",
   "Administrativo",
 ];
-const perfis = [
-  { label: "Administrador", value: "ADMINISTRADOR" },
-  { label: "Gestor", value: "GESTOR" },
-  { label: "Coordenador", value: "COORDENADOR" },
-  { label: "Supervisor", value: "SUPERVISOR" },
-  { label: "Analista", value: "ANALISTA" },
-  { label: "Operador", value: "OPERADOR" },
-  { label: "Portaria", value: "PORTARIA" },
-  { label: "Cadastro", value: "CADASTRO" },
-  { label: "Técnico/Manutenção", value: "TECNICO_MANUTENCAO" },
-];
 const gruposTreinamento = [
   "CCOS",
   "Liderança",
@@ -219,16 +208,10 @@ export default function Usuarios() {
   const [confirmarReset, setConfirmarReset] = useState("");
   const superAdmin = podeSuperAdmin();
   const perfisDisponiveis = useMemo(() => {
-    const doBanco = perfisAcesso
+    return perfisAcesso
       .filter((perfil) => perfil.status === "ATIVO")
-      .map((perfil) => ({ label: perfil.nome, value: perfil.codigo }));
-    const combinados = [
-      ...doBanco,
-      ...perfis.filter(
-        (perfil) => !doBanco.some((item) => item.value === perfil.value),
-      ),
-    ];
-    return combinados.sort((a, b) => a.label.localeCompare(b.label));
+      .map((perfil) => ({ label: perfil.nome, value: perfil.codigo }))
+      .sort((a, b) => a.label.localeCompare(b.label));
   }, [perfisAcesso]);
 
   async function carregarUsuarios() {
@@ -237,7 +220,6 @@ export default function Usuarios() {
   }
 
   async function carregarPerfisAcesso() {
-    if (!superAdmin) return;
     const response = await api.get("/usuarios/perfis-acesso");
     setPerfisAcesso(response.data);
   }
@@ -604,7 +586,6 @@ export default function Usuarios() {
     if (valor === "SUPER_ADMIN") return "Super Admin";
     return (
       perfisAcesso.find((perfil) => perfil.codigo === valor)?.nome ||
-      perfis.find((perfil) => perfil.value === valor)?.label ||
       valor ||
       "-"
     );

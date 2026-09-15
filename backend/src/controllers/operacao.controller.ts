@@ -75,6 +75,165 @@ function podeGerenciarPassagem(perfil?: string) {
   );
 }
 
+function numeroInteiroNaoNegativo(valor: unknown) {
+  const numero = Number(valor || 0);
+  if (!Number.isFinite(numero) || numero < 0) return 0;
+  return Math.trunc(numero);
+}
+
+function dadosScannerPassagem(body: any) {
+  const leituraComFalha = numeroInteiroNaoNegativo(body.leituraComFalha);
+  const leituraSatisfatoria = numeroInteiroNaoNegativo(body.leituraSatisfatoria);
+  const areaSuspeita = numeroInteiroNaoNegativo(body.areaSuspeita);
+  const insatisfatoria = numeroInteiroNaoNegativo(body.insatisfatoria);
+
+  return {
+    data: body.data ? new Date(body.data) : new Date(),
+    scanner: String(body.scanner || "NUTECH5S600").trim() || "NUTECH5S600",
+    leituraComFalha,
+    leituraSatisfatoria,
+    areaSuspeita,
+    insatisfatoria,
+    total:
+      leituraComFalha + leituraSatisfatoria + areaSuspeita + insatisfatoria,
+  };
+}
+
+export async function listarScannerPassagens(req: AuthRequest, res: Response) {
+  try {
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const registros = await prisma.scannerPassagem.findMany({
+      where: { unidade },
+      orderBy: { data: "desc" },
+    });
+    const usuarios = await prisma.usuario.findMany({
+      where: {
+        id: {
+          in: Array.from(
+            new Set(
+              registros
+                .map((registro) => registro.criadoPorId)
+                .filter((id): id is number => typeof id === "number"),
+            ),
+          ),
+        },
+      },
+      select: {
+        id: true,
+        nome: true,
+        apelido: true,
+        email: true,
+      },
+    });
+    const usuariosPorId = new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+
+    return res.json(
+      registros.map((registro) => ({
+        ...registro,
+        criadoPor: registro.criadoPorId
+          ? usuariosPorId.get(registro.criadoPorId) || null
+          : null,
+      })),
+    );
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar passagens do scanner" });
+  }
+}
+
+export async function criarScannerPassagem(req: AuthRequest, res: Response) {
+  try {
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const dados = dadosScannerPassagem(req.body);
+    const registro = await prisma.scannerPassagem.create({
+      data: {
+        ...dados,
+        unidade,
+        criadoPorId: req.usuarioId,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Criação de passagem scanner",
+      tipoRegistro: "ScannerPassagem",
+      registroId: registro.id,
+      dadosNovos: registro,
+    });
+
+    return res.status(201).json(registro);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao criar passagem do scanner" });
+  }
+}
+
+export async function atualizarScannerPassagem(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const anterior = await prisma.scannerPassagem.findFirst({
+      where: { id: Number(id), unidade },
+    });
+
+    if (!anterior) {
+      return res.status(404).json({ error: "Passagem do scanner não encontrada" });
+    }
+
+    const registro = await prisma.scannerPassagem.update({
+      where: { id: Number(id) },
+      data: dadosScannerPassagem(req.body),
+    });
+
+    await registrarLog({
+      req,
+      acao: "Atualização de passagem scanner",
+      tipoRegistro: "ScannerPassagem",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(registro);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao atualizar passagem do scanner" });
+  }
+}
+
+export async function excluirScannerPassagem(req: AuthRequest, res: Response) {
+  try {
+    const { id } = req.params;
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const anterior = await prisma.scannerPassagem.findFirst({
+      where: { id: Number(id), unidade },
+    });
+
+    if (!anterior) {
+      return res.status(404).json({ error: "Passagem do scanner não encontrada" });
+    }
+
+    await exigirSenhaAssinatura(req);
+    await prisma.scannerPassagem.delete({ where: { id: Number(id) } });
+
+    await registrarLog({
+      req,
+      acao: "Exclusão de passagem scanner",
+      tipoRegistro: "ScannerPassagem",
+      registroId: anterior.id,
+      dadosAnteriores: anterior,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status)
+      return res.status(status).json({ error: (error as Error).message });
+    return res.status(500).json({ error: "Erro ao excluir passagem do scanner" });
+  }
+}
+
 function desenharAssinaturaDigitalCcos(
   doc: PDFKit.PDFDocument,
   params: {

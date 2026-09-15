@@ -151,7 +151,7 @@ export function permissoesModulosAtual() {
   if (Array.isArray(usuario.permissoesModulos)) {
     return usuario.permissoesModulos;
   }
-  return PERFIS_POR_MODULO[usuario.perfilAcesso || ""] || [];
+  return [];
 }
 
 function moduloCorresponde(permissaoModulo: string, moduloSolicitado: string) {
@@ -174,7 +174,7 @@ export function permissoesAcoesAtual() {
   if (Array.isArray(usuario.permissoesAcoes)) {
     return usuario.permissoesAcoes;
   }
-  return permissoesCompletas(permissoesModulosAtual());
+  return [];
 }
 
 export function temModulo(modulo: string) {

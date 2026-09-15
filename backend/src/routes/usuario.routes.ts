@@ -57,7 +57,7 @@ router.post("/", autenticarUsuario, autorizarPerfis(acessoTotal), criarUsuario);
 router.get(
   "/perfis-acesso",
   autenticarUsuario,
-  autorizarPerfis(["SUPER_ADMIN"]),
+  autorizarPerfis(acessoTotal),
   listarPerfisAcesso,
 );
 router.post(

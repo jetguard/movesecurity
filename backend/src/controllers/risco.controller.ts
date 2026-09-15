@@ -1509,6 +1509,7 @@ type PlanoFatorResumo = {
   acaoPreventiva?: string | null;
   responsavelNome?: string | null;
   mediadoresJson?: string | null;
+  mediadoresConclusoesJson?: string | null;
   prazo?: Date;
   concluidoEm?: Date | null;
   evidencia?: string | null;
@@ -1521,18 +1522,28 @@ function planoAcaoConcluido(plano: PlanoFatorResumo) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
-  return status === "concluido" || !!plano.concluidoEm;
+  return status === "concluido" || !!plano.concluidoEm || Number(plano.percentual || 0) >= 100;
+}
+
+function percentualPlanoAcao(plano: PlanoFatorResumo) {
+  if (planoAcaoConcluido(plano)) return 100;
+  return Math.min(100, Math.max(0, Math.round(Number(plano.percentual || 0))));
 }
 
 function resumirPlanosPorFator(planos: PlanoFatorResumo[]) {
-  const mapa = new Map<number, { total: number; concluidos: number }>();
+  const mapa = new Map<
+    number,
+    { total: number; concluidos: number; somaPercentual: number }
+  >();
   for (const plano of planos) {
     if (!plano.fatorRiscoId) continue;
     const atual = mapa.get(plano.fatorRiscoId) || {
       total: 0,
       concluidos: 0,
+      somaPercentual: 0,
     };
     atual.total += 1;
+    atual.somaPercentual += percentualPlanoAcao(plano);
     if (planoAcaoConcluido(plano)) {
       atual.concluidos += 1;
     }
@@ -1554,7 +1565,7 @@ function apresentarAnaliseCompleta(
     return {
       ...fator,
       percentualTratativa: resumo
-        ? Math.round((resumo.concluidos / Math.max(1, resumo.total)) * 100)
+        ? Math.round(resumo.somaPercentual / Math.max(1, resumo.total))
         : 0,
       planosTratativa: resumo?.total || 0,
       planosConcluidos: resumo?.concluidos || 0,
@@ -1565,7 +1576,12 @@ function apresentarAnaliseCompleta(
     (fator) => (fator.percentualTratativa || 0) >= 100,
   ).length;
   const percentualConclusaoTratativa = totalFatoresTratativa
-    ? Math.round((fatoresConcluidosTratativa / totalFatoresTratativa) * 100)
+    ? Math.round(
+        fatoresRisco.reduce(
+          (total, fator) => total + (fator.percentualTratativa || 0),
+          0,
+        ) / totalFatoresTratativa,
+      )
     : 0;
 
   return {
@@ -1597,6 +1613,7 @@ function apresentarAnaliseCompleta(
       acaoPreventiva: plano.acaoPreventiva,
       responsavelNome: plano.responsavelNome,
       mediadores: parseListaJson(plano.mediadoresJson),
+      conclusoesMediadores: parseListaJson(plano.mediadoresConclusoesJson),
       prazo: plano.prazo,
       concluidoEm: plano.concluidoEm,
       evidencia: plano.evidencia,
@@ -1630,6 +1647,7 @@ async function listarPlanosDaAnaliseCompleta(
       acaoPreventiva: true,
       responsavelNome: true,
       mediadoresJson: true,
+      mediadoresConclusoesJson: true,
       prazo: true,
       concluidoEm: true,
       evidencia: true,
@@ -1739,6 +1757,40 @@ async function dadosAnaliseCompleta(req: AuthRequest) {
   };
 }
 
+async function aprovadorAnaliseCompleta(req: AuthRequest, obrigatorio: boolean) {
+  const aprovadorId = normalizarId(req.body.finalizacaoAprovadorId);
+  if (!aprovadorId) {
+    if (obrigatorio) {
+      throw new Error(
+        "Selecione o aprovador da Segurança Patrimonial para esta análise.",
+      );
+    }
+    return null;
+  }
+
+  const aprovador = await prisma.usuario.findFirst({
+    where: {
+      id: aprovadorId,
+      statusUsuario: "ATIVO",
+      perfilAcesso: { in: ["ADMINISTRADOR", "SUPER_ADMIN"] },
+      OR: [
+        { unidade: req.unidadeAtiva },
+        { unidade: null },
+        { unidadesPermitidas: { contains: req.unidadeAtiva || "" } },
+      ],
+    },
+    select: { id: true, nome: true },
+  });
+
+  if (!aprovador) {
+    throw new Error(
+      "O aprovador selecionado precisa ser um usuário ativo com perfil Administrador.",
+    );
+  }
+
+  return aprovador;
+}
+
 export async function listarAnalisesCompletasRisco(
   req: AuthRequest,
   res: Response,
@@ -1759,6 +1811,8 @@ export async function listarAnalisesCompletasRisco(
             origemId: true,
             fatorRiscoId: true,
             status: true,
+            percentual: true,
+            concluidoEm: true,
           },
         })
       : [];
@@ -1830,6 +1884,8 @@ export async function listarTratativasAnaliseCompletaRisco(
             origemId: true,
             fatorRiscoId: true,
             status: true,
+            percentual: true,
+            concluidoEm: true,
           },
         })
       : [];
@@ -1871,6 +1927,7 @@ export async function listarResponsaveisTratativaRisco(
         setor: true,
         cargo: true,
         unidade: true,
+        perfilAcesso: true,
       },
       orderBy: { nome: "asc" },
     });
@@ -1889,6 +1946,8 @@ export async function criarAnaliseCompletaRisco(
   try {
     const ano = new Date().getFullYear();
     const dados = await dadosAnaliseCompleta(req);
+    const aprovador = await aprovadorAnaliseCompleta(req, true);
+    if (!aprovador) throw new Error("Selecione o aprovador da análise.");
     const registro = await prisma.$transaction(async (tx) => {
       await travarSequencia(
         tx,
@@ -1906,6 +1965,9 @@ export async function criarAnaliseCompletaRisco(
           codigo: `ARC-${String(numero).padStart(4, "0")}/${ano}`,
           unidade: req.unidadeAtiva || req.body.unidade,
           responsavelId: req.usuarioId || null,
+          finalizacaoStatus: "Aguardando aprovação",
+          finalizacaoAprovadorId: aprovador.id,
+          finalizacaoAprovadorNome: aprovador.nome,
           ...dados,
         },
       });
@@ -1944,10 +2006,17 @@ export async function atualizarAnaliseCompletaRisco(
         .json({ error: "Análise completa não encontrada." });
 
     const dados = await dadosAnaliseCompleta(req);
+    const aprovador = await aprovadorAnaliseCompleta(req, false);
     const registro = await prisma.analiseRiscoCompleta.update({
       where: { id },
       data: {
         ...dados,
+        ...(aprovador
+          ? {
+              finalizacaoAprovadorId: aprovador.id,
+              finalizacaoAprovadorNome: aprovador.nome,
+            }
+          : {}),
         preventivosJson:
           req.body.preventivos !== undefined
             ? JSON.stringify(normalizarControles(req.body.preventivos))

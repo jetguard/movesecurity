@@ -2,6 +2,7 @@
 import { ClipboardList, Edit3, Link2, Plus, Trash2, X } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "../services/api";
+import { podeNoModulo, temModulo } from "../utils/permissoes";
 
 type Plano = {
   id: number;
@@ -20,6 +21,7 @@ type Plano = {
   acaoCorretiva?: string;
   acaoPreventiva?: string;
   responsavelNome?: string;
+  responsaveis?: Responsavel[];
   mediadores?: Responsavel[];
   prazo: string;
   evidencia?: string;
@@ -115,6 +117,7 @@ const vazio = {
   acaoPreventiva: "",
   responsavelId: "",
   responsavelNome: "",
+  responsaveisIds: [] as string[],
   mediadoresIds: [] as string[],
   prazo: "",
   evidencia: "",
@@ -131,6 +134,9 @@ export default function PlanosAcao() {
   const [abrir, setAbrir] = useState(false);
   const [searchParams] = useSearchParams();
   const [parametrosAplicados, setParametrosAplicados] = useState(false);
+  const podeCriarPlano = podeNoModulo("plano_acao", "criar");
+  const podeEditarPlano = podeNoModulo("plano_acao", "editar");
+  const podeExcluirPlano = podeNoModulo("plano_acao", "excluir");
 
   async function carregar() {
     const [planosResponse, origensResponse, responsaveisResponse] =
@@ -211,6 +217,12 @@ export default function PlanosAcao() {
       origemId: plano.origemId ? String(plano.origemId) : "",
       fatorRiscoId: plano.fatorRiscoId ? String(plano.fatorRiscoId) : "",
       responsavelId: plano.responsavelId ? String(plano.responsavelId) : "",
+      responsaveisIds: (plano.responsaveis?.length
+        ? plano.responsaveis
+        : plano.responsavelId
+          ? [{ id: plano.responsavelId } as Responsavel]
+          : []
+      ).map((responsavel) => String(responsavel.id)),
       mediadoresIds: (plano.mediadores || []).map((mediador) =>
         String(mediador.id),
       ),
@@ -234,7 +246,9 @@ export default function PlanosAcao() {
       origemId: form.origemModulo === "Independente" ? null : form.origemId,
       fatorRiscoId:
         form.origemModulo === "AnaliseRisco" ? form.fatorRiscoId : null,
-      responsavelNome: form.responsavelId ? "" : form.responsavelNome,
+      responsavelId: form.responsaveisIds[0] || form.responsavelId || "",
+      responsavelNome: form.responsaveisIds.length ? "" : form.responsavelNome,
+      responsaveisIds: form.responsaveisIds,
       mediadoresIds: form.mediadoresIds,
     };
 
@@ -279,14 +293,50 @@ export default function PlanosAcao() {
   const fatoresDisponiveisDaArc = fatoresDaArc.filter(
     (fator) => !fatoresUsadosNaArc.has(String(fator.id || "")),
   );
+  const responsaveisSelecionados = responsaveis.filter((responsavel) =>
+    form.responsaveisIds.includes(String(responsavel.id)),
+  );
+  const responsaveisDisponiveis = responsaveis.filter(
+    (responsavel) =>
+      !form.responsaveisIds.includes(String(responsavel.id)) &&
+      !form.mediadoresIds.includes(String(responsavel.id)),
+  );
   const mediadoresSelecionados = responsaveis.filter((responsavel) =>
     form.mediadoresIds.includes(String(responsavel.id)),
   );
   const mediadoresDisponiveis = responsaveis.filter(
     (responsavel) =>
-      String(responsavel.id) !== form.responsavelId &&
+      !form.responsaveisIds.includes(String(responsavel.id)) &&
       !form.mediadoresIds.includes(String(responsavel.id)),
   );
+
+  function adicionarResponsavel(valor: string) {
+    if (!valor) return;
+    setForm((atual) => ({
+      ...atual,
+      responsavelId: atual.responsavelId || valor,
+      responsaveisIds: atual.responsaveisIds.includes(valor)
+        ? atual.responsaveisIds
+        : [...atual.responsaveisIds, valor],
+      mediadoresIds: atual.mediadoresIds.filter((item) => item !== valor),
+    }));
+  }
+
+  function removerResponsavel(valor: string) {
+    setForm((atual) => {
+      const responsaveisIds = atual.responsaveisIds.filter(
+        (item) => item !== valor,
+      );
+      return {
+        ...atual,
+        responsaveisIds,
+        responsavelId:
+          atual.responsavelId === valor
+            ? responsaveisIds[0] || ""
+            : atual.responsavelId,
+      };
+    });
+  }
 
   function adicionarMediador(valor: string) {
     if (!valor) return;
@@ -332,18 +382,22 @@ export default function PlanosAcao() {
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-          <Link
-            to="/riscos/analise-completa"
-            className="flex items-center justify-center gap-2 rounded-lg border border-blue-300/50 bg-blue-50 px-4 py-2 font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/30 dark:bg-blue-500/10 dark:text-blue-100 dark:hover:bg-blue-500/20"
-          >
-            Ver análises
-          </Link>
-          <button
-            onClick={novo}
-            className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-500"
-          >
-            <Plus size={18} /> Novo Plano
-          </button>
+          {temModulo("analise_riscos") && (
+            <Link
+              to="/riscos/analise-completa"
+              className="flex items-center justify-center gap-2 rounded-lg border border-blue-300/50 bg-blue-50 px-4 py-2 font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-400/30 dark:bg-blue-500/10 dark:text-blue-100 dark:hover:bg-blue-500/20"
+            >
+              Ver análises
+            </Link>
+          )}
+          {podeCriarPlano && (
+            <button
+              onClick={novo}
+              className="flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-500"
+            >
+              <Plus size={18} /> Novo Plano
+            </button>
+          )}
         </div>
       </div>
 
@@ -443,16 +497,14 @@ export default function PlanosAcao() {
               </span>
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
-              Responsável pela execução
+              Responsáveis pela execução
               <select
                 className={classeCampo}
-                value={form.responsavelId}
-                onChange={(evento) =>
-                  campo("responsavelId", evento.target.value)
-                }
+                value=""
+                onChange={(evento) => adicionarResponsavel(evento.target.value)}
               >
-                <option value="">Selecione o responsável</option>
-                {responsaveis.map((responsavel) => (
+                <option value="">Selecionar responsável</option>
+                {responsaveisDisponiveis.map((responsavel) => (
                   <option key={responsavel.id} value={responsavel.id}>
                     {responsavel.nome}
                     {responsavel.setor ? ` | ${responsavel.setor}` : ""}
@@ -460,6 +512,26 @@ export default function PlanosAcao() {
                   </option>
                 ))}
               </select>
+              {responsaveisSelecionados.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {responsaveisSelecionados.map((responsavel) => (
+                    <span
+                      key={responsavel.id}
+                      className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800 dark:border-emerald-400/30 dark:bg-emerald-500/10 dark:text-emerald-100"
+                    >
+                      {responsavel.nome}
+                      <button
+                        type="button"
+                        onClick={() => removerResponsavel(String(responsavel.id))}
+                        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-200 bg-white/80 text-emerald-700 transition hover:border-red-300 hover:text-red-600 dark:border-emerald-400/30 dark:bg-slate-950/70 dark:text-emerald-100 dark:hover:border-red-300/60 dark:hover:text-red-200"
+                        aria-label={`Remover responsável ${responsavel.nome}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
             </label>
             <label className="space-y-1 text-sm font-medium text-slate-700 dark:text-slate-300">
               Mediadores
@@ -638,7 +710,12 @@ export default function PlanosAcao() {
                   </h2>
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-slate-500">
                     <span>
-                      Responsável: {plano.responsavelNome || "Não informado"}
+                      Responsáveis:{" "}
+                      {plano.responsaveis?.length
+                        ? plano.responsaveis
+                            .map((responsavel) => responsavel.nome)
+                            .join(", ")
+                        : plano.responsavelNome || "Não informado"}
                     </span>
                     <span className="hidden text-slate-300 dark:text-slate-700 sm:inline">
                       |
@@ -686,24 +763,28 @@ export default function PlanosAcao() {
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={(evento) => {
-                      evento.stopPropagation();
-                      editar(plano);
-                    }}
-                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500"
-                  >
-                    <Edit3 size={16} /> Editar
-                  </button>
-                  <button
-                    onClick={(evento) => {
-                      evento.stopPropagation();
-                      excluir(plano);
-                    }}
-                    className="flex items-center gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-500 hover:text-white dark:text-red-200"
-                  >
-                    <Trash2 size={16} /> Excluir
-                  </button>
+                  {podeEditarPlano && (
+                    <button
+                      onClick={(evento) => {
+                        evento.stopPropagation();
+                        editar(plano);
+                      }}
+                      className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white transition hover:bg-blue-500"
+                    >
+                      <Edit3 size={16} /> Editar
+                    </button>
+                  )}
+                  {podeExcluirPlano && (
+                    <button
+                      onClick={(evento) => {
+                        evento.stopPropagation();
+                        excluir(plano);
+                      }}
+                      className="flex items-center gap-2 rounded-lg border border-red-400/40 bg-red-500/10 px-3 py-2 text-sm font-bold text-red-600 transition hover:bg-red-500 hover:text-white dark:text-red-200"
+                    >
+                      <Trash2 size={16} /> Excluir
+                    </button>
+                  )}
                 </div>
               </div>
               {plano.comentarios && (

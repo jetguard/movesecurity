@@ -51,7 +51,6 @@ const PlanoAcaoTratamento = lazyWithReload(
 );
 const APRs = lazyWithReload(() => import("./pages/APRs"));
 const Evidencias = lazyWithReload(() => import("./pages/Evidencias"));
-const Pendencias = lazyWithReload(() => import("./pages/Pendencias"));
 const Notificacoes = lazyWithReload(() => import("./pages/Notificacoes"));
 const AlertasOperacionais = lazyWithReload(
   () => import("./pages/AlertasOperacionais"),
@@ -71,6 +70,7 @@ const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazyWithReload(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazyWithReload(() => import("./pages/OperacaoSOC"));
+const Scanner = lazyWithReload(() => import("./pages/Scanner"));
 const RelatosCampo = lazyWithReload(() => import("./pages/RelatosCampo"));
 const MapaOperacional = lazyWithReload(() => import("./pages/MapaOperacional"));
 const AtualizacoesSistema = lazyWithReload(
@@ -206,9 +206,27 @@ export default function App() {
             <Route path="investigacao" element={<Investigacao />} />
             <Route path="eventos" element={<Eventos />} />
             <Route path="documentos" element={<CentralDocumentos />} />
-            <Route path="evidencias" element={<Evidencias />} />
-            <Route path="pendencias" element={<Pendencias />} />
-            <Route path="notificacoes" element={<Notificacoes />} />
+            <Route
+              path="evidencias"
+              element={
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}
+                >
+                  <Evidencias />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="pendencias" element={<Navigate to="/" replace />} />
+            <Route
+              path="notificacoes"
+              element={
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}
+                >
+                  <Notificacoes />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="alertas-operacionais"
               element={<AlertasOperacionais />}
@@ -252,7 +270,31 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
-            <Route path="operacao-soc" element={<OperacaoSOC />} />
+            <Route
+              path="operacao-soc"
+              element={
+                <ProtectedRoute
+                  perfis={[PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR, PERFIS.ANALISTA]}
+                >
+                  <OperacaoSOC />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="scanner"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                  ]}
+                >
+                  <Scanner />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="painel-treinamentos"
               element={

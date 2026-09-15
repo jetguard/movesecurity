@@ -45,6 +45,25 @@ type MediadorPlano = {
   cargo?: string | null;
 };
 
+type ResponsavelPlano = MediadorPlano;
+
+type ConclusaoMediadorPlano = {
+  mediadorId: number;
+  mediadorNome: string;
+  conclusao: string;
+  concluidoEm: string;
+};
+
+type TratamentoCustosPlano = {
+  houveCusto: boolean;
+  tipo: string | null;
+  valorEstimado: string | null;
+  valorRealizado: string | null;
+  observacao: string | null;
+  atualizadoPorId?: number | null;
+  atualizadoEm?: string | null;
+};
+
 async function fatorRiscoDaArc(req: AuthRequest) {
   if (req.body.origemModulo !== "AnaliseRisco") {
     return {
@@ -109,18 +128,16 @@ async function validarFatorAindaDisponivel(
   }
 }
 
-async function responsavelDoPlano(req: AuthRequest) {
-  const responsavelId = normalizarId(req.body.responsavelId);
-  if (!responsavelId) {
-    return {
-      responsavelId: null,
-      responsavelNome: textoObrigatorio(req.body.responsavelNome) || null,
-    };
-  }
+async function usuariosDoPlanoPorIds(req: AuthRequest, idsRecebidos: unknown[]) {
+  const ids: number[] = idsRecebidos
+    .map(normalizarId)
+    .filter((id): id is number => Boolean(id));
+  const unicos = Array.from(new Set(ids));
+  if (!unicos.length) return [];
 
-  const responsavel = await prisma.usuario.findFirst({
+  const usuarios = await prisma.usuario.findMany({
     where: {
-      id: responsavelId,
+      id: { in: unicos },
       statusUsuario: "ATIVO",
       OR: [
         { unidade: req.unidadeAtiva },
@@ -128,16 +145,44 @@ async function responsavelDoPlano(req: AuthRequest) {
         { unidadesPermitidas: { contains: req.unidadeAtiva || "" } },
       ],
     },
-    select: { id: true, nome: true },
+    orderBy: { nome: "asc" },
+    select: {
+      id: true,
+      nome: true,
+      email: true,
+      setor: true,
+      cargo: true,
+    },
   });
 
-  if (!responsavel) {
-    throw new Error("Responsável selecionado não encontrado ou inativo.");
+  if (usuarios.length !== unicos.length) {
+    throw new Error("Um ou mais usuários selecionados não foram encontrados.");
+  }
+
+  return usuarios;
+}
+
+async function responsaveisDoPlano(req: AuthRequest) {
+  const idsRecebidos: unknown[] = Array.isArray(req.body.responsaveisIds)
+    ? req.body.responsaveisIds
+    : req.body.responsavelId
+      ? [req.body.responsavelId]
+      : [];
+  const responsaveis = await usuariosDoPlanoPorIds(req, idsRecebidos);
+  const principal = responsaveis[0];
+
+  if (!principal) {
+    return {
+      responsavelId: null,
+      responsavelNome: textoObrigatorio(req.body.responsavelNome) || null,
+      responsaveisJson: JSON.stringify([]),
+    };
   }
 
   return {
-    responsavelId: responsavel.id,
-    responsavelNome: responsavel.nome,
+    responsavelId: principal.id,
+    responsavelNome: responsaveis.map((item) => item.nome).join(", "),
+    responsaveisJson: JSON.stringify(responsaveis),
   };
 }
 
@@ -183,12 +228,201 @@ async function mediadoresDoPlano(req: AuthRequest) {
 }
 
 function apresentarPlano(plano: any) {
+  const responsaveis = parseListaJson<ResponsavelPlano>(
+    plano.responsaveisJson,
+  );
+  const mediadores = parseListaJson<MediadorPlano>(plano.mediadoresJson);
+  const conclusoesMediadores = parseListaJson<ConclusaoMediadorPlano>(
+    plano.mediadoresConclusoesJson,
+  );
   return {
     ...plano,
     status: normalizarStatusPlano(plano.status),
-    mediadores: parseListaJson<MediadorPlano>(plano.mediadoresJson),
+    responsaveis: responsaveis.length
+      ? responsaveis
+      : plano.responsavelId
+        ? [
+            {
+              id: plano.responsavelId,
+              nome: plano.responsavelNome || "Responsável",
+            },
+          ]
+        : [],
+    mediadores: mediadores.map((mediador) => ({
+      ...mediador,
+      conclusao: conclusoesMediadores.find(
+        (item) => item.mediadorId === mediador.id,
+      ),
+    })),
+    conclusoesMediadores,
+    tratamentoExecucaoStatus: normalizarStatusPlano(
+      plano.tratamentoExecucaoStatus || plano.status,
+    ),
     anexosTratamento: parseListaJson<AnexoTratamentoPlano>(plano.evidencia),
+    tratamentoCustos: parseTratamentoCustos(plano.tratamentoCustosJson),
   };
+}
+
+function parseTratamentoCustos(
+  valor: string | null | undefined,
+): TratamentoCustosPlano {
+  try {
+    const dados = JSON.parse(valor || "{}");
+    return {
+      houveCusto: Boolean(dados.houveCusto),
+      tipo: textoObrigatorio(dados.tipo) || null,
+      valorEstimado: textoObrigatorio(dados.valorEstimado) || null,
+      valorRealizado: textoObrigatorio(dados.valorRealizado) || null,
+      observacao: textoObrigatorio(dados.observacao) || null,
+      atualizadoPorId: normalizarId(dados.atualizadoPorId),
+      atualizadoEm: textoObrigatorio(dados.atualizadoEm) || null,
+    };
+  } catch {
+    return {
+      houveCusto: false,
+      tipo: null,
+      valorEstimado: null,
+      valorRealizado: null,
+      observacao: null,
+    };
+  }
+}
+
+function usuarioResponsavelPelaExecucao(
+  plano: { responsavelId?: number | null; responsaveisJson?: string | null },
+  usuarioId?: number,
+) {
+  if (!usuarioId) return false;
+  if (plano.responsavelId === usuarioId) return true;
+  return parseListaJson<ResponsavelPlano>(plano.responsaveisJson).some(
+    (responsavel) => responsavel.id === usuarioId,
+  );
+}
+
+function tratamentoCustosDoRequest(
+  req: AuthRequest,
+): TratamentoCustosPlano {
+  return {
+    houveCusto: ["true", "1", "sim", "on"].includes(
+      String(req.body.houveCusto || "").trim().toLowerCase(),
+    ),
+    tipo: textoObrigatorio(req.body.tipoCusto) || null,
+    valorEstimado: textoObrigatorio(req.body.valorEstimado) || null,
+    valorRealizado: textoObrigatorio(req.body.valorRealizado) || null,
+    observacao: textoObrigatorio(req.body.observacaoCusto) || null,
+    atualizadoPorId: req.usuarioId || null,
+    atualizadoEm: new Date().toISOString(),
+  };
+}
+
+async function sincronizarMencoesPlanoAcao(
+  req: AuthRequest,
+  plano: {
+    id: number;
+    codigo: string;
+    titulo: string;
+    prazo?: Date | null;
+  },
+  responsaveis: ResponsavelPlano[],
+  mediadores: MediadorPlano[],
+) {
+  const alvos = new Map<
+    number,
+    { tipoMencao: string; observacao: string }
+  >();
+
+  responsaveis.forEach((responsavel) => {
+    alvos.set(responsavel.id, {
+      tipoMencao: "Responsável pela execução",
+      observacao:
+        "Você foi marcado como responsável pela execução deste plano de ação.",
+    });
+  });
+
+  mediadores.forEach((mediador) => {
+    if (alvos.has(mediador.id)) {
+      alvos.set(mediador.id, {
+        tipoMencao: "Responsável e mediador",
+        observacao:
+          "Você foi marcado como responsável pela execução e mediador deste plano de ação.",
+      });
+      return;
+    }
+
+    alvos.set(mediador.id, {
+      tipoMencao: "Mediador",
+      observacao: "Você foi marcado como mediador deste plano de ação.",
+    });
+  });
+
+  const idsMencionados = Array.from(alvos.keys());
+
+  await prisma.mencao.deleteMany({
+    where: {
+      modulo: "PlanoAcao",
+      registroId: plano.id,
+      usuarioMencionadoId: {
+        notIn: idsMencionados.length ? idsMencionados : [0],
+      },
+    },
+  });
+
+  if (!idsMencionados.length) return;
+
+  const existentes = await prisma.mencao.findMany({
+    where: {
+      modulo: "PlanoAcao",
+      registroId: plano.id,
+      usuarioMencionadoId: { in: idsMencionados },
+    },
+    select: { usuarioMencionadoId: true },
+  });
+  const idsExistentes = new Set(
+    existentes.map((mencao) => mencao.usuarioMencionadoId),
+  );
+
+  const novasMencoes = idsMencionados
+    .filter((id) => !idsExistentes.has(id))
+    .map((id) => {
+      const dados = alvos.get(id)!;
+      return {
+        modulo: "PlanoAcao",
+        registroId: plano.id,
+        codigoRegistro: plano.codigo,
+        tituloRegistro: plano.titulo,
+        unidade: req.unidadeAtiva || "GJA-T1",
+        usuarioMencionadoId: id,
+        autorId: req.usuarioId || null,
+        tipoMencao: dados.tipoMencao,
+        prazo: plano.prazo || null,
+        observacao: dados.observacao,
+      };
+    });
+
+  if (novasMencoes.length) {
+    await prisma.mencao.createMany({ data: novasMencoes });
+  }
+
+  await Promise.all(
+    idsMencionados.map((id) => {
+      const dados = alvos.get(id)!;
+      return prisma.mencao.updateMany({
+        where: {
+          modulo: "PlanoAcao",
+          registroId: plano.id,
+          usuarioMencionadoId: id,
+        },
+        data: {
+          codigoRegistro: plano.codigo,
+          tituloRegistro: plano.titulo,
+          unidade: req.unidadeAtiva || "GJA-T1",
+          tipoMencao: dados.tipoMencao,
+          prazo: plano.prazo || null,
+          observacao: dados.observacao,
+        },
+      });
+    }),
+  );
 }
 
 type AnexoTratamentoPlano = {
@@ -221,10 +455,75 @@ function evidenciaComAnexos(
   return JSON.stringify([...anexosAtuais, ...novos]);
 }
 
+function progressoDoPlano(
+  mediadores: MediadorPlano[],
+  conclusoes: ConclusaoMediadorPlano[],
+  tratamentoExecucaoStatus?: string | null,
+) {
+  const statusExecucao = normalizarStatusPlano(tratamentoExecucaoStatus);
+  const idsMediadores = new Set(mediadores.map((mediador) => mediador.id));
+  const totalConcluido = conclusoes.filter((item) =>
+    idsMediadores.has(item.mediadorId),
+  ).length;
+  const execucaoConcluida = statusExecucao === "Concluido";
+  const totalEtapas = mediadores.length + 1;
+  const percentual = Math.round(
+    ((totalConcluido + (execucaoConcluida ? 1 : 0)) / totalEtapas) * 100,
+  );
+
+  return {
+    percentual,
+    status:
+      percentual >= 100
+        ? "Concluido"
+        : percentual > 0 || statusExecucao === "Em andamento"
+          ? "Em andamento"
+          : "Pendente",
+    concluidoEm: percentual >= 100 ? new Date() : null,
+  };
+}
+
+function perfilPrivilegiadoPlano(req: AuthRequest) {
+  const perfil = String(req.usuarioPerfil || "").toUpperCase();
+  return ["SUPER_ADMIN", "ADMINISTRADOR", "T_I"].includes(perfil);
+}
+
+function filtroPlanosVisiveis(req: AuthRequest) {
+  if (perfilPrivilegiadoPlano(req)) return {};
+  if (!req.usuarioId) return { id: -1 };
+  const marcadorUsuario = `"id":${req.usuarioId}`;
+  const nomeUsuario = textoObrigatorio(req.usuarioNome);
+  const emailUsuario = textoObrigatorio(req.usuarioEmail);
+  const filtrosTexto = [
+    ...(nomeUsuario
+      ? [
+          { responsavelNome: { contains: nomeUsuario } },
+          { responsaveisJson: { contains: nomeUsuario } },
+          { mediadoresJson: { contains: nomeUsuario } },
+        ]
+      : []),
+    ...(emailUsuario
+      ? [
+          { responsaveisJson: { contains: emailUsuario } },
+          { mediadoresJson: { contains: emailUsuario } },
+        ]
+      : []),
+  ];
+
+  return {
+    OR: [
+      { responsavelId: req.usuarioId },
+      { responsaveisJson: { contains: marcadorUsuario } },
+      { mediadoresJson: { contains: marcadorUsuario } },
+      ...filtrosTexto,
+    ],
+  };
+}
+
 export async function listarPlanosAcao(req: AuthRequest, res: Response) {
   try {
     const planos = await prisma.planoAcaoCorporativo.findMany({
-      where: { unidade: req.unidadeAtiva },
+      where: { unidade: req.unidadeAtiva, ...filtroPlanosVisiveis(req) },
       orderBy: { createdAt: "desc" },
       include: {
         responsavel: { select: { id: true, nome: true, apelido: true } },
@@ -240,7 +539,11 @@ export async function listarPlanosAcao(req: AuthRequest, res: Response) {
 export async function buscarPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const plano = await prisma.planoAcaoCorporativo.findFirst({
-      where: { id: Number(req.params.id), unidade: req.unidadeAtiva },
+      where: {
+        id: Number(req.params.id),
+        unidade: req.unidadeAtiva,
+        ...filtroPlanosVisiveis(req),
+      },
       include: {
         responsavel: { select: { id: true, nome: true, apelido: true } },
       },
@@ -405,10 +708,17 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
     const status = normalizarStatusPlano(req.body.status);
     const fatorRisco = await fatorRiscoDaArc(req);
     await validarFatorAindaDisponivel(req, fatorRisco.fatorRiscoId);
-    const responsavel = await responsavelDoPlano(req);
+    const responsavel = await responsaveisDoPlano(req);
     const mediadores = await mediadoresDoPlano(req);
-    const percentual =
-      status === "Concluido" || status === "Concluído" ? 100 : 0;
+    const responsaveis = parseListaJson<ResponsavelPlano>(
+      responsavel.responsaveisJson,
+    );
+    const tratamentoExecucaoStatus = status;
+    const progressoInicial = progressoDoPlano(
+      mediadores,
+      [],
+      tratamentoExecucaoStatus,
+    );
 
     const plano = await prisma.planoAcaoCorporativo.create({
       data: {
@@ -421,15 +731,17 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         origemId: normalizarId(req.body.origemId),
         ...fatorRisco,
         prioridade: req.body.prioridade || "Media",
-        status,
-        percentual,
+        status: progressoInicial.status,
+        percentual: progressoInicial.percentual,
         descricao,
         acaoCorretiva: req.body.acaoCorretiva,
         acaoPreventiva: req.body.acaoPreventiva,
         ...responsavel,
         mediadoresJson: JSON.stringify(mediadores),
+        mediadoresConclusoesJson: JSON.stringify([]),
+        tratamentoExecucaoStatus,
         prazo: new Date(prazo),
-        concluidoEm: status === "Concluido" ? new Date() : null,
+        concluidoEm: progressoInicial.concluidoEm,
         evidencia: req.body.evidencia,
         comentarios,
       },
@@ -437,6 +749,8 @@ export async function criarPlanoAcao(req: AuthRequest, res: Response) {
         responsavel: { select: { id: true, nome: true, apelido: true } },
       },
     });
+
+    await sincronizarMencoesPlanoAcao(req, plano, responsaveis, mediadores);
 
     const origemId = normalizarId(req.body.origemId);
     if (req.body.origemModulo === "AnaliseRisco" && origemId) {
@@ -475,7 +789,11 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const { id } = req.params;
     const anterior = await prisma.planoAcaoCorporativo.findFirst({
-      where: { id: Number(id), unidade: req.unidadeAtiva },
+      where: {
+        id: Number(id),
+        unidade: req.unidadeAtiva,
+        ...filtroPlanosVisiveis(req),
+      },
     });
     if (!anterior)
       return res.status(404).json({ error: "Plano de acao nao encontrado" });
@@ -487,10 +805,23 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
       fatorRisco.fatorRiscoId,
       anterior.id,
     );
-    const responsavel = await responsavelDoPlano(req);
+    const responsavel = await responsaveisDoPlano(req);
     const mediadores = await mediadoresDoPlano(req);
-    const percentual =
-      status === "Concluido" || status === "Concluído" ? 100 : 0;
+    const responsaveis = parseListaJson<ResponsavelPlano>(
+      responsavel.responsaveisJson,
+    );
+    const conclusoesAtuais = parseListaJson<ConclusaoMediadorPlano>(
+      anterior.mediadoresConclusoesJson,
+    ).filter((conclusao) =>
+      mediadores.some((mediador) => mediador.id === conclusao.mediadorId),
+    );
+    const tratamentoExecucaoStatus =
+      anterior.tratamentoExecucaoStatus || anterior.status || status;
+    const progresso = progressoDoPlano(
+      mediadores,
+      conclusoesAtuais,
+      tratamentoExecucaoStatus,
+    );
     const plano = await prisma.planoAcaoCorporativo.update({
       where: { id: Number(id) },
       data: {
@@ -499,8 +830,8 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         origemId: normalizarId(req.body.origemId),
         ...fatorRisco,
         prioridade: req.body.prioridade,
-        status,
-        percentual,
+        status: progresso.status,
+        percentual: progresso.percentual,
         descricao:
           textoObrigatorio(req.body.descricao) ||
           textoObrigatorio(req.body.comentarios) ||
@@ -509,8 +840,10 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         acaoPreventiva: req.body.acaoPreventiva,
         ...responsavel,
         mediadoresJson: JSON.stringify(mediadores),
+        mediadoresConclusoesJson: JSON.stringify(conclusoesAtuais),
+        tratamentoExecucaoStatus,
         prazo: req.body.prazo ? new Date(req.body.prazo) : anterior.prazo,
-        concluidoEm: status === "Concluido" ? new Date() : null,
+        concluidoEm: progresso.concluidoEm,
         evidencia: req.body.evidencia,
         comentarios: textoObrigatorio(req.body.comentarios),
       },
@@ -518,6 +851,8 @@ export async function atualizarPlanoAcao(req: AuthRequest, res: Response) {
         responsavel: { select: { id: true, nome: true, apelido: true } },
       },
     });
+
+    await sincronizarMencoesPlanoAcao(req, plano, responsaveis, mediadores);
 
     await registrarLog({
       req,
@@ -543,25 +878,44 @@ export async function tratarPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
     const anterior = await prisma.planoAcaoCorporativo.findFirst({
-      where: { id, unidade: req.unidadeAtiva },
+      where: { id, unidade: req.unidadeAtiva, ...filtroPlanosVisiveis(req) },
     });
     if (!anterior) {
       return res.status(404).json({ error: "Plano de acao nao encontrado" });
     }
+    if (!usuarioResponsavelPelaExecucao(anterior, req.usuarioId)) {
+      return res.status(403).json({
+        error:
+          "Somente responsáveis pela execução podem registrar o tratamento deste plano.",
+      });
+    }
 
-    const status = normalizarStatusPlano(req.body.status || anterior.status);
-    const percentual = status === "Concluido" ? 100 : 0;
+    const mediadores = parseListaJson<MediadorPlano>(anterior.mediadoresJson);
+    const conclusoesMediadores = parseListaJson<ConclusaoMediadorPlano>(
+      anterior.mediadoresConclusoesJson,
+    );
+    const tratamentoExecucaoStatus = normalizarStatusPlano(
+      req.body.status || anterior.tratamentoExecucaoStatus || anterior.status,
+    );
+    const progresso = progressoDoPlano(
+      mediadores,
+      conclusoesMediadores,
+      tratamentoExecucaoStatus,
+    );
     const comentarios = textoObrigatorio(req.body.comentarios);
     const anexos = anexosDoRequest(req);
+    const tratamentoCustos = tratamentoCustosDoRequest(req);
 
     const plano = await prisma.planoAcaoCorporativo.update({
       where: { id },
       data: {
-        status,
-        percentual,
+        status: progresso.status,
+        percentual: progresso.percentual,
         comentarios: comentarios || anterior.comentarios,
         evidencia: evidenciaComAnexos(anterior.evidencia, anexos),
-        concluidoEm: status === "Concluido" ? new Date() : null,
+        tratamentoExecucaoStatus,
+        tratamentoCustosJson: JSON.stringify(tratamentoCustos),
+        concluidoEm: progresso.concluidoEm,
       },
       include: {
         responsavel: { select: { id: true, nome: true, apelido: true } },
@@ -602,11 +956,121 @@ export async function tratarPlanoAcao(req: AuthRequest, res: Response) {
   }
 }
 
+export async function concluirAnaliseMediadorPlanoAcao(
+  req: AuthRequest,
+  res: Response,
+) {
+  try {
+    const id = Number(req.params.id);
+    const anterior = await prisma.planoAcaoCorporativo.findFirst({
+      where: { id, unidade: req.unidadeAtiva, ...filtroPlanosVisiveis(req) },
+    });
+    if (!anterior) {
+      return res.status(404).json({ error: "Plano de acao nao encontrado" });
+    }
+
+    if (!req.usuarioId) {
+      return res.status(401).json({ error: "Usuário não autenticado." });
+    }
+
+    const mediadores = parseListaJson<MediadorPlano>(anterior.mediadoresJson);
+    if (!mediadores.length) {
+      return res.status(400).json({
+        error: "Este plano não possui mediadores para análise.",
+      });
+    }
+
+    const mediador = mediadores.find((item) => item.id === req.usuarioId);
+    if (!mediador) {
+      return res.status(403).json({
+        error: "Somente mediadores deste plano podem concluir esta análise.",
+      });
+    }
+
+    const conclusao = textoObrigatorio(req.body.conclusao);
+    if (!conclusao) {
+      return res
+        .status(400)
+        .json({ error: "Informe a conclusão da análise do mediador." });
+    }
+
+    const conclusoesAtuais = parseListaJson<ConclusaoMediadorPlano>(
+      anterior.mediadoresConclusoesJson,
+    ).filter((item) => item.mediadorId !== mediador.id);
+    const conclusoes = [
+      ...conclusoesAtuais,
+      {
+        mediadorId: mediador.id,
+        mediadorNome: mediador.nome,
+        conclusao,
+        concluidoEm: new Date().toISOString(),
+      },
+    ];
+    const progresso = progressoDoPlano(
+      mediadores,
+      conclusoes,
+      anterior.tratamentoExecucaoStatus || anterior.status,
+    );
+
+    const plano = await prisma.planoAcaoCorporativo.update({
+      where: { id },
+      data: {
+        mediadoresConclusoesJson: JSON.stringify(conclusoes),
+        percentual: progresso.percentual,
+        status: progresso.status,
+        concluidoEm: progresso.concluidoEm,
+        comentarios:
+          textoObrigatorio(req.body.comentarios) || anterior.comentarios,
+      },
+      include: {
+        responsavel: { select: { id: true, nome: true, apelido: true } },
+      },
+    });
+
+    if (plano.origemModulo === "AnaliseRisco" && plano.origemId) {
+      await prisma.analiseRiscoCompleta.updateMany({
+        where: {
+          id: plano.origemId,
+          unidade: req.unidadeAtiva,
+          finalizadaEm: null,
+          finalizacaoStatus: { not: "Anulada" },
+        },
+        data: {
+          finalizacaoStatus: "Em Andamento",
+          tratativaStatus:
+            progresso.percentual >= 100 ? "Concluída" : "Em andamento",
+          tratativaConcluidaEm:
+            progresso.percentual >= 100 ? new Date() : null,
+        },
+      });
+    }
+
+    await registrarLog({
+      req,
+      acao: `Conclusão de análise de mediador no plano ${plano.codigo}`,
+      tipoRegistro: "PlanoAcao",
+      registroId: plano.id,
+      dadosAnteriores: anterior,
+      dadosNovos: plano,
+    });
+
+    return res.json(apresentarPlano(plano));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({
+      error:
+        error instanceof Error
+          ? error.message
+          : "Erro ao concluir análise do mediador.",
+    });
+  }
+}
+
 export async function excluirPlanoAcao(req: AuthRequest, res: Response) {
   try {
     const id = Number(req.params.id);
     const anterior = await prisma.planoAcaoCorporativo.findFirst({
-      where: { id, unidade: req.unidadeAtiva },
+      where: { id, unidade: req.unidadeAtiva, ...filtroPlanosVisiveis(req) },
     });
     if (!anterior)
       return res.status(404).json({ error: "Plano de acao nao encontrado" });

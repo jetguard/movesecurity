@@ -104,6 +104,21 @@ async function localizarArquivo(req: AuthRequest, caminhoNormalizado: string) {
     };
   }
 
+  const solicitacaoImagem = await prisma.anexoSolicitacaoImagem.findFirst({
+    where: { caminho: { in: variantesCaminho(caminhoNormalizado) } },
+    include: {
+      solicitacao: { select: { id: true, unidade: true, protocolo: true } },
+    },
+  });
+  if (solicitacaoImagem) {
+    return {
+      permitido: unidadePermitida(req, solicitacaoImagem.solicitacao.unidade),
+      tipoRegistro: "AnexoSolicitacaoImagem",
+      registroId: solicitacaoImagem.solicitacao.id,
+      unidade: solicitacaoImagem.solicitacao.unidade,
+    };
+  }
+
   const sugestao = await prisma.sugestaoMelhoria.findFirst({
     where: { printTela: { in: variantesCaminho(caminhoNormalizado) } },
     select: { id: true, unidade: true, autorId: true },

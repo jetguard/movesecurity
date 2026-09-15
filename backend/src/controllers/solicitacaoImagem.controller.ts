@@ -1,10 +1,13 @@
 import crypto from "crypto";
+import fs from "fs";
+import path from "path";
 import { Response } from "express";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { AuthRequest } from "../middlewares/auth";
+import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { enviarEmail } from "../services/email.service";
 import { registrarLog } from "../services/auditoria.service";
+import { validarPinOperacional } from "../services/pinOperacional.service";
 import { travarSequencia } from "../utils/lockSequencia";
 
 const STATUS = {
@@ -12,7 +15,7 @@ const STATUS = {
   AGUARDANDO_CLASSIFICACAO: "Aguardando Classificação",
   EM_ATENDIMENTO: "Em Atendimento",
   PAUSADO: "Pausado",
-  FINALIZADO: "Finalizado",
+  CONCLUIDO: "Concluído",
   ANULADO: "Anulado",
 };
 
@@ -25,6 +28,7 @@ const PRIORIDADES = new Set([
 ]);
 
 const STATUS_VALIDOS = new Set(Object.values(STATUS));
+const TOKEN_TESTE_DESENVOLVIMENTO = "teste-desenvolvimento";
 
 const includeSolicitacao = {
   criadoPor: { select: { id: true, nome: true, email: true } },
@@ -45,6 +49,12 @@ function texto(valor: unknown) {
 function textoOpcional(valor: unknown) {
   const valorTexto = texto(valor);
   return valorTexto || null;
+}
+
+function normalizarStatus(valor: unknown) {
+  const status = texto(valor);
+  if (status === "Finalizado") return STATUS.CONCLUIDO;
+  return status;
 }
 
 function dataOpcional(valor: unknown) {
@@ -81,6 +91,11 @@ function validarPeriodoOcorrencia(
   return null;
 }
 
+function segundosDesde(inicio?: Date | null, fim = new Date()) {
+  if (!inicio) return 0;
+  return Math.max(0, Math.floor((fim.getTime() - inicio.getTime()) / 1000));
+}
+
 function protocoloImagem(numero: number, ano: number) {
   return `IMG-${ano}-${String(numero).padStart(4, "0")}`;
 }
@@ -95,6 +110,36 @@ function urlPublica(token: string) {
     process.env.FRONTEND_URL ||
     "https://movesecurity.movecta.com.br";
   return `${base.replace(/\/+$/, "")}/solicitacao/imagens/${token}`;
+}
+
+function tokenTesteDesenvolvimento(token: string) {
+  return (
+    process.env.NODE_ENV !== "production" &&
+    token === TOKEN_TESTE_DESENVOLVIMENTO
+  );
+}
+
+function unidadePublica(req: AuthRequest) {
+  const unidadeHeader = req.headers["x-unidade-ativa"];
+  return (
+    (Array.isArray(unidadeHeader) ? unidadeHeader[0] : unidadeHeader) ||
+    process.env.UNIDADE_ATIVA ||
+    "GJA-T1"
+  );
+}
+
+async function locaisPublicos(unidade: string) {
+  return prisma.localTerminal.findMany({
+    where: { unidade, status: "Ativo" },
+    orderBy: [{ areaSensivel: "desc" }, { nome: "asc" }],
+    select: {
+      id: true,
+      nome: true,
+      tipo: true,
+      status: true,
+      unidade: true,
+    },
+  });
 }
 
 function nomeUsuario(req: AuthRequest) {
@@ -153,6 +198,37 @@ function anexosParaCriacao(
   }));
 }
 
+function anexosImagem(arquivos: Express.Multer.File[]) {
+  return arquivos.filter((arquivo) => arquivo.mimetype?.startsWith("image/"));
+}
+
+function removerArquivoUpload(caminho?: string | null) {
+  if (!caminho) return;
+  const caminhoNormalizado = caminho.replace(/\\/g, "/");
+  if (!caminhoNormalizado.startsWith("uploads/")) return;
+
+  const raizUploads = path.resolve(process.cwd(), "uploads");
+  const absoluto = path.resolve(process.cwd(), caminhoNormalizado);
+  if (!absoluto.startsWith(raizUploads)) return;
+  if (fs.existsSync(absoluto)) fs.rmSync(absoluto, { force: true });
+}
+
+async function buscarSolicitacaoComHistorico(
+  tx: Prisma.TransactionClient,
+  id: number,
+) {
+  return tx.solicitacaoImagem.findUniqueOrThrow({
+    where: { id },
+    include: {
+      ...includeSolicitacao,
+      historico: {
+        include: { usuario: { select: { id: true, nome: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+}
+
 function validarCamposBase(body: any, externo = false) {
   const titulo = texto(body.titulo);
   const solicitanteNome = texto(body.solicitanteNome || body.nome);
@@ -192,7 +268,12 @@ export async function listarSolicitacoesImagem(req: AuthRequest, res: Response) 
       unidade: req.unidadeAtiva,
     };
 
-    if (status) where.status = status;
+    if (status) {
+      where.status =
+        normalizarStatus(status) === STATUS.CONCLUIDO
+          ? { in: [STATUS.CONCLUIDO, "Finalizado"] }
+          : normalizarStatus(status);
+    }
     if (prioridade) where.prioridade = prioridade;
     if (busca) {
       where.OR = [
@@ -351,7 +432,7 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
       return res.status(404).json({ error: "Solicitação de imagens não encontrada." });
     }
 
-    const novoStatus = texto(req.body.status) || atual.status;
+    const novoStatus = normalizarStatus(req.body.status) || normalizarStatus(atual.status);
     const novaPrioridade = texto(req.body.prioridade) || atual.prioridade;
 
     if (!STATUS_VALIDOS.has(novoStatus)) {
@@ -360,11 +441,17 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
     if (!PRIORIDADES.has(novaPrioridade)) {
       return res.status(400).json({ error: "Prioridade inválida." });
     }
-    if (novoStatus === STATUS.FINALIZADO && !texto(req.body.descricaoConclusao)) {
-      return res.status(400).json({ error: "Informe a conclusão para finalizar." });
+    if (novoStatus === STATUS.CONCLUIDO && !texto(req.body.descricaoConclusao)) {
+      return res.status(400).json({ error: "Informe o motivo da conclusão." });
     }
     if (novoStatus === STATUS.ANULADO && !texto(req.body.motivoAnulacao)) {
       return res.status(400).json({ error: "Informe o motivo para anular." });
+    }
+    if (
+      [STATUS.CONCLUIDO, STATUS.ANULADO].includes(novoStatus) &&
+      normalizarStatus(atual.status) !== novoStatus
+    ) {
+      await validarPinOperacional(req.usuarioId || 0, String(req.body?.pinOperacional || ""));
     }
 
     const local = textoOpcional(req.body.local);
@@ -403,6 +490,39 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
     if (erroPeriodo) return res.status(400).json({ error: erroPeriodo });
 
     const solicitacao = await prisma.$transaction(async (tx) => {
+      const agora = new Date();
+      let tempoFinalizadoSegundos = 0;
+      const deveEncerrarAtendimentoAtivo =
+        atual.status === STATUS.EM_ATENDIMENTO &&
+        statusFinal !== STATUS.EM_ATENDIMENTO &&
+        atual.atendenteId;
+
+      if (deveEncerrarAtendimentoAtivo) {
+        const atendimentoAtivo = await tx.atendimentoSolicitacaoImagem.findFirst({
+          where: { solicitacaoId: id, atendenteId: atual.atendenteId || 0, pausadoEm: null },
+          orderBy: { iniciadoEm: "desc" },
+        });
+
+        if (atendimentoAtivo) {
+          tempoFinalizadoSegundos = segundosDesde(atendimentoAtivo.iniciadoEm, agora);
+          await tx.atendimentoSolicitacaoImagem.update({
+            where: { id: atendimentoAtivo.id },
+            data: {
+              pausadoEm: agora,
+              tempoSegundos: tempoFinalizadoSegundos,
+              motivoPausa:
+                statusFinal === STATUS.CONCLUIDO
+                  ? "Atendimento encerrado na finalização da solicitação."
+                  : "Atendimento encerrado pela alteração de status.",
+              andamento:
+                statusFinal === STATUS.CONCLUIDO
+                  ? texto(req.body.descricaoConclusao)
+                  : texto(req.body.motivoAnulacao) || "Status alterado.",
+            },
+          });
+        }
+      }
+
       const atualizada = await tx.solicitacaoImagem.update({
         where: { id },
         data: {
@@ -419,18 +539,25 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
           descricao: textoOpcional(req.body.descricao) ?? atual.descricao,
           prioridade: novaPrioridade,
           status: statusFinal,
+          tempoTotalAtendimento:
+            tempoFinalizadoSegundos > 0
+              ? { increment: tempoFinalizadoSegundos }
+              : undefined,
+          atendimentoIniciadoEm: deveEncerrarAtendimentoAtivo
+            ? null
+            : atual.atendimentoIniciadoEm,
           descricaoConclusao:
-            statusFinal === STATUS.FINALIZADO
+            statusFinal === STATUS.CONCLUIDO
               ? texto(req.body.descricaoConclusao)
               : atual.descricaoConclusao,
-          concluidoPorId: statusFinal === STATUS.FINALIZADO ? req.usuarioId || null : atual.concluidoPorId,
-          concluidoEm: statusFinal === STATUS.FINALIZADO ? new Date() : atual.concluidoEm,
+          concluidoPorId: statusFinal === STATUS.CONCLUIDO ? req.usuarioId || null : atual.concluidoPorId,
+          concluidoEm: statusFinal === STATUS.CONCLUIDO ? agora : atual.concluidoEm,
           motivoAnulacao:
             statusFinal === STATUS.ANULADO
               ? texto(req.body.motivoAnulacao)
               : atual.motivoAnulacao,
           anuladoPorId: statusFinal === STATUS.ANULADO ? req.usuarioId || null : atual.anuladoPorId,
-          anuladoEm: statusFinal === STATUS.ANULADO ? new Date() : atual.anuladoEm,
+          anuladoEm: statusFinal === STATUS.ANULADO ? agora : atual.anuladoEm,
         },
       });
 
@@ -450,6 +577,7 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
           : `Status alterado de ${atual.status} para ${statusFinal}.`,
         atual.status,
         statusFinal,
+        tempoFinalizadoSegundos > 0 ? { tempoSegundos: tempoFinalizadoSegundos } : undefined,
       );
 
       return tx.solicitacaoImagem.findUniqueOrThrow({
@@ -459,7 +587,10 @@ export async function atualizarSolicitacaoImagem(req: AuthRequest, res: Response
     });
 
     return res.json(solicitacao);
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.status) {
+      return res.status(error.status).json({ error: error.message });
+    }
     console.error("Erro ao atualizar solicitação de imagens:", error);
     return res.status(500).json({ error: "Erro ao atualizar solicitação de imagens." });
   }
@@ -469,6 +600,7 @@ export async function iniciarAtendimentoSolicitacaoImagem(req: AuthRequest, res:
   try {
     const id = Number(req.params.id);
     const agora = new Date();
+    await validarPinOperacional(req.usuarioId || 0, String(req.body?.pinOperacional || ""));
 
     const solicitacao = await prisma.$transaction(async (tx) => {
       const atual = await tx.solicitacaoImagem.findFirst({
@@ -529,6 +661,9 @@ export async function iniciarAtendimentoSolicitacaoImagem(req: AuthRequest, res:
     }
     if (error?.message === "ATENDIMENTO_CONCORRENTE") {
       return res.status(409).json({ error: "A solicitação já foi assumida por outro atendente." });
+    }
+    if (error?.status) {
+      return res.status(error.status).json({ error: error.message });
     }
     console.error("Erro ao iniciar atendimento:", error);
     return res.status(500).json({ error: "Erro ao iniciar atendimento." });
@@ -712,8 +847,132 @@ export async function pausarAtendimentoSolicitacaoImagem(req: AuthRequest, res: 
   }
 }
 
+export async function coletarEvidenciasSolicitacaoImagem(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const arquivosRecebidos = (req.files as Express.Multer.File[]) || [];
+    const arquivos = anexosImagem(arquivosRecebidos);
+
+    if (!arquivos.length) {
+      arquivosRecebidos.forEach((arquivo) => removerArquivoUpload(arquivo.path));
+      return res.status(400).json({ error: "Envie pelo menos uma imagem como evidência." });
+    }
+
+    const arquivosInvalidos = arquivosRecebidos.filter(
+      (arquivo) => !arquivo.mimetype?.startsWith("image/"),
+    );
+    arquivosInvalidos.forEach((arquivo) => removerArquivoUpload(arquivo.path));
+
+    const solicitacao = await prisma.$transaction(async (tx) => {
+      const atual = await tx.solicitacaoImagem.findFirst({
+        where: { id, excluidoEm: null, unidade: req.unidadeAtiva },
+      });
+
+      if (!atual) throw new Error("NAO_ENCONTRADA");
+      if (atual.status !== STATUS.EM_ATENDIMENTO) throw new Error("NAO_EM_ATENDIMENTO");
+      if (atual.atendenteId !== req.usuarioId) throw new Error("ATENDENTE_DIFERENTE");
+
+      await tx.anexoSolicitacaoImagem.createMany({
+        data: anexosParaCriacao(id, arquivos, "Evidencia", req.usuarioId),
+      });
+
+      await registrarHistorico(
+        tx,
+        id,
+        req,
+        "COLETA_EVIDENCIAS",
+        `Evidências coletadas: ${arquivos.length}.`,
+        atual.status,
+        atual.status,
+        {
+          quantidade: arquivos.length,
+          arquivos: arquivos.map((arquivo) => arquivo.originalname),
+        },
+      );
+
+      return buscarSolicitacaoComHistorico(tx, id);
+    });
+
+    return res.status(201).json(solicitacao);
+  } catch (error: any) {
+    ((req.files as Express.Multer.File[]) || []).forEach((arquivo) =>
+      removerArquivoUpload(arquivo.path),
+    );
+    if (error?.message === "NAO_ENCONTRADA") {
+      return res.status(404).json({ error: "Solicitação de imagens não encontrada." });
+    }
+    if (error?.message === "ATENDENTE_DIFERENTE") {
+      return res.status(403).json({ error: "Somente o atendente atual pode coletar evidências." });
+    }
+    if (error?.message === "NAO_EM_ATENDIMENTO") {
+      return res.status(409).json({ error: "A coleta de evidências só fica disponível durante o atendimento." });
+    }
+    console.error("Erro ao coletar evidências:", error);
+    return res.status(500).json({ error: "Erro ao coletar evidências." });
+  }
+}
+
+export async function excluirEvidenciaSolicitacaoImagem(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const anexoId = Number(req.params.anexoId);
+
+    const solicitacao = await prisma.$transaction(async (tx) => {
+      const atual = await tx.solicitacaoImagem.findFirst({
+        where: { id, excluidoEm: null, unidade: req.unidadeAtiva },
+      });
+
+      if (!atual) throw new Error("NAO_ENCONTRADA");
+      if (atual.status !== STATUS.EM_ATENDIMENTO) throw new Error("NAO_EM_ATENDIMENTO");
+      if (atual.atendenteId !== req.usuarioId) throw new Error("ATENDENTE_DIFERENTE");
+
+      const anexo = await tx.anexoSolicitacaoImagem.findFirst({
+        where: { id: anexoId, solicitacaoId: id, origem: "Evidencia" },
+      });
+      if (!anexo) throw new Error("EVIDENCIA_NAO_ENCONTRADA");
+
+      await tx.anexoSolicitacaoImagem.delete({ where: { id: anexo.id } });
+
+      await registrarHistorico(
+        tx,
+        id,
+        req,
+        "EXCLUSAO_EVIDENCIA",
+        `Evidência removida: ${anexo.nomeOriginal}.`,
+        atual.status,
+        atual.status,
+        { anexoId: anexo.id, nomeOriginal: anexo.nomeOriginal },
+      );
+
+      removerArquivoUpload(anexo.caminho);
+
+      return buscarSolicitacaoComHistorico(tx, id);
+    });
+
+    return res.json(solicitacao);
+  } catch (error: any) {
+    if (error?.message === "NAO_ENCONTRADA" || error?.message === "EVIDENCIA_NAO_ENCONTRADA") {
+      return res.status(404).json({ error: "Evidência não encontrada." });
+    }
+    if (error?.message === "ATENDENTE_DIFERENTE") {
+      return res.status(403).json({ error: "Somente o atendente atual pode excluir evidências." });
+    }
+    if (error?.message === "NAO_EM_ATENDIMENTO") {
+      return res.status(409).json({ error: "Evidências só podem ser removidas durante o atendimento." });
+    }
+    console.error("Erro ao excluir evidência:", error);
+    return res.status(500).json({ error: "Erro ao excluir evidência." });
+  }
+}
+
 export async function excluirSolicitacaoImagem(req: AuthRequest, res: Response) {
   try {
+    if (![PERFIS.SUPER_ADMIN, PERFIS.ADMINISTRADOR].includes(req.usuarioPerfil || "")) {
+      return res.status(403).json({
+        error: "Somente administradores e Super Admin podem excluir solicitações de imagens.",
+      });
+    }
+
     const id = Number(req.params.id);
     const motivo = texto(req.body?.motivo) || "Exclusão administrativa";
 
@@ -796,6 +1055,19 @@ export async function enviarFormularioSolicitacaoImagem(req: AuthRequest, res: R
 export async function validarTokenSolicitacaoImagem(req: AuthRequest, res: Response) {
   try {
     const token = texto(req.params.token);
+    const unidade = unidadePublica(req);
+    const locais = await locaisPublicos(unidade);
+
+    if (tokenTesteDesenvolvimento(token)) {
+      return res.json({
+        email: "teste.desenvolvimento@movecta.com.br",
+        expiraEm: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        unidade,
+        locais,
+        desenvolvimento: true,
+      });
+    }
+
     const registro = await prisma.tokenSolicitacaoImagem.findUnique({
       where: { tokenHash: hashToken(token) },
     });
@@ -804,7 +1076,7 @@ export async function validarTokenSolicitacaoImagem(req: AuthRequest, res: Respo
       return res.status(404).json({ error: "Link inválido, expirado ou já utilizado." });
     }
 
-    return res.json({ email: registro.email, expiraEm: registro.expiraEm });
+    return res.json({ email: registro.email, expiraEm: registro.expiraEm, unidade, locais });
   } catch (error) {
     console.error("Erro ao validar token:", error);
     return res.status(500).json({ error: "Erro ao validar link." });
@@ -819,6 +1091,7 @@ export async function criarSolicitacaoImagemPublica(req: AuthRequest, res: Respo
     const token = texto(req.params.token);
     const arquivos = (req.files as Express.Multer.File[]) || [];
     const ano = new Date().getFullYear();
+    const unidade = unidadePublica(req);
     const dataOcorrencia = dataOpcional(req.body.dataOcorrencia);
     const dataFinalOcorrencia =
       dataOpcional(req.body.dataFinalOcorrencia) || dataOcorrencia;
@@ -832,12 +1105,28 @@ export async function criarSolicitacaoImagemPublica(req: AuthRequest, res: Respo
     );
     if (erroPeriodo) return res.status(400).json({ error: erroPeriodo });
 
-    const solicitacao = await prisma.$transaction(async (tx) => {
-      const registro = await tx.tokenSolicitacaoImagem.findUnique({
-        where: { tokenHash: hashToken(token) },
-      });
+    const local = textoOpcional(req.body.local);
+    if (local) {
+      const localCadastro = await validarLocalAtivo(local, unidade);
+      if (!localCadastro) {
+        return res.status(400).json({
+          error: "Selecione um local ativo cadastrado para esta unidade.",
+        });
+      }
+    }
 
-      if (!registro || registro.usadoEm || registro.expiraEm.getTime() < Date.now()) {
+    const solicitacao = await prisma.$transaction(async (tx) => {
+      const tokenDesenvolvimento = tokenTesteDesenvolvimento(token);
+      const registro = tokenDesenvolvimento
+        ? null
+        : await tx.tokenSolicitacaoImagem.findUnique({
+            where: { tokenHash: hashToken(token) },
+          });
+
+      if (
+        !tokenDesenvolvimento &&
+        (!registro || registro.usadoEm || registro.expiraEm.getTime() < Date.now())
+      ) {
         throw new Error("TOKEN_INVALIDO");
       }
 
@@ -847,14 +1136,14 @@ export async function criarSolicitacaoImagemPublica(req: AuthRequest, res: Respo
           ano,
           numero,
           protocolo: protocoloImagem(numero, ano),
-          unidade: "GJA-T1",
+          unidade,
           origem: "Formulário Externo",
           titulo: texto(req.body.titulo),
           solicitanteNome: texto(req.body.nome || req.body.solicitanteNome),
           solicitanteEmail: texto(req.body.email).toLowerCase(),
           solicitanteSetor: textoOpcional(req.body.setor),
           solicitanteCargo: textoOpcional(req.body.cargo),
-          local: textoOpcional(req.body.local),
+          local,
           dataOcorrencia,
           dataFinalOcorrencia,
           horaInicial,
@@ -871,10 +1160,12 @@ export async function criarSolicitacaoImagemPublica(req: AuthRequest, res: Respo
         });
       }
 
-      await tx.tokenSolicitacaoImagem.update({
-        where: { id: registro.id },
-        data: { usadoEm: new Date() },
-      });
+      if (registro) {
+        await tx.tokenSolicitacaoImagem.update({
+          where: { id: registro.id },
+          data: { usadoEm: new Date() },
+        });
+      }
 
       await registrarHistorico(
         tx,

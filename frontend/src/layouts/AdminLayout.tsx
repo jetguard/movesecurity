@@ -22,7 +22,6 @@ import {
   Settings,
   ShieldAlert,
   ListChecks,
-  CheckCircle2,
   Paperclip,
   Users,
   Video,
@@ -91,6 +90,9 @@ export default function AdminLayout() {
   const cadastro = usuario?.perfilAcesso === PERFIS.CADASTRO;
   const tecnicoManutencao = somenteTecnicoManutencao();
   const podeVerDashboard = temModulo("dashboard");
+  const podeVerAnaliseRiscos = temModulo("analise_riscos");
+  const podeVerPlanoAcao = temModulo("plano_acao");
+  const podeVerRelatorios = temModulo("relatorios");
   const podeVerRelatoriosMenu = temModulo("relatorios") || temModulo("documentos");
   const podeVerTreinamentosMenu =
     temModulo("treinamentos") ||
@@ -130,6 +132,29 @@ export default function AdminLayout() {
   useEffect(() => {
     document.documentElement.classList.add("dark");
     localStorage.setItem("tema", "dark");
+  }, []);
+
+  useEffect(() => {
+    let cancelado = false;
+    api
+      .post("/auth/refresh")
+      .then((response) => {
+        if (cancelado || !response.data?.usuario) return;
+        const usuarioAtualizado = response.data.usuario;
+        const usuarioCache = localStorage.getItem("usuario");
+        const proximoUsuario = JSON.stringify(usuarioAtualizado);
+        if (usuarioCache !== proximoUsuario) {
+          localStorage.setItem("usuario", proximoUsuario);
+          window.location.reload();
+        }
+      })
+      .catch(() => {
+        // O interceptor global trata sessão expirada quando necessário.
+      });
+
+    return () => {
+      cancelado = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -232,6 +257,11 @@ export default function AdminLayout() {
     }
 
     function carregarNotificacoes() {
+      if (!podeVerRelatorios) {
+        setNotificacoes([]);
+        return;
+      }
+
       api
         .get("/gestao/notificacoes")
         .then((response) => setNotificacoes(response.data))
@@ -246,22 +276,26 @@ export default function AdminLayout() {
       .then((response) => setMencoesPendentes(response.data.total || 0))
       .catch(() => setMencoesPendentes(0));
 
-    api
-      .get("/operacao/passagens-turno")
-      .then((response) => {
-        const abertas = Array.isArray(response.data)
-          ? response.data.filter((item) => item.status === "Aberto").length
-          : 0;
-        setPassagensAbertas(abertas);
-      })
-      .catch(() => setPassagensAbertas(0));
+    if (podeVerRelatorios) {
+      api
+        .get("/operacao/passagens-turno")
+        .then((response) => {
+          const abertas = Array.isArray(response.data)
+            ? response.data.filter((item) => item.status === "Aberto").length
+            : 0;
+          setPassagensAbertas(abertas);
+        })
+        .catch(() => setPassagensAbertas(0));
+    } else {
+      setPassagensAbertas(0);
+    }
 
     return () =>
       window.removeEventListener(
         "notificacoes-atualizadas",
         carregarNotificacoes,
       );
-  }, [portaria, cadastro]);
+  }, [portaria, cadastro, podeVerRelatorios]);
 
   useEffect(() => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -414,6 +448,18 @@ export default function AdminLayout() {
 
   if (tecnicoManutencao && !rotaTecnicoPermitida) {
     return <Navigate to="/cameras" replace />;
+  }
+
+  if (location.pathname === "/" && !podeVerDashboard) {
+    if (temModulo("plano_acao")) return <Navigate to="/planos-acao" replace />;
+    if (temModulo("analise_riscos")) return <Navigate to="/riscos/dashboard" replace />;
+    if (temModulo("solicitacoes_imagens")) return <Navigate to="/solicitacoes/imagens" replace />;
+    if (temModulo("relatorios")) return <Navigate to="/ocorrencias" replace />;
+    if (temModulo("documentos")) return <Navigate to="/documentos" replace />;
+    if (temModulo("treinamentos")) return <Navigate to="/treinamentos-terminal" replace />;
+    if (temModulo("cftv")) return <Navigate to="/cameras" replace />;
+    if (temModulo("operacao")) return <Navigate to="/meus-dados?aba=tarefas" replace />;
+    return <Navigate to="/meus-dados" replace />;
   }
 
   return (
@@ -695,10 +741,6 @@ export default function AdminLayout() {
                         <Columns3 size={16} />
                         Quadro de Tarefas
                       </Link>}
-                      {temModulo("operacao") && <Link to="/tarefas" className={subItem}>
-                        <CheckCircle2 size={16} />
-                        Minhas Tarefas
-                      </Link>}
                       {temModulo("quadra_seguranca") && <Link to="/quadra-seguranca" className={subItem}>
                         <PackageSearch size={16} />
                         Quadra de Segurança
@@ -707,21 +749,13 @@ export default function AdminLayout() {
                         <MapPinned size={16} />
                         Mapa Operacional
                       </Link>}
-                      {temModulo("operacao") && <Link to="/notificacoes" className={subItem}>
-                        <Bell size={16} />
-                        Notificações
-                      </Link>}
                       {temModulo("operacao") && <Link to="/alertas-operacionais" className={subItem}>
                         <ShieldAlert size={16} />
                         Alertas Operacionais
                       </Link>}
-                      {temModulo("operacao") && <Link to="/pendencias" className={subItem}>
-                        <ListChecks size={16} />
-                        Pendências
-                      </Link>}
-                      {temModulo("documentos") && <Link to="/evidencias" className={subItem}>
-                        <Paperclip size={16} />
-                        Evidências
+                      {temModulo("operacao") && <Link to="/scanner" className={subItem}>
+                        <Activity size={16} />
+                        Scanner
                       </Link>}
                     </>
                   )}
@@ -756,7 +790,17 @@ export default function AdminLayout() {
             </>
           )}
 
-          {podeGerenciarRiscos() && (
+          {podeVerPlanoAcao && !podeVerAnaliseRiscos && (
+            <Link
+              to="/planos-acao"
+              className="flex h-11 items-center gap-3 rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"
+            >
+              <ListChecks size={20} className="shrink-0" />
+              <span className={menuText}>Plano de ação</span>
+            </Link>
+          )}
+
+          {podeGerenciarRiscos() && podeVerAnaliseRiscos && (
             <>
               <button
                 onClick={() => setGestaoAvancadaOpen(!gestaoAvancadaOpen)}
@@ -773,27 +817,27 @@ export default function AdminLayout() {
 
               {gestaoAvancadaOpen && (
                 <div className={submenuClass}>
-                  {temModulo("analise_riscos") && <Link to="/riscos/dashboard" className={subItem}>
+                  {podeVerAnaliseRiscos && <Link to="/riscos/dashboard" className={subItem}>
                     <LayoutDashboard size={16} />
                     Dashboard
                   </Link>}
-                  {temModulo("analise_riscos") && <Link to="/riscos/fluxograma" className={subItem}>
+                  {podeVerAnaliseRiscos && <Link to="/riscos/fluxograma" className={subItem}>
                     <GitBranch size={16} />
                     Fluxograma
                   </Link>}
-                  {temModulo("analise_riscos") && <Link to="/riscos/cadastro-geral" className={subItem}>
+                  {podeVerAnaliseRiscos && <Link to="/riscos/cadastro-geral" className={subItem}>
                     <Columns3 size={16} />
                     Cadastro Geral
                   </Link>}
-                  {temModulo("analise_riscos") && <Link to="/riscos/analise-completa" className={subItem}>
+                  {podeVerAnaliseRiscos && <Link to="/riscos/analise-completa" className={subItem}>
                     <FileBarChart size={16} />
                     Análise Completa
                   </Link>}
-                  {temModulo("plano_acao") && <Link to="/planos-acao" className={subItem}>
+                  {podeVerPlanoAcao && <Link to="/planos-acao" className={subItem}>
                     <ListChecks size={16} />
                     Plano de ação
                   </Link>}
-                  {temModulo("analise_riscos") && <Link to="/riscos/pontuacoes" className={subItem}>
+                  {podeVerAnaliseRiscos && <Link to="/riscos/pontuacoes" className={subItem}>
                     <Gauge size={16} />
                     Pontuações
                   </Link>}
@@ -915,7 +959,7 @@ export default function AdminLayout() {
             </button>
 
             <div className="flex min-w-0 flex-1 items-center justify-end gap-1">
-              {!portaria && (
+              {!portaria && podeVerRelatorios && (
                 <Link
                   to="/notificacoes"
                   className="relative shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800"
@@ -941,7 +985,7 @@ export default function AdminLayout() {
                   )}
                 </Link>
               )}
-              {!portaria && (
+              {!portaria && podeVerRelatorios && (
                 <Link
                   to="/operacao-soc"
                   className="relative hidden shrink-0 rounded-full bg-slate-900 p-2.5 text-slate-100 hover:bg-slate-800 min-[460px]:inline-flex"
@@ -1022,7 +1066,7 @@ export default function AdminLayout() {
           </div>
 
           <div className="hidden min-w-0 items-center justify-end gap-3 sm:gap-4 md:flex">
-            {!portaria && (
+            {!portaria && podeVerRelatorios && (
               <Link
                 to="/notificacoes"
                 className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
@@ -1048,7 +1092,7 @@ export default function AdminLayout() {
                 )}
               </Link>
             )}
-            {!portaria && (
+            {!portaria && podeVerRelatorios && (
               <Link
                 to="/operacao-soc"
                 className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"

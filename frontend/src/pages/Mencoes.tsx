@@ -33,6 +33,13 @@ export default function Mencoes() {
     await carregar();
   }
 
+  function linkDaMencao(mencao: Mencao) {
+    if (mencao.modulo === "PlanoAcao") {
+      return `/planos-acao/${mencao.registroId}`;
+    }
+    return `/timeline/${mencao.modulo}/${mencao.registroId}`;
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -94,10 +101,10 @@ export default function Mencoes() {
                   </button>
                 )}
                 <a
-                  href={`/timeline/${mencao.modulo}/${mencao.registroId}`}
+                  href={linkDaMencao(mencao)}
                   className="rounded bg-slate-200 px-3 py-2 text-sm text-slate-700"
                 >
-                  Timeline
+                  {mencao.modulo === "PlanoAcao" ? "Abrir plano" : "Timeline"}
                 </a>
               </div>
             </div>

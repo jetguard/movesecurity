@@ -663,6 +663,10 @@ model AnaliseOcorrencia {
   concluidoEm        DateTime?
   status             String    @default("Em Análise")
   prejuizoFinanceiro String    @default("0,00")
+  houveDanoPrejuizo  String?   @db.Text
+  tipoImpactoFinanceiro String? @db.Text
+  valorPrejuizo      String    @default("0,00")
+  valorRecuperado    String    @default("0,00")
   conclusaoAnalise   String?   @db.Text
   concluidoPorId     Int?
   createdAt          DateTime  @default(now())
@@ -681,6 +685,9 @@ model AnaliseEvento {
   concluidoEm      DateTime?
   status           String    @default("Em Análise")
   valorRecuperado  String    @default("0,00")
+  houveDanoPrejuizo  String?   @db.Text
+  tipoImpactoFinanceiro String? @db.Text
+  valorPrejuizo      String    @default("0,00")
   conclusaoAnalise String?   @db.Text
   concluidoPorId   Int?
   createdAt        DateTime  @default(now())
@@ -910,7 +917,7 @@ model RiscoCadastroGeral {
   codigo           String   @unique
   nome             String   @unique
   descricao        String?  @db.Text
-  fatoresRiscoJson String   @default("[]")
+  fatoresRiscoJson String   @db.Text
   status           String   @default("Ativo")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -961,7 +968,7 @@ model AnaliseRiscoCompleta {
   riscoId                         Int?
   riscoCodigo                     String    @db.Text
   riscoNome                       String    @db.Text
-  fatoresRiscoJson                String    @default("[]")
+  fatoresRiscoJson                String    @db.Text
   sc                              Int
   fe                              Int
   intervalo                       Int
@@ -1139,8 +1146,12 @@ model PlanoAcaoCorporativo {
   acaoPreventiva   String?   @db.Text
   responsavelId    Int?
   responsavelNome  String?   @db.Text
-  mediadoresJson   String    @default("[]")
-  prazo            DateTime
+    responsaveisJson String?   @db.Text
+    mediadoresJson   String    @default("[]")
+    mediadoresConclusoesJson String? @db.Text
+    tratamentoExecucaoStatus String? @db.Text
+    tratamentoCustosJson String? @db.Text
+    prazo            DateTime
   concluidoEm      DateTime?
   evidencia        String?   @db.Text
   comentarios      String?   @db.Text
@@ -1236,6 +1247,23 @@ model PassagemTurnoPosto {
   createdAt   DateTime @default(now())
 
   passagem PassagemTurno @relation(fields: [passagemId], references: [id], onDelete: Cascade)
+}
+
+model ScannerPassagem {
+  id                  Int      @id @default(autoincrement())
+  data                DateTime
+  scanner             String   @default("NUTECH5S600")
+  leituraComFalha     Int      @default(0)
+  leituraSatisfatoria Int      @default(0)
+  areaSuspeita        Int      @default(0)
+  insatisfatoria      Int      @default(0)
+  total               Int      @default(0)
+  unidade             String
+  criadoPorId         Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([unidade, data])
 }
 
 model RelatorioDiarioExecutivo {
