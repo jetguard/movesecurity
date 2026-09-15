@@ -508,6 +508,12 @@ export default function SolicitacoesImagens() {
     setModalForm("criar");
   }
 
+  function fecharFormulario() {
+    setModalForm(null);
+    setSolicitacaoEditando(null);
+    setAnexos(null);
+  }
+
   function abrirEdicao(item: SolicitacaoImagem) {
     setErro("");
     setForm({
@@ -572,8 +578,7 @@ export default function SolicitacoesImagens() {
           montarFormData(pinOperacional),
         );
       }
-      setModalForm(null);
-      setSolicitacaoEditando(null);
+      fecharFormulario();
       await carregarSolicitacoes();
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Não foi possível salvar.");
@@ -1134,10 +1139,7 @@ export default function SolicitacoesImagens() {
             solicitacaoEditando ? anexosDaSolicitacao(solicitacaoEditando) : []
           }
           setAnexos={setAnexos}
-          onClose={() => {
-            setModalForm(null);
-            setSolicitacaoEditando(null);
-          }}
+          onClose={fecharFormulario}
           onSubmit={salvarFormulario}
           salvando={salvando}
         />
