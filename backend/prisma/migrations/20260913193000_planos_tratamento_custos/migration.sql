@@ -1,2 +1,2 @@
-ALTER TABLE `PlanoAcaoCorporativo`
-  ADD COLUMN `tratamentoCustosJson` TEXT NULL;
+ALTER TABLE "PlanoAcaoCorporativo"
+  ADD COLUMN "tratamentoCustosJson" TEXT;

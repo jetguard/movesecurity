@@ -1,5 +1,5 @@
-ALTER TABLE `RiscoCadastroGeral`
-  MODIFY `fatoresRiscoJson` TEXT NOT NULL;
+ALTER TABLE "RiscoCadastroGeral"
+  ALTER COLUMN "fatoresRiscoJson" TYPE TEXT;
 
-ALTER TABLE `AnaliseRiscoCompleta`
-  MODIFY `fatoresRiscoJson` TEXT NOT NULL;
+ALTER TABLE "AnaliseRiscoCompleta"
+  ALTER COLUMN "fatoresRiscoJson" TYPE TEXT;
