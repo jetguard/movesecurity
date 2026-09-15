@@ -252,6 +252,15 @@ function evidenciasDoHistorico(item: Historico, evidencias: Anexo[]) {
   return encontradas.length ? encontradas : evidencias;
 }
 
+function textoHistorico(item: Historico) {
+  const descricao = item.descricao?.trim() || "";
+  const dados = dadosHistorico(item);
+  const andamento = typeof dados?.andamento === "string" ? dados.andamento.trim() : "";
+
+  if (!andamento) return descricao;
+  return `${descricao}\n\nAndamento: ${andamento}`;
+}
+
 function ehImagemAnexo(anexo: Anexo) {
   return (
     anexo.tipoArquivo?.startsWith("image/") ||
@@ -663,11 +672,13 @@ export default function SolicitacoesImagens() {
     setErro("");
     setSalvando(true);
     try {
-      await api.post(`/solicitacoes-imagens/${modalPausa.id}/atendimento/pausar`, pausa);
+      const resposta = await api.post(
+        `/solicitacoes-imagens/${modalPausa.id}/atendimento/pausar`,
+        pausa,
+      );
+      aplicarSolicitacaoAtualizada(resposta.data);
       setModalPausa(null);
       setPausa({ motivo: "", andamento: "" });
-      await carregarSolicitacoes();
-      if (detalhe?.id === modalPausa.id) await atualizarDetalhe(modalPausa.id);
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Não foi possível pausar.");
     } finally {
@@ -1940,6 +1951,7 @@ function DetalheSolicitacao({
             const evidenciasEvento = evidenciasDoHistorico(item, evidencias).filter(ehImagemAnexo);
             const miniaturas = evidenciasEvento.slice(0, 3);
             const excedente = Math.max(0, evidenciasEvento.length - miniaturas.length);
+            const textoDoEvento = textoHistorico(item);
 
             return (
               <div key={item.id} className="relative flex gap-3">
@@ -1955,7 +1967,7 @@ function DetalheSolicitacao({
                   </div>
                   <div className="mt-2">
                     <TextoComResumo
-                      texto={item.descricao}
+                      texto={textoDoEvento}
                       onAbrir={(texto) =>
                         setTextoAberto({
                           titulo: rotuloEvento(item),
