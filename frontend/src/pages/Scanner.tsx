@@ -24,6 +24,15 @@ type ScannerPassagem = {
   leituraSatisfatoria: number;
   areaSuspeita: number;
   insatisfatoria: number;
+  falhasEquipamento: number;
+  reprocessamentos: number;
+  containersInspecao: number;
+  aberturasSuspeita: number;
+  tiposSuspeita?: string | null;
+  indisponibilidadeInicio?: string | null;
+  indisponibilidadeFim?: string | null;
+  indisponibilidadeMinutos: number;
+  acoesContingencia?: string | null;
   total: number;
   createdAt: string;
   criadoPor?: {
@@ -40,6 +49,15 @@ type ScannerForm = {
   leituraSatisfatoria: string;
   areaSuspeita: string;
   insatisfatoria: string;
+  falhasEquipamento: string;
+  reprocessamentos: string;
+  containersInspecao: string;
+  aberturasSuspeita: string;
+  tiposSuspeita: string;
+  registrarIndisponibilidade: boolean;
+  indisponibilidadeInicio: string;
+  indisponibilidadeFim: string;
+  acoesContingencia: string;
 };
 
 type PeriodoTemporal = "dia" | "mes" | "ano";
@@ -74,6 +92,19 @@ function numero(valor: string | number) {
 
 function formatarData(data: string) {
   return new Date(data).toLocaleString("pt-BR");
+}
+
+function formatarPercentual(valor: number) {
+  if (!Number.isFinite(valor)) return "0%";
+  return `${valor.toFixed(1).replace(".", ",")}%`;
+}
+
+function formatarMinutos(minutos: number) {
+  const total = Math.max(0, Math.round(minutos || 0));
+  const horas = Math.floor(total / 60);
+  const mins = total % 60;
+  if (!horas) return `${mins}min`;
+  return `${horas}h ${String(mins).padStart(2, "0")}min`;
 }
 
 function formatarDataReferencia(data: string) {
@@ -114,6 +145,15 @@ function formVazio(): ScannerForm {
     leituraSatisfatoria: "0",
     areaSuspeita: "0",
     insatisfatoria: "0",
+    falhasEquipamento: "0",
+    reprocessamentos: "0",
+    containersInspecao: "0",
+    aberturasSuspeita: "0",
+    tiposSuspeita: "",
+    registrarIndisponibilidade: false,
+    indisponibilidadeInicio: "",
+    indisponibilidadeFim: "",
+    acoesContingencia: "",
   };
 }
 
@@ -136,10 +176,9 @@ export default function Scanner() {
 
   const totalFormulario = useMemo(
     () =>
-      numero(form.leituraComFalha) +
       numero(form.leituraSatisfatoria) +
-      numero(form.areaSuspeita) +
-      numero(form.insatisfatoria),
+      numero(form.insatisfatoria) +
+      numero(form.falhasEquipamento),
     [form],
   );
 
@@ -150,6 +189,12 @@ export default function Scanner() {
         acc.leituraSatisfatoria += item.leituraSatisfatoria || 0;
         acc.areaSuspeita += item.areaSuspeita || 0;
         acc.insatisfatoria += item.insatisfatoria || 0;
+        acc.falhasEquipamento += item.falhasEquipamento || 0;
+        acc.reprocessamentos += item.reprocessamentos || 0;
+        acc.containersInspecao += item.containersInspecao || 0;
+        acc.aberturasSuspeita += item.aberturasSuspeita || 0;
+        acc.indisponibilidadeMinutos += item.indisponibilidadeMinutos || 0;
+        acc.indisponibilidades += item.indisponibilidadeMinutos > 0 ? 1 : 0;
         acc.total += item.total || 0;
         return acc;
       },
@@ -158,22 +203,57 @@ export default function Scanner() {
         leituraSatisfatoria: 0,
         areaSuspeita: 0,
         insatisfatoria: 0,
+        falhasEquipamento: 0,
+        reprocessamentos: 0,
+        containersInspecao: 0,
+        aberturasSuspeita: 0,
+        indisponibilidadeMinutos: 0,
+        indisponibilidades: 0,
         total: 0,
       },
     );
 
-    const percentualSatisfatorio =
-      base.total > 0 ? Math.round((base.leituraSatisfatoria / base.total) * 100) : 0;
+    const diasOperacao = Math.max(
+      1,
+      new Set(registros.map((registro) => chaveData(registro.data))).size,
+    );
+    const minutosOperacao = diasOperacao * 24 * 60;
+    const percentualImagensSuspeitas =
+      base.total > 0 ? (base.areaSuspeita / base.total) * 100 : 0;
     const percentualFalhas =
       base.total > 0
-        ? Math.round(
-            ((base.leituraComFalha + base.areaSuspeita + base.insatisfatoria) /
-              base.total) *
+        ? ((base.leituraComFalha + base.insatisfatoria + base.falhasEquipamento) /
+            base.total) *
+          100
+        : 0;
+    const disponibilidade =
+      minutosOperacao > 0
+        ? Math.max(
+            0,
+            Math.min(
               100,
+              ((minutosOperacao - base.indisponibilidadeMinutos) / minutosOperacao) *
+                100,
+            ),
           )
+        : 100;
+    const tempoMedioRecuperacao =
+      base.indisponibilidades > 0
+        ? base.indisponibilidadeMinutos / base.indisponibilidades
+        : 0;
+    const efetividadeInspecoes =
+      base.areaSuspeita > 0
+        ? (base.aberturasSuspeita / base.areaSuspeita) * 100
         : 0;
 
-    return { ...base, percentualSatisfatorio, percentualFalhas };
+    return {
+      ...base,
+      percentualImagensSuspeitas,
+      percentualFalhas,
+      disponibilidade,
+      tempoMedioRecuperacao,
+      efetividadeInspecoes,
+    };
   }, [registros]);
 
   const barras = [
@@ -188,7 +268,7 @@ export default function Scanner() {
       cor: "bg-amber-400",
     },
     {
-      titulo: "Área suspeita",
+      titulo: "Imagens suspeitas",
       valor: indicadores.areaSuspeita,
       cor: "bg-sky-400",
     },
@@ -196,6 +276,11 @@ export default function Scanner() {
       titulo: "Insatisfatória",
       valor: indicadores.insatisfatoria,
       cor: "bg-rose-400",
+    },
+    {
+      titulo: "Falhas no equipamento",
+      valor: indicadores.falhasEquipamento,
+      cor: "bg-red-400",
     },
   ];
 
@@ -250,6 +335,11 @@ export default function Scanner() {
         leituraSatisfatoria: number;
         areaSuspeita: number;
         insatisfatoria: number;
+        falhasEquipamento: number;
+        reprocessamentos: number;
+        containersInspecao: number;
+        aberturasSuspeita: number;
+        indisponibilidadeMinutos: number;
         total: number;
       }
     >();
@@ -272,6 +362,11 @@ export default function Scanner() {
           leituraSatisfatoria: 0,
           areaSuspeita: 0,
           insatisfatoria: 0,
+          falhasEquipamento: 0,
+          reprocessamentos: 0,
+          containersInspecao: 0,
+          aberturasSuspeita: 0,
+          indisponibilidadeMinutos: 0,
           total: 0,
         };
 
@@ -280,6 +375,11 @@ export default function Scanner() {
       atual.leituraSatisfatoria += registro.leituraSatisfatoria || 0;
       atual.areaSuspeita += registro.areaSuspeita || 0;
       atual.insatisfatoria += registro.insatisfatoria || 0;
+      atual.falhasEquipamento += registro.falhasEquipamento || 0;
+      atual.reprocessamentos += registro.reprocessamentos || 0;
+      atual.containersInspecao += registro.containersInspecao || 0;
+      atual.aberturasSuspeita += registro.aberturasSuspeita || 0;
+      atual.indisponibilidadeMinutos += registro.indisponibilidadeMinutos || 0;
       atual.total += registro.total || 0;
       mapa.set(chave, atual);
     });
@@ -290,7 +390,8 @@ export default function Scanner() {
   const maiorFalhaTemporal = Math.max(
     1,
     ...serieTemporal.map(
-      (item) => item.leituraComFalha + item.areaSuspeita + item.insatisfatoria,
+      (item) =>
+        item.leituraComFalha + item.insatisfatoria + item.falhasEquipamento,
     ),
   );
 
@@ -298,9 +399,9 @@ export default function Scanner() {
     (typeof serieTemporal)[number] | null
   >((maior, item) => {
     const falhasItem =
-      item.leituraComFalha + item.areaSuspeita + item.insatisfatoria;
+      item.leituraComFalha + item.insatisfatoria + item.falhasEquipamento;
     const falhasMaior = maior
-      ? maior.leituraComFalha + maior.areaSuspeita + maior.insatisfatoria
+      ? maior.leituraComFalha + maior.insatisfatoria + maior.falhasEquipamento
       : -1;
     return falhasItem > falhasMaior ? item : maior;
   }, null);
@@ -334,6 +435,19 @@ export default function Scanner() {
       leituraSatisfatoria: String(registro.leituraSatisfatoria || 0),
       areaSuspeita: String(registro.areaSuspeita || 0),
       insatisfatoria: String(registro.insatisfatoria || 0),
+      falhasEquipamento: String(registro.falhasEquipamento || 0),
+      reprocessamentos: String(registro.reprocessamentos || 0),
+      containersInspecao: String(registro.containersInspecao || 0),
+      aberturasSuspeita: String(registro.aberturasSuspeita || 0),
+      tiposSuspeita: registro.tiposSuspeita || "",
+      registrarIndisponibilidade: Boolean(registro.indisponibilidadeInicio),
+      indisponibilidadeInicio: registro.indisponibilidadeInicio
+        ? registro.indisponibilidadeInicio.slice(0, 16)
+        : "",
+      indisponibilidadeFim: registro.indisponibilidadeFim
+        ? registro.indisponibilidadeFim.slice(0, 16)
+        : "",
+      acoesContingencia: registro.acoesContingencia || "",
     });
     setModalAberto(true);
   }
@@ -342,9 +456,23 @@ export default function Scanner() {
     setForm((atual) => ({
       ...atual,
       [campo]:
-        campo === "scanner" || campo === "data"
+        campo === "scanner" ||
+        campo === "data" ||
+        campo === "tiposSuspeita" ||
+        campo === "indisponibilidadeInicio" ||
+        campo === "indisponibilidadeFim" ||
+        campo === "acoesContingencia"
           ? valor
           : valor.replace(/\D/g, ""),
+    }));
+  }
+
+  function atualizarFlagIndisponibilidade(valor: boolean) {
+    setForm((atual) => ({
+      ...atual,
+      registrarIndisponibilidade: valor,
+      indisponibilidadeInicio: valor ? atual.indisponibilidadeInicio : "",
+      indisponibilidadeFim: valor ? atual.indisponibilidadeFim : "",
     }));
   }
 
@@ -359,6 +487,19 @@ export default function Scanner() {
         leituraSatisfatoria: numero(form.leituraSatisfatoria),
         areaSuspeita: numero(form.areaSuspeita),
         insatisfatoria: numero(form.insatisfatoria),
+        falhasEquipamento: numero(form.falhasEquipamento),
+        reprocessamentos: numero(form.reprocessamentos),
+        containersInspecao: numero(form.containersInspecao),
+        aberturasSuspeita: numero(form.aberturasSuspeita),
+        tiposSuspeita: form.tiposSuspeita,
+        registrarIndisponibilidade: form.registrarIndisponibilidade,
+        indisponibilidadeInicio: form.registrarIndisponibilidade
+          ? form.indisponibilidadeInicio
+          : "",
+        indisponibilidadeFim: form.registrarIndisponibilidade
+          ? form.indisponibilidadeFim
+          : "",
+        acoesContingencia: form.acoesContingencia,
       };
 
       if (editando) {
@@ -451,34 +592,54 @@ export default function Scanner() {
 
         {indicadoresAbertos && (
           <div className="space-y-5 p-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <IndicadorScanner
-                titulo="Total de leituras"
+                titulo="Total de containers scanneados"
                 valor={indicadores.total}
                 detalhe={`${registros.length} lançamento(s)`}
                 destaque="text-white"
               />
               <IndicadorScanner
-                titulo="Satisfatórias"
-                valor={indicadores.leituraSatisfatoria}
-                detalhe={`${indicadores.percentualSatisfatorio}% do total`}
-                destaque="text-emerald-300"
+                titulo="% de imagens suspeitas"
+                valor={formatarPercentual(indicadores.percentualImagensSuspeitas)}
+                detalhe={`${indicadores.areaSuspeita} imagem(ns) suspeita(s)`}
+                destaque="text-sky-300"
               />
               <IndicadorScanner
-                titulo="Falhas e alertas"
-                valor={
-                  indicadores.leituraComFalha +
-                  indicadores.areaSuspeita +
-                  indicadores.insatisfatoria
-                }
-                detalhe={`${indicadores.percentualFalhas}% do total`}
+                titulo="Aberturas por suspeita"
+                valor={indicadores.aberturasSuspeita}
+                detalhe={`${indicadores.containersInspecao} container(s) para inspeção`}
                 destaque="text-amber-300"
               />
               <IndicadorScanner
-                titulo="Áreas suspeitas"
-                valor={indicadores.areaSuspeita}
-                detalhe="Pontuação operacional"
-                destaque="text-sky-300"
+                titulo="% falhas"
+                valor={formatarPercentual(indicadores.percentualFalhas)}
+                detalhe={`${indicadores.leituraComFalha + indicadores.insatisfatoria + indicadores.falhasEquipamento} falha(s)`}
+                destaque="text-amber-300"
+              />
+              <IndicadorScanner
+                titulo="Disponibilidade do scanner"
+                valor={formatarPercentual(indicadores.disponibilidade)}
+                detalhe={`${formatarMinutos(indicadores.indisponibilidadeMinutos)} indisponível`}
+                destaque="text-emerald-300"
+              />
+              <IndicadorScanner
+                titulo="Tempo médio de recuperação"
+                valor={formatarMinutos(indicadores.tempoMedioRecuperacao)}
+                detalhe={`${indicadores.indisponibilidades} evento(s) de indisponibilidade`}
+                destaque="text-blue-300"
+              />
+              <IndicadorScanner
+                titulo="Efetividade das inspeções"
+                valor={formatarPercentual(indicadores.efetividadeInspecoes)}
+                detalhe={`${indicadores.aberturasSuspeita} abertura(s) / ${indicadores.areaSuspeita} suspeita(s)`}
+                destaque="text-purple-300"
+              />
+              <IndicadorScanner
+                titulo="Reprocessamentos"
+                valor={indicadores.reprocessamentos}
+                detalhe="Repassagens por falha ou imagem insatisfatória"
+                destaque="text-rose-300"
               />
             </div>
 
@@ -533,10 +694,10 @@ export default function Scanner() {
                       {periodoComMaisFalhas.rotulo}:{" "}
                       <strong>
                         {periodoComMaisFalhas.leituraComFalha +
-                          periodoComMaisFalhas.areaSuspeita +
-                          periodoComMaisFalhas.insatisfatoria}
+                          periodoComMaisFalhas.insatisfatoria +
+                          periodoComMaisFalhas.falhasEquipamento}
                       </strong>{" "}
-                      falha(s) e alerta(s)
+                      falha(s)
                     </p>
                   </div>
                 )}
@@ -632,7 +793,7 @@ export default function Scanner() {
                 ) : (
                   serieTemporal.map((item) => {
                     const falhasEAlertas =
-                      item.leituraComFalha + item.areaSuspeita + item.insatisfatoria;
+                      item.leituraComFalha + item.insatisfatoria + item.falhasEquipamento;
                     const larguraFalhas =
                       falhasEAlertas > 0
                         ? Math.max(4, (falhasEAlertas / maiorFalhaTemporal) * 100)
@@ -653,7 +814,7 @@ export default function Scanner() {
                             </p>
                           </div>
                           <span className="rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-bold text-amber-200">
-                            {falhasEAlertas} falha(s) e alerta(s)
+                            {falhasEAlertas} falha(s)
                           </span>
                         </div>
 
@@ -664,16 +825,28 @@ export default function Scanner() {
                           />
                         </div>
 
-                        <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5">
+                        <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4 xl:grid-cols-8">
                           <ResumoTemporal label="Falhas" valor={item.leituraComFalha} />
                           <ResumoTemporal
                             label="Satisfatórias"
                             valor={item.leituraSatisfatoria}
                           />
-                          <ResumoTemporal label="Área suspeita" valor={item.areaSuspeita} />
+                          <ResumoTemporal label="Suspeitas" valor={item.areaSuspeita} />
                           <ResumoTemporal
                             label="Insatisfatórias"
                             valor={item.insatisfatoria}
+                          />
+                          <ResumoTemporal
+                            label="Falhas equip."
+                            valor={item.falhasEquipamento}
+                          />
+                          <ResumoTemporal
+                            label="Reprocess."
+                            valor={item.reprocessamentos}
+                          />
+                          <ResumoTemporal
+                            label="Aberturas"
+                            valor={item.aberturasSuspeita}
                           />
                           <ResumoTemporal label="Total" valor={item.total} destaque />
                         </div>
@@ -704,9 +877,13 @@ export default function Scanner() {
                   "Scanner",
                   "Leitura com falha",
                   "Leitura satisfatória",
-                  "Área suspeita",
                   "Insatisfatória",
-                  "Total",
+                  "Falhas equipamento",
+                  "Reprocessamentos",
+                  "Imagens suspeitas",
+                  "Inspeção",
+                  "Aberturas",
+                  "Total scanneado",
                   "Cadastrado por",
                   "Ações",
                 ].map((item) => (
@@ -722,13 +899,13 @@ export default function Scanner() {
             <tbody className="divide-y divide-slate-800">
               {carregando ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={13} className="px-4 py-8 text-center text-slate-400">
                     Carregando lançamentos...
                   </td>
                 </tr>
               ) : registros.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={13} className="px-4 py-8 text-center text-slate-400">
                     Nenhum lançamento de scanner cadastrado.
                   </td>
                 </tr>
@@ -750,11 +927,23 @@ export default function Scanner() {
                     <td className="px-4 py-4 text-sm text-emerald-200">
                       {registro.leituraSatisfatoria}
                     </td>
+                    <td className="px-4 py-4 text-sm text-rose-200">
+                      {registro.insatisfatoria}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-red-200">
+                      {registro.falhasEquipamento}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-blue-200">
+                      {registro.reprocessamentos}
+                    </td>
                     <td className="px-4 py-4 text-sm text-sky-200">
                       {registro.areaSuspeita}
                     </td>
-                    <td className="px-4 py-4 text-sm text-rose-200">
-                      {registro.insatisfatoria}
+                    <td className="px-4 py-4 text-sm text-violet-200">
+                      {registro.containersInspecao}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-amber-200">
+                      {registro.aberturasSuspeita}
                     </td>
                     <td className="px-4 py-4 text-sm font-bold text-white">
                       {registro.total}
@@ -805,7 +994,7 @@ export default function Scanner() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
           <form
             onSubmit={salvarRegistro}
-            className="w-full max-w-3xl overflow-hidden rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl"
+            className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl"
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-slate-900/80 p-5">
               <div className="flex items-center gap-3">
@@ -864,22 +1053,103 @@ export default function Scanner() {
                 onChange={(valor) => atualizarCampo("leituraSatisfatoria", valor)}
               />
               <CampoNumero
-                label="Área suspeita"
+                label="Leitura insatisfatória"
+                value={form.insatisfatoria}
+                onChange={(valor) => atualizarCampo("insatisfatoria", valor)}
+              />
+              <CampoNumero
+                label="Falhas no equipamento"
+                value={form.falhasEquipamento}
+                onChange={(valor) => atualizarCampo("falhasEquipamento", valor)}
+              />
+              <CampoNumero
+                label="Quantidade de reprocessamento"
+                value={form.reprocessamentos}
+                onChange={(valor) => atualizarCampo("reprocessamentos", valor)}
+              />
+              <CampoNumero
+                label="Quantidade de imagens suspeitas"
                 value={form.areaSuspeita}
                 onChange={(valor) => atualizarCampo("areaSuspeita", valor)}
               />
               <CampoNumero
-                label="Insatisfatória"
-                value={form.insatisfatoria}
-                onChange={(valor) => atualizarCampo("insatisfatoria", valor)}
+                label="Containers encaminhados para inspeção"
+                value={form.containersInspecao}
+                onChange={(valor) => atualizarCampo("containersInspecao", valor)}
               />
+              <CampoNumero
+                label="Aberturas realizadas por imagem suspeita"
+                value={form.aberturasSuspeita}
+                onChange={(valor) => atualizarCampo("aberturasSuspeita", valor)}
+              />
+
+              <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
+                Principais tipos de suspeita identificados
+                <textarea
+                  value={form.tiposSuspeita}
+                  onChange={(e) => atualizarCampo("tiposSuspeita", e.target.value)}
+                  className="min-h-24 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </label>
+
+              <label className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 p-4 text-sm font-bold text-slate-200 md:col-span-2">
+                <input
+                  type="checkbox"
+                  checked={form.registrarIndisponibilidade}
+                  onChange={(e) => atualizarFlagIndisponibilidade(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-600 bg-slate-950 text-blue-600 focus:ring-blue-500"
+                />
+                Tempo de indisponibilidade
+              </label>
+
+              {form.registrarIndisponibilidade && (
+                <>
+                  <label className="space-y-2 text-sm font-bold text-slate-200">
+                    Início da indisponibilidade
+                    <input
+                      type="datetime-local"
+                      value={form.indisponibilidadeInicio}
+                      onChange={(e) =>
+                        atualizarCampo("indisponibilidadeInicio", e.target.value)
+                      }
+                      required
+                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </label>
+                  <label className="space-y-2 text-sm font-bold text-slate-200">
+                    Fim da indisponibilidade
+                    <input
+                      type="datetime-local"
+                      value={form.indisponibilidadeFim}
+                      min={form.indisponibilidadeInicio || undefined}
+                      onChange={(e) =>
+                        atualizarCampo("indisponibilidadeFim", e.target.value)
+                      }
+                      required
+                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </label>
+                </>
+              )}
+
+              <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
+                Ações de contingência
+                <textarea
+                  value={form.acoesContingencia}
+                  onChange={(e) => atualizarCampo("acoesContingencia", e.target.value)}
+                  className="min-h-24 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                />
+              </label>
 
               <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 md:col-span-2">
                 <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
-                  Total
+                  Total de containers scanneados
                 </p>
                 <p className="mt-1 text-3xl font-bold text-white">
                   {totalFormulario}
+                </p>
+                <p className="mt-1 text-xs text-blue-100/80">
+                  Soma de leitura satisfatória + leitura insatisfatória + falhas no equipamento.
                 </p>
               </div>
             </div>
@@ -914,7 +1184,7 @@ function IndicadorScanner({
   destaque,
 }: {
   titulo: string;
-  valor: number;
+  valor: number | string;
   detalhe: string;
   destaque: string;
 }) {

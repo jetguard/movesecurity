@@ -1251,6 +1251,15 @@ model ScannerPassagem {
   leituraSatisfatoria Int      @default(0)
   areaSuspeita        Int      @default(0)
   insatisfatoria      Int      @default(0)
+  falhasEquipamento   Int      @default(0)
+  reprocessamentos    Int      @default(0)
+  containersInspecao  Int      @default(0)
+  aberturasSuspeita   Int      @default(0)
+  tiposSuspeita       String?
+  indisponibilidadeInicio DateTime?
+  indisponibilidadeFim    DateTime?
+  indisponibilidadeMinutos Int     @default(0)
+  acoesContingencia   String?
   total               Int      @default(0)
   unidade             String
   criadoPorId         Int?

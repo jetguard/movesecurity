@@ -81,11 +81,41 @@ function numeroInteiroNaoNegativo(valor: unknown) {
   return Math.trunc(numero);
 }
 
+function textoOpcional(valor: unknown) {
+  const texto = String(valor || "").trim();
+  return texto || null;
+}
+
+function dataOpcional(valor: unknown) {
+  const texto = String(valor || "").trim();
+  if (!texto) return null;
+  const data = new Date(texto);
+  return Number.isNaN(data.getTime()) ? null : data;
+}
+
+function minutosEntre(inicio: Date | null, fim: Date | null) {
+  if (!inicio || !fim) return 0;
+  const diferenca = fim.getTime() - inicio.getTime();
+  if (!Number.isFinite(diferenca) || diferenca <= 0) return 0;
+  return Math.round(diferenca / 60000);
+}
+
 function dadosScannerPassagem(body: any) {
   const leituraComFalha = numeroInteiroNaoNegativo(body.leituraComFalha);
   const leituraSatisfatoria = numeroInteiroNaoNegativo(body.leituraSatisfatoria);
   const areaSuspeita = numeroInteiroNaoNegativo(body.areaSuspeita);
   const insatisfatoria = numeroInteiroNaoNegativo(body.insatisfatoria);
+  const falhasEquipamento = numeroInteiroNaoNegativo(body.falhasEquipamento);
+  const reprocessamentos = numeroInteiroNaoNegativo(body.reprocessamentos);
+  const containersInspecao = numeroInteiroNaoNegativo(body.containersInspecao);
+  const aberturasSuspeita = numeroInteiroNaoNegativo(body.aberturasSuspeita);
+  const registrarIndisponibilidade = Boolean(body.registrarIndisponibilidade);
+  const indisponibilidadeInicio = registrarIndisponibilidade
+    ? dataOpcional(body.indisponibilidadeInicio)
+    : null;
+  const indisponibilidadeFim = registrarIndisponibilidade
+    ? dataOpcional(body.indisponibilidadeFim)
+    : null;
 
   return {
     data: body.data ? new Date(body.data) : new Date(),
@@ -94,9 +124,35 @@ function dadosScannerPassagem(body: any) {
     leituraSatisfatoria,
     areaSuspeita,
     insatisfatoria,
-    total:
-      leituraComFalha + leituraSatisfatoria + areaSuspeita + insatisfatoria,
+    falhasEquipamento,
+    reprocessamentos,
+    containersInspecao,
+    aberturasSuspeita,
+    tiposSuspeita: textoOpcional(body.tiposSuspeita),
+    indisponibilidadeInicio,
+    indisponibilidadeFim,
+    indisponibilidadeMinutos: minutosEntre(
+      indisponibilidadeInicio,
+      indisponibilidadeFim,
+    ),
+    acoesContingencia: textoOpcional(body.acoesContingencia),
+    total: leituraSatisfatoria + insatisfatoria + falhasEquipamento,
   };
+}
+
+async function anexarCriadorScanner<T extends { criadoPorId: number | null }>(
+  registro: T,
+) {
+  if (!registro.criadoPorId) {
+    return { ...registro, criadoPor: null };
+  }
+
+  const criadoPor = await prisma.usuario.findUnique({
+    where: { id: registro.criadoPorId },
+    select: { id: true, nome: true, apelido: true, email: true },
+  });
+
+  return { ...registro, criadoPor };
 }
 
 export async function listarScannerPassagens(req: AuthRequest, res: Response) {
@@ -161,7 +217,7 @@ export async function criarScannerPassagem(req: AuthRequest, res: Response) {
       dadosNovos: registro,
     });
 
-    return res.status(201).json(registro);
+    return res.status(201).json(await anexarCriadorScanner(registro));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao criar passagem do scanner" });
@@ -194,7 +250,7 @@ export async function atualizarScannerPassagem(req: AuthRequest, res: Response) 
       dadosNovos: registro,
     });
 
-    return res.json(registro);
+    return res.json(await anexarCriadorScanner(registro));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao atualizar passagem do scanner" });
