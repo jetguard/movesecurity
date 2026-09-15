@@ -9,5 +9,5 @@ export async function travarSequencia(
   tx: Prisma.TransactionClient,
   chave: string,
 ) {
-  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${chave})::bigint)`;
+  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${chave})::bigint)`;
 }
