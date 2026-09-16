@@ -1570,8 +1570,8 @@ export default function Scanner() {
       </section>
 
       {confirmarEnvioVazio && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[1.4rem] border border-amber-400/30 bg-slate-950 p-5 text-white shadow-2xl">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-2 backdrop-blur-sm sm:p-4">
+          <div className="w-[calc(100vw-1rem)] max-w-md rounded-2xl border border-amber-400/30 bg-slate-950 p-4 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem] sm:p-5">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/30">
                 <Activity size={22} />
@@ -1612,8 +1612,8 @@ export default function Scanner() {
       )}
 
       {validacaoScanner && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[1.4rem] border border-slate-700 bg-slate-950 text-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
+          <div className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]">
             <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-blue-50 to-cyan-50 p-5 text-slate-950">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg">
@@ -1704,10 +1704,10 @@ export default function Scanner() {
       )}
 
       {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
           <form
             onSubmit={salvarRegistro}
-            className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[1.4rem] border border-slate-200 bg-white text-slate-950 shadow-2xl"
+            className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-2xl sm:w-full sm:rounded-[1.4rem]"
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50 p-5">
               <div className="flex items-center gap-3">
@@ -2223,8 +2223,8 @@ export default function Scanner() {
       )}
 
       {validacaoEquipe && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[1.4rem] border border-slate-700 bg-slate-950 text-white shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
+          <div className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]">
             <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-emerald-50 to-blue-50 p-5 text-slate-950">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg">
@@ -2316,10 +2316,10 @@ export default function Scanner() {
       )}
 
       {modalEquipeAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
           <form
             onSubmit={salvarEquipeRegistro}
-            className="w-full max-w-2xl overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white text-slate-950 shadow-2xl"
+            className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-2xl sm:w-full sm:rounded-[1.4rem]"
           >
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-blue-50 p-5">
               <div className="flex items-center gap-3">

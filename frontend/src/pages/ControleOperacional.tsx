@@ -181,16 +181,16 @@ export default function ControleOperacional() {
   }, [modulosPermitidos, usuarioSessao?.id, validadorOperacional]);
 
   return (
-    <div className="min-h-[calc(100vh-7rem)] rounded-2xl bg-slate-950 p-4 text-white sm:p-6">
+    <div className="min-h-[calc(100vh-7rem)] rounded-xl bg-slate-950 p-2 text-white sm:rounded-2xl sm:p-6">
       <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/25">
-        <div className="bg-slate-950 p-5 sm:p-7">
-          <div className="mb-5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm font-semibold text-blue-100">
+        <div className="bg-slate-950 p-3 sm:p-7">
+          <div className="mb-3 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-semibold leading-5 text-blue-100 sm:mb-5 sm:px-4 sm:py-3 sm:text-sm">
             Preencha os cards disponíveis para sua rotina operacional. Os
             módulos aparecem conforme as permissões atribuídas ao seu perfil.
           </div>
 
           {modulosPermitidos.length > 0 ? (
-            <div className="grid gap-3 md:grid-cols-2 2xl:grid-cols-3">
+            <div className="grid gap-2 sm:gap-3 md:grid-cols-2 2xl:grid-cols-3">
               {modulosPermitidos.map((modulo) => {
                 const Icone = modulo.icone;
                 const enviado = Boolean(statusCards[modulo.titulo]);
@@ -198,23 +198,23 @@ export default function ControleOperacional() {
                   <Link
                     key={modulo.titulo}
                     to={modulo.rota}
-                    className="group flex min-h-36 items-center gap-4 rounded-xl border border-slate-700/80 bg-slate-900 p-4 shadow-lg shadow-black/15 transition hover:-translate-y-0.5 hover:border-blue-500/70 hover:bg-slate-800/90"
+                    className="group flex min-h-[104px] items-center gap-3 rounded-xl border border-slate-700/80 bg-slate-900 p-3 shadow-lg shadow-black/15 transition hover:-translate-y-0.5 hover:border-blue-500/70 hover:bg-slate-800/90 sm:min-h-36 sm:gap-4 sm:p-4"
                   >
                     <div
-                      className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${modulo.cor} text-white shadow-lg shadow-blue-950/10`}
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${modulo.cor} text-white shadow-lg shadow-blue-950/10 sm:h-14 sm:w-14`}
                     >
-                      <Icone size={28} />
+                      <Icone size={22} className="sm:h-7 sm:w-7" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h2 className="text-base font-black text-white">
+                      <h2 className="text-sm font-black leading-tight text-white sm:text-base">
                         {modulo.titulo}
                       </h2>
-                      <p className="mt-1 text-sm leading-5 text-slate-300">
+                      <p className="mt-1 text-xs leading-4 text-slate-300 sm:text-sm sm:leading-5">
                         {modulo.descricao}
                       </p>
                       {!validadorOperacional && (
                         <span
-                          className={`mt-3 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ring-1 ${
+                          className={`mt-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-bold ring-1 sm:mt-3 sm:px-2.5 sm:py-1 sm:text-xs ${
                             enviado
                               ? "bg-emerald-500/15 text-emerald-100 ring-emerald-400/25"
                               : "bg-slate-800 text-blue-100 ring-blue-400/20"
