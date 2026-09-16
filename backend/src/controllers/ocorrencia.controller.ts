@@ -207,6 +207,14 @@ export async function criarOcorrencia(req: AuthRequest, res: Response) {
       link: "/ocorrencias",
       payload: { id: ocorrencia.id, codigo: ocorrencia.codigo },
     });
+    emitirRealtime({
+      tipo: "indicadores_seguranca_atualizados",
+      titulo: "Indicadores atualizados",
+      mensagem: "Os indicadores de ocorrências e eventos foram atualizados.",
+      severidade: "baixa",
+      unidade: ocorrencia.unidade,
+      payload: { origem: "ocorrencia_criada", id: ocorrencia.id },
+    });
 
     return res.status(201).json(ocorrencia);
   } catch (error) {
@@ -438,6 +446,23 @@ export async function atualizarOcorrencia(req: AuthRequest, res: Response) {
       registroId: ocorrencia.id,
       dadosAnteriores: ocorrenciaExiste,
       dadosNovos: ocorrencia,
+    });
+    emitirRealtime({
+      tipo: "ocorrencia.atualizada",
+      titulo: `Ocorrência ${ocorrencia.codigo} atualizada`,
+      mensagem: `Os dados de ${ocorrencia.assunto} foram atualizados.`,
+      severidade: "baixa",
+      unidade: ocorrencia.unidade,
+      link: "/ocorrencias",
+      payload: { id: ocorrencia.id, codigo: ocorrencia.codigo },
+    });
+    emitirRealtime({
+      tipo: "indicadores_seguranca_atualizados",
+      titulo: "Indicadores atualizados",
+      mensagem: "Os indicadores de ocorrências e eventos foram atualizados.",
+      severidade: "baixa",
+      unidade: ocorrencia.unidade,
+      payload: { origem: "ocorrencia_atualizada", id: ocorrencia.id },
     });
 
     return res.json(ocorrencia);

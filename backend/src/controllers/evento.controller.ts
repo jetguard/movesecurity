@@ -214,6 +214,14 @@ export async function criarEvento(req: AuthRequest, res: Response) {
       link: "/eventos",
       payload: { id: evento.id, codigo: evento.codigo },
     });
+    emitirRealtime({
+      tipo: "indicadores_seguranca_atualizados",
+      titulo: "Indicadores atualizados",
+      mensagem: "Os indicadores de ocorrências e eventos foram atualizados.",
+      severidade: "baixa",
+      unidade: evento.unidade,
+      payload: { origem: "evento_criado", id: evento.id },
+    });
 
     return res.status(201).json(evento);
   } catch (error) {
@@ -441,6 +449,23 @@ export async function atualizarEvento(req: AuthRequest, res: Response) {
       registroId: evento.id,
       dadosAnteriores: eventoExiste,
       dadosNovos: evento,
+    });
+    emitirRealtime({
+      tipo: "evento.atualizado",
+      titulo: `Evento ${evento.codigo} atualizado`,
+      mensagem: `Os dados de ${evento.assunto} foram atualizados.`,
+      severidade: "baixa",
+      unidade: evento.unidade,
+      link: "/eventos",
+      payload: { id: evento.id, codigo: evento.codigo },
+    });
+    emitirRealtime({
+      tipo: "indicadores_seguranca_atualizados",
+      titulo: "Indicadores atualizados",
+      mensagem: "Os indicadores de ocorrências e eventos foram atualizados.",
+      severidade: "baixa",
+      unidade: evento.unidade,
+      payload: { origem: "evento_atualizado", id: evento.id },
     });
 
     return res.json(evento);

@@ -186,8 +186,10 @@ export default function IndicadoresSegurancaEmpresarial() {
     let timeout: number | undefined;
     const eventosRelevantes = new Set([
       "indicadores_seguranca_atualizados",
-      "nova_ocorrencia",
-      "novo_evento",
+      "ocorrencia.criada",
+      "ocorrencia.atualizada",
+      "evento.criado",
+      "evento.atualizado",
       "camera_status_alterado",
       "camera_indisponibilidade_atualizada",
       "camera_cadastrada",
