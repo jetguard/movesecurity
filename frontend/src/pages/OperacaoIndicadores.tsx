@@ -927,13 +927,13 @@ export default function OperacaoIndicadores() {
       {registroValidacao && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
           <div className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-emerald-50 to-blue-50 p-5 text-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-emerald-500/20 to-blue-500/10 p-5 text-white">
               <div className="flex items-center gap-3">
                 <span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${config.destaque} text-white shadow-lg`}>
                   <BarChart3 size={22} />
                 </span>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
                     Validação
                   </p>
                   <h2 className="text-xl font-black">
@@ -944,7 +944,7 @@ export default function OperacaoIndicadores() {
               <button
                 type="button"
                 onClick={() => setRegistroValidacao(null)}
-                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               >
                 <X size={20} />
               </button>
@@ -1078,13 +1078,13 @@ export default function OperacaoIndicadores() {
             onSubmit={salvar}
             className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-5xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-blue-50 to-slate-100 p-5 text-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-blue-600/20 to-slate-800/80 p-5 text-white">
               <div className="flex items-center gap-3">
                 <span className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${config.destaque} text-white shadow-lg`}>
                   <Activity size={22} />
                 </span>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
                     {config.titulo}
                   </p>
                   <h2 className="text-xl font-black">
@@ -1095,7 +1095,7 @@ export default function OperacaoIndicadores() {
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               >
                 <X size={20} />
               </button>

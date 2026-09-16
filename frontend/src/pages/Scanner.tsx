@@ -1614,13 +1614,13 @@ export default function Scanner() {
       {validacaoScanner && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
           <div className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-blue-50 to-cyan-50 p-5 text-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-blue-600/20 to-cyan-500/10 p-5 text-white">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg">
                   <ScanLine size={22} />
                 </span>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
                     Validação Scanner
                   </p>
                   <h2 className="text-xl font-black">
@@ -1631,7 +1631,7 @@ export default function Scanner() {
               <button
                 type="button"
                 onClick={() => setValidacaoScanner(null)}
-                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               >
                 <X size={20} />
               </button>
@@ -1707,18 +1707,18 @@ export default function Scanner() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
           <form
             onSubmit={salvarRegistro}
-            className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-3xl overflow-y-auto rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-2xl sm:w-full sm:rounded-[1.4rem]"
+            className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-3xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50 p-5">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-blue-600/20 to-cyan-500/10 p-5">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-950/30 ring-1 ring-blue-300/20">
                   <ScanLine size={22} />
                 </span>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-300">
                     Scanner
                   </p>
-                  <h2 className="text-xl font-black">
+                  <h2 className="text-xl font-black text-white">
                     {editando ? "Editar lançamento" : "Novo lançamento"}
                   </h2>
                 </div>
@@ -1726,7 +1726,7 @@ export default function Scanner() {
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               >
                 <X size={20} />
               </button>
@@ -1741,15 +1741,15 @@ export default function Scanner() {
                 onChange={(valor) => atualizarCampo("data", valor)}
               />
 
-              <label className="space-y-2 text-sm font-bold text-slate-700">
+              <label className="space-y-2 text-sm font-bold text-slate-200">
                 <span className="inline-flex items-center gap-2">
-                  <ScanLine size={16} className="text-blue-600" />
+                  <ScanLine size={16} className="text-blue-400" />
                   Scanner
                 </span>
                 <select
                   value={form.scanner}
                   onChange={(e) => atualizarCampo("scanner", e.target.value)}
-                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 font-normal text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  className="h-11 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition [color-scheme:dark] focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
                 >
                   <option value={scannerPadrao}>{scannerPadrao}</option>
                 </select>
@@ -1813,21 +1813,21 @@ export default function Scanner() {
                 onChange={(valor) => atualizarCampo("aberturasSuspeita", valor)}
               />
 
-              <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2">
+              <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
                 <span className="inline-flex items-center gap-2">
-                  <Edit3 size={16} className="text-blue-600" />
+                  <Edit3 size={16} className="text-blue-400" />
                   Principais tipos de suspeita identificados
                 </span>
                 <textarea
                   value={form.tiposSuspeita}
                   onChange={(e) => atualizarCampo("tiposSuspeita", e.target.value)}
-                  className="min-h-20 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  className="min-h-20 w-full resize-none rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
                 />
               </label>
 
-              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 md:col-span-2">
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-200 md:col-span-2">
                 <span className="inline-flex items-center gap-2">
-                  <Clock size={16} className="text-amber-600" />
+                  <Clock size={16} className="text-amber-300" />
                   Tempo de indisponibilidade
                 </span>
                 <input
@@ -1860,33 +1860,33 @@ export default function Scanner() {
                 </>
               )}
 
-              <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2">
+              <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
                 <span className="inline-flex items-center gap-2">
-                  <Edit3 size={16} className="text-blue-600" />
+                  <Edit3 size={16} className="text-blue-400" />
                   Ações de contingência
                 </span>
                 <textarea
                   value={form.acoesContingencia}
                   onChange={(e) => atualizarCampo("acoesContingencia", e.target.value)}
-                  className="min-h-20 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+                  className="min-h-20 w-full resize-none rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
                 />
               </label>
 
-              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 md:col-span-2">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
+              <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 md:col-span-2">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-200">
                   Total de containers scanneados
                 </p>
-                <p className="mt-1 text-3xl font-black text-slate-950">
+                <p className="mt-1 text-3xl font-black text-white">
                   {totalFormulario}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-900/60 p-5 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-slate-800"
               >
                 Cancelar
               </button>
@@ -2225,13 +2225,13 @@ export default function Scanner() {
       {validacaoEquipe && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
           <div className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-4xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-emerald-50 to-blue-50 p-5 text-slate-950">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-emerald-500/20 to-blue-500/10 p-5 text-white">
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg">
                   <Users size={22} />
                 </span>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
                     Validação Equipe Scanner
                   </p>
                   <h2 className="text-xl font-black">
@@ -2242,7 +2242,7 @@ export default function Scanner() {
               <button
                 type="button"
                 onClick={() => setValidacaoEquipe(null)}
-                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               >
                 <X size={20} />
               </button>
@@ -2319,18 +2319,18 @@ export default function Scanner() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-2 backdrop-blur-sm sm:p-4">
           <form
             onSubmit={salvarEquipeRegistro}
-            className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl border border-slate-200 bg-white text-slate-950 shadow-2xl sm:w-full sm:rounded-[1.4rem]"
+            className="max-h-[96dvh] w-[calc(100vw-1rem)] max-w-2xl overflow-y-auto rounded-2xl border border-slate-700 bg-slate-950 text-white shadow-2xl sm:w-full sm:rounded-[1.4rem]"
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-blue-50 p-5">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-emerald-500/20 to-blue-500/10 p-5">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-200">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-950/30 ring-1 ring-emerald-300/20">
                   <UserCheck size={22} />
                 </span>
                 <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-300">
                     Equipe Scanner
                   </p>
-                  <h2 className="text-xl font-black">
+                  <h2 className="text-xl font-black text-white">
                     {editandoEquipe ? "Editar lançamento" : "Novo lançamento"}
                   </h2>
                 </div>
@@ -2338,7 +2338,7 @@ export default function Scanner() {
               <button
                 type="button"
                 onClick={() => setModalEquipeAberto(false)}
-                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
               >
                 <X size={20} />
               </button>
@@ -2374,9 +2374,9 @@ export default function Scanner() {
                 onChange={(valor) => atualizarEquipeCampo("faltas", valor)}
               />
 
-              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 sm:col-span-2">
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-200 sm:col-span-2">
                 <span className="inline-flex items-center gap-2">
-                  <Clock size={16} className="text-amber-600" />
+                  <Clock size={16} className="text-amber-300" />
                   Mencionar atraso
                 </span>
                 <input
@@ -2403,36 +2403,36 @@ export default function Scanner() {
                     value={equipeForm.atrasoFim}
                     onChange={(valor) => atualizarEquipeCampo("atrasoFim", valor)}
                   />
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 sm:col-span-2">
-                    <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+                  <div className="rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 sm:col-span-2">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-200">
                       Tempo calculado de atraso
                     </p>
-                    <p className="mt-1 text-2xl font-black text-slate-950">
+                    <p className="mt-1 text-2xl font-black text-white">
                       {formatarMinutos(atrasoEquipeMinutos)}
                     </p>
                   </div>
                 </>
               )}
 
-              <label className="space-y-2 text-sm font-bold text-slate-700 sm:col-span-2">
+              <label className="space-y-2 text-sm font-bold text-slate-200 sm:col-span-2">
                 <span className="inline-flex items-center gap-2">
-                  <Edit3 size={16} className="text-blue-600" />
+                  <Edit3 size={16} className="text-blue-400" />
                   Observações <span className="font-normal text-slate-400">(opcional)</span>
                 </span>
                 <textarea
                   value={equipeForm.observacoes}
                   onChange={(event) => atualizarEquipeCampo("observacoes", event.target.value)}
                   placeholder="Registre observações do turno, cobertura ou impacto operacional."
-                  className="min-h-24 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                  className="min-h-24 w-full resize-none rounded-2xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition placeholder:text-slate-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                 />
               </label>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-900/60 p-5 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setModalEquipeAberto(false)}
-                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-slate-800"
               >
                 Cancelar
               </button>
@@ -2523,9 +2523,9 @@ function CampoEquipe({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-2 text-sm font-bold text-slate-700">
+    <label className="space-y-2 text-sm font-bold text-slate-200">
       <span className="inline-flex items-center gap-2">
-        <span className="text-emerald-600">{icon}</span>
+        <span className="text-emerald-300">{icon}</span>
         {label}
       </span>
       <input
@@ -2535,7 +2535,7 @@ function CampoEquipe({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required
-        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 font-normal text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+        className="h-11 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition [color-scheme:dark] placeholder:text-slate-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
       />
     </label>
   );
@@ -2559,14 +2559,14 @@ function CampoScannerInput({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-2 text-sm font-bold text-slate-700">
+    <label className="space-y-2 text-sm font-bold text-slate-200">
       <span className="flex flex-wrap items-center justify-between gap-2">
         <span className="inline-flex items-center gap-2">
-          <span className="text-blue-600">{icon}</span>
+          <span className="text-blue-300">{icon}</span>
           {label}
         </span>
         {detalhe && (
-          <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-black text-blue-700">
+          <span className="rounded-full border border-blue-400/30 bg-blue-400/10 px-2 py-0.5 text-[11px] font-black text-blue-100">
             {detalhe}
           </span>
         )}
@@ -2578,7 +2578,7 @@ function CampoScannerInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         required
-        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 font-normal text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+        className="h-11 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition [color-scheme:dark] placeholder:text-slate-500 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
       />
     </label>
   );
