@@ -13,6 +13,7 @@ import {
   enviarFormularioSolicitacaoImagem,
   excluirEvidenciaSolicitacaoImagem,
   excluirSolicitacaoImagem,
+  gerarRelatorioSolicitacaoImagemPdf,
   iniciarAtendimentoSolicitacaoImagem,
   listarCamerasConectadasSolicitacaoImagem,
   listarSolicitacoesImagem,
@@ -55,6 +56,7 @@ router.get("/", listarSolicitacoesImagem);
 router.post("/", upload.array("anexos"), criarSolicitacaoImagem);
 router.post("/formularios", enviarFormularioSolicitacaoImagem);
 router.get("/cameras-conectadas", listarCamerasConectadasSolicitacaoImagem);
+router.get("/:id/relatorio/pdf", gerarRelatorioSolicitacaoImagemPdf);
 router.get("/:id", buscarSolicitacaoImagem);
 router.put("/:id", upload.array("anexos"), atualizarSolicitacaoImagem);
 router.post("/:id/atendimento/iniciar", iniciarAtendimentoSolicitacaoImagem);

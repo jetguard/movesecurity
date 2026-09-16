@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  FileText,
   ImagePlus,
   Mail,
   MapPin,
@@ -786,6 +787,14 @@ export default function SolicitacoesImagens() {
     await carregarSolicitacoes();
   }
 
+  function abrirRelatorioPdf(item: SolicitacaoImagem) {
+    window.open(
+      `/api/solicitacoes-imagens/${item.id}/relatorio/pdf`,
+      "_blank",
+      "noopener,noreferrer",
+    );
+  }
+
   async function enviarFormulario(event: FormEvent) {
     event.preventDefault();
     setErro("");
@@ -1152,6 +1161,9 @@ export default function SolicitacoesImagens() {
                         <div className="flex justify-end gap-2">
                           <button title="Linha do tempo" onClick={() => atualizarDetalhe(item.id)} className="rounded-lg border border-slate-700 p-2 hover:border-sky-500">
                             <Eye size={16} />
+                          </button>
+                          <button title="Relatório PDF" onClick={() => abrirRelatorioPdf(item)} className="rounded-lg border border-slate-700 p-2 text-cyan-300 hover:border-cyan-500">
+                            <FileText size={16} />
                           </button>
                           {podeEditar && item.status !== "Em Atendimento" && (
                             <button title="Editar" onClick={() => abrirEdicao(item)} className="rounded-lg border border-slate-700 p-2 hover:border-sky-500">

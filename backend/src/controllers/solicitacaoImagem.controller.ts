@@ -3,12 +3,18 @@ import fs from "fs";
 import path from "path";
 import { Response } from "express";
 import type { Prisma } from "@prisma/client";
+import PDFDocument from "pdfkit";
 import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { enviarEmail } from "../services/email.service";
 import { registrarLog } from "../services/auditoria.service";
 import { validarPinOperacional } from "../services/pinOperacional.service";
 import { travarSequencia } from "../utils/lockSequencia";
+import {
+  desenharCabecalhoPadrao,
+  desenharRodapeAssinaturaPadrao,
+  pdfTheme,
+} from "../services/documentoPdfBase.service";
 
 const STATUS = {
   AGUARDANDO_ATENDIMENTO: "Aguardando Atendimento",
@@ -133,6 +139,116 @@ function urlPublica(token: string) {
     process.env.FRONTEND_URL ||
     "https://movesecurity.movecta.com.br";
   return `${base.replace(/\/+$/, "")}/solicitacao/imagens/${token}`;
+}
+
+function formatarDataPdf(valor?: Date | string | null) {
+  if (!valor) return "-";
+  const data = valor instanceof Date ? valor : new Date(valor);
+  if (Number.isNaN(data.getTime())) return "-";
+  return data.toLocaleString("pt-BR");
+}
+
+function valorPdf(valor?: string | number | null) {
+  const textoValor = String(valor ?? "").trim();
+  return textoValor || "-";
+}
+
+function parseJsonSeguro(valor?: string | null) {
+  if (!valor) return null;
+  try {
+    return JSON.parse(valor);
+  } catch {
+    return null;
+  }
+}
+
+function textoHistoricoPdf(item: {
+  descricao: string;
+  dadosJson?: string | null;
+}) {
+  const dados = parseJsonSeguro(item.dadosJson);
+  const andamento =
+    typeof dados?.andamento === "string" ? dados.andamento.trim() : "";
+  const cameras = Array.isArray(dados?.camerasBusca) ? dados.camerasBusca : [];
+  const camerasTexto = cameras.length
+    ? `\n\nCâmeras utilizadas na busca:\n${cameras
+        .map((camera: any) => `- ${camera.rotulo || rotuloCameraBusca(camera)}`)
+        .join("\n")}`
+    : "";
+
+  return `${item.descricao || "-"}${andamento ? `\n\nAndamento: ${andamento}` : ""}${camerasTexto}`;
+}
+
+function garantirEspacoPdf(doc: PDFKit.PDFDocument, altura = 70) {
+  if (doc.y + altura > doc.page.height - 135) doc.addPage();
+}
+
+function secaoPdf(doc: PDFKit.PDFDocument, titulo: string) {
+  garantirEspacoPdf(doc, 42);
+  const y = doc.y;
+  doc.roundedRect(42, y, doc.page.width - 84, 28, 6).fill("#eaf2ff");
+  doc
+    .fillColor(pdfTheme.primary)
+    .font("Helvetica-Bold")
+    .fontSize(10)
+    .text(titulo.toUpperCase(), 54, y + 9, { width: doc.page.width - 108 });
+  doc.y = y + 42;
+}
+
+function campoPdf(
+  doc: PDFKit.PDFDocument,
+  rotulo: string,
+  conteudo: string,
+  x: number,
+  y: number,
+  width: number,
+) {
+  doc
+    .roundedRect(x, y, width, 39, 6)
+    .fill("#f8fafc")
+    .strokeColor("#e2e8f0")
+    .lineWidth(0.6)
+    .stroke();
+  doc
+    .fillColor("#64748b")
+    .font("Helvetica-Bold")
+    .fontSize(7)
+    .text(rotulo.toUpperCase(), x + 10, y + 7, { width: width - 20 });
+  doc
+    .fillColor("#0f172a")
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text(conteudo, x + 10, y + 20, {
+      width: width - 20,
+      height: 13,
+      ellipsis: true,
+    });
+}
+
+function blocoTextoPdf(doc: PDFKit.PDFDocument, titulo: string, conteudo?: string | null) {
+  garantirEspacoPdf(doc, 70);
+  doc
+    .fillColor(pdfTheme.primary)
+    .font("Helvetica-Bold")
+    .fontSize(9)
+    .text(titulo, 42, doc.y, { width: doc.page.width - 84 });
+  doc.moveDown(0.25);
+  const textoConteudo = valorPdf(conteudo);
+  const altura = doc.heightOfString(textoConteudo, {
+    width: doc.page.width - 84,
+    lineGap: 3,
+  });
+  garantirEspacoPdf(doc, Math.min(altura + 22, 260));
+  doc
+    .fillColor("#334155")
+    .font("Helvetica")
+    .fontSize(9)
+    .text(textoConteudo, 42, doc.y, {
+      width: doc.page.width - 84,
+      lineGap: 3,
+      align: "justify",
+    });
+  doc.moveDown(0.8);
 }
 
 function tokenTesteDesenvolvimento(token: string) {
@@ -343,6 +459,184 @@ export async function buscarSolicitacaoImagem(req: AuthRequest, res: Response) {
   } catch (error) {
     console.error("Erro ao buscar solicitação de imagens:", error);
     return res.status(500).json({ error: "Erro ao buscar solicitação de imagens." });
+  }
+}
+
+export async function gerarRelatorioSolicitacaoImagemPdf(req: AuthRequest, res: Response) {
+  try {
+    const id = Number(req.params.id);
+    const solicitacao = await prisma.solicitacaoImagem.findFirst({
+      where: { id, excluidoEm: null, unidade: req.unidadeAtiva },
+      include: {
+        ...includeSolicitacao,
+        historico: {
+          include: { usuario: { select: { id: true, nome: true, email: true } } },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
+
+    if (!solicitacao) {
+      return res.status(404).json({ error: "Solicitação de imagens não encontrada." });
+    }
+
+    const doc = new PDFDocument({
+      size: "A4",
+      margin: 42,
+      bufferPages: true,
+      margins: { top: 130, left: 42, right: 42, bottom: 135 },
+      info: {
+        Title: `Relatório da Solicitação de Imagens ${solicitacao.protocolo}`,
+        Author: "MoveSecurity",
+      },
+    });
+    const nomeArquivo = `relatorio-solicitacao-imagens-${solicitacao.protocolo.replace(/[^\w-]+/g, "-")}.pdf`;
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${nomeArquivo}"`);
+    doc.pipe(res);
+
+    const cabecalho = () =>
+      desenharCabecalhoPadrao(doc, {
+        titulo: "Relatório de Solicitação de Imagens",
+        subtitulo: solicitacao.titulo,
+        codigo: solicitacao.protocolo,
+        unidade: solicitacao.unidade,
+        emitidoEm: new Date(),
+      });
+    doc.on("pageAdded", cabecalho);
+    cabecalho();
+
+    secaoPdf(doc, "Resumo da solicitação");
+    const coluna = (doc.page.width - 96) / 2;
+    const x2 = 54 + coluna + 12;
+    let y = doc.y;
+    campoPdf(doc, "Protocolo", solicitacao.protocolo, 42, y, coluna);
+    campoPdf(doc, "Status", valorPdf(solicitacao.status), x2, y, coluna);
+    y += 47;
+    campoPdf(doc, "Prioridade", valorPdf(solicitacao.prioridade), 42, y, coluna);
+    campoPdf(doc, "Solicitante", valorPdf(solicitacao.solicitanteNome), x2, y, coluna);
+    y += 47;
+    campoPdf(doc, "Setor/Cargo", [solicitacao.solicitanteSetor, solicitacao.solicitanteCargo].filter(Boolean).join(" | ") || "-", 42, y, coluna);
+    campoPdf(doc, "Local", valorPdf(solicitacao.local), x2, y, coluna);
+    y += 47;
+    campoPdf(doc, "Data da solicitação", formatarDataPdf(solicitacao.createdAt), 42, y, coluna);
+    campoPdf(doc, "Atendente", valorPdf(solicitacao.atendente?.nome), x2, y, coluna);
+    doc.y = y + 55;
+
+    const periodoOcorrencia = [
+      solicitacao.dataOcorrencia ? formatarDataPdf(solicitacao.dataOcorrencia).replace(/,.*$/, "") : "",
+      solicitacao.horaInicial,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const periodoFinal = [
+      solicitacao.dataFinalOcorrencia
+        ? formatarDataPdf(solicitacao.dataFinalOcorrencia).replace(/,.*$/, "")
+        : "",
+      solicitacao.horaFinal,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    blocoTextoPdf(
+      doc,
+      "Período solicitado",
+      periodoOcorrencia
+        ? `${periodoOcorrencia}${periodoFinal ? ` até ${periodoFinal}` : ""}`
+        : "Não informado.",
+    );
+    blocoTextoPdf(doc, "Descrição / dados solicitados", solicitacao.descricao);
+
+    secaoPdf(doc, "Atendimentos e evidências");
+    const evidencias = solicitacao.anexos.filter((anexo) => anexo.origem === "Evidencia");
+    blocoTextoPdf(
+      doc,
+      "Indicadores do atendimento",
+      `Tempo acumulado de atendimento: ${Math.floor(solicitacao.tempoTotalAtendimento / 3600)
+        .toString()
+        .padStart(2, "0")}:${Math.floor((solicitacao.tempoTotalAtendimento % 3600) / 60)
+        .toString()
+        .padStart(2, "0")}:${Math.floor(solicitacao.tempoTotalAtendimento % 60)
+        .toString()
+        .padStart(2, "0")}\nEvidências coletadas: ${evidencias.length}\nAnexos da solicitação: ${
+        solicitacao.anexos.length - evidencias.length
+      }`,
+    );
+
+    if (solicitacao.descricaoConclusao) {
+      blocoTextoPdf(doc, "Conclusão", solicitacao.descricaoConclusao);
+    }
+    if (solicitacao.motivoAnulacao) {
+      blocoTextoPdf(doc, "Motivo de anulação", solicitacao.motivoAnulacao);
+    }
+
+    secaoPdf(doc, "Linha do tempo");
+    if (!solicitacao.historico.length) {
+      blocoTextoPdf(doc, "Histórico", "Sem eventos registrados.");
+    }
+
+    solicitacao.historico.forEach((item, index) => {
+      garantirEspacoPdf(doc, 88);
+      const yEvento = doc.y;
+      doc
+        .roundedRect(42, yEvento, doc.page.width - 84, 24, 6)
+        .fill(index % 2 === 0 ? "#f8fafc" : "#eef6ff")
+        .strokeColor("#dbe4f0")
+        .lineWidth(0.6)
+        .stroke();
+      doc
+        .fillColor(pdfTheme.primary)
+        .font("Helvetica-Bold")
+        .fontSize(8.5)
+        .text(`${item.tipoEvento.replace(/_/g, " ")} | ${formatarDataPdf(item.createdAt)}`, 54, yEvento + 7, {
+          width: 360,
+          ellipsis: true,
+        });
+      doc
+        .fillColor("#0b74ff")
+        .font("Helvetica-Bold")
+        .fontSize(7.5)
+        .text(item.usuario?.nome || item.usuarioNome || "Sistema", doc.page.width - 205, yEvento + 8, {
+          width: 150,
+          align: "right",
+          ellipsis: true,
+        });
+      doc.y = yEvento + 32;
+      const textoEvento = textoHistoricoPdf(item);
+      doc
+        .fillColor("#334155")
+        .font("Helvetica")
+        .fontSize(8.7)
+        .text(textoEvento, 54, doc.y, {
+          width: doc.page.width - 108,
+          lineGap: 2.5,
+          align: "justify",
+        });
+      if (item.statusAnterior && item.statusNovo) {
+        doc
+          .fillColor("#64748b")
+          .font("Helvetica-Bold")
+          .fontSize(7.5)
+          .text(`Status: ${item.statusAnterior} → ${item.statusNovo}`, 54, doc.y + 4, {
+            width: doc.page.width - 108,
+          });
+      }
+      doc.moveDown(0.9);
+    });
+
+    const range = doc.bufferedPageRange();
+    for (let i = range.start; i < range.start + range.count; i += 1) {
+      doc.switchToPage(i);
+      desenharRodapeAssinaturaPadrao(doc, {
+        pagina: i + 1,
+        totalPaginas: range.count,
+      });
+    }
+
+    doc.end();
+  } catch (error) {
+    console.error("Erro ao gerar relatório da solicitação de imagens:", error);
+    return res.status(500).json({ error: "Erro ao gerar relatório da solicitação de imagens." });
   }
 }
 
