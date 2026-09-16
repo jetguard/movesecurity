@@ -78,6 +78,10 @@ function numeroParaInput(valor: unknown) {
   return numeroValor === 0 || !Number.isFinite(numeroValor) ? "" : String(valor);
 }
 
+function campoNumerico(campo: CampoConfig) {
+  return !campo.tipo && !campo.calculado;
+}
+
 function soma(registros: RegistroOperacional[], chave: string) {
   return registros.reduce((total, registro) => total + numero(dados(registro)[chave]), 0);
 }
@@ -1134,8 +1138,10 @@ export default function OperacaoIndicadores() {
                   ) : campo.calculado ? (
                     <div className="flex h-12 w-full items-center rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 font-black text-blue-100">
                       {campo.chave === "tempoTotalImpactoMin"
-                        ? minutos(numero(form.dados[campo.chave]))
-                        : form.dados[campo.chave] || "0"}
+                        ? form.dados.horarioInicioFila && form.dados.horarioNormalizado
+                          ? minutos(numero(form.dados[campo.chave]))
+                          : ""
+                        : form.dados[campo.chave] || ""}
                     </div>
                   ) : (
                     <input
@@ -1146,10 +1152,11 @@ export default function OperacaoIndicadores() {
                             ? "datetime-local"
                             : "number"
                       }
-                      min={campo.tipo === "number" ? 0 : undefined}
-                      step={campo.tipo === "number" ? 1 : undefined}
+                      min={campoNumerico(campo) ? 0 : undefined}
+                      step={campoNumerico(campo) ? 1 : undefined}
                       value={form.dados[campo.chave] || ""}
                       onChange={(event) => atualizarCampo(campo, event.target.value)}
+                      required={campoNumerico(campo)}
                       className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
                     />
                   )}
