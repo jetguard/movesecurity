@@ -40,6 +40,8 @@ const selectUsuario = {
   unidade: true,
   unidadesPermitidas: true,
   perfilAcesso: true,
+  validadorOperacional: true,
+  mediadorOperacional: true,
   statusUsuario: true,
   deveAlterarSenha: true,
   somenteCadastro: true,
@@ -175,7 +177,21 @@ const MODULOS_ACESSO = [
   "treinamentos_criados",
   "treinamentos_visitantes",
   "operacao",
+  "operacao_planejamento",
+  "operacao_mapa",
+  "operacao_alertas",
+  "controle_operacional",
+  "operacao_entrada_saida",
+  "operacao_vigilancia",
+  "operacao_balanca",
+  "operacao_ocr",
+  "operacao_scanner",
+  "operacao_equipe_scanner",
+  "operacao_acesso",
+  "operacao_motoristas",
+  "operacao_filas",
   "cftv",
+  "operacao_ordens_servico",
   "solicitacoes_imagens",
   "quadra_seguranca",
   "analise_riscos",
@@ -187,11 +203,12 @@ const MODULOS_ACESSO = [
   "logs",
 ];
 
-const ACOES_ACESSO = ["leitura", "criar", "editar", "excluir"];
+const ACOES_ACESSO = ["leitura", "indicadores", "criar", "editar", "excluir"];
 
 type PermissaoModulo = {
   modulo: string;
   leitura: boolean;
+  indicadores?: boolean;
   criar: boolean;
   editar: boolean;
   excluir: boolean;
@@ -242,6 +259,7 @@ function permissoesCompletas(modulos: string[]) {
     .map((modulo) => ({
       modulo,
       leitura: true,
+      indicadores: true,
       criar: true,
       editar: true,
       excluir: true,
@@ -272,11 +290,17 @@ function normalizarPermissoesDetalhadas(valor: unknown): PermissaoModulo[] {
       const permissoes = {
         modulo,
         leitura: Boolean(item.leitura),
+        indicadores: Boolean(item.indicadores),
         criar: Boolean(item.criar),
         editar: Boolean(item.editar),
         excluir: Boolean(item.excluir),
       };
-      if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+      if (
+        permissoes.indicadores ||
+        permissoes.criar ||
+        permissoes.editar ||
+        permissoes.excluir
+      ) {
         permissoes.leitura = true;
       }
       if (ACOES_ACESSO.some((acao) => Boolean(permissoes[acao as keyof PermissaoModulo]))) {
@@ -294,11 +318,17 @@ function normalizarPermissoesDetalhadas(valor: unknown): PermissaoModulo[] {
       const permissoes = {
         modulo,
         leitura: listaAcoes.includes("leitura"),
+        indicadores: listaAcoes.includes("indicadores"),
         criar: listaAcoes.includes("criar"),
         editar: listaAcoes.includes("editar"),
         excluir: listaAcoes.includes("excluir"),
       };
-      if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+      if (
+        permissoes.indicadores ||
+        permissoes.criar ||
+        permissoes.editar ||
+        permissoes.excluir
+      ) {
         permissoes.leitura = true;
       }
       if (ACOES_ACESSO.some((acao) => Boolean(permissoes[acao as keyof PermissaoModulo]))) {
@@ -404,6 +434,11 @@ export async function criarPerfilAcesso(req: AuthRequest, res: Response) {
       return res
         .status(400)
         .json({ error: "Já existe um perfil com este código." });
+    }
+    if (error?.code === "P2000") {
+      return res
+        .status(400)
+        .json({ error: "As permissões selecionadas excederam o tamanho permitido pelo banco de dados." });
     }
     return res.status(500).json({ error: "Erro ao criar perfil de acesso." });
   }
@@ -582,6 +617,8 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       unidade,
       unidadesPermitidas,
       perfilAcesso,
+      validadorOperacional,
+      mediadorOperacional,
       senha,
       confirmarSenha,
       terceirizado,
@@ -672,6 +709,10 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
         ),
         empresa: "Movecta S/A",
         perfilAcesso: perfilNormalizado,
+        validadorOperacional:
+          req.usuarioPerfil === "SUPER_ADMIN" && Boolean(validadorOperacional),
+        mediadorOperacional:
+          req.usuarioPerfil === "SUPER_ADMIN" && Boolean(mediadorOperacional),
         statusUsuario: cadastroSemAcesso ? "INATIVO" : "ATIVO",
         deveAlterarSenha: !cadastroSemAcesso,
         somenteCadastro: cadastroSemAcesso,
@@ -734,6 +775,8 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       unidade,
       unidadesPermitidas,
       perfilAcesso,
+      validadorOperacional,
+      mediadorOperacional,
       statusUsuario,
       terceirizado,
       somenteCadastro,
@@ -799,6 +842,14 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
         ),
         empresa: "Movecta S/A",
         perfilAcesso: perfilNormalizado,
+        validadorOperacional:
+          req.usuarioPerfil === "SUPER_ADMIN"
+            ? Boolean(validadorOperacional)
+            : usuarioAnterior.validadorOperacional,
+        mediadorOperacional:
+          req.usuarioPerfil === "SUPER_ADMIN"
+            ? Boolean(mediadorOperacional)
+            : usuarioAnterior.mediadorOperacional,
         statusUsuario: cadastroSemAcesso
           ? "INATIVO"
           : validarStatus(statusUsuario),

@@ -17,10 +17,34 @@ import {
 import { emitirRealtime } from "../services/realtime.service";
 import { equipeFixaValida, escalaEquipe } from "../config/equipes";
 
+const MODULOS_OPERACIONAIS_INDICADORES = new Set([
+  "operacao_entrada_saida",
+  "operacao_vigilancia",
+  "operacao_balanca",
+  "operacao_ocr",
+  "operacao_equipe_scanner",
+  "operacao_acesso",
+  "operacao_motoristas",
+  "operacao_filas",
+]);
+
+type AcaoModuloOperacional =
+  | "leitura"
+  | "indicadores"
+  | "criar"
+  | "editar"
+  | "excluir";
+
 function inicioDia(data = new Date()) {
   const inicio = new Date(data);
   inicio.setHours(0, 0, 0, 0);
   return inicio;
+}
+
+function proximoDia(data = new Date()) {
+  const fim = inicioDia(data);
+  fim.setDate(fim.getDate() + 1);
+  return fim;
 }
 
 function inicioMes(data = new Date()) {
@@ -73,6 +97,96 @@ function podeGerenciarPassagem(perfil?: string) {
     perfil === PERFIS.ADMINISTRADOR ||
     perfil === PERFIS.ANALISTA
   );
+}
+
+function perfilPrivilegiadoOperacao(perfil?: string | null) {
+  return perfil === PERFIS.SUPER_ADMIN || perfil === PERFIS.TI;
+}
+
+function moduloOperacional(req: AuthRequest) {
+  const modulo = String(req.params.modulo || "").trim();
+  return MODULOS_OPERACIONAIS_INDICADORES.has(modulo) ? modulo : "";
+}
+
+function podeAcessarModuloOperacional(
+  req: AuthRequest,
+  modulo: string,
+  acao: AcaoModuloOperacional,
+) {
+  if (perfilPrivilegiadoOperacao(req.usuarioPerfil)) return true;
+  if (
+    req.usuarioValidadorOperacional &&
+    (acao === "criar" || acao === "editar") &&
+    (req.usuarioPermissoesAcoes || []).some(
+      (permissao) =>
+        (permissao.modulo === modulo || permissao.modulo === "operacao") &&
+        permissao.leitura,
+    )
+  ) {
+    return true;
+  }
+  return (req.usuarioPermissoesAcoes || []).some(
+    (permissao) =>
+      (permissao.modulo === modulo || permissao.modulo === "operacao") &&
+      (permissao[acao] || (acao === "leitura" && permissao.leitura)),
+  );
+}
+
+function podeValidarModuloOperacional(req: AuthRequest, modulo: string) {
+  if (perfilPrivilegiadoOperacao(req.usuarioPerfil)) return true;
+  if (
+    req.usuarioValidadorOperacional &&
+    podeAcessarModuloOperacional(req, modulo, "leitura")
+  ) {
+    return true;
+  }
+  if (
+    req.usuarioPerfil === PERFIS.ADMINISTRADOR ||
+    req.usuarioPerfil === PERFIS.GESTOR
+  ) {
+    return podeAcessarModuloOperacional(req, modulo, "leitura");
+  }
+  return podeAcessarModuloOperacional(req, modulo, "indicadores");
+}
+
+function dadosOperacaoIndicador(body: any) {
+  const dados = body?.dados && typeof body.dados === "object" ? body.dados : {};
+  return {
+    dataReferencia: body.dataReferencia ? new Date(body.dataReferencia) : new Date(),
+    dadosJson: JSON.stringify(dados),
+  };
+}
+
+async function anexarCriadorOperacao<T extends { criadoPorId: number | null }>(
+  registro: T,
+) {
+  if (!registro.criadoPorId) return { ...registro, criadoPor: null };
+  const criadoPor = await prisma.usuario.findUnique({
+    where: { id: registro.criadoPorId },
+    select: { id: true, nome: true, apelido: true, email: true },
+  });
+  return { ...registro, criadoPor };
+}
+
+async function anexarUsuariosOperacao<
+  T extends { criadoPorId: number | null; validadoPorId?: number | null },
+>(registro: T) {
+  const ids = [registro.criadoPorId, registro.validadoPorId].filter(
+    (id): id is number => typeof id === "number",
+  );
+  if (!ids.length) return { ...registro, criadoPor: null, validadoPor: null };
+  const usuarios = await prisma.usuario.findMany({
+    where: { id: { in: Array.from(new Set(ids)) } },
+    select: { id: true, nome: true, apelido: true, email: true },
+  });
+  const porId = new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+  return {
+    ...registro,
+    criadoPor: registro.criadoPorId ? porId.get(registro.criadoPorId) || null : null,
+    validadoPor: registro.validadoPorId
+      ? porId.get(registro.validadoPorId) || null
+      : null,
+  };
 }
 
 function numeroInteiroNaoNegativo(valor: unknown) {
@@ -141,19 +255,25 @@ function dadosScannerPassagem(body: any) {
   };
 }
 
-async function anexarCriadorScanner<T extends { criadoPorId: number | null }>(
-  registro: T,
-) {
-  if (!registro.criadoPorId) {
-    return { ...registro, criadoPor: null };
-  }
-
-  const criadoPor = await prisma.usuario.findUnique({
-    where: { id: registro.criadoPorId },
+async function anexarUsuariosScanner<
+  T extends { criadoPorId: number | null; validadoPorId?: number | null },
+>(registro: T) {
+  const ids = [registro.criadoPorId, registro.validadoPorId].filter(
+    (id): id is number => typeof id === "number",
+  );
+  if (!ids.length) return { ...registro, criadoPor: null, validadoPor: null };
+  const usuarios = await prisma.usuario.findMany({
+    where: { id: { in: Array.from(new Set(ids)) } },
     select: { id: true, nome: true, apelido: true, email: true },
   });
-
-  return { ...registro, criadoPor };
+  const porId = new Map(usuarios.map((usuario) => [usuario.id, usuario]));
+  return {
+    ...registro,
+    criadoPor: registro.criadoPorId ? porId.get(registro.criadoPorId) || null : null,
+    validadoPor: registro.validadoPorId
+      ? porId.get(registro.validadoPorId) || null
+      : null,
+  };
 }
 
 export async function listarScannerPassagens(req: AuthRequest, res: Response) {
@@ -169,7 +289,7 @@ export async function listarScannerPassagens(req: AuthRequest, res: Response) {
           in: Array.from(
             new Set(
               registros
-                .map((registro) => registro.criadoPorId)
+                .flatMap((registro) => [registro.criadoPorId, registro.validadoPorId])
                 .filter((id): id is number => typeof id === "number"),
             ),
           ),
@@ -190,6 +310,9 @@ export async function listarScannerPassagens(req: AuthRequest, res: Response) {
         criadoPor: registro.criadoPorId
           ? usuariosPorId.get(registro.criadoPorId) || null
           : null,
+        validadoPor: registro.validadoPorId
+          ? usuariosPorId.get(registro.validadoPorId) || null
+          : null,
       })),
     );
   } catch (error) {
@@ -202,11 +325,35 @@ export async function criarScannerPassagem(req: AuthRequest, res: Response) {
   try {
     const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
     const dados = dadosScannerPassagem(req.body);
+    if (!req.usuarioValidadorOperacional) {
+      const jaExiste = await prisma.scannerPassagem.findFirst({
+        where: {
+          unidade,
+          criadoPorId: req.usuarioId,
+          data: {
+            gte: inicioDia(dados.data),
+            lt: proximoDia(dados.data),
+          },
+        },
+        select: { id: true },
+      });
+
+      if (jaExiste) {
+        return res.status(409).json({
+          error:
+            "Este colaborador já enviou o lançamento do scanner para esta data.",
+        });
+      }
+    }
+
     const registro = await prisma.scannerPassagem.create({
       data: {
         ...dados,
         unidade,
         criadoPorId: req.usuarioId,
+        statusValidacao: "Pendente",
+        validadoPorId: null,
+        validadoEm: null,
       },
     });
 
@@ -218,7 +365,7 @@ export async function criarScannerPassagem(req: AuthRequest, res: Response) {
       dadosNovos: registro,
     });
 
-    return res.status(201).json(await anexarCriadorScanner(registro));
+    return res.status(201).json(await anexarUsuariosScanner(registro));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao criar passagem do scanner" });
@@ -237,9 +384,37 @@ export async function atualizarScannerPassagem(req: AuthRequest, res: Response) 
       return res.status(404).json({ error: "Passagem do scanner não encontrada" });
     }
 
+    const dados = dadosScannerPassagem(req.body);
+    if (!req.usuarioValidadorOperacional) {
+      const duplicado = await prisma.scannerPassagem.findFirst({
+        where: {
+          unidade,
+          criadoPorId: anterior.criadoPorId,
+          id: { not: Number(id) },
+          data: {
+            gte: inicioDia(dados.data),
+            lt: proximoDia(dados.data),
+          },
+        },
+        select: { id: true },
+      });
+
+      if (duplicado) {
+        return res.status(409).json({
+          error:
+            "Este colaborador já possui outro lançamento do scanner nesta data.",
+        });
+      }
+    }
+
     const registro = await prisma.scannerPassagem.update({
       where: { id: Number(id) },
-      data: dadosScannerPassagem(req.body),
+      data: {
+        ...dados,
+        statusValidacao: "Pendente",
+        validadoPorId: null,
+        validadoEm: null,
+      },
     });
 
     await registrarLog({
@@ -251,10 +426,51 @@ export async function atualizarScannerPassagem(req: AuthRequest, res: Response) 
       dadosNovos: registro,
     });
 
-    return res.json(await anexarCriadorScanner(registro));
+    return res.json(await anexarUsuariosScanner(registro));
   } catch (error) {
     console.error(error);
     return res.status(500).json({ error: "Erro ao atualizar passagem do scanner" });
+  }
+}
+
+export async function validarScannerPassagem(req: AuthRequest, res: Response) {
+  try {
+    if (!podeValidarModuloOperacional(req, "operacao_scanner")) {
+      return res.status(403).json({ error: "Acesso não autorizado para validar scanner." });
+    }
+
+    const { id } = req.params;
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const anterior = await prisma.scannerPassagem.findFirst({
+      where: { id: Number(id), unidade },
+    });
+
+    if (!anterior) {
+      return res.status(404).json({ error: "Passagem do scanner não encontrada" });
+    }
+
+    const registro = await prisma.scannerPassagem.update({
+      where: { id: Number(id) },
+      data: {
+        statusValidacao: "Validado",
+        validadoPorId: req.usuarioId,
+        validadoEm: new Date(),
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: "Validação de passagem scanner",
+      tipoRegistro: "ScannerPassagem",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(await anexarUsuariosScanner(registro));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao validar passagem do scanner" });
   }
 }
 
@@ -288,6 +504,238 @@ export async function excluirScannerPassagem(req: AuthRequest, res: Response) {
     if (status)
       return res.status(status).json({ error: (error as Error).message });
     return res.status(500).json({ error: "Erro ao excluir passagem do scanner" });
+  }
+}
+
+export async function listarOperacaoIndicadores(req: AuthRequest, res: Response) {
+  try {
+    const modulo = moduloOperacional(req);
+    if (!modulo)
+      return res.status(404).json({ error: "Módulo operacional não encontrado." });
+    if (!podeAcessarModuloOperacional(req, modulo, "leitura")) {
+      return res.status(403).json({ error: "Acesso não autorizado para este módulo." });
+    }
+
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const registros = await prisma.operacaoIndicadorRegistro.findMany({
+      where: { unidade, modulo },
+      orderBy: { dataReferencia: "desc" },
+      include: {
+        criadoPor: { select: { id: true, nome: true, apelido: true, email: true } },
+        validadoPor: { select: { id: true, nome: true, apelido: true, email: true } },
+      },
+    });
+
+    return res.json(registros);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao listar registros operacionais." });
+  }
+}
+
+export async function criarOperacaoIndicador(req: AuthRequest, res: Response) {
+  try {
+    const modulo = moduloOperacional(req);
+    if (!modulo)
+      return res.status(404).json({ error: "Módulo operacional não encontrado." });
+    if (!podeAcessarModuloOperacional(req, modulo, "criar")) {
+      return res.status(403).json({ error: "Acesso não autorizado para criar neste módulo." });
+    }
+
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const dados = dadosOperacaoIndicador(req.body);
+    if (!req.usuarioValidadorOperacional) {
+      const jaExiste = await prisma.operacaoIndicadorRegistro.findFirst({
+        where: {
+          unidade,
+          modulo,
+          criadoPorId: req.usuarioId,
+          dataReferencia: {
+            gte: inicioDia(dados.dataReferencia),
+            lt: proximoDia(dados.dataReferencia),
+          },
+        },
+        select: { id: true },
+      });
+
+      if (jaExiste) {
+        return res.status(409).json({
+          error:
+            "Este colaborador já enviou este formulário operacional para esta data.",
+        });
+      }
+    }
+
+    const registro = await prisma.operacaoIndicadorRegistro.create({
+      data: {
+        modulo,
+        unidade,
+        criadoPorId: req.usuarioId,
+        statusValidacao: "Pendente",
+        validadoPorId: null,
+        validadoEm: null,
+        ...dados,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: `Criação de indicador operacional - ${modulo}`,
+      tipoRegistro: "OperacaoIndicadorRegistro",
+      registroId: registro.id,
+      dadosNovos: registro,
+    });
+
+    return res.status(201).json(await anexarUsuariosOperacao(registro));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao criar registro operacional." });
+  }
+}
+
+export async function atualizarOperacaoIndicador(req: AuthRequest, res: Response) {
+  try {
+    const modulo = moduloOperacional(req);
+    if (!modulo)
+      return res.status(404).json({ error: "Módulo operacional não encontrado." });
+    if (!podeAcessarModuloOperacional(req, modulo, "editar")) {
+      return res.status(403).json({ error: "Acesso não autorizado para editar neste módulo." });
+    }
+
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const id = Number(req.params.id);
+    const anterior = await prisma.operacaoIndicadorRegistro.findFirst({
+      where: { id, unidade, modulo },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Registro operacional não encontrado." });
+
+    const dados = dadosOperacaoIndicador(req.body);
+    if (!req.usuarioValidadorOperacional) {
+      const duplicado = await prisma.operacaoIndicadorRegistro.findFirst({
+        where: {
+          unidade,
+          modulo,
+          criadoPorId: anterior.criadoPorId,
+          id: { not: id },
+          dataReferencia: {
+            gte: inicioDia(dados.dataReferencia),
+            lt: proximoDia(dados.dataReferencia),
+          },
+        },
+        select: { id: true },
+      });
+
+      if (duplicado) {
+        return res.status(409).json({
+          error:
+            "Este colaborador já possui outro lançamento deste formulário nesta data.",
+        });
+      }
+    }
+
+    const registro = await prisma.operacaoIndicadorRegistro.update({
+      where: { id },
+      data: {
+        ...dados,
+        statusValidacao: "Pendente",
+        validadoPorId: null,
+        validadoEm: null,
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: `Atualização de indicador operacional - ${modulo}`,
+      tipoRegistro: "OperacaoIndicadorRegistro",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(await anexarUsuariosOperacao(registro));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao atualizar registro operacional." });
+  }
+}
+
+export async function validarOperacaoIndicador(req: AuthRequest, res: Response) {
+  try {
+    const modulo = moduloOperacional(req);
+    if (!modulo)
+      return res.status(404).json({ error: "Módulo operacional não encontrado." });
+    if (!podeValidarModuloOperacional(req, modulo)) {
+      return res.status(403).json({ error: "Acesso não autorizado para validar este módulo." });
+    }
+
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const id = Number(req.params.id);
+    const anterior = await prisma.operacaoIndicadorRegistro.findFirst({
+      where: { id, unidade, modulo },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Registro operacional não encontrado." });
+
+    const registro = await prisma.operacaoIndicadorRegistro.update({
+      where: { id },
+      data: {
+        statusValidacao: "Validado",
+        validadoPorId: req.usuarioId,
+        validadoEm: new Date(),
+      },
+    });
+
+    await registrarLog({
+      req,
+      acao: `Validação de indicador operacional - ${modulo}`,
+      tipoRegistro: "OperacaoIndicadorRegistro",
+      registroId: registro.id,
+      dadosAnteriores: anterior,
+      dadosNovos: registro,
+    });
+
+    return res.json(await anexarUsuariosOperacao(registro));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: "Erro ao validar registro operacional." });
+  }
+}
+
+export async function excluirOperacaoIndicador(req: AuthRequest, res: Response) {
+  try {
+    const modulo = moduloOperacional(req);
+    if (!modulo)
+      return res.status(404).json({ error: "Módulo operacional não encontrado." });
+    if (!podeAcessarModuloOperacional(req, modulo, "excluir")) {
+      return res.status(403).json({ error: "Acesso não autorizado para excluir neste módulo." });
+    }
+
+    const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
+    const id = Number(req.params.id);
+    const anterior = await prisma.operacaoIndicadorRegistro.findFirst({
+      where: { id, unidade, modulo },
+    });
+    if (!anterior)
+      return res.status(404).json({ error: "Registro operacional não encontrado." });
+
+    await exigirSenhaAssinatura(req);
+    await prisma.operacaoIndicadorRegistro.delete({ where: { id } });
+
+    await registrarLog({
+      req,
+      acao: `Exclusão de indicador operacional - ${modulo}`,
+      tipoRegistro: "OperacaoIndicadorRegistro",
+      registroId: anterior.id,
+      dadosAnteriores: anterior,
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error(error);
+    const status = (error as Error & { status?: number }).status;
+    if (status) return res.status(status).json({ error: (error as Error).message });
+    return res.status(500).json({ error: "Erro ao excluir registro operacional." });
   }
 }
 

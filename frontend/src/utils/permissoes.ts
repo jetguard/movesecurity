@@ -18,6 +18,8 @@ export type UsuarioLocal = {
   apelido?: string;
   email: string;
   perfilAcesso?: string;
+  validadorOperacional?: boolean;
+  mediadorOperacional?: boolean;
   equipe?: string;
   unidade?: string;
   unidadesPermitidas?: string[];
@@ -27,11 +29,17 @@ export type UsuarioLocal = {
   deveAlterarSenha?: boolean;
 };
 
-export type AcaoAcesso = "leitura" | "criar" | "editar" | "excluir";
+export type AcaoAcesso =
+  | "leitura"
+  | "indicadores"
+  | "criar"
+  | "editar"
+  | "excluir";
 
 export type PermissaoModulo = {
   modulo: string;
   leitura: boolean;
+  indicadores?: boolean;
   criar: boolean;
   editar: boolean;
   excluir: boolean;
@@ -46,7 +54,21 @@ export const MODULOS_ACESSO = [
   { chave: "treinamentos_criados", nome: "Treinamentos Criados" },
   { chave: "treinamentos_visitantes", nome: "Cadastro de Visitantes" },
   { chave: "operacao", nome: "Operação" },
+  { chave: "operacao_planejamento", nome: "Quadro de Tarefas" },
+  { chave: "operacao_mapa", nome: "Mapa Operacional" },
+  { chave: "operacao_alertas", nome: "Alertas Operacionais" },
+  { chave: "controle_operacional", nome: "Controle Operacional" },
+  { chave: "operacao_entrada_saida", nome: "Entrada e Saída" },
+  { chave: "operacao_vigilancia", nome: "Vigilância Patrimonial" },
+  { chave: "operacao_balanca", nome: "Balança" },
+  { chave: "operacao_ocr", nome: "OCR" },
+  { chave: "operacao_scanner", nome: "Scanner" },
+  { chave: "operacao_equipe_scanner", nome: "Equipe do Scanner" },
+  { chave: "operacao_acesso", nome: "Acesso de Pessoas e Veículos Leves" },
+  { chave: "operacao_motoristas", nome: "Cadastro de Motoristas" },
+  { chave: "operacao_filas", nome: "Filas e Paradas de Sistema" },
   { chave: "cftv", nome: "Câmeras e manutenção" },
+  { chave: "operacao_ordens_servico", nome: "Ordens de Serviço" },
   { chave: "solicitacoes_imagens", nome: "Solicitações de Imagens" },
   { chave: "quadra_seguranca", nome: "Quadra de Segurança" },
   { chave: "analise_riscos", nome: "Análise de riscos" },
@@ -80,6 +102,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
     "documentos",
     "treinamentos",
     "operacao",
+    "controle_operacional",
     "cftv",
     "solicitacoes_imagens",
     "quadra_seguranca",
@@ -94,6 +117,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
     "relatorios",
     "documentos",
     "operacao",
+    "controle_operacional",
     "cftv",
     "solicitacoes_imagens",
     "quadra_seguranca",
@@ -111,6 +135,7 @@ function permissoesCompletas(modulos: string[]) {
     .map((modulo) => ({
       modulo,
       leitura: true,
+      indicadores: true,
       criar: true,
       editar: true,
       excluir: true,
@@ -130,6 +155,10 @@ export function usuarioAtual(): UsuarioLocal | null {
 
 export function perfilAtual() {
   return usuarioAtual()?.perfilAcesso || PERFIS.OPERADOR;
+}
+
+export function usuarioValidadorOperacional() {
+  return Boolean(usuarioAtual()?.validadorOperacional);
 }
 
 export function temPerfil(perfis: string[]) {
@@ -157,6 +186,8 @@ export function permissoesModulosAtual() {
 function moduloCorresponde(permissaoModulo: string, moduloSolicitado: string) {
   return (
     permissaoModulo === moduloSolicitado ||
+    (permissaoModulo === "operacao" &&
+      moduloSolicitado.startsWith("operacao_")) ||
     (permissaoModulo === "treinamentos" &&
       moduloSolicitado.startsWith("treinamentos_"))
   );

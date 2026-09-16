@@ -35,6 +35,8 @@ type Usuario = {
   somenteCadastro?: boolean;
   gruposTreinamento?: string[];
   perfilAcesso: string;
+  validadorOperacional?: boolean;
+  mediadorOperacional?: boolean;
   statusUsuario: string;
   possuiPinOperacional?: boolean;
   ultimoAcesso?: string | null;
@@ -89,6 +91,8 @@ const vazio = {
   somenteCadastro: false,
   gruposTreinamento: [] as string[],
   perfilAcesso: "",
+  validadorOperacional: false,
+  mediadorOperacional: false,
   statusUsuario: "ATIVO",
   senha: "",
   confirmarSenha: "",
@@ -104,6 +108,7 @@ const perfilVazio = {
 
 const acoesPerfil: { chave: AcaoAcesso; label: string }[] = [
   { chave: "leitura", label: "Leitura" },
+  { chave: "indicadores", label: "Indicadores" },
   { chave: "criar", label: "Criar" },
   { chave: "editar", label: "Editar" },
   { chave: "excluir", label: "Excluir" },
@@ -359,6 +364,8 @@ export default function Usuarios() {
       somenteCadastro: Boolean(usuario.somenteCadastro),
       gruposTreinamento: usuario.gruposTreinamento || [],
       perfilAcesso: usuario.perfilAcesso,
+      validadorOperacional: Boolean(usuario.validadorOperacional),
+      mediadorOperacional: Boolean(usuario.mediadorOperacional),
       statusUsuario: usuario.statusUsuario,
       senha: "",
       confirmarSenha: "",
@@ -498,6 +505,7 @@ export default function Usuarios() {
         (perfil.permissoes || []).map((modulo) => ({
           modulo,
           leitura: true,
+          indicadores: true,
           criar: true,
           editar: true,
           excluir: true,
@@ -521,6 +529,7 @@ export default function Usuarios() {
         ) || {
           modulo,
           leitura: false,
+          indicadores: false,
           criar: false,
           editar: false,
           excluir: false,
@@ -529,7 +538,12 @@ export default function Usuarios() {
           ...existente,
           [acao]: !existente[acao],
         };
-        if (atualizado.criar || atualizado.editar || atualizado.excluir) {
+        if (
+          atualizado.indicadores ||
+          atualizado.criar ||
+          atualizado.editar ||
+          atualizado.excluir
+        ) {
           atualizado.leitura = true;
         }
         const aindaPossuiPermissao = acoesPerfil.some(
@@ -887,6 +901,55 @@ export default function Usuarios() {
                   <option value="INATIVO">Inativo</option>
                   <option value="BLOQUEADO">Bloqueado</option>
                 </select>
+                {superAdmin && (
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 md:col-span-2">
+                    <p className="mb-3 text-sm font-semibold text-slate-700">
+                      Funções operacionais
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <label className="flex items-start gap-3 rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={Boolean(formulario.validadorOperacional)}
+                          onChange={(e) =>
+                            atualizarCampo(
+                              "validadorOperacional",
+                              e.target.checked,
+                            )
+                          }
+                        />
+                        <span>
+                          <strong className="block text-slate-900">
+                            Validador
+                          </strong>
+                          Visualiza os cards sem pendência e pode criar/editar
+                          formulários operacionais sem limite diário.
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3 rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={Boolean(formulario.mediadorOperacional)}
+                          onChange={(e) =>
+                            atualizarCampo(
+                              "mediadorOperacional",
+                              e.target.checked,
+                            )
+                          }
+                        />
+                        <span>
+                          <strong className="block text-slate-900">
+                            Mediador
+                          </strong>
+                          Marca o usuário para mediação operacional e fluxos de
+                          acompanhamento.
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                )}
               </>
             )}
             {!editando && !formulario.somenteCadastro && (
@@ -1067,14 +1130,15 @@ export default function Usuarios() {
                   Permissões por módulo
                 </p>
                 <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-300">
-                  Leitura libera visualização. Criar, editar ou excluir também
-                  habilitam leitura automaticamente.
+                  Leitura libera visualização. Indicadores, criar, editar ou
+                  excluir também habilitam leitura automaticamente.
                 </p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[620px] table-fixed text-left text-xs">
+                <table className="w-full min-w-[720px] table-fixed text-left text-xs">
                   <colgroup>
-                    <col className="w-[52%]" />
+                    <col className="w-[40%]" />
+                    <col className="w-[12%]" />
                     <col className="w-[12%]" />
                     <col className="w-[12%]" />
                     <col className="w-[12%]" />

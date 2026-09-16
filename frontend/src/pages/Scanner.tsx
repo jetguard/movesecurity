@@ -1,19 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Activity,
   BarChart3,
   CalendarDays,
   ChevronDown,
+  Clock,
   Edit3,
   Filter,
   Plus,
   ScanLine,
   TrendingUp,
   Trash2,
+  UserCheck,
+  Users,
   X,
 } from "lucide-react";
 import { api } from "../services/api";
-import { podeNoModulo } from "../utils/permissoes";
+import { podeNoModulo, usuarioValidadorOperacional } from "../utils/permissoes";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
 
 type ScannerPassagem = {
@@ -35,7 +39,14 @@ type ScannerPassagem = {
   acoesContingencia?: string | null;
   total: number;
   createdAt: string;
+  statusValidacao?: string;
+  validadoEm?: string | null;
   criadoPor?: {
+    nome: string;
+    apelido?: string | null;
+    email: string;
+  } | null;
+  validadoPor?: {
     nome: string;
     apelido?: string | null;
     email: string;
@@ -58,6 +69,40 @@ type ScannerForm = {
   indisponibilidadeInicio: string;
   indisponibilidadeFim: string;
   acoesContingencia: string;
+};
+
+type AbaScanner = "passagens" | "equipe";
+
+type EquipeScannerRegistro = {
+  id: number;
+  modulo: string;
+  dataReferencia: string;
+  dadosJson: string;
+  createdAt: string;
+  statusValidacao?: string;
+  validadoEm?: string | null;
+  criadoPor?: {
+    nome: string;
+    apelido?: string | null;
+    email?: string | null;
+  } | null;
+  validadoPor?: {
+    nome: string;
+    apelido?: string | null;
+    email?: string | null;
+  } | null;
+};
+
+type EquipeScannerForm = {
+  dataReferencia: string;
+  efetivoPrevisto: string;
+  efetivoPresente: string;
+  faltas: string;
+  mencionarAtraso: boolean;
+  atrasoInicio: string;
+  atrasoFim: string;
+  atrasoMinutos: string;
+  observacoes: string;
 };
 
 type PeriodoTemporal = "dia" | "mes" | "ano";
@@ -111,6 +156,11 @@ function formatarDataReferencia(data: string) {
   return new Date(data).toLocaleDateString("pt-BR");
 }
 
+function formatarHoraSimples(valor?: string | null) {
+  if (!valor) return "";
+  return valor;
+}
+
 function chaveData(data: string) {
   return dataInput(data);
 }
@@ -121,6 +171,31 @@ function chaveMes(data: string) {
 
 function chaveAno(data: string) {
   return chaveData(data).slice(0, 4);
+}
+
+function dentroDosFiltrosTemporais(
+  data: string,
+  filtroDataInicial: string,
+  filtroDataFinal: string,
+  filtroMes: string,
+  filtroAno: string,
+) {
+  const dataRegistro = chaveData(data);
+  const primeiraData = filtroDataInicial || filtroDataFinal;
+  const segundaData = filtroDataFinal || filtroDataInicial;
+  const inicio =
+    primeiraData && segundaData && primeiraData > segundaData
+      ? segundaData
+      : primeiraData;
+  const fim =
+    primeiraData && segundaData && primeiraData > segundaData
+      ? primeiraData
+      : segundaData;
+  if (inicio && dataRegistro < inicio) return false;
+  if (fim && dataRegistro > fim) return false;
+  if (filtroMes && chaveMes(data).slice(5, 7) !== filtroMes) return false;
+  if (filtroAno && chaveAno(data) !== filtroAno) return false;
+  return true;
 }
 
 function rotuloPeriodo(data: string, periodo: PeriodoTemporal) {
@@ -157,22 +232,134 @@ function formVazio(): ScannerForm {
   };
 }
 
+function equipeFormVazio(): EquipeScannerForm {
+  return {
+    dataReferencia: dataInput(),
+    efetivoPrevisto: "0",
+    efetivoPresente: "0",
+    faltas: "0",
+    mencionarAtraso: false,
+    atrasoInicio: "",
+    atrasoFim: "",
+    atrasoMinutos: "0",
+    observacoes: "",
+  };
+}
+
+function scannerSemPreenchimento(form: ScannerForm) {
+  return (
+    numero(form.leituraComFalha) === 0 &&
+    numero(form.leituraSatisfatoria) === 0 &&
+    numero(form.areaSuspeita) === 0 &&
+    numero(form.insatisfatoria) === 0 &&
+    numero(form.falhasEquipamento) === 0 &&
+    numero(form.reprocessamentos) === 0 &&
+    numero(form.containersInspecao) === 0 &&
+    numero(form.aberturasSuspeita) === 0 &&
+    !form.tiposSuspeita.trim() &&
+    !form.acoesContingencia.trim() &&
+    !form.registrarIndisponibilidade
+  );
+}
+
+function equipeSemPreenchimento(form: EquipeScannerForm) {
+  return (
+    numero(form.efetivoPrevisto) === 0 &&
+    numero(form.efetivoPresente) === 0 &&
+    numero(form.faltas) === 0 &&
+    !form.mencionarAtraso &&
+    !form.observacoes.trim()
+  );
+}
+
+function dadosEquipe(registro: EquipeScannerRegistro) {
+  try {
+    return JSON.parse(registro.dadosJson || "{}") as Partial<EquipeScannerForm>;
+  } catch {
+    return {};
+  }
+}
+
+function minutosEntreHoras(inicio: string, fim: string) {
+  if (!inicio || !fim) return 0;
+  const [horaInicio, minutoInicio] = inicio.split(":").map(Number);
+  const [horaFim, minutoFim] = fim.split(":").map(Number);
+  if (
+    !Number.isFinite(horaInicio) ||
+    !Number.isFinite(minutoInicio) ||
+    !Number.isFinite(horaFim) ||
+    !Number.isFinite(minutoFim)
+  ) {
+    return 0;
+  }
+  const inicioMinutos = horaInicio * 60 + minutoInicio;
+  const fimMinutos = horaFim * 60 + minutoFim;
+  return Math.max(0, fimMinutos - inicioMinutos);
+}
+
 export default function Scanner() {
+  const navigate = useNavigate();
+  const [abaAtiva, setAbaAtiva] = useState<AbaScanner>("passagens");
   const [registros, setRegistros] = useState<ScannerPassagem[]>([]);
+  const [equipeRegistros, setEquipeRegistros] = useState<EquipeScannerRegistro[]>([]);
   const [carregando, setCarregando] = useState(true);
+  const [carregandoEquipe, setCarregandoEquipe] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [salvandoEquipe, setSalvandoEquipe] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalEquipeAberto, setModalEquipeAberto] = useState(false);
   const [editando, setEditando] = useState<ScannerPassagem | null>(null);
+  const [editandoEquipe, setEditandoEquipe] = useState<EquipeScannerRegistro | null>(null);
+  const [validacaoScanner, setValidacaoScanner] = useState<ScannerPassagem | null>(null);
+  const [validacaoEquipe, setValidacaoEquipe] = useState<EquipeScannerRegistro | null>(null);
+  const [validando, setValidando] = useState(false);
+  const [confirmarEnvioVazio, setConfirmarEnvioVazio] = useState<
+    "scanner" | "equipe" | null
+  >(null);
   const [indicadoresAbertos, setIndicadoresAbertos] = useState(true);
+  const [indicadoresEquipeAbertos, setIndicadoresEquipeAbertos] = useState(false);
   const [filtroDataInicial, setFiltroDataInicial] = useState("");
   const [filtroDataFinal, setFiltroDataFinal] = useState("");
   const [filtroMes, setFiltroMes] = useState("");
   const [filtroAno, setFiltroAno] = useState("");
+  const [equipeFiltroDataInicial, setEquipeFiltroDataInicial] = useState("");
+  const [equipeFiltroDataFinal, setEquipeFiltroDataFinal] = useState("");
+  const [equipeFiltroMes, setEquipeFiltroMes] = useState("");
+  const [equipeFiltroAno, setEquipeFiltroAno] = useState("");
   const [form, setForm] = useState<ScannerForm>(formVazio());
+  const [equipeForm, setEquipeForm] = useState<EquipeScannerForm>(equipeFormVazio());
 
-  const podeCriar = podeNoModulo("operacao", "criar");
-  const podeEditar = podeNoModulo("operacao", "editar");
-  const podeExcluir = podeNoModulo("operacao", "excluir");
+  const validadorOperacional = usuarioValidadorOperacional();
+  const podeLerScanner =
+    podeNoModulo("operacao_scanner", "leitura") || podeNoModulo("operacao", "leitura");
+  const podeCriar =
+    podeNoModulo("operacao_scanner", "criar") ||
+    podeNoModulo("operacao", "criar") ||
+    (validadorOperacional && podeLerScanner);
+  const podeEditar =
+    podeNoModulo("operacao_scanner", "editar") ||
+    podeNoModulo("operacao", "editar") ||
+    (validadorOperacional && podeLerScanner);
+  const podeExcluir =
+    podeNoModulo("operacao_scanner", "excluir") || podeNoModulo("operacao", "excluir");
+  const podeVerIndicadoresScanner =
+    podeNoModulo("operacao_scanner", "indicadores") ||
+    podeNoModulo("operacao", "indicadores");
+  const podeVerEquipe =
+    podeNoModulo("operacao_equipe_scanner", "leitura") || podeNoModulo("operacao", "leitura");
+  const podeCriarEquipe =
+    podeNoModulo("operacao_equipe_scanner", "criar") ||
+    podeNoModulo("operacao", "criar") ||
+    (validadorOperacional && podeVerEquipe);
+  const podeEditarEquipe =
+    podeNoModulo("operacao_equipe_scanner", "editar") ||
+    podeNoModulo("operacao", "editar") ||
+    (validadorOperacional && podeVerEquipe);
+  const podeExcluirEquipe =
+    podeNoModulo("operacao_equipe_scanner", "excluir") || podeNoModulo("operacao", "excluir");
+  const podeVerIndicadoresEquipe =
+    podeNoModulo("operacao_equipe_scanner", "indicadores") ||
+    podeNoModulo("operacao", "indicadores");
 
   const totalFormulario = useMemo(
     () =>
@@ -190,8 +377,102 @@ export default function Scanner() {
     [form],
   );
 
+  const atrasoEquipeMinutos = useMemo(
+    () =>
+      equipeForm.mencionarAtraso
+        ? minutosEntreHoras(equipeForm.atrasoInicio, equipeForm.atrasoFim)
+        : 0,
+    [equipeForm.atrasoFim, equipeForm.atrasoInicio, equipeForm.mencionarAtraso],
+  );
+
+  const statusScannerEfetivo = (
+    registro: Pick<ScannerPassagem | EquipeScannerRegistro, "statusValidacao" | "validadoPor" | "validadoEm">,
+  ) =>
+    registro.statusValidacao === "Validado" &&
+    (registro.validadoPor || registro.validadoEm)
+      ? "Validado"
+      : "Pendente";
+
+  const registroEstaValidado = (
+    registro: Pick<ScannerPassagem | EquipeScannerRegistro, "statusValidacao" | "validadoPor" | "validadoEm">,
+  ) => statusScannerEfetivo(registro) === "Validado";
+
+  const registrosFiltrados = useMemo(
+    () =>
+      registros.filter((registro) =>
+        dentroDosFiltrosTemporais(
+          registro.data,
+          filtroDataInicial,
+          filtroDataFinal,
+          filtroMes,
+          filtroAno,
+        ),
+      ),
+    [filtroAno, filtroDataFinal, filtroDataInicial, filtroMes, registros],
+  );
+
+  const registrosFiltradosValidados = useMemo(
+    () =>
+      registrosFiltrados.filter((registro) =>
+        registroEstaValidado(registro),
+      ),
+    [registrosFiltrados],
+  );
+
+  const equipeRegistrosFiltrados = useMemo(
+    () =>
+      equipeRegistros.filter((registro) =>
+        dentroDosFiltrosTemporais(
+          registro.dataReferencia,
+          equipeFiltroDataInicial,
+          equipeFiltroDataFinal,
+          equipeFiltroMes,
+          equipeFiltroAno,
+        ),
+      ),
+    [
+      equipeFiltroAno,
+      equipeFiltroDataFinal,
+      equipeFiltroDataInicial,
+      equipeFiltroMes,
+      equipeRegistros,
+    ],
+  );
+
+  const equipeRegistrosFiltradosValidados = useMemo(
+    () =>
+      equipeRegistrosFiltrados.filter((registro) =>
+        registroEstaValidado(registro),
+      ),
+    [equipeRegistrosFiltrados],
+  );
+
+  const indicadoresEquipe = useMemo(() => {
+    const base = equipeRegistrosFiltradosValidados.reduce(
+      (acc, registro) => {
+        const item = dadosEquipe(registro);
+        acc.efetivoPrevisto += numero(item.efetivoPrevisto || 0);
+        acc.efetivoPresente += numero(item.efetivoPresente || 0);
+        acc.faltas += numero(item.faltas || 0);
+        acc.atrasoMinutos += numero(item.atrasoMinutos || 0);
+        acc.registros += 1;
+        return acc;
+      },
+      { efetivoPrevisto: 0, efetivoPresente: 0, faltas: 0, atrasoMinutos: 0, registros: 0 },
+    );
+    return {
+      ...base,
+      cobertura:
+        base.efetivoPrevisto > 0
+          ? (base.efetivoPresente / base.efetivoPrevisto) * 100
+          : 0,
+      absenteismo:
+        base.efetivoPrevisto > 0 ? (base.faltas / base.efetivoPrevisto) * 100 : 0,
+    };
+  }, [equipeRegistrosFiltradosValidados]);
+
   const indicadores = useMemo(() => {
-    const base = registros.reduce(
+    const base = registrosFiltradosValidados.reduce(
       (acc, item) => {
         acc.leituraComFalha += item.leituraComFalha || 0;
         acc.leituraSatisfatoria += item.leituraSatisfatoria || 0;
@@ -223,7 +504,7 @@ export default function Scanner() {
 
     const diasOperacao = Math.max(
       1,
-      new Set(registros.map((registro) => chaveData(registro.data))).size,
+      new Set(registrosFiltradosValidados.map((registro) => chaveData(registro.data))).size,
     );
     const minutosOperacao = diasOperacao * 24 * 60;
     const percentualImagensSuspeitas =
@@ -262,7 +543,7 @@ export default function Scanner() {
       tempoMedioRecuperacao,
       efetividadeInspecoes,
     };
-  }, [registros]);
+  }, [registrosFiltradosValidados]);
 
   const barras = [
     {
@@ -299,30 +580,14 @@ export default function Scanner() {
     return Array.from(new Set(anos)).sort((a, b) => b.localeCompare(a));
   }, [registros]);
 
-  const registrosTemporais = useMemo(
-    () =>
-      registros.filter((registro) => {
-        const dataRegistro = chaveData(registro.data);
-        const primeiraData = filtroDataInicial || filtroDataFinal;
-        const segundaData = filtroDataFinal || filtroDataInicial;
-        const inicio =
-          primeiraData && segundaData && primeiraData > segundaData
-            ? segundaData
-            : primeiraData;
-        const fim =
-          primeiraData && segundaData && primeiraData > segundaData
-            ? primeiraData
-            : segundaData;
-        if (inicio && dataRegistro < inicio) return false;
-        if (fim && dataRegistro > fim) return false;
-        if (filtroMes && chaveMes(registro.data).slice(5, 7) !== filtroMes) {
-          return false;
-        }
-        if (filtroAno && chaveAno(registro.data) !== filtroAno) return false;
-        return true;
-      }),
-    [filtroAno, filtroDataFinal, filtroDataInicial, filtroMes, registros],
-  );
+  const anosEquipeDisponiveis = useMemo(() => {
+    const anos = equipeRegistros
+      .map((registro) => chaveAno(registro.dataReferencia))
+      .filter(Boolean);
+    return Array.from(new Set(anos)).sort((a, b) => b.localeCompare(a));
+  }, [equipeRegistros]);
+
+  const registrosTemporais = registrosFiltrados;
 
   const periodoTemporal = useMemo<PeriodoTemporal>(() => {
     if (filtroDataInicial || filtroDataFinal) return "dia";
@@ -330,6 +595,18 @@ export default function Scanner() {
     if (filtroAno) return "mes";
     return "ano";
   }, [filtroAno, filtroDataFinal, filtroDataInicial, filtroMes]);
+
+  const periodoEquipeTemporal = useMemo<PeriodoTemporal>(() => {
+    if (equipeFiltroDataInicial || equipeFiltroDataFinal) return "dia";
+    if (equipeFiltroMes && equipeFiltroAno) return "dia";
+    if (equipeFiltroAno) return "mes";
+    return "ano";
+  }, [
+    equipeFiltroAno,
+    equipeFiltroDataFinal,
+    equipeFiltroDataInicial,
+    equipeFiltroMes,
+  ]);
 
   const serieTemporal = useMemo(() => {
     const mapa = new Map<
@@ -395,6 +672,53 @@ export default function Scanner() {
     return Array.from(mapa.values()).sort((a, b) => a.ordem - b.ordem);
   }, [periodoTemporal, registrosTemporais]);
 
+  const serieEquipeTemporal = useMemo(() => {
+    const mapa = new Map<
+      string,
+      {
+        chave: string;
+        rotulo: string;
+        ordem: number;
+        lancamentos: number;
+        efetivoPrevisto: number;
+        efetivoPresente: number;
+        faltas: number;
+        atrasoMinutos: number;
+      }
+    >();
+
+    equipeRegistrosFiltrados.forEach((registro) => {
+      const chave =
+        periodoEquipeTemporal === "ano"
+          ? chaveAno(registro.dataReferencia)
+          : periodoEquipeTemporal === "mes"
+            ? chaveMes(registro.dataReferencia)
+            : chaveData(registro.dataReferencia);
+      const valores = dadosEquipe(registro);
+      const atual =
+        mapa.get(chave) ||
+        {
+          chave,
+          rotulo: rotuloPeriodo(registro.dataReferencia, periodoEquipeTemporal),
+          ordem: new Date(registro.dataReferencia).getTime(),
+          lancamentos: 0,
+          efetivoPrevisto: 0,
+          efetivoPresente: 0,
+          faltas: 0,
+          atrasoMinutos: 0,
+        };
+
+      atual.lancamentos += 1;
+      atual.efetivoPrevisto += numero(valores.efetivoPrevisto || 0);
+      atual.efetivoPresente += numero(valores.efetivoPresente || 0);
+      atual.faltas += numero(valores.faltas || 0);
+      atual.atrasoMinutos += numero(valores.atrasoMinutos || 0);
+      mapa.set(chave, atual);
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => a.ordem - b.ordem);
+  }, [equipeRegistrosFiltrados, periodoEquipeTemporal]);
+
   const maiorFalhaTemporal = Math.max(
     1,
     ...serieTemporal.map(
@@ -424,14 +748,35 @@ export default function Scanner() {
     }
   }
 
+  async function carregarEquipeRegistros() {
+    if (!podeVerEquipe) return;
+    setCarregandoEquipe(true);
+    try {
+      const response = await api.get("/operacao/indicadores/operacao_equipe_scanner");
+      setEquipeRegistros(response.data || []);
+    } finally {
+      setCarregandoEquipe(false);
+    }
+  }
+
   useEffect(() => {
     carregarRegistros();
   }, []);
+
+  useEffect(() => {
+    if (podeVerEquipe) carregarEquipeRegistros();
+  }, [podeVerEquipe]);
 
   function abrirNovo() {
     setEditando(null);
     setForm(formVazio());
     setModalAberto(true);
+  }
+
+  function abrirNovaEquipe() {
+    setEditandoEquipe(null);
+    setEquipeForm(equipeFormVazio());
+    setModalEquipeAberto(true);
   }
 
   function abrirEdicao(registro: ScannerPassagem) {
@@ -460,6 +805,23 @@ export default function Scanner() {
     setModalAberto(true);
   }
 
+  function abrirEdicaoEquipe(registro: EquipeScannerRegistro) {
+    const dados = dadosEquipe(registro);
+    setEditandoEquipe(registro);
+    setEquipeForm({
+      dataReferencia: dataInput(registro.dataReferencia),
+      efetivoPrevisto: String(dados.efetivoPrevisto || 0),
+      efetivoPresente: String(dados.efetivoPresente || 0),
+      faltas: String(dados.faltas || 0),
+      mencionarAtraso: Boolean(dados.mencionarAtraso),
+      atrasoInicio: String(dados.atrasoInicio || ""),
+      atrasoFim: String(dados.atrasoFim || ""),
+      atrasoMinutos: String(dados.atrasoMinutos || 0),
+      observacoes: String(dados.observacoes || ""),
+    });
+    setModalEquipeAberto(true);
+  }
+
   function atualizarCampo(campo: keyof ScannerForm, valor: string) {
     setForm((atual) => ({
       ...atual,
@@ -484,9 +846,32 @@ export default function Scanner() {
     }));
   }
 
-  async function salvarRegistro(event: React.FormEvent) {
-    event.preventDefault();
+  function atualizarEquipeCampo(campo: keyof EquipeScannerForm, valor: string) {
+    setEquipeForm((atual) => ({
+      ...atual,
+      [campo]:
+        campo === "dataReferencia" ||
+        campo === "atrasoInicio" ||
+        campo === "atrasoFim" ||
+        campo === "observacoes"
+          ? valor
+          : valor.replace(/\D/g, ""),
+    }));
+  }
+
+  function atualizarFlagAtraso(valor: boolean) {
+    setEquipeForm((atual) => ({
+      ...atual,
+      mencionarAtraso: valor,
+      atrasoInicio: valor ? atual.atrasoInicio : "",
+      atrasoFim: valor ? atual.atrasoFim : "",
+      atrasoMinutos: valor ? atual.atrasoMinutos : "0",
+    }));
+  }
+
+  async function enviarRegistroScanner() {
     setSalvando(true);
+    setConfirmarEnvioVazio(null);
     try {
       const payload = {
         ...form,
@@ -518,9 +903,19 @@ export default function Scanner() {
 
       setModalAberto(false);
       await carregarRegistros();
+      navigate("/controle-operacional");
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function salvarRegistro(event: React.FormEvent) {
+    event.preventDefault();
+    if (scannerSemPreenchimento(form)) {
+      setConfirmarEnvioVazio("scanner");
+      return;
+    }
+    await enviarRegistroScanner();
   }
 
   async function excluirRegistro(registro: ScannerPassagem) {
@@ -542,6 +937,100 @@ export default function Scanner() {
     await carregarRegistros();
   }
 
+  async function validarRegistroScanner(registro: ScannerPassagem) {
+    setValidando(true);
+    try {
+      const response = await api.post(`/operacao/scanner/${registro.id}/validar`);
+      setRegistros((lista) =>
+        lista.map((item) => (item.id === registro.id ? response.data : item)),
+      );
+      setValidacaoScanner(response.data);
+    } finally {
+      setValidando(false);
+    }
+  }
+
+  async function enviarRegistroEquipe() {
+    setSalvandoEquipe(true);
+    setConfirmarEnvioVazio(null);
+    try {
+      const atrasoMinutos = equipeForm.mencionarAtraso
+        ? minutosEntreHoras(equipeForm.atrasoInicio, equipeForm.atrasoFim)
+        : 0;
+      const payload = {
+        dataReferencia: `${equipeForm.dataReferencia}T00:00`,
+        dados: {
+          efetivoPrevisto: numero(equipeForm.efetivoPrevisto),
+          efetivoPresente: numero(equipeForm.efetivoPresente),
+          faltas: numero(equipeForm.faltas),
+          mencionarAtraso: equipeForm.mencionarAtraso,
+          atrasoInicio: equipeForm.mencionarAtraso ? equipeForm.atrasoInicio : "",
+          atrasoFim: equipeForm.mencionarAtraso ? equipeForm.atrasoFim : "",
+          atrasoMinutos,
+          observacoes: equipeForm.observacoes,
+        },
+      };
+
+      if (editandoEquipe) {
+        await api.put(
+          `/operacao/indicadores/operacao_equipe_scanner/${editandoEquipe.id}`,
+          payload,
+        );
+      } else {
+        await api.post("/operacao/indicadores/operacao_equipe_scanner", payload);
+      }
+
+      setModalEquipeAberto(false);
+      await carregarEquipeRegistros();
+      navigate("/controle-operacional");
+    } finally {
+      setSalvandoEquipe(false);
+    }
+  }
+
+  async function salvarEquipeRegistro(event: React.FormEvent) {
+    event.preventDefault();
+    if (equipeSemPreenchimento(equipeForm)) {
+      setConfirmarEnvioVazio("equipe");
+      return;
+    }
+    await enviarRegistroEquipe();
+  }
+
+  async function excluirEquipeRegistro(registro: EquipeScannerRegistro) {
+    const confirmar = window.confirm(
+      `Deseja excluir o lançamento da equipe do scanner de ${formatarDataReferencia(
+        registro.dataReferencia,
+      )}?`,
+    );
+    if (!confirmar) return;
+
+    const pinOperacional = await solicitarPinOperacional(
+      "Informe seu PIN para confirmar a exclusão do lançamento da equipe do scanner.",
+    );
+    if (!pinOperacional) return;
+
+    await api.delete(`/operacao/indicadores/operacao_equipe_scanner/${registro.id}`, {
+      data: { pinOperacional },
+    });
+    await carregarEquipeRegistros();
+  }
+
+  async function validarEquipeRegistro(registro: EquipeScannerRegistro) {
+    setValidando(true);
+    try {
+      const response = await api.post(
+        `/operacao/indicadores/operacao_equipe_scanner/${registro.id}/validar`,
+      );
+      setEquipeRegistros((lista) =>
+        lista.map((item) => (item.id === registro.id ? response.data : item)),
+      );
+      setValidacaoEquipe(response.data);
+    } finally {
+      setValidando(false);
+    }
+  }
+
   const maiorBarra = Math.max(1, ...barras.map((item) => item.valor));
 
   return (
@@ -559,7 +1048,7 @@ export default function Scanner() {
           </p>
         </div>
 
-        {podeCriar && (
+        {abaAtiva === "passagens" && podeCriar && (
           <button
             type="button"
             onClick={abrirNovo}
@@ -569,8 +1058,50 @@ export default function Scanner() {
             Novo lançamento
           </button>
         )}
+        {abaAtiva === "equipe" && podeCriarEquipe && (
+          <button
+            type="button"
+            onClick={abrirNovaEquipe}
+            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-500"
+          >
+            <Plus size={18} />
+            Novo lançamento
+          </button>
+        )}
       </div>
 
+      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2">
+        <button
+          type="button"
+          onClick={() => setAbaAtiva("passagens")}
+          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+            abaAtiva === "passagens"
+              ? "bg-blue-600 text-white shadow-lg shadow-blue-950/30"
+              : "text-slate-300 hover:bg-slate-900 hover:text-white"
+          }`}
+        >
+          <ScanLine size={17} />
+          Passagem Scanner
+        </button>
+        {podeVerEquipe && (
+          <button
+            type="button"
+            onClick={() => setAbaAtiva("equipe")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+              abaAtiva === "equipe"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/30"
+                : "text-slate-300 hover:bg-slate-900 hover:text-white"
+            }`}
+          >
+            <Users size={17} />
+            Equipe do Scanner
+          </button>
+        )}
+      </div>
+
+      {abaAtiva === "passagens" && (
+        <>
+      {podeVerIndicadoresScanner && (
       <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/70 shadow-2xl shadow-black/20">
         <button
           type="button"
@@ -604,7 +1135,7 @@ export default function Scanner() {
               <IndicadorScanner
                 titulo="Total de containers scanneados"
                 valor={indicadores.total}
-                detalhe={`${registros.length} lançamento(s)`}
+                detalhe={`${registrosFiltrados.length} lançamento(s) no filtro`}
                 destaque="text-white"
               />
               <IndicadorScanner
@@ -867,6 +1398,7 @@ export default function Scanner() {
           </div>
         )}
       </section>
+      )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-2xl shadow-black/20">
         <div className="border-b border-slate-800 px-5 py-4">
@@ -893,6 +1425,7 @@ export default function Scanner() {
                   "Aberturas",
                   "Total scanneado",
                   "Cadastrado por",
+                  "Validação",
                   "Ações",
                 ].map((item) => (
                   <th
@@ -907,13 +1440,13 @@ export default function Scanner() {
             <tbody className="divide-y divide-slate-800">
               {carregando ? (
                 <tr>
-                  <td colSpan={13} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={14} className="px-4 py-8 text-center text-slate-400">
                     Carregando lançamentos...
                   </td>
                 </tr>
               ) : registros.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-4 py-8 text-center text-slate-400">
+                  <td colSpan={14} className="px-4 py-8 text-center text-slate-400">
                     Nenhum lançamento de scanner cadastrado.
                   </td>
                 </tr>
@@ -966,26 +1499,59 @@ export default function Scanner() {
                         {formatarData(registro.createdAt)}
                       </p>
                     </td>
+                    <td className="px-4 py-4 text-sm">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                        registroEstaValidado(registro)
+                          ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-400/30"
+                          : "bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/30"
+                      }`}>
+                        {statusScannerEfetivo(registro)}
+                      </span>
+                      {registro.validadoPor && (
+                        <p className="mt-1 text-xs text-slate-500">
+                          {registro.validadoPor.apelido || registro.validadoPor.nome}
+                        </p>
+                      )}
+                    </td>
                     <td className="px-4 py-4">
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          title={
+                            registroEstaValidado(registro)
+                              ? "Ver validação"
+                              : "Validar lançamento"
+                          }
+                          aria-label={
+                            registroEstaValidado(registro)
+                              ? "Ver validação"
+                              : "Validar lançamento"
+                          }
+                          onClick={() => setValidacaoScanner(registro)}
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-500/40 text-emerald-100 transition hover:bg-emerald-500/10"
+                        >
+                          <BarChart3 size={16} />
+                        </button>
                         {podeEditar && (
                           <button
                             type="button"
+                            title="Editar lançamento"
+                            aria-label="Editar lançamento"
                             onClick={() => abrirEdicao(registro)}
-                            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-500"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-blue-600 text-white transition hover:bg-blue-500"
                           >
-                            <Edit3 size={14} />
-                            Editar
+                            <Edit3 size={16} />
                           </button>
                         )}
                         {podeExcluir && (
                           <button
                             type="button"
+                            title="Excluir lançamento"
+                            aria-label="Excluir lançamento"
                             onClick={() => excluirRegistro(registro)}
-                            className="inline-flex items-center gap-2 rounded-lg border border-red-500/40 px-3 py-2 text-xs font-bold text-red-200 transition hover:bg-red-500/10"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/40 text-red-200 transition hover:bg-red-500/10"
                           >
-                            <Trash2 size={14} />
-                            Excluir
+                            <Trash2 size={16} />
                           </button>
                         )}
                       </div>
@@ -998,22 +1564,156 @@ export default function Scanner() {
         </div>
       </section>
 
-      {modalAberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
-          <form
-            onSubmit={salvarRegistro}
-            className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-slate-700 bg-slate-950 shadow-2xl"
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-slate-900/80 p-5">
+      {confirmarEnvioVazio && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[1.4rem] border border-amber-400/30 bg-slate-950 p-5 text-white shadow-2xl">
+            <div className="flex items-start gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/30">
+                <Activity size={22} />
+              </span>
+              <div>
+                <h3 className="text-lg font-black">
+                  Existem informações que não foram preenchidas
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-slate-300">
+                  O formulário não recebeu dados operacionais. Deseja enviar
+                  mesmo assim ou revisar o preenchimento?
+                </p>
+              </div>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmarEnvioVazio(null)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-slate-800"
+              >
+                REVISAR
+              </button>
+              <button
+                type="button"
+                disabled={salvando || salvandoEquipe}
+                onClick={() =>
+                  confirmarEnvioVazio === "scanner"
+                    ? enviarRegistroScanner()
+                    : enviarRegistroEquipe()
+                }
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {salvando || salvandoEquipe ? "ENVIANDO..." : "ENVIAR"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {validacaoScanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[1.4rem] border border-slate-700 bg-slate-950 text-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-blue-50 to-cyan-50 p-5 text-slate-950">
               <div className="flex items-center gap-3">
-                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600/15 text-blue-300 ring-1 ring-blue-400/20">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg">
                   <ScanLine size={22} />
                 </span>
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.24em] text-blue-300">
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
+                    Validação Scanner
+                  </p>
+                  <h2 className="text-xl font-black">
+                    {validacaoScanner.scanner} - {formatarDataReferencia(validacaoScanner.data)}
+                  </h2>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setValidacaoScanner(null)}
+                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div className="grid gap-3 md:grid-cols-3">
+                <InfoScanner label="Status" value={statusScannerEfetivo(validacaoScanner)} />
+                <InfoScanner
+                  label="Cadastrado por"
+                  value={validacaoScanner.criadoPor?.apelido || validacaoScanner.criadoPor?.nome || "Não identificado"}
+                />
+                <InfoScanner label="Data de cadastro" value={formatarData(validacaoScanner.createdAt)} />
+                <InfoScanner
+                  label="Validado por"
+                  value={validacaoScanner.validadoPor?.apelido || validacaoScanner.validadoPor?.nome || "Aguardando validação"}
+                />
+                <InfoScanner
+                  label="Data de validação"
+                  value={validacaoScanner.validadoEm ? formatarData(validacaoScanner.validadoEm) : "Pendente"}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.16em] text-blue-300">
+                  Dados preenchidos
+                </h3>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {[
+                    ["Leitura com falha", validacaoScanner.leituraComFalha],
+                    ["Leitura satisfatória", validacaoScanner.leituraSatisfatoria],
+                    ["Leitura insatisfatória", validacaoScanner.insatisfatoria],
+                    ["Falhas no equipamento", validacaoScanner.falhasEquipamento],
+                    ["Reprocessamentos", validacaoScanner.reprocessamentos],
+                    ["Imagens suspeitas", validacaoScanner.areaSuspeita],
+                    ["Containers para inspeção", validacaoScanner.containersInspecao],
+                    ["Aberturas por suspeita", validacaoScanner.aberturasSuspeita],
+                    ["Total scanneado", validacaoScanner.total],
+                    ["Tipos de suspeita", validacaoScanner.tiposSuspeita || "-"],
+                    ["Tempo indisponível", formatarMinutos(validacaoScanner.indisponibilidadeMinutos || 0)],
+                    ["Ações de contingência", validacaoScanner.acoesContingencia || "-"],
+                  ].map(([label, value]) => (
+                    <InfoScanner key={String(label)} label={String(label)} value={String(value)} />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-900/60 p-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setValidacaoScanner(null)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-slate-800"
+              >
+                Fechar
+              </button>
+              {!registroEstaValidado(validacaoScanner) && (
+                <button
+                  type="button"
+                  disabled={validando}
+                  onClick={() => validarRegistroScanner(validacaoScanner)}
+                  className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {validando ? "Validando..." : "Validar lançamento"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={salvarRegistro}
+            className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[1.4rem] border border-slate-200 bg-white text-slate-950 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50 p-5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-200">
+                  <ScanLine size={22} />
+                </span>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-700">
                     Scanner
                   </p>
-                  <h2 className="text-xl font-bold text-white">
+                  <h2 className="text-xl font-black">
                     {editando ? "Editar lançamento" : "Novo lançamento"}
                   </h2>
                 </div>
@@ -1021,159 +1721,722 @@ export default function Scanner() {
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                className="rounded-xl p-2 text-slate-400 transition hover:bg-slate-800 hover:text-white"
+                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 p-5 md:grid-cols-2">
-              <label className="space-y-2 text-sm font-bold text-slate-200">
-                Data referência
-                <input
-                  type="date"
-                  value={form.data}
-                  onChange={(e) => atualizarCampo("data", e.target.value)}
-                  required
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-                />
-              </label>
+            <div className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2">
+              <CampoScannerInput
+                icon={<CalendarDays size={16} />}
+                label="Data referência"
+                type="date"
+                value={form.data}
+                onChange={(valor) => atualizarCampo("data", valor)}
+              />
 
-              <label className="space-y-2 text-sm font-bold text-slate-200">
-                Scanner
+              <label className="space-y-2 text-sm font-bold text-slate-700">
+                <span className="inline-flex items-center gap-2">
+                  <ScanLine size={16} className="text-blue-600" />
+                  Scanner
+                </span>
                 <select
                   value={form.scanner}
                   onChange={(e) => atualizarCampo("scanner", e.target.value)}
-                  className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                  className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 font-normal text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 >
                   <option value={scannerPadrao}>{scannerPadrao}</option>
                 </select>
               </label>
 
-              <CampoNumero
+              <CampoScannerInput
+                icon={<AlertIcon />}
                 label="Leitura com falha"
+                type="number"
                 value={form.leituraComFalha}
                 onChange={(valor) => atualizarCampo("leituraComFalha", valor)}
               />
-              <CampoNumero
+              <CampoScannerInput
+                icon={<UserCheck size={16} />}
                 label="Leitura satisfatória"
+                type="number"
                 value={form.leituraSatisfatoria}
                 onChange={(valor) => atualizarCampo("leituraSatisfatoria", valor)}
               />
-              <CampoNumero
+              <CampoScannerInput
+                icon={<Activity size={16} />}
                 label="Leitura insatisfatória"
+                type="number"
                 value={form.insatisfatoria}
                 onChange={(valor) => atualizarCampo("insatisfatoria", valor)}
               />
-              <CampoNumero
+              <CampoScannerInput
+                icon={<AlertIcon />}
                 label="Falhas no equipamento"
+                type="number"
                 value={form.falhasEquipamento}
                 onChange={(valor) => atualizarCampo("falhasEquipamento", valor)}
               />
-              <CampoNumero
+              <CampoScannerInput
+                icon={<TrendingUp size={16} />}
                 label="Quantidade de reprocessamento"
+                type="number"
                 detalhe={`sugerido: ${reprocessamentoSugerido}`}
                 value={form.reprocessamentos}
                 onChange={(valor) => atualizarCampo("reprocessamentos", valor)}
               />
-              <CampoNumero
+              <CampoScannerInput
+                icon={<ScanLine size={16} />}
                 label="Quantidade de imagens suspeitas"
+                type="number"
                 value={form.areaSuspeita}
                 onChange={(valor) => atualizarCampo("areaSuspeita", valor)}
               />
-              <CampoNumero
+              <CampoScannerInput
+                icon={<Filter size={16} />}
                 label="Containers encaminhados para inspeção"
+                type="number"
                 value={form.containersInspecao}
                 onChange={(valor) => atualizarCampo("containersInspecao", valor)}
               />
-              <CampoNumero
+              <CampoScannerInput
+                icon={<Activity size={16} />}
                 label="Aberturas realizadas por imagem suspeita"
+                type="number"
                 value={form.aberturasSuspeita}
                 onChange={(valor) => atualizarCampo("aberturasSuspeita", valor)}
               />
 
-              <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
-                Principais tipos de suspeita identificados
+              <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2">
+                <span className="inline-flex items-center gap-2">
+                  <Edit3 size={16} className="text-blue-600" />
+                  Principais tipos de suspeita identificados
+                </span>
                 <textarea
                   value={form.tiposSuspeita}
                   onChange={(e) => atualizarCampo("tiposSuspeita", e.target.value)}
-                  className="min-h-24 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                  className="min-h-20 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 />
               </label>
 
-              <label className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-900/70 p-4 text-sm font-bold text-slate-200 md:col-span-2">
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 md:col-span-2">
+                <span className="inline-flex items-center gap-2">
+                  <Clock size={16} className="text-amber-600" />
+                  Tempo de indisponibilidade
+                </span>
                 <input
                   type="checkbox"
                   checked={form.registrarIndisponibilidade}
                   onChange={(e) => atualizarFlagIndisponibilidade(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-600 bg-slate-950 text-blue-600 focus:ring-blue-500"
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                 />
-                Tempo de indisponibilidade
               </label>
 
               {form.registrarIndisponibilidade && (
                 <>
-                  <label className="space-y-2 text-sm font-bold text-slate-200">
-                    Início da indisponibilidade
-                    <input
-                      type="datetime-local"
-                      value={form.indisponibilidadeInicio}
-                      onChange={(e) =>
-                        atualizarCampo("indisponibilidadeInicio", e.target.value)
-                      }
-                      required
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </label>
-                  <label className="space-y-2 text-sm font-bold text-slate-200">
-                    Fim da indisponibilidade
-                    <input
-                      type="datetime-local"
-                      value={form.indisponibilidadeFim}
-                      min={form.indisponibilidadeInicio || undefined}
-                      onChange={(e) =>
-                        atualizarCampo("indisponibilidadeFim", e.target.value)
-                      }
-                      required
-                      className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-                    />
-                  </label>
+                  <CampoScannerInput
+                    icon={<Clock size={16} />}
+                    label="Início da indisponibilidade"
+                    type="datetime-local"
+                    value={form.indisponibilidadeInicio}
+                    onChange={(valor) =>
+                      atualizarCampo("indisponibilidadeInicio", valor)
+                    }
+                  />
+                  <CampoScannerInput
+                    icon={<Clock size={16} />}
+                    label="Fim da indisponibilidade"
+                    type="datetime-local"
+                    value={form.indisponibilidadeFim}
+                    min={form.indisponibilidadeInicio || undefined}
+                    onChange={(valor) => atualizarCampo("indisponibilidadeFim", valor)}
+                  />
                 </>
               )}
 
-              <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
-                Ações de contingência
+              <label className="space-y-2 text-sm font-bold text-slate-700 md:col-span-2">
+                <span className="inline-flex items-center gap-2">
+                  <Edit3 size={16} className="text-blue-600" />
+                  Ações de contingência
+                </span>
                 <textarea
                   value={form.acoesContingencia}
                   onChange={(e) => atualizarCampo("acoesContingencia", e.target.value)}
-                  className="min-h-24 w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                  className="min-h-20 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal text-slate-950 outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
                 />
               </label>
 
-              <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4 md:col-span-2">
-                <p className="text-xs font-bold uppercase tracking-[0.2em] text-blue-200">
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 md:col-span-2">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">
                   Total de containers scanneados
                 </p>
-                <p className="mt-1 text-3xl font-bold text-white">
+                <p className="mt-1 text-3xl font-black text-slate-950">
                   {totalFormulario}
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-col-reverse gap-3 border-t border-slate-800 p-5 sm:flex-row sm:justify-end">
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={() => setModalAberto(false)}
-                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-bold text-slate-200 transition hover:bg-slate-900"
+                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={salvando}
-                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-black text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {salvando ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+        </>
+      )}
+
+      {abaAtiva === "equipe" && podeVerEquipe && (
+        <section className="overflow-hidden rounded-[1.4rem] border border-emerald-400/20 bg-slate-950 shadow-2xl shadow-black/20">
+          <div className="border-b border-slate-800 bg-gradient-to-r from-emerald-500/12 to-blue-500/10 px-5 py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/25">
+                  <Users size={21} />
+                </span>
+                <div>
+                  <h2 className="text-lg font-bold text-white">Equipe do Scanner</h2>
+                  <p className="text-sm text-slate-400">
+                    Efetivo, faltas e atrasos vinculados à operação diária.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-5 p-5">
+            {podeVerIndicadoresEquipe && (
+              <button
+                type="button"
+                onClick={() => setIndicadoresEquipeAbertos((aberto) => !aberto)}
+                className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-4 py-4 text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20">
+                    <BarChart3 size={20} />
+                  </span>
+                  <div>
+                    <h3 className="text-base font-bold text-white">
+                      Indicadores e análise temporal
+                    </h3>
+                    <p className="text-sm text-slate-400">
+                      Filtre por período para analisar efetivo, faltas e atrasos.
+                    </p>
+                  </div>
+                </div>
+                <ChevronDown
+                  className={`text-slate-400 transition ${
+                    indicadoresEquipeAbertos ? "rotate-180" : ""
+                  }`}
+                  size={20}
+                />
+              </button>
+            )}
+
+            {podeVerIndicadoresEquipe && indicadoresEquipeAbertos && (
+              <div className="space-y-4 rounded-2xl border border-slate-800 bg-slate-900/45 p-4">
+                <div className="grid grid-cols-1 gap-3 lg:grid-cols-5">
+                  <FiltroData
+                    label="Data inicial"
+                    value={equipeFiltroDataInicial}
+                    onChange={setEquipeFiltroDataInicial}
+                  />
+                  <FiltroData
+                    label="Data final"
+                    value={equipeFiltroDataFinal}
+                    onChange={setEquipeFiltroDataFinal}
+                  />
+                  <FiltroSelect
+                    label="Mês"
+                    value={equipeFiltroMes}
+                    onChange={setEquipeFiltroMes}
+                    options={meses}
+                    vazio="Todos"
+                  />
+                  <FiltroSelect
+                    label="Ano"
+                    value={equipeFiltroAno}
+                    onChange={setEquipeFiltroAno}
+                    options={anosEquipeDisponiveis.map((ano) => ({
+                      valor: ano,
+                      label: ano,
+                    }))}
+                    vazio="Todos"
+                  />
+                  <div className="flex items-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEquipeFiltroDataInicial("");
+                        setEquipeFiltroDataFinal("");
+                        setEquipeFiltroMes("");
+                        setEquipeFiltroAno("");
+                      }}
+                      className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-700 px-3 text-sm font-bold text-slate-200 transition hover:bg-slate-800"
+                    >
+                      <Filter size={16} />
+                      Limpar filtros
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-4">
+              <IndicadorScanner
+                titulo="Efetivo previsto"
+                valor={indicadoresEquipe.efetivoPrevisto}
+                    detalhe={`${indicadoresEquipe.registros} lançamento(s) no filtro`}
+                destaque="text-white"
+              />
+              <IndicadorScanner
+                titulo="Efetivo presente"
+                valor={indicadoresEquipe.efetivoPresente}
+                detalhe={`${formatarPercentual(indicadoresEquipe.cobertura)} de cobertura`}
+                destaque="text-emerald-300"
+              />
+              <IndicadorScanner
+                titulo="Faltas"
+                valor={indicadoresEquipe.faltas}
+                detalhe={`${formatarPercentual(indicadoresEquipe.absenteismo)} de absenteísmo`}
+                destaque="text-rose-300"
+              />
+              <IndicadorScanner
+                titulo="Tempo em atraso"
+                valor={formatarMinutos(indicadoresEquipe.atrasoMinutos)}
+                detalhe="Soma dos atrasos registrados"
+                destaque="text-amber-300"
+              />
+            </div>
+
+                <div className="space-y-3">
+                  {serieEquipeTemporal.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-slate-700 p-5 text-center text-sm text-slate-400">
+                      Nenhum lançamento encontrado para o período selecionado.
+                    </div>
+                  ) : (
+                    serieEquipeTemporal.map((item) => {
+                      const cobertura =
+                        item.efetivoPrevisto > 0
+                          ? (item.efetivoPresente / item.efetivoPrevisto) * 100
+                          : 0;
+                      return (
+                        <div
+                          key={item.chave}
+                          className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4"
+                        >
+                          <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-bold capitalize text-white">
+                                {item.rotulo}
+                              </p>
+                              <p className="text-xs text-slate-400">
+                                {item.lancamentos} lançamento(s)
+                              </p>
+                            </div>
+                            <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-bold text-emerald-200">
+                              {formatarPercentual(cobertura)} cobertura
+                            </span>
+                          </div>
+
+                          <div className="mt-3 h-3 overflow-hidden rounded-full bg-slate-800">
+                            <div
+                              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-blue-400"
+                              style={{ width: `${Math.max(4, Math.min(100, cobertura))}%` }}
+                            />
+                          </div>
+
+                          <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+                            <ResumoTemporal label="Previsto" valor={item.efetivoPrevisto} />
+                            <ResumoTemporal label="Presente" valor={item.efetivoPresente} />
+                            <ResumoTemporal label="Faltas" valor={item.faltas} />
+                            <ResumoTemporal
+                              label="Atraso min."
+                              valor={item.atrasoMinutos}
+                              destaque
+                            />
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="overflow-x-auto rounded-2xl border border-slate-800">
+              <table className="min-w-full divide-y divide-slate-800">
+                <thead className="bg-slate-900/80">
+                  <tr>
+                    {[
+                      "Data referência",
+                      "Efetivo previsto",
+                      "Efetivo presente",
+                      "Faltas",
+                      "Atraso",
+                      "Observações",
+                      "Cadastrado por",
+                      "Validação",
+                      "Ações",
+                    ].map((item) => (
+                      <th
+                        key={item}
+                        className="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider text-slate-400"
+                      >
+                        {item}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {carregandoEquipe ? (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
+                        Carregando lançamentos da equipe...
+                      </td>
+                    </tr>
+                  ) : equipeRegistros.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="px-4 py-8 text-center text-slate-400">
+                        Nenhum lançamento da equipe do scanner cadastrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    equipeRegistros.map((registro) => {
+                      const item = dadosEquipe(registro);
+                      return (
+                        <tr key={registro.id} className="bg-slate-950 transition hover:bg-slate-900/70">
+                          <td className="px-4 py-4 text-sm text-slate-200">
+                            {formatarDataReferencia(registro.dataReferencia)}
+                          </td>
+                          <td className="px-4 py-4 text-sm font-bold text-white">
+                            {numero(item.efetivoPrevisto || 0)}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-emerald-200">
+                            {numero(item.efetivoPresente || 0)}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-rose-200">
+                            {numero(item.faltas || 0)}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-amber-200">
+                            {item.mencionarAtraso
+                              ? `${formatarHoraSimples(String(item.atrasoInicio || ""))} a ${formatarHoraSimples(String(item.atrasoFim || ""))} (${formatarMinutos(numero(item.atrasoMinutos || 0))})`
+                              : "Sem atraso"}
+                          </td>
+                          <td className="max-w-xs px-4 py-4 text-sm text-slate-300">
+                            <span className="line-clamp-2">
+                              {String(item.observacoes || "Sem observações")}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 text-sm">
+                            <p className="font-bold text-white">
+                              {registro.criadoPor?.apelido ||
+                                registro.criadoPor?.nome ||
+                                "Não identificado"}
+                            </p>
+                            <p className="text-xs text-slate-400">
+                              {formatarData(registro.createdAt)}
+                            </p>
+                          </td>
+                          <td className="px-4 py-4 text-sm">
+                            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black ${
+                              registroEstaValidado(registro)
+                                ? "bg-emerald-500/15 text-emerald-200 ring-1 ring-emerald-400/30"
+                                : "bg-amber-500/15 text-amber-200 ring-1 ring-amber-400/30"
+                            }`}>
+                              {statusScannerEfetivo(registro)}
+                            </span>
+                            {registro.validadoPor && (
+                              <p className="mt-1 text-xs text-slate-500">
+                                {registro.validadoPor.apelido || registro.validadoPor.nome}
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                title={
+                                  registroEstaValidado(registro)
+                                    ? "Ver validação"
+                                    : "Validar lançamento"
+                                }
+                                aria-label={
+                                  registroEstaValidado(registro)
+                                    ? "Ver validação"
+                                    : "Validar lançamento"
+                                }
+                                onClick={() => setValidacaoEquipe(registro)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-500/40 text-emerald-100 transition hover:bg-emerald-500/10"
+                              >
+                                <BarChart3 size={16} />
+                              </button>
+                              {podeEditarEquipe && (
+                                <button
+                                  type="button"
+                                  title="Editar lançamento"
+                                  aria-label="Editar lançamento"
+                                  onClick={() => abrirEdicaoEquipe(registro)}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white transition hover:bg-emerald-500"
+                                >
+                                  <Edit3 size={16} />
+                                </button>
+                              )}
+                              {podeExcluirEquipe && (
+                                <button
+                                  type="button"
+                                  title="Excluir lançamento"
+                                  aria-label="Excluir lançamento"
+                                  onClick={() => excluirEquipeRegistro(registro)}
+                                  className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-500/40 text-red-200 transition hover:bg-red-500/10"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {validacaoEquipe && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+          <div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-[1.4rem] border border-slate-700 bg-slate-950 text-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-gradient-to-r from-emerald-50 to-blue-50 p-5 text-slate-950">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg">
+                  <Users size={22} />
+                </span>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
+                    Validação Equipe Scanner
+                  </p>
+                  <h2 className="text-xl font-black">
+                    {formatarDataReferencia(validacaoEquipe.dataReferencia)}
+                  </h2>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setValidacaoEquipe(null)}
+                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="space-y-4 p-5">
+              <div className="grid gap-3 md:grid-cols-3">
+                <InfoScanner label="Status" value={statusScannerEfetivo(validacaoEquipe)} />
+                <InfoScanner
+                  label="Cadastrado por"
+                  value={validacaoEquipe.criadoPor?.apelido || validacaoEquipe.criadoPor?.nome || "Não identificado"}
+                />
+                <InfoScanner label="Data de cadastro" value={formatarData(validacaoEquipe.createdAt)} />
+                <InfoScanner
+                  label="Validado por"
+                  value={validacaoEquipe.validadoPor?.apelido || validacaoEquipe.validadoPor?.nome || "Aguardando validação"}
+                />
+                <InfoScanner
+                  label="Data de validação"
+                  value={validacaoEquipe.validadoEm ? formatarData(validacaoEquipe.validadoEm) : "Pendente"}
+                />
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
+                <h3 className="text-sm font-black uppercase tracking-[0.16em] text-emerald-300">
+                  Dados preenchidos
+                </h3>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  {(() => {
+                    const item = dadosEquipe(validacaoEquipe);
+                    return [
+                      ["Efetivo previsto", numero(item.efetivoPrevisto || 0)],
+                      ["Efetivo presente", numero(item.efetivoPresente || 0)],
+                      ["Faltas", numero(item.faltas || 0)],
+                      [
+                        "Atraso",
+                        item.mencionarAtraso
+                          ? `${formatarHoraSimples(String(item.atrasoInicio || ""))} a ${formatarHoraSimples(String(item.atrasoFim || ""))} (${formatarMinutos(numero(item.atrasoMinutos || 0))})`
+                          : "Sem atraso",
+                      ],
+                      ["Observações", String(item.observacoes || "-")],
+                    ].map(([label, value]) => (
+                      <InfoScanner key={String(label)} label={String(label)} value={String(value)} />
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-900/60 p-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setValidacaoEquipe(null)}
+                className="rounded-xl border border-slate-700 px-5 py-3 text-sm font-black text-slate-200 transition hover:bg-slate-800"
+              >
+                Fechar
+              </button>
+              {!registroEstaValidado(validacaoEquipe) && (
+                <button
+                  type="button"
+                  disabled={validando}
+                  onClick={() => validarEquipeRegistro(validacaoEquipe)}
+                  className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {validando ? "Validando..." : "Validar lançamento"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalEquipeAberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-4 backdrop-blur-sm">
+          <form
+            onSubmit={salvarEquipeRegistro}
+            className="w-full max-w-2xl overflow-hidden rounded-[1.4rem] border border-slate-200 bg-white text-slate-950 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-r from-emerald-50 to-blue-50 p-5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-200">
+                  <UserCheck size={22} />
+                </span>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] text-emerald-700">
+                    Equipe Scanner
+                  </p>
+                  <h2 className="text-xl font-black">
+                    {editandoEquipe ? "Editar lançamento" : "Novo lançamento"}
+                  </h2>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalEquipeAberto(false)}
+                className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-200 hover:text-slate-900"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="grid gap-3 p-5 sm:grid-cols-2">
+              <CampoEquipe
+                icon={<CalendarDays size={16} />}
+                label="Data referência"
+                type="date"
+                value={equipeForm.dataReferencia}
+                onChange={(valor) => atualizarEquipeCampo("dataReferencia", valor)}
+              />
+              <CampoEquipe
+                icon={<Users size={16} />}
+                label="Efetivo previsto"
+                type="number"
+                value={equipeForm.efetivoPrevisto}
+                onChange={(valor) => atualizarEquipeCampo("efetivoPrevisto", valor)}
+              />
+              <CampoEquipe
+                icon={<UserCheck size={16} />}
+                label="Efetivo presente"
+                type="number"
+                value={equipeForm.efetivoPresente}
+                onChange={(valor) => atualizarEquipeCampo("efetivoPresente", valor)}
+              />
+              <CampoEquipe
+                icon={<AlertIcon />}
+                label="Faltas"
+                type="number"
+                value={equipeForm.faltas}
+                onChange={(valor) => atualizarEquipeCampo("faltas", valor)}
+              />
+
+              <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700 sm:col-span-2">
+                <span className="inline-flex items-center gap-2">
+                  <Clock size={16} className="text-amber-600" />
+                  Mencionar atraso
+                </span>
+                <input
+                  type="checkbox"
+                  checked={equipeForm.mencionarAtraso}
+                  onChange={(event) => atualizarFlagAtraso(event.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                />
+              </label>
+
+              {equipeForm.mencionarAtraso && (
+                <>
+                  <CampoEquipe
+                    icon={<Clock size={16} />}
+                    label="Início do atraso"
+                    type="time"
+                    value={equipeForm.atrasoInicio}
+                    onChange={(valor) => atualizarEquipeCampo("atrasoInicio", valor)}
+                  />
+                  <CampoEquipe
+                    icon={<Clock size={16} />}
+                    label="Fim do atraso"
+                    type="time"
+                    value={equipeForm.atrasoFim}
+                    onChange={(valor) => atualizarEquipeCampo("atrasoFim", valor)}
+                  />
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 sm:col-span-2">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">
+                      Tempo calculado de atraso
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-slate-950">
+                      {formatarMinutos(atrasoEquipeMinutos)}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              <label className="space-y-2 text-sm font-bold text-slate-700 sm:col-span-2">
+                <span className="inline-flex items-center gap-2">
+                  <Edit3 size={16} className="text-blue-600" />
+                  Observações <span className="font-normal text-slate-400">(opcional)</span>
+                </span>
+                <textarea
+                  value={equipeForm.observacoes}
+                  onChange={(event) => atualizarEquipeCampo("observacoes", event.target.value)}
+                  placeholder="Registre observações do turno, cobertura ou impacto operacional."
+                  className="min-h-24 w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 font-normal text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-slate-100 bg-slate-50 p-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setModalEquipeAberto(false)}
+                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-black text-slate-700 transition hover:bg-slate-100"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={salvandoEquipe}
+                className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-black text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {salvandoEquipe ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </form>
@@ -1228,35 +2491,152 @@ function ResumoTemporal({
   );
 }
 
-function CampoNumero({
+function InfoScanner({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-950 px-3 py-2">
+      <p className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 whitespace-pre-wrap text-sm font-bold text-slate-100">
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
+function CampoEquipe({
+  icon,
   label,
-  detalhe,
+  type,
   value,
   onChange,
 }: {
+  icon: React.ReactNode;
   label: string;
-  detalhe?: string;
+  type: "date" | "number" | "time";
   value: string;
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-2 text-sm font-bold text-slate-200">
+    <label className="space-y-2 text-sm font-bold text-slate-700">
+      <span className="inline-flex items-center gap-2">
+        <span className="text-emerald-600">{icon}</span>
+        {label}
+      </span>
+      <input
+        type={type}
+        min={type === "number" ? "0" : undefined}
+        step={type === "number" ? "1" : undefined}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        required
+        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 font-normal text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-100"
+      />
+    </label>
+  );
+}
+
+function CampoScannerInput({
+  icon,
+  label,
+  type,
+  value,
+  min,
+  detalhe,
+  onChange,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  type: "date" | "number" | "datetime-local";
+  value: string;
+  min?: string;
+  detalhe?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="space-y-2 text-sm font-bold text-slate-700">
       <span className="flex flex-wrap items-center justify-between gap-2">
-        <span>{label}</span>
+        <span className="inline-flex items-center gap-2">
+          <span className="text-blue-600">{icon}</span>
+          {label}
+        </span>
         {detalhe && (
-          <span className="rounded-full border border-blue-400/30 bg-blue-500/10 px-2 py-0.5 text-[11px] font-black text-blue-200">
+          <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-black text-blue-700">
             {detalhe}
           </span>
         )}
       </span>
       <input
-        type="number"
-        min="0"
-        step="1"
+        type={type}
+        min={min || (type === "number" ? "0" : undefined)}
+        step={type === "number" ? "1" : undefined}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+        onChange={(event) => onChange(event.target.value)}
+        required
+        className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 font-normal text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
       />
     </label>
+  );
+}
+
+function FiltroData({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="space-y-2 text-sm font-bold text-slate-200">
+      {label}
+      <input
+        type="date"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+      />
+    </label>
+  );
+}
+
+function FiltroSelect({
+  label,
+  value,
+  onChange,
+  options,
+  vazio,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ valor: string; label: string }>;
+  vazio: string;
+}) {
+  return (
+    <label className="space-y-2 text-sm font-bold text-slate-200">
+      {label}
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-11 w-full rounded-xl border border-slate-700 bg-slate-950 px-3 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+      >
+        <option value="">{vazio}</option>
+        {options.map((option) => (
+          <option key={option.valor} value={option.valor}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function AlertIcon() {
+  return (
+    <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-100 text-[10px] font-black text-rose-600">
+      !
+    </span>
   );
 }

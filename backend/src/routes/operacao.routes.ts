@@ -2,19 +2,25 @@ import { Router } from "express";
 import {
   adicionarInformacaoPassagem,
   atualizarPassagemTurno,
+  atualizarOperacaoIndicador,
   atualizarScannerPassagem,
   criarPassagemTurno,
+  criarOperacaoIndicador,
   criarRegistroOperacional,
   criarScannerPassagem,
+  excluirOperacaoIndicador,
   excluirPassagemTurno,
   excluirScannerPassagem,
   finalizarPassagemTurno,
   gerarPdfPassagemTurno,
+  listarOperacaoIndicadores,
   listarPassagensTurno,
   listarScannerPassagens,
   listarUsuariosMesmaEquipe,
   ultimoChecklistEquipamentosPassagem,
   painelOperacionalSoc,
+  validarOperacaoIndicador,
+  validarScannerPassagem,
 } from "../controllers/operacao.controller";
 import {
   consolidarRelatorioDiario,
@@ -32,7 +38,13 @@ router.get("/usuarios-equipe", autenticarUsuario, autorizarPerfis(acessoRelatori
 router.get("/scanner", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarScannerPassagens);
 router.post("/scanner", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarScannerPassagem);
 router.put("/scanner/:id", autenticarUsuario, autorizarPerfis(acessoRelatorios), atualizarScannerPassagem);
+router.post("/scanner/:id/validar", autenticarUsuario, validarScannerPassagem);
 router.delete("/scanner/:id", autenticarUsuario, autorizarPerfis(acessoTotal), excluirScannerPassagem);
+router.get("/indicadores/:modulo", autenticarUsuario, listarOperacaoIndicadores);
+router.post("/indicadores/:modulo", autenticarUsuario, criarOperacaoIndicador);
+router.put("/indicadores/:modulo/:id", autenticarUsuario, atualizarOperacaoIndicador);
+router.post("/indicadores/:modulo/:id/validar", autenticarUsuario, validarOperacaoIndicador);
+router.delete("/indicadores/:modulo/:id", autenticarUsuario, excluirOperacaoIndicador);
 router.get("/passagens-turno", autenticarUsuario, autorizarPerfis(acessoRelatorios), listarPassagensTurno);
 router.get("/passagens-turno/ultimo-checklist-equipamentos", autenticarUsuario, autorizarPerfis(acessoRelatorios), ultimoChecklistEquipamentosPassagem);
 router.post("/passagens-turno", autenticarUsuario, autorizarPerfis(acessoRelatorios), criarPassagemTurno);

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -25,6 +25,8 @@ model Usuario {
   unidade                    String?
   unidadesPermitidas         String?
   perfilAcesso               String    @default("USUARIO")
+  validadorOperacional       Boolean   @default(false)
+  mediadorOperacional        Boolean   @default(false)
   statusUsuario              String    @default("ATIVO")
   deveAlterarSenha           Boolean   @default(true)
   somenteCadastro            Boolean   @default(false)
@@ -71,6 +73,10 @@ model Usuario {
   planejamentoCardsResponsavel PlanejamentoCard[]             @relation("PlanejamentoResponsavel")
   passagensTurnoResponsavel    PassagemTurno[]                @relation("PassagemTurnoResponsavel")
   relatoriosDiariosResponsavel RelatorioDiarioExecutivo[]     @relation("RelatorioDiarioResponsavel")
+  operacaoIndicadoresCriados   OperacaoIndicadorRegistro[]    @relation("OperacaoIndicadorCriador")
+  operacaoIndicadoresValidados OperacaoIndicadorRegistro[]    @relation("OperacaoIndicadorValidador")
+  scannerPassagensCriadas      ScannerPassagem[]              @relation("ScannerPassagemCriador")
+  scannerPassagensValidadas    ScannerPassagem[]              @relation("ScannerPassagemValidador")
   quadraContainersCriados      QuadraSegurancaContainer[]     @relation("QuadraContainerCriador")
   quadraContainersAtualizados  QuadraSegurancaContainer[]     @relation("QuadraContainerAtualizador")
   quadraAnexos                 QuadraSegurancaAnexo[]         @relation("QuadraAnexoUsuario")
@@ -99,7 +105,7 @@ model PerfilAcesso {
   codigo         String   @unique
   nome           String
   descricao      String?
-  permissoesJson String   @default("[]")
+  permissoesJson String   @default("[]") @db.LongText
   sistema        Boolean  @default(false)
   status         String   @default("ATIVO")
   createdAt      DateTime @default(now())
@@ -1263,10 +1269,37 @@ model ScannerPassagem {
   total               Int      @default(0)
   unidade             String
   criadoPorId         Int?
+  statusValidacao     String   @default("Pendente")
+  validadoPorId       Int?
+  validadoEm          DateTime?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
+  criadoPor   Usuario? @relation("ScannerPassagemCriador", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  validadoPor Usuario? @relation("ScannerPassagemValidador", fields: [validadoPorId], references: [id], onDelete: SetNull)
+
   @@index([unidade, data])
+  @@index([unidade, statusValidacao])
+}
+
+model OperacaoIndicadorRegistro {
+  id             Int      @id @default(autoincrement())
+  modulo         String
+  dataReferencia DateTime
+  dadosJson      String
+  unidade        String
+  criadoPorId    Int?
+  statusValidacao String   @default("Pendente")
+  validadoPorId  Int?
+  validadoEm     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  criadoPor   Usuario? @relation("OperacaoIndicadorCriador", fields: [criadoPorId], references: [id], onDelete: SetNull)
+  validadoPor Usuario? @relation("OperacaoIndicadorValidador", fields: [validadoPorId], references: [id], onDelete: SetNull)
+
+  @@index([unidade, modulo, dataReferencia])
+  @@index([unidade, modulo, statusValidacao])
 }
 
 model RelatorioDiarioExecutivo {

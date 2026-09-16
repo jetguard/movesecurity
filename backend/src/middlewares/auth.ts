@@ -15,6 +15,8 @@ export type AuthRequest = Request & {
   usuarioPermissoes?: string[];
   usuarioPermissoesAcoes?: PermissaoModulo[];
   usuarioUnidade?: string | null;
+  usuarioValidadorOperacional?: boolean;
+  usuarioMediadorOperacional?: boolean;
   unidadeAtiva?: string;
   unidadesPermitidas?: string[];
   sessaoId?: string;
@@ -49,12 +51,13 @@ function lerCookie(req: Request, nome: string) {
 type PermissaoModulo = {
   modulo: string;
   leitura: boolean;
+  indicadores?: boolean;
   criar: boolean;
   editar: boolean;
   excluir: boolean;
 };
 
-const ACOES_ACESSO = ["leitura", "criar", "editar", "excluir"];
+const ACOES_ACESSO = ["leitura", "indicadores", "criar", "editar", "excluir"];
 
 function permissoesCompletas(modulos: string[]) {
   return Array.from(new Set(modulos))
@@ -62,6 +65,7 @@ function permissoesCompletas(modulos: string[]) {
     .map((modulo) => ({
       modulo,
       leitura: true,
+      indicadores: true,
       criar: true,
       editar: true,
       excluir: true,
@@ -81,11 +85,17 @@ function normalizarPermissoes(valor: unknown): PermissaoModulo[] {
         const permissoes = {
           modulo,
           leitura: Boolean(item.leitura),
+          indicadores: Boolean(item.indicadores),
           criar: Boolean(item.criar),
           editar: Boolean(item.editar),
           excluir: Boolean(item.excluir),
         };
-        if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+        if (
+          permissoes.indicadores ||
+          permissoes.criar ||
+          permissoes.editar ||
+          permissoes.excluir
+        ) {
           permissoes.leitura = true;
         }
         return ACOES_ACESSO.some((acao) =>
@@ -159,10 +169,15 @@ function modulosDaRota(req: AuthRequest) {
   if (rota.startsWith("/api/riscos")) return ["analise_riscos"];
   if (rota.startsWith("/api/planos-acao")) return ["plano_acao"];
   if (rota.startsWith("/api/solicitacoes-imagens")) return ["solicitacoes_imagens"];
-  if (
-    rota.startsWith("/api/cameras") ||
-    rota.startsWith("/api/ordens-servico")
-  ) return ["cftv"];
+  if (rota.startsWith("/api/cameras")) return ["cftv"];
+  if (rota.startsWith("/api/ordens-servico")) return ["operacao_ordens_servico", "cftv"];
+  if (rota.startsWith("/api/planejamento")) return ["operacao_planejamento", "operacao"];
+  if (rota.startsWith("/api/alertas-operacionais")) return ["operacao_alertas", "operacao"];
+  if (rota.startsWith("/api/operacao/scanner")) return ["operacao_scanner", "operacao"];
+  if (rota.startsWith("/api/operacao/indicadores/")) {
+    const modulo = rota.split("/api/operacao/indicadores/")[1]?.split(/[/?#]/)[0];
+    return modulo ? [modulo, "operacao"] : ["operacao"];
+  }
   if (rota.startsWith("/api/operacao")) return ["operacao"];
   if (rota.startsWith("/api/quadra")) return ["quadra_seguranca"];
   if (rota.startsWith("/api/locais") && req.method === "GET") {
@@ -186,6 +201,7 @@ function modulosDaRota(req: AuthRequest) {
 function moduloCorresponde(permissaoModulo: string, moduloRota: string) {
   return (
     permissaoModulo === moduloRota ||
+    (permissaoModulo === "operacao" && moduloRota.startsWith("operacao_")) ||
     (permissaoModulo === "treinamentos" &&
       moduloRota.startsWith("treinamentos_"))
   );
@@ -220,6 +236,8 @@ export async function autenticarUsuario(
         nome: true,
         email: true,
         perfilAcesso: true,
+        validadorOperacional: true,
+        mediadorOperacional: true,
         statusUsuario: true,
         unidade: true,
         unidadesPermitidas: true,
@@ -277,6 +295,8 @@ export async function autenticarUsuario(
     req.usuarioNome = usuario.nome;
     req.usuarioEmail = usuario.email;
     req.usuarioPerfil = usuario.perfilAcesso;
+    req.usuarioValidadorOperacional = Boolean(usuario.validadorOperacional);
+    req.usuarioMediadorOperacional = Boolean(usuario.mediadorOperacional);
     req.usuarioPermissoesAcoes = await permissoesDoPerfil(usuario.perfilAcesso);
     req.usuarioPermissoes = req.usuarioPermissoesAcoes.map(
       (permissao) => permissao.modulo,
@@ -362,8 +382,18 @@ export function autorizarPerfis(perfisPermitidos: string[]) {
           ) &&
           Boolean(permissao[acao as keyof PermissaoModulo]),
       );
+    const acessoValidadorOperacional =
+      Boolean(req.usuarioValidadorOperacional) &&
+      (acao === "criar" || acao === "editar") &&
+      Boolean(modulosRota?.length) &&
+      (req.usuarioPermissoesAcoes || []).some(
+        (permissao) =>
+          modulosRota?.some((moduloRota) =>
+            moduloCorresponde(permissao.modulo, moduloRota),
+          ) && permissao.leitura,
+      );
 
-    if (!acessoPorPerfil && !acessoPorModulo) {
+    if (!acessoPorPerfil && !acessoPorModulo && !acessoValidadorOperacional) {
       return res.status(403).json({
         error: "Acesso não autorizado para este perfil",
       });
@@ -396,7 +426,21 @@ export const MODULOS_ACESSO = [
   { chave: "treinamentos_criados", nome: "Treinamentos Criados" },
   { chave: "treinamentos_visitantes", nome: "Cadastro de Visitantes" },
   { chave: "operacao", nome: "Operação" },
+  { chave: "operacao_planejamento", nome: "Quadro de Tarefas" },
+  { chave: "operacao_mapa", nome: "Mapa Operacional" },
+  { chave: "operacao_alertas", nome: "Alertas Operacionais" },
+  { chave: "controle_operacional", nome: "Controle Operacional" },
+  { chave: "operacao_entrada_saida", nome: "Entrada e Saída" },
+  { chave: "operacao_vigilancia", nome: "Vigilância Patrimonial" },
+  { chave: "operacao_balanca", nome: "Balança" },
+  { chave: "operacao_ocr", nome: "OCR" },
+  { chave: "operacao_scanner", nome: "Scanner" },
+  { chave: "operacao_equipe_scanner", nome: "Equipe do Scanner" },
+  { chave: "operacao_acesso", nome: "Acesso de Pessoas e Veículos Leves" },
+  { chave: "operacao_motoristas", nome: "Cadastro de Motoristas" },
+  { chave: "operacao_filas", nome: "Filas e Paradas de Sistema" },
   { chave: "cftv", nome: "Câmeras e manutenção" },
+  { chave: "operacao_ordens_servico", nome: "Ordens de Serviço" },
   { chave: "solicitacoes_imagens", nome: "Solicitações de Imagens" },
   { chave: "quadra_seguranca", nome: "Quadra de Segurança" },
   { chave: "analise_riscos", nome: "Análise de riscos" },
@@ -416,6 +460,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
     "documentos",
     "treinamentos",
     "operacao",
+    "controle_operacional",
     "cftv",
     "solicitacoes_imagens",
     "quadra_seguranca",
@@ -460,6 +505,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
     "relatorios",
     "documentos",
     "operacao",
+    "controle_operacional",
     "cftv",
     "solicitacoes_imagens",
     "quadra_seguranca",

@@ -70,7 +70,13 @@ const MinhaJornada = lazyWithReload(() => import("./pages/MinhaJornada"));
 const Planejamento = lazyWithReload(() => import("./pages/Planejamento"));
 const QuadraSeguranca = lazyWithReload(() => import("./pages/QuadraSeguranca"));
 const OperacaoSOC = lazyWithReload(() => import("./pages/OperacaoSOC"));
+const ControleOperacional = lazyWithReload(
+  () => import("./pages/ControleOperacional"),
+);
 const Scanner = lazyWithReload(() => import("./pages/Scanner"));
+const OperacaoIndicadores = lazyWithReload(
+  () => import("./pages/OperacaoIndicadores"),
+);
 const RelatosCampo = lazyWithReload(() => import("./pages/RelatosCampo"));
 const MapaOperacional = lazyWithReload(() => import("./pages/MapaOperacional"));
 const AtualizacoesSistema = lazyWithReload(
@@ -229,7 +235,21 @@ export default function App() {
             />
             <Route
               path="alertas-operacionais"
-              element={<AlertasOperacionais />}
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                    PERFIS.GESTOR,
+                  ]}
+                >
+                  <AlertasOperacionais />
+                </ProtectedRoute>
+              }
             />
             <Route path="timeline/:tipo/:id" element={<Timeline />} />
             <Route path="meus-dados" element={<MeusDados />} />
@@ -240,7 +260,22 @@ export default function App() {
               path="anulacoes"
               element={<Navigate to="/documentos" replace />}
             />
-            <Route path="cameras" element={<Cameras />} />
+            <Route
+              path="cameras"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                    PERFIS.TECNICO_MANUTENCAO,
+                  ]}
+                >
+                  <Cameras />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="solicitacoes/imagens"
               element={
@@ -271,6 +306,24 @@ export default function App() {
               }
             />
             <Route
+              path="controle-operacional"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                    PERFIS.GESTOR,
+                  ]}
+                >
+                  <ControleOperacional />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="operacao-soc"
               element={
                 <ProtectedRoute
@@ -292,6 +345,24 @@ export default function App() {
                   ]}
                 >
                   <Scanner />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="operacoes/:modulo"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                    PERFIS.GESTOR,
+                  ]}
+                >
+                  <OperacaoIndicadores />
                 </ProtectedRoute>
               }
             />
@@ -433,9 +504,60 @@ export default function App() {
               }
             />
             <Route path="relatos-campo" element={<RelatosCampo />} />
-            <Route path="mapa-operacional" element={<MapaOperacional />} />
-            <Route path="planejamento" element={<Planejamento />} />
-            <Route path="quadra-seguranca" element={<QuadraSeguranca />} />
+            <Route
+              path="mapa-operacional"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                    PERFIS.GESTOR,
+                  ]}
+                >
+                  <MapaOperacional />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="planejamento"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                    PERFIS.GESTOR,
+                  ]}
+                >
+                  <Planejamento />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="quadra-seguranca"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                    PERFIS.GESTOR,
+                  ]}
+                >
+                  <QuadraSeguranca />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="gestao-patrimonial"
               element={<Navigate to="/riscos" replace />}

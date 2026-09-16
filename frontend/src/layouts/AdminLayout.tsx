@@ -103,8 +103,27 @@ export default function AdminLayout() {
   const podeVerCriadorTreinamentos = temModulo("treinamentos_criador");
   const podeVerTreinamentosCriados = temModulo("treinamentos_criados");
   const podeVerVisitantesTreinamentos = temModulo("treinamentos_visitantes");
+  const modulosOperacionaisMenu = [
+    "operacao_planejamento",
+    "operacao_mapa",
+    "operacao_alertas",
+    "controle_operacional",
+    "operacao_entrada_saida",
+    "operacao_vigilancia",
+    "operacao_balanca",
+    "operacao_ocr",
+    "operacao_scanner",
+    "operacao_equipe_scanner",
+    "operacao_acesso",
+    "operacao_motoristas",
+    "operacao_filas",
+    "operacao_ordens_servico",
+    "cftv",
+    "quadra_seguranca",
+  ];
   const podeVerOperacaoMenu =
-    temModulo("operacao") || temModulo("cftv") || temModulo("quadra_seguranca");
+    temModulo("operacao") ||
+    modulosOperacionaisMenu.some((modulo) => temModulo(modulo));
   const podeVerSolicitacoesMenu = temModulo("solicitacoes_imagens") && !tecnicoManutencao;
   const podeVerAdministracaoMenu =
     temModulo("cadastros") || (superAdmin && temModulo("configuracoes"));
@@ -458,6 +477,11 @@ export default function AdminLayout() {
     if (temModulo("documentos")) return <Navigate to="/documentos" replace />;
     if (temModulo("treinamentos")) return <Navigate to="/treinamentos-terminal" replace />;
     if (temModulo("cftv")) return <Navigate to="/cameras" replace />;
+    if (temModulo("controle_operacional")) return <Navigate to="/controle-operacional" replace />;
+    if (temModulo("operacao_planejamento")) return <Navigate to="/planejamento" replace />;
+    if (temModulo("operacao_mapa")) return <Navigate to="/mapa-operacional" replace />;
+    if (temModulo("operacao_alertas")) return <Navigate to="/alertas-operacionais" replace />;
+    if (temModulo("operacao_ordens_servico")) return <Navigate to="/ordens-servico" replace />;
     if (temModulo("operacao")) return <Navigate to="/meus-dados?aba=tarefas" replace />;
     return <Navigate to="/meus-dados" replace />;
   }
@@ -731,13 +755,13 @@ export default function AdminLayout() {
                     <Video size={16} />
                     Câmeras CFTV
                   </Link>}
-                  {temModulo("cftv") && <Link to="/ordens-servico" className={subItem}>
+                  {(temModulo("operacao_ordens_servico") || temModulo("cftv") || temModulo("operacao")) && <Link to="/ordens-servico" className={subItem}>
                     <Wrench size={16} />
                     Ordens de Serviço
                   </Link>}
                   {!tecnicoManutencao && (
                     <>
-                      {temModulo("operacao") && <Link to="/planejamento" className={subItem}>
+                      {(temModulo("operacao_planejamento") || temModulo("operacao")) && <Link to="/planejamento" className={subItem}>
                         <Columns3 size={16} />
                         Quadro de Tarefas
                       </Link>}
@@ -745,17 +769,25 @@ export default function AdminLayout() {
                         <PackageSearch size={16} />
                         Quadra de Segurança
                       </Link>}
-                      {temModulo("operacao") && <Link to="/mapa-operacional" className={subItem}>
+                      {(temModulo("operacao_mapa") || temModulo("operacao")) && <Link to="/mapa-operacional" className={subItem}>
                         <MapPinned size={16} />
                         Mapa Operacional
                       </Link>}
-                      {temModulo("operacao") && <Link to="/alertas-operacionais" className={subItem}>
+                      {(temModulo("operacao_alertas") || temModulo("operacao")) && <Link to="/alertas-operacionais" className={subItem}>
                         <ShieldAlert size={16} />
                         Alertas Operacionais
                       </Link>}
-                      {temModulo("operacao") && <Link to="/scanner" className={subItem}>
+                      {(temModulo("controle_operacional") || temModulo("operacao")) && <Link to="/controle-operacional" className={subItem}>
                         <Activity size={16} />
-                        Scanner
+                        Controle Operacional
+                      </Link>}
+                      {(temModulo("operacao_entrada_saida") || temModulo("operacao")) && <Link to="/operacoes/operacao_entrada_saida" className={subItem}>
+                        <PackageSearch size={16} />
+                        Entrada e Saída
+                      </Link>}
+                      {(temModulo("operacao_motoristas") || temModulo("operacao")) && <Link to="/operacoes/operacao_motoristas" className={subItem}>
+                        <FileText size={16} />
+                        Cadastro de Motoristas
                       </Link>}
                     </>
                   )}
@@ -1069,7 +1101,7 @@ export default function AdminLayout() {
             {!portaria && podeVerRelatorios && (
               <Link
                 to="/notificacoes"
-                className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
+                  className="relative rounded-full bg-slate-900 p-3 text-slate-100 hover:bg-slate-800"
               >
                 <Bell size={18} />
                 {notificacoes.length > 0 && (

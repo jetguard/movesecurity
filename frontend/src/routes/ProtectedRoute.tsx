@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import {
   PERFIS,
+  temModulo,
   temPerfilOuModulo,
   usuarioAtual,
 } from "../utils/permissoes";
@@ -82,12 +83,24 @@ function moduloDaRota(pathname: string) {
   if (pathname.startsWith("/logs")) return "logs";
   if (pathname.startsWith("/naturezas") || pathname.startsWith("/locais")) return "cadastros";
   if (pathname.startsWith("/solicitacoes/imagens")) return "solicitacoes_imagens";
-  if (pathname.startsWith("/cameras") || pathname.startsWith("/ordens-servico")) return "cftv";
+  if (pathname.startsWith("/cameras")) return "cftv";
+  if (pathname.startsWith("/ordens-servico")) {
+    return temModulo("cftv") ? "cftv" : "operacao_ordens_servico";
+  }
   if (pathname.startsWith("/quadra-seguranca")) return "quadra_seguranca";
+  if (pathname.startsWith("/planejamento")) return "operacao_planejamento";
+  if (pathname.startsWith("/mapa-operacional")) return "operacao_mapa";
+  if (pathname.startsWith("/alertas-operacionais")) return "operacao_alertas";
   if (pathname.startsWith("/documentos") || pathname.startsWith("/evidencias")) return "documentos";
   if (pathname.startsWith("/notificacoes")) return "relatorios";
   if (pathname.startsWith("/ocorrencias") || pathname.startsWith("/eventos") || pathname.startsWith("/investigacao") || pathname.startsWith("/relatos-campo")) return "relatorios";
-  if (pathname.startsWith("/scanner")) return "operacao";
+  if (pathname.startsWith("/operacoes/")) return pathname.split("/")[2] || "operacao";
+  if (pathname.startsWith("/controle-operacional")) return "controle_operacional";
+  if (pathname.startsWith("/scanner")) {
+    return temModulo("operacao_scanner")
+      ? "operacao_scanner"
+      : "operacao_equipe_scanner";
+  }
   if (pathname.startsWith("/relatorio-diario") || pathname.startsWith("/operacao-soc")) return "relatorios";
   if (pathname === "/") return "dashboard";
   return undefined;

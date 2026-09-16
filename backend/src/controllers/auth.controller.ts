@@ -202,7 +202,21 @@ const TODOS_MODULOS_ACESSO = [
   "treinamentos_criados",
   "treinamentos_visitantes",
   "operacao",
+  "operacao_planejamento",
+  "operacao_mapa",
+  "operacao_alertas",
+  "controle_operacional",
+  "operacao_entrada_saida",
+  "operacao_vigilancia",
+  "operacao_balanca",
+  "operacao_ocr",
+  "operacao_scanner",
+  "operacao_equipe_scanner",
+  "operacao_acesso",
+  "operacao_motoristas",
+  "operacao_filas",
   "cftv",
+  "operacao_ordens_servico",
   "solicitacoes_imagens",
   "quadra_seguranca",
   "analise_riscos",
@@ -214,11 +228,12 @@ const TODOS_MODULOS_ACESSO = [
   "logs",
 ];
 
-const ACOES_ACESSO = ["leitura", "criar", "editar", "excluir"];
+const ACOES_ACESSO = ["leitura", "indicadores", "criar", "editar", "excluir"];
 
 type PermissaoModulo = {
   modulo: string;
   leitura: boolean;
+  indicadores?: boolean;
   criar: boolean;
   editar: boolean;
   excluir: boolean;
@@ -230,6 +245,7 @@ function permissoesCompletas(modulos: string[]) {
     .map((modulo) => ({
       modulo,
       leitura: true,
+      indicadores: true,
       criar: true,
       editar: true,
       excluir: true,
@@ -249,11 +265,17 @@ function normalizarPermissoesPerfil(valor: unknown): PermissaoModulo[] {
         const permissoes = {
           modulo,
           leitura: Boolean(item.leitura),
+          indicadores: Boolean(item.indicadores),
           criar: Boolean(item.criar),
           editar: Boolean(item.editar),
           excluir: Boolean(item.excluir),
         };
-        if (permissoes.criar || permissoes.editar || permissoes.excluir) {
+        if (
+          permissoes.indicadores ||
+          permissoes.criar ||
+          permissoes.editar ||
+          permissoes.excluir
+        ) {
           permissoes.leitura = true;
         }
         return ACOES_ACESSO.some((acao) =>
@@ -395,6 +417,8 @@ type UsuarioAutenticado = {
   fotoPerfil: string | null;
   email: string;
   perfilAcesso: string;
+  validadorOperacional?: boolean;
+  mediadorOperacional?: boolean;
   equipe: string | null;
   unidade: string | null;
   unidadesPermitidas: string | null;
@@ -479,6 +503,8 @@ async function criarSessaoAutenticada(
     fotoPerfil: usuario.fotoPerfil,
     email: usuario.email,
     perfilAcesso: usuario.perfilAcesso,
+    validadorOperacional: Boolean(usuario.validadorOperacional),
+    mediadorOperacional: Boolean(usuario.mediadorOperacional),
     permissoesModulos,
     permissoesAcoes,
     equipe: usuario.equipe,
@@ -1246,6 +1272,8 @@ export async function alterarSenhaObrigatoria(req: AuthRequest, res: Response) {
         fotoPerfil: true,
         email: true,
         perfilAcesso: true,
+        validadorOperacional: true,
+        mediadorOperacional: true,
         equipe: true,
         unidade: true,
         unidadesPermitidas: true,
@@ -1383,6 +1411,8 @@ export async function renovarSessao(req: Request, res: Response) {
             fotoPerfil: true,
             email: true,
             perfilAcesso: true,
+            validadorOperacional: true,
+            mediadorOperacional: true,
             equipe: true,
             unidade: true,
             unidadesPermitidas: true,
@@ -1425,6 +1455,8 @@ export async function renovarSessao(req: Request, res: Response) {
         fotoPerfil: sessao.usuario.fotoPerfil,
         email: sessao.usuario.email,
         perfilAcesso: sessao.usuario.perfilAcesso,
+        validadorOperacional: Boolean(sessao.usuario.validadorOperacional),
+        mediadorOperacional: Boolean(sessao.usuario.mediadorOperacional),
         permissoesModulos,
         permissoesAcoes,
         equipe: sessao.usuario.equipe,
