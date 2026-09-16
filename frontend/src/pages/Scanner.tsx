@@ -1075,11 +1075,11 @@ export default function Scanner() {
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2">
+      <div className={`grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 ${podeVerEquipe ? "grid-cols-2" : "grid-cols-1"}`}>
         <button
           type="button"
           onClick={() => setAbaAtiva("passagens")}
-          className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+          className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-center text-xs font-bold transition sm:px-4 sm:text-sm ${
             abaAtiva === "passagens"
               ? "bg-blue-600 text-white shadow-lg shadow-blue-950/30"
               : "text-slate-300 hover:bg-slate-900 hover:text-white"
@@ -1092,7 +1092,7 @@ export default function Scanner() {
           <button
             type="button"
             onClick={() => setAbaAtiva("equipe")}
-            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${
+            className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-center text-xs font-bold transition sm:px-4 sm:text-sm ${
               abaAtiva === "equipe"
                 ? "bg-emerald-600 text-white shadow-lg shadow-emerald-950/30"
                 : "text-slate-300 hover:bg-slate-900 hover:text-white"
