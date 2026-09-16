@@ -73,6 +73,11 @@ function numero(valor: unknown) {
   return Math.trunc(parsed);
 }
 
+function numeroParaInput(valor: unknown) {
+  const numeroValor = Number(valor || 0);
+  return numeroValor === 0 || !Number.isFinite(numeroValor) ? "" : String(valor);
+}
+
 function soma(registros: RegistroOperacional[], chave: string) {
   return registros.reduce((total, registro) => total + numero(dados(registro)[chave]), 0);
 }
@@ -478,9 +483,12 @@ function formularioInicial(config: ModuloConfig): Formulario {
     dados: Object.fromEntries(
       config.campos.map((campo) => [
         campo.chave,
-        campo.tipo === "text" || campo.tipo === "textarea" || campo.tipo === "datetime"
+        campo.tipo === "text" ||
+        campo.tipo === "textarea" ||
+        campo.tipo === "datetime" ||
+        campo.calculado
           ? ""
-          : "0",
+          : "",
       ]),
     ),
   };
@@ -613,7 +621,9 @@ export default function OperacaoIndicadores() {
           campo.chave,
           campo.tipo === "datetime"
             ? dataHoraInput(String(valores[campo.chave] || ""))
-            : String(valores[campo.chave] ?? ""),
+            : campo.tipo === "text" || campo.tipo === "textarea" || campo.calculado
+              ? String(valores[campo.chave] ?? "")
+              : numeroParaInput(valores[campo.chave]),
         ]),
       ),
     });

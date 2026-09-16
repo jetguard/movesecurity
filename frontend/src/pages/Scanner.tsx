@@ -135,6 +135,11 @@ function numero(valor: string | number) {
   return Math.trunc(parsed);
 }
 
+function numeroParaInput(valor: unknown) {
+  const numeroValor = Number(valor || 0);
+  return numeroValor === 0 || !Number.isFinite(numeroValor) ? "" : String(valor);
+}
+
 function formatarData(data: string) {
   return new Date(data).toLocaleString("pt-BR");
 }
@@ -216,14 +221,14 @@ function formVazio(): ScannerForm {
   return {
     data: dataInput(),
     scanner: scannerPadrao,
-    leituraComFalha: "0",
-    leituraSatisfatoria: "0",
-    areaSuspeita: "0",
-    insatisfatoria: "0",
-    falhasEquipamento: "0",
-    reprocessamentos: "0",
-    containersInspecao: "0",
-    aberturasSuspeita: "0",
+    leituraComFalha: "",
+    leituraSatisfatoria: "",
+    areaSuspeita: "",
+    insatisfatoria: "",
+    falhasEquipamento: "",
+    reprocessamentos: "",
+    containersInspecao: "",
+    aberturasSuspeita: "",
     tiposSuspeita: "",
     registrarIndisponibilidade: false,
     indisponibilidadeInicio: "",
@@ -235,13 +240,13 @@ function formVazio(): ScannerForm {
 function equipeFormVazio(): EquipeScannerForm {
   return {
     dataReferencia: dataInput(),
-    efetivoPrevisto: "0",
-    efetivoPresente: "0",
-    faltas: "0",
+    efetivoPrevisto: "",
+    efetivoPresente: "",
+    faltas: "",
     mencionarAtraso: false,
     atrasoInicio: "",
     atrasoFim: "",
-    atrasoMinutos: "0",
+    atrasoMinutos: "",
     observacoes: "",
   };
 }
@@ -784,14 +789,14 @@ export default function Scanner() {
     setForm({
       data: dataInput(registro.data),
       scanner: registro.scanner || scannerPadrao,
-      leituraComFalha: String(registro.leituraComFalha || 0),
-      leituraSatisfatoria: String(registro.leituraSatisfatoria || 0),
-      areaSuspeita: String(registro.areaSuspeita || 0),
-      insatisfatoria: String(registro.insatisfatoria || 0),
-      falhasEquipamento: String(registro.falhasEquipamento || 0),
-      reprocessamentos: String(registro.reprocessamentos || 0),
-      containersInspecao: String(registro.containersInspecao || 0),
-      aberturasSuspeita: String(registro.aberturasSuspeita || 0),
+      leituraComFalha: numeroParaInput(registro.leituraComFalha),
+      leituraSatisfatoria: numeroParaInput(registro.leituraSatisfatoria),
+      areaSuspeita: numeroParaInput(registro.areaSuspeita),
+      insatisfatoria: numeroParaInput(registro.insatisfatoria),
+      falhasEquipamento: numeroParaInput(registro.falhasEquipamento),
+      reprocessamentos: numeroParaInput(registro.reprocessamentos),
+      containersInspecao: numeroParaInput(registro.containersInspecao),
+      aberturasSuspeita: numeroParaInput(registro.aberturasSuspeita),
       tiposSuspeita: registro.tiposSuspeita || "",
       registrarIndisponibilidade: Boolean(registro.indisponibilidadeInicio),
       indisponibilidadeInicio: registro.indisponibilidadeInicio
@@ -810,13 +815,13 @@ export default function Scanner() {
     setEditandoEquipe(registro);
     setEquipeForm({
       dataReferencia: dataInput(registro.dataReferencia),
-      efetivoPrevisto: String(dados.efetivoPrevisto || 0),
-      efetivoPresente: String(dados.efetivoPresente || 0),
-      faltas: String(dados.faltas || 0),
+      efetivoPrevisto: numeroParaInput(dados.efetivoPrevisto),
+      efetivoPresente: numeroParaInput(dados.efetivoPresente),
+      faltas: numeroParaInput(dados.faltas),
       mencionarAtraso: Boolean(dados.mencionarAtraso),
       atrasoInicio: String(dados.atrasoInicio || ""),
       atrasoFim: String(dados.atrasoFim || ""),
-      atrasoMinutos: String(dados.atrasoMinutos || 0),
+      atrasoMinutos: numeroParaInput(dados.atrasoMinutos),
       observacoes: String(dados.observacoes || ""),
     });
     setModalEquipeAberto(true);
@@ -865,7 +870,7 @@ export default function Scanner() {
       mencionarAtraso: valor,
       atrasoInicio: valor ? atual.atrasoInicio : "",
       atrasoFim: valor ? atual.atrasoFim : "",
-      atrasoMinutos: valor ? atual.atrasoMinutos : "0",
+      atrasoMinutos: valor ? atual.atrasoMinutos : "",
     }));
   }
 
