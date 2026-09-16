@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -105,7 +105,7 @@ model PerfilAcesso {
   codigo         String   @unique
   nome           String
   descricao      String?
-  permissoesJson String   @default("[]") @db.LongText
+  permissoesJson String   @default("[]")
   sistema        Boolean  @default(false)
   status         String   @default("ATIVO")
   createdAt      DateTime @default(now())
