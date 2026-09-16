@@ -14,6 +14,7 @@ import {
   excluirEvidenciaSolicitacaoImagem,
   excluirSolicitacaoImagem,
   iniciarAtendimentoSolicitacaoImagem,
+  listarCamerasConectadasSolicitacaoImagem,
   listarSolicitacoesImagem,
   pausarAtendimentoSolicitacaoImagem,
   validarTokenSolicitacaoImagem,
@@ -53,6 +54,7 @@ router.use(autenticarUsuario, autorizarPerfis(acessoCftvOperacional));
 router.get("/", listarSolicitacoesImagem);
 router.post("/", upload.array("anexos"), criarSolicitacaoImagem);
 router.post("/formularios", enviarFormularioSolicitacaoImagem);
+router.get("/cameras-conectadas", listarCamerasConectadasSolicitacaoImagem);
 router.get("/:id", buscarSolicitacaoImagem);
 router.put("/:id", upload.array("anexos"), atualizarSolicitacaoImagem);
 router.post("/:id/atendimento/iniciar", iniciarAtendimentoSolicitacaoImagem);

@@ -3,6 +3,7 @@ import type { ChangeEvent, FormEvent } from "react";
 import {
   BarChart3,
   CalendarDays,
+  Camera,
   ChevronDown,
   Clock,
   ChevronLeft,
@@ -39,6 +40,17 @@ type LocalTerminal = {
   tipo?: string | null;
   status: string;
   unidade: string;
+};
+
+type CameraFoco = {
+  id: number;
+  numeroCamera: string;
+  nomeCamera?: string | null;
+  numeroServidor?: string | null;
+  localInstalado: string;
+  areaMonitorada: string;
+  status: string;
+  rotulo?: string;
 };
 
 type Anexo = {
@@ -252,13 +264,32 @@ function evidenciasDoHistorico(item: Historico, evidencias: Anexo[]) {
   return encontradas.length ? encontradas : evidencias;
 }
 
+function camerasBuscaDoHistorico(item: Historico): CameraFoco[] {
+  const dados = dadosHistorico(item);
+  const cameras = Array.isArray(dados?.camerasBusca) ? dados.camerasBusca : [];
+  return cameras.filter((camera: any) => camera && camera.id);
+}
+
+function rotuloCameraFoco(camera: CameraFoco) {
+  if (camera.rotulo) return camera.rotulo;
+  const nome = camera.nomeCamera ? ` - ${camera.nomeCamera}` : "";
+  return `Câmera ${camera.numeroCamera}${nome} | ${camera.areaMonitorada} | ${camera.localInstalado}`;
+}
+
 function textoHistorico(item: Historico) {
   const descricao = item.descricao?.trim() || "";
   const dados = dadosHistorico(item);
   const andamento = typeof dados?.andamento === "string" ? dados.andamento.trim() : "";
+  const camerasBusca = camerasBuscaDoHistorico(item);
+  const camerasTexto = camerasBusca.length
+    ? `Câmeras utilizadas na busca:\n${camerasBusca
+        .map((camera) => `- ${rotuloCameraFoco(camera)}`)
+        .join("\n")}`
+    : "";
 
-  if (!andamento) return descricao;
-  return `${descricao}\n\nAndamento: ${andamento}`;
+  return [descricao, andamento ? `Andamento: ${andamento}` : "", camerasTexto]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 function ehImagemAnexo(anexo: Anexo) {
@@ -329,6 +360,8 @@ function classePrioridade(prioridade: string) {
 export default function SolicitacoesImagens() {
   const [solicitacoes, setSolicitacoes] = useState<SolicitacaoImagem[]>([]);
   const [locais, setLocais] = useState<LocalTerminal[]>([]);
+  const [camerasConectadas, setCamerasConectadas] = useState<CameraFoco[]>([]);
+  const [carregandoCameras, setCarregandoCameras] = useState(false);
   const [carregando, setCarregando] = useState(true);
   const [busca, setBusca] = useState("");
   const [statusFiltro, setStatusFiltro] = useState("");
@@ -348,6 +381,7 @@ export default function SolicitacoesImagens() {
   const [emailFormulario, setEmailFormulario] = useState("");
   const [linkGerado, setLinkGerado] = useState("");
   const [pausa, setPausa] = useState({ motivo: "", andamento: "" });
+  const [camerasPausaSelecionadas, setCamerasPausaSelecionadas] = useState<number[]>([]);
   const [assumir, setAssumir] = useState({ motivo: "", descricao: "" });
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] = useState(false);
@@ -379,6 +413,40 @@ export default function SolicitacoesImagens() {
   async function carregarLocais() {
     const resposta = await api.get("/locais", { params: { status: "ativo" } });
     setLocais(resposta.data || []);
+  }
+
+  async function carregarCamerasConectadas() {
+    setCarregandoCameras(true);
+    try {
+      const resposta = await api.get("/solicitacoes-imagens/cameras-conectadas");
+      setCamerasConectadas(resposta.data || []);
+    } catch {
+      setCamerasConectadas([]);
+    } finally {
+      setCarregandoCameras(false);
+    }
+  }
+
+  function abrirModalPausa(item: SolicitacaoImagem) {
+    setErro("");
+    setPausa({ motivo: "", andamento: "" });
+    setCamerasPausaSelecionadas([]);
+    setModalPausa(item);
+    carregarCamerasConectadas();
+  }
+
+  function fecharModalPausa() {
+    setModalPausa(null);
+    setPausa({ motivo: "", andamento: "" });
+    setCamerasPausaSelecionadas([]);
+  }
+
+  function alternarCameraPausa(cameraId: number) {
+    setCamerasPausaSelecionadas((atuais) =>
+      atuais.includes(cameraId)
+        ? atuais.filter((id) => id !== cameraId)
+        : [...atuais, cameraId],
+    );
   }
 
   useEffect(() => {
@@ -674,11 +742,13 @@ export default function SolicitacoesImagens() {
     try {
       const resposta = await api.post(
         `/solicitacoes-imagens/${modalPausa.id}/atendimento/pausar`,
-        pausa,
+        {
+          ...pausa,
+          cameraIds: camerasPausaSelecionadas,
+        },
       );
       aplicarSolicitacaoAtualizada(resposta.data);
-      setModalPausa(null);
-      setPausa({ motivo: "", andamento: "" });
+      fecharModalPausa();
     } catch (error: any) {
       setErro(error?.response?.data?.error || "Não foi possível pausar.");
     } finally {
@@ -1114,7 +1184,7 @@ export default function SolicitacoesImagens() {
                             </button>
                           )}
                           {podeEditar && item.status === "Em Atendimento" && item.atendente?.id === usuarioLogado?.id && (
-                            <button title="Pausar" onClick={() => setModalPausa(item)} className="rounded-lg border border-slate-700 p-2 text-amber-300 hover:border-amber-500">
+                            <button title="Pausar" onClick={() => abrirModalPausa(item)} className="rounded-lg border border-slate-700 p-2 text-amber-300 hover:border-amber-500">
                               <PauseCircle size={16} />
                             </button>
                           )}
@@ -1157,10 +1227,10 @@ export default function SolicitacoesImagens() {
 
       {modalPausa && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
-          <form onSubmit={pausarAtendimento} className="w-full max-w-lg rounded-xl border border-slate-800 bg-slate-950 p-5">
+          <form onSubmit={pausarAtendimento} className="w-full max-w-2xl rounded-xl border border-slate-800 bg-slate-950 p-5">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-black text-white">Pausar atendimento</h2>
-              <button type="button" onClick={() => setModalPausa(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800">
+              <button type="button" onClick={fecharModalPausa} className="rounded-lg p-2 text-slate-400 hover:bg-slate-800">
                 <X size={18} />
               </button>
             </div>
@@ -1170,6 +1240,58 @@ export default function SolicitacoesImagens() {
             <Campo label="Andamento">
               <textarea value={pausa.andamento} onChange={(e) => setPausa({ ...pausa, andamento: e.target.value })} className="input-dark min-h-28" required />
             </Campo>
+            <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <label className="flex items-center gap-2 text-sm font-black text-slate-100">
+                  <Camera size={16} className="text-cyan-300" />
+                  Câmeras em foco
+                </label>
+                <span className="rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2 py-1 text-[11px] font-bold text-cyan-100">
+                  {camerasPausaSelecionadas.length} selecionada(s)
+                </span>
+              </div>
+              {carregandoCameras ? (
+                <p className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-400">
+                  Carregando câmeras conectadas...
+                </p>
+              ) : camerasConectadas.length > 0 ? (
+                <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                  {camerasConectadas.map((camera) => {
+                    const selecionada = camerasPausaSelecionadas.includes(camera.id);
+                    return (
+                      <label
+                        key={camera.id}
+                        className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2 transition ${
+                          selecionada
+                            ? "border-cyan-400/60 bg-cyan-500/15 text-white"
+                            : "border-slate-800 bg-slate-950/70 text-slate-300 hover:border-slate-600"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selecionada}
+                          onChange={() => alternarCameraPausa(camera.id)}
+                          className="mt-1 h-4 w-4 accent-cyan-500"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-black">
+                            Câmera {camera.numeroCamera}
+                            {camera.nomeCamera ? ` - ${camera.nomeCamera}` : ""}
+                          </span>
+                          <span className="block text-xs text-slate-400">
+                            {camera.areaMonitorada} | {camera.localInstalado}
+                          </span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-sm text-slate-400">
+                  Nenhuma câmera conectada encontrada para esta unidade.
+                </p>
+              )}
+            </div>
             <button disabled={salvando} className="mt-4 w-full rounded-lg bg-amber-600 px-4 py-2 font-bold text-white hover:bg-amber-500 disabled:opacity-60">
               Salvar pausa
             </button>
@@ -1952,6 +2074,7 @@ function DetalheSolicitacao({
             const miniaturas = evidenciasEvento.slice(0, 3);
             const excedente = Math.max(0, evidenciasEvento.length - miniaturas.length);
             const textoDoEvento = textoHistorico(item);
+            const camerasBusca = camerasBuscaDoHistorico(item);
 
             return (
               <div key={item.id} className="relative flex gap-3">
@@ -1976,6 +2099,24 @@ function DetalheSolicitacao({
                       }
                     />
                   </div>
+                  {camerasBusca.length > 0 && (
+                    <div className="mt-3 rounded-lg border border-cyan-400/20 bg-cyan-500/10 p-3">
+                      <p className="mb-2 flex items-center gap-2 text-xs font-black uppercase text-cyan-100">
+                        <Camera size={14} />
+                        Câmeras utilizadas na busca:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {camerasBusca.map((camera) => (
+                          <span
+                            key={camera.id}
+                            className="rounded-full border border-cyan-300/20 bg-slate-950/70 px-3 py-1 text-xs font-bold text-cyan-50"
+                          >
+                            {rotuloCameraFoco(camera)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   {evidenciasEvento.length > 0 && (
                     <button
                       type="button"

@@ -29,6 +29,8 @@ const PRIORIDADES = new Set([
 
 const STATUS_VALIDOS = new Set(Object.values(STATUS));
 const TOKEN_TESTE_DESENVOLVIMENTO = "teste-desenvolvimento";
+const STATUS_CAMERA_CONECTADA = "Conectada";
+const STATUS_CAMERA_ATIVA = "Ativa";
 
 const includeSolicitacao = {
   criadoPor: { select: { id: true, nome: true, email: true } },
@@ -49,6 +51,27 @@ function texto(valor: unknown) {
 function textoOpcional(valor: unknown) {
   const valorTexto = texto(valor);
   return valorTexto || null;
+}
+
+function idsNumericos(valor: unknown) {
+  if (!Array.isArray(valor)) return [];
+  return Array.from(
+    new Set(
+      valor
+        .map((item) => Number(item))
+        .filter((item) => Number.isInteger(item) && item > 0),
+    ),
+  );
+}
+
+function rotuloCameraBusca(camera: {
+  numeroCamera: string;
+  nomeCamera: string | null;
+  localInstalado: string;
+  areaMonitorada: string;
+}) {
+  const nome = camera.nomeCamera ? ` - ${camera.nomeCamera}` : "";
+  return `Câmera ${camera.numeroCamera}${nome} | ${camera.areaMonitorada} | ${camera.localInstalado}`;
 }
 
 function normalizarStatus(valor: unknown) {
@@ -782,6 +805,27 @@ export async function pausarAtendimentoSolicitacaoImagem(req: AuthRequest, res: 
 
     const agora = new Date();
     const solicitacao = await prisma.$transaction(async (tx) => {
+      const cameraIds = idsNumericos(req.body.cameraIds || req.body.camerasIds);
+      const camerasBusca = cameraIds.length
+        ? await tx.cameraMonitoramento.findMany({
+            where: {
+              id: { in: cameraIds },
+              unidade: req.unidadeAtiva,
+              status: STATUS_CAMERA_CONECTADA,
+              statusCadastro: STATUS_CAMERA_ATIVA,
+            },
+            orderBy: [{ numeroCamera: "asc" }],
+            select: {
+              id: true,
+              numeroCamera: true,
+              nomeCamera: true,
+              numeroServidor: true,
+              localInstalado: true,
+              areaMonitorada: true,
+              status: true,
+            },
+          })
+        : [];
       const atual = await tx.solicitacaoImagem.findFirst({
         where: { id, excluidoEm: null, unidade: req.unidadeAtiva },
       });
@@ -822,7 +866,14 @@ export async function pausarAtendimentoSolicitacaoImagem(req: AuthRequest, res: 
         `Atendimento pausado. Motivo: ${motivo}`,
         STATUS.EM_ATENDIMENTO,
         STATUS.PAUSADO,
-        { andamento, tempoSegundos },
+        {
+          andamento,
+          tempoSegundos,
+          camerasBusca: camerasBusca.map((camera) => ({
+            ...camera,
+            rotulo: rotuloCameraBusca(camera),
+          })),
+        },
       );
 
       return tx.solicitacaoImagem.findUniqueOrThrow({
@@ -844,6 +895,38 @@ export async function pausarAtendimentoSolicitacaoImagem(req: AuthRequest, res: 
     }
     console.error("Erro ao pausar atendimento:", error);
     return res.status(500).json({ error: "Erro ao pausar atendimento." });
+  }
+}
+
+export async function listarCamerasConectadasSolicitacaoImagem(req: AuthRequest, res: Response) {
+  try {
+    const cameras = await prisma.cameraMonitoramento.findMany({
+      where: {
+        unidade: req.unidadeAtiva,
+        status: STATUS_CAMERA_CONECTADA,
+        statusCadastro: STATUS_CAMERA_ATIVA,
+      },
+      orderBy: [{ numeroCamera: "asc" }],
+      select: {
+        id: true,
+        numeroCamera: true,
+        nomeCamera: true,
+        numeroServidor: true,
+        localInstalado: true,
+        areaMonitorada: true,
+        status: true,
+      },
+    });
+
+    return res.json(
+      cameras.map((camera) => ({
+        ...camera,
+        rotulo: rotuloCameraBusca(camera),
+      })),
+    );
+  } catch (error) {
+    console.error("Erro ao listar câmeras conectadas:", error);
+    return res.status(500).json({ error: "Erro ao listar câmeras conectadas." });
   }
 }
 
