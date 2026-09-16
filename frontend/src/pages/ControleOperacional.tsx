@@ -78,6 +78,9 @@ type RegistroOperacionalResumo = {
 };
 
 function dataLocal(data?: string) {
+  if (data && /^\d{4}-\d{2}-\d{2}/.test(data)) {
+    return data.slice(0, 10);
+  }
   const valor = data ? new Date(data) : new Date();
   const offset = valor.getTimezoneOffset();
   return new Date(valor.getTime() - offset * 60000).toISOString().slice(0, 10);
