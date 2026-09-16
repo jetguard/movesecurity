@@ -1,1 +1,1 @@
-ALTER TABLE `PerfilAcesso` MODIFY `permissoesJson` LONGTEXT NOT NULL;
+-- No-op for PostgreSQL. The Prisma schema maps String to text without a native type.
