@@ -195,6 +195,7 @@ function perfilSessaoUnica(perfil?: string) {
 
 const TODOS_MODULOS_ACESSO = [
   "dashboard",
+  "indicadores_seguranca_empresarial",
   "relatorios",
   "documentos",
   "treinamentos",

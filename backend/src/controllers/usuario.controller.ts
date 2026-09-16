@@ -170,6 +170,7 @@ const GRUPOS_TREINAMENTO = [
 
 const MODULOS_ACESSO = [
   "dashboard",
+  "indicadores_seguranca_empresarial",
   "relatorios",
   "documentos",
   "treinamentos",

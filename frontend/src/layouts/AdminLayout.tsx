@@ -90,6 +90,7 @@ export default function AdminLayout() {
   const cadastro = usuario?.perfilAcesso === PERFIS.CADASTRO;
   const tecnicoManutencao = somenteTecnicoManutencao();
   const podeVerDashboard = temModulo("dashboard");
+  const podeVerIndicadoresSeguranca = temModulo("indicadores_seguranca_empresarial");
   const podeVerAnaliseRiscos = temModulo("analise_riscos");
   const podeVerPlanoAcao = temModulo("plano_acao");
   const podeVerRelatorios = temModulo("relatorios");
@@ -469,6 +470,9 @@ export default function AdminLayout() {
   }
 
   if (location.pathname === "/" && !podeVerDashboard) {
+    if (temModulo("indicadores_seguranca_empresarial")) {
+      return <Navigate to="/indicadores-seguranca-empresarial" replace />;
+    }
     if (temModulo("plano_acao")) return <Navigate to="/planos-acao" replace />;
     if (temModulo("analise_riscos")) return <Navigate to="/riscos/dashboard" replace />;
     if (temModulo("solicitacoes_imagens")) return <Navigate to="/solicitacoes/imagens" replace />;
@@ -542,6 +546,16 @@ export default function AdminLayout() {
               <span className={menuText}>Dashboard</span>
             </Link>
           )}
+
+          {!tecnicoManutencao &&
+            !portaria &&
+            !cadastro &&
+            podeVerIndicadoresSeguranca && (
+              <Link to="/indicadores-seguranca-empresarial" className={item}>
+                <Gauge size={20} className="shrink-0" />
+                <span className={menuText}>Indicadores Segurança Empresarial</span>
+              </Link>
+            )}
 
           {!tecnicoManutencao && !portaria && !cadastro && podeVerRelatoriosMenu && (
             <>

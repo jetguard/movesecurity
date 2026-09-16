@@ -71,6 +71,7 @@ export default function ProtectedRoute({ children, perfis }: Props) {
 
 function moduloDaRota(pathname: string) {
   if (pathname.startsWith("/treinamentos-dinamicos")) return "treinamentos_criador";
+  if (pathname.startsWith("/indicadores-seguranca-empresarial")) return "indicadores_seguranca_empresarial";
   if (pathname.startsWith("/treinamentos-criados")) return "treinamentos_criados";
   if (pathname.startsWith("/treinamentos-visitantes")) return "treinamentos_visitantes";
   if (pathname.startsWith("/treinamentos") || pathname.startsWith("/integracoes-do-terminal") || pathname.startsWith("/painel-treinamentos")) return "treinamentos";

@@ -154,6 +154,7 @@ function modulosDaRota(req: AuthRequest) {
   const rota = req.originalUrl || req.path || "";
   if (rota.startsWith("/api/usuarios")) return ["usuarios"];
   if (rota.startsWith("/api/auth")) return undefined;
+  if (rota.startsWith("/api/indicadores-seguranca-empresarial")) return ["indicadores_seguranca_empresarial"];
   if (rota.startsWith("/api/treinamentos-visitantes")) return ["treinamentos_visitantes"];
   if (
     rota.startsWith("/api/treinamentos-dinamicos/anexo") ||
@@ -419,6 +420,7 @@ export const PERFIS = {
 
 export const MODULOS_ACESSO = [
   { chave: "dashboard", nome: "Dashboard" },
+  { chave: "indicadores_seguranca_empresarial", nome: "Indicadores Segurança Empresarial" },
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },
@@ -456,6 +458,7 @@ const PERFIS_POR_MODULO: Record<string, string[]> = {
   [PERFIS.TI]: MODULOS_ACESSO.map((item) => item.chave),
   [PERFIS.ADMINISTRADOR]: [
     "dashboard",
+    "indicadores_seguranca_empresarial",
     "relatorios",
     "documentos",
     "treinamentos",

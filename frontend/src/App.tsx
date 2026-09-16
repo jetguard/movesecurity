@@ -8,6 +8,9 @@ import { SkeletonPage } from "./components/ui/Skeleton";
 import { lazyWithReload } from "./utils/lazyWithReload";
 
 const Dashboard = lazyWithReload(() => import("./pages/Dashboard"));
+const IndicadoresSegurancaEmpresarial = lazyWithReload(
+  () => import("./pages/IndicadoresSegurancaEmpresarial"),
+);
 const Ocorrencias = lazyWithReload(
   () => import("./pages/Relatórios/Ocorrencias"),
 );
@@ -208,6 +211,24 @@ export default function App() {
             }
           >
             <Route index element={<Dashboard />} />
+            <Route
+              path="indicadores-seguranca-empresarial"
+              element={
+                <ProtectedRoute
+                  perfis={[
+                    PERFIS.SUPER_ADMIN,
+                    PERFIS.ADMINISTRADOR,
+                    PERFIS.GESTOR,
+                    PERFIS.COORDENADOR,
+                    PERFIS.SUPERVISOR,
+                    PERFIS.ANALISTA,
+                    PERFIS.OPERADOR,
+                  ]}
+                >
+                  <IndicadoresSegurancaEmpresarial />
+                </ProtectedRoute>
+              }
+            />
             <Route path="ocorrencias" element={<Ocorrencias />} />
             <Route path="investigacao" element={<Investigacao />} />
             <Route path="eventos" element={<Eventos />} />

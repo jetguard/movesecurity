@@ -47,6 +47,7 @@ export type PermissaoModulo = {
 
 export const MODULOS_ACESSO = [
   { chave: "dashboard", nome: "Dashboard" },
+  { chave: "indicadores_seguranca_empresarial", nome: "Indicadores Segurança Empresarial" },
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },
