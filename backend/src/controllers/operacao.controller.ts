@@ -35,6 +35,17 @@ type AcaoModuloOperacional =
   | "editar"
   | "excluir";
 
+function emitirAtualizacaoIndicadoresSeguranca(unidade: string, origem: string) {
+  emitirRealtime({
+    tipo: "indicadores_seguranca_atualizados",
+    titulo: "Indicadores atualizados",
+    mensagem: "Os indicadores de Segurança Empresarial foram atualizados.",
+    severidade: "baixa",
+    unidade,
+    payload: { origem },
+  });
+}
+
 function inicioDia(data = new Date()) {
   const inicio = new Date(data);
   inicio.setHours(0, 0, 0, 0);
@@ -364,6 +375,7 @@ export async function criarScannerPassagem(req: AuthRequest, res: Response) {
       registroId: registro.id,
       dadosNovos: registro,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, "scanner_criado");
 
     return res.status(201).json(await anexarUsuariosScanner(registro));
   } catch (error) {
@@ -425,6 +437,7 @@ export async function atualizarScannerPassagem(req: AuthRequest, res: Response) 
       dadosAnteriores: anterior,
       dadosNovos: registro,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, "scanner_atualizado");
 
     return res.json(await anexarUsuariosScanner(registro));
   } catch (error) {
@@ -466,6 +479,7 @@ export async function validarScannerPassagem(req: AuthRequest, res: Response) {
       dadosAnteriores: anterior,
       dadosNovos: registro,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, "scanner_validado");
 
     return res.json(await anexarUsuariosScanner(registro));
   } catch (error) {
@@ -496,6 +510,7 @@ export async function excluirScannerPassagem(req: AuthRequest, res: Response) {
       registroId: anterior.id,
       dadosAnteriores: anterior,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, "scanner_excluido");
 
     return res.status(204).send();
   } catch (error) {
@@ -585,6 +600,7 @@ export async function criarOperacaoIndicador(req: AuthRequest, res: Response) {
       registroId: registro.id,
       dadosNovos: registro,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, `${modulo}_criado`);
 
     return res.status(201).json(await anexarUsuariosOperacao(registro));
   } catch (error) {
@@ -652,6 +668,7 @@ export async function atualizarOperacaoIndicador(req: AuthRequest, res: Response
       dadosAnteriores: anterior,
       dadosNovos: registro,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, `${modulo}_atualizado`);
 
     return res.json(await anexarUsuariosOperacao(registro));
   } catch (error) {
@@ -694,6 +711,7 @@ export async function validarOperacaoIndicador(req: AuthRequest, res: Response) 
       dadosAnteriores: anterior,
       dadosNovos: registro,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, `${modulo}_validado`);
 
     return res.json(await anexarUsuariosOperacao(registro));
   } catch (error) {
@@ -729,6 +747,7 @@ export async function excluirOperacaoIndicador(req: AuthRequest, res: Response) 
       registroId: anterior.id,
       dadosAnteriores: anterior,
     });
+    emitirAtualizacaoIndicadoresSeguranca(unidade, `${modulo}_excluido`);
 
     return res.status(204).send();
   } catch (error) {

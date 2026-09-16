@@ -183,6 +183,31 @@ export default function IndicadoresSegurancaEmpresarial() {
   }, []);
 
   useEffect(() => {
+    let timeout: number | undefined;
+    const eventosRelevantes = new Set([
+      "indicadores_seguranca_atualizados",
+      "nova_ocorrencia",
+      "novo_evento",
+      "camera_status_alterado",
+      "camera_indisponibilidade_atualizada",
+      "camera_cadastrada",
+    ]);
+
+    function atualizarPorEvento(event: Event) {
+      const detalhe = (event as CustomEvent<{ tipo?: string }>).detail;
+      if (!detalhe?.tipo || !eventosRelevantes.has(detalhe.tipo)) return;
+      window.clearTimeout(timeout);
+      timeout = window.setTimeout(() => carregarIndicadores(), 700);
+    }
+
+    window.addEventListener("movesecurity-realtime", atualizarPorEvento);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener("movesecurity-realtime", atualizarPorEvento);
+    };
+  }, []);
+
+  useEffect(() => {
     document.body.classList.toggle("overflow-hidden", estendido);
     return () => document.body.classList.remove("overflow-hidden");
   }, [estendido]);

@@ -325,6 +325,10 @@ export default function AdminLayout() {
         const data = JSON.parse(event.data);
         if (data.tipo === "conectado") return;
         if (data.unidade && data.unidade !== unidadeAtiva) return;
+        window.dispatchEvent(
+          new CustomEvent("movesecurity-realtime", { detail: data }),
+        );
+        if (data.tipo === "indicadores_seguranca_atualizados") return;
         const id = `${data.tipo}-${data.createdAt || Date.now()}`;
         const novaNotificacao = {
           id,
