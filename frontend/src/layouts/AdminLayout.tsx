@@ -208,6 +208,13 @@ export default function AdminLayout() {
   }, []);
 
   useEffect(() => {
+    if (usuario?.bloqueioAutomaticoSessao === false) {
+      localStorage.removeItem("sistemaBloqueado");
+      setSistemaBloqueado(false);
+      localStorage.setItem(CHAVE_ULTIMA_ATIVIDADE, String(Date.now()));
+      return;
+    }
+
     let ultimaPersistencia = 0;
 
     const bloquearPorInatividade = () => {
@@ -265,7 +272,7 @@ export default function AdminLayout() {
       document.removeEventListener("visibilitychange", verificarAoRetornar);
       window.clearInterval(interval);
     };
-  }, []);
+  }, [usuario?.bloqueioAutomaticoSessao]);
 
   useEffect(() => {
     if (portaria || cadastro) {

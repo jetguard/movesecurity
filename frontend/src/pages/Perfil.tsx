@@ -14,6 +14,7 @@ type UsuarioPerfil = {
   unidade?: string;
   perfilAcesso?: string;
   statusUsuario?: string;
+  bloqueioAutomaticoSessao?: boolean;
   possuiPinOperacional?: boolean;
   pinOperacionalCriadoEm?: string;
   pinOperacionalAtualizadoEm?: string;
@@ -28,6 +29,8 @@ export default function Perfil() {
   const [fotoPerfil, setFotoPerfil] = useState<File | null>(null);
   const [previewFoto, setPreviewFoto] = useState("");
   const [removerFoto, setRemoverFoto] = useState(false);
+  const [bloqueioAutomaticoSessao, setBloqueioAutomaticoSessao] =
+    useState(true);
   const [pinAtual, setPinAtual] = useState("");
   const [senhaAtualPin, setSenhaAtualPin] = useState("");
   const [novoPin, setNovoPin] = useState("");
@@ -49,6 +52,7 @@ export default function Perfil() {
 
     setPerfil(response.data);
     setApelido(response.data.apelido || "");
+    setBloqueioAutomaticoSessao(response.data.bloqueioAutomaticoSessao !== false);
     setPreviewFoto(response.data.fotoPerfil || "");
     setRemoverFoto(false);
   }
@@ -84,6 +88,10 @@ export default function Perfil() {
 
     formData.append("apelido", apelido);
     formData.append("removerFoto", String(removerFoto));
+    formData.append(
+      "bloqueioAutomaticoSessao",
+      String(bloqueioAutomaticoSessao),
+    );
 
     if (fotoPerfil) {
       formData.append("fotoPerfil", fotoPerfil);
@@ -416,6 +424,33 @@ export default function Perfil() {
                 value={perfil.statusUsuario || ""}
                 readOnly
               />
+            </label>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-base font-black text-slate-900">
+                Bloqueio automático de sessão
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Quando ativo, o sistema bloqueia a tela após alguns minutos sem
+                atividade. Desative para painéis exibidos em TV.
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={bloqueioAutomaticoSessao}
+                onChange={(e) =>
+                  setBloqueioAutomaticoSessao(e.target.checked)
+                }
+                className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm font-bold text-slate-700">
+                Permitir bloqueio automático
+              </span>
             </label>
           </div>
         </div>

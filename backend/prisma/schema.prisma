@@ -29,6 +29,7 @@ model Usuario {
   mediadorOperacional        Boolean   @default(false)
   statusUsuario              String    @default("ATIVO")
   deveAlterarSenha           Boolean   @default(true)
+  bloqueioAutomaticoSessao   Boolean   @default(true)
   somenteCadastro            Boolean   @default(false)
   gruposTreinamentoJson      String    @default("[]")
   senhaAlteradaEm            DateTime?

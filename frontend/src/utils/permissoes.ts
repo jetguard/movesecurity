@@ -27,6 +27,7 @@ export type UsuarioLocal = {
   permissoesAcoes?: PermissaoModulo[];
   fotoPerfil?: string;
   deveAlterarSenha?: boolean;
+  bloqueioAutomaticoSessao?: boolean;
 };
 
 export type AcaoAcesso =

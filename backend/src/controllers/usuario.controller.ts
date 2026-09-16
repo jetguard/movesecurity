@@ -44,6 +44,7 @@ const selectUsuario = {
   mediadorOperacional: true,
   statusUsuario: true,
   deveAlterarSenha: true,
+  bloqueioAutomaticoSessao: true,
   somenteCadastro: true,
   gruposTreinamentoJson: true,
   senhaAlteradaEm: true,
@@ -1162,12 +1163,13 @@ export async function buscarPerfil(req: AuthRequest, res: Response) {
 
 export async function atualizarPerfil(req: AuthRequest, res: Response) {
   try {
-    const { apelido, removerFoto } = req.body;
+    const { apelido, removerFoto, bloqueioAutomaticoSessao } = req.body;
     const arquivo = req.file as Express.Multer.File | undefined;
 
     const data: {
       apelido?: string;
       fotoPerfil?: string | null;
+      bloqueioAutomaticoSessao?: boolean;
     } = {};
 
     const usuarioAnterior = await prisma.usuario.findUnique({
@@ -1179,6 +1181,7 @@ export async function atualizarPerfil(req: AuthRequest, res: Response) {
         nome: true,
         apelido: true,
         fotoPerfil: true,
+        bloqueioAutomaticoSessao: true,
       },
     });
 
@@ -1190,6 +1193,10 @@ export async function atualizarPerfil(req: AuthRequest, res: Response) {
 
     if (typeof apelido === "string") {
       data.apelido = apelido.trim();
+    }
+
+    if (typeof bloqueioAutomaticoSessao === "string") {
+      data.bloqueioAutomaticoSessao = bloqueioAutomaticoSessao === "true";
     }
 
     if (arquivo) {
@@ -1227,6 +1234,24 @@ export async function atualizarPerfil(req: AuthRequest, res: Response) {
         registroId: usuario.id,
         dadosAnteriores: { fotoPerfil: usuarioAnterior.fotoPerfil },
         dadosNovos: { fotoPerfil: usuario.fotoPerfil },
+      });
+    }
+
+    if (
+      usuarioAnterior.bloqueioAutomaticoSessao !==
+      usuario.bloqueioAutomaticoSessao
+    ) {
+      await registrarLog({
+        req,
+        acao: "Alteração de bloqueio automático de sessão",
+        tipoRegistro: "Usuario",
+        registroId: usuario.id,
+        dadosAnteriores: {
+          bloqueioAutomaticoSessao: usuarioAnterior.bloqueioAutomaticoSessao,
+        },
+        dadosNovos: {
+          bloqueioAutomaticoSessao: usuario.bloqueioAutomaticoSessao,
+        },
       });
     }
 

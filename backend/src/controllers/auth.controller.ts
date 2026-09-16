@@ -424,6 +424,7 @@ type UsuarioAutenticado = {
   unidade: string | null;
   unidadesPermitidas: string | null;
   deveAlterarSenha: boolean;
+  bloqueioAutomaticoSessao?: boolean;
   pinOperacionalHash: string | null;
   doisFatoresAtivo?: boolean;
   doisFatoresMetodo?: string | null;
@@ -515,6 +516,7 @@ async function criarSessaoAutenticada(
       usuario.unidade,
     ),
     deveAlterarSenha: usuario.deveAlterarSenha,
+    bloqueioAutomaticoSessao: usuario.bloqueioAutomaticoSessao !== false,
     possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
     doisFatoresAtivo: Boolean(usuario.doisFatoresAtivo),
     doisFatoresMetodo: usuario.doisFatoresMetodo || null,
@@ -1419,6 +1421,7 @@ export async function renovarSessao(req: Request, res: Response) {
             unidadesPermitidas: true,
             statusUsuario: true,
             deveAlterarSenha: true,
+            bloqueioAutomaticoSessao: true,
             pinOperacionalHash: true,
           },
         },
@@ -1467,6 +1470,8 @@ export async function renovarSessao(req: Request, res: Response) {
           sessao.usuario.unidade,
         ),
         deveAlterarSenha: sessao.usuario.deveAlterarSenha,
+        bloqueioAutomaticoSessao:
+          sessao.usuario.bloqueioAutomaticoSessao !== false,
         possuiPinOperacional: Boolean(sessao.usuario.pinOperacionalHash),
       },
     });
@@ -1497,6 +1502,7 @@ export async function sessaoAtual(req: AuthRequest, res: Response) {
         unidadesPermitidas: true,
         statusUsuario: true,
         deveAlterarSenha: true,
+        bloqueioAutomaticoSessao: true,
         pinOperacionalHash: true,
       },
     });
@@ -1527,6 +1533,7 @@ export async function sessaoAtual(req: AuthRequest, res: Response) {
           usuario.unidade,
         ),
         deveAlterarSenha: usuario.deveAlterarSenha,
+        bloqueioAutomaticoSessao: usuario.bloqueioAutomaticoSessao !== false,
         possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
       },
     });
