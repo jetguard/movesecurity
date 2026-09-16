@@ -184,9 +184,9 @@ export default function ControleOperacional() {
   }, [modulosPermitidos, usuarioSessao?.id, validadorOperacional]);
 
   return (
-    <div className="min-h-[calc(100vh-7rem)] rounded-xl bg-slate-950 p-2 text-white sm:rounded-2xl sm:p-6">
-      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/25">
-        <div className="bg-slate-950 p-3 sm:p-7">
+    <div className="min-h-[calc(100vh-7rem)] rounded-xl bg-slate-950 px-0 py-2 text-white sm:rounded-2xl sm:p-6">
+      <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900 shadow-2xl shadow-black/25 sm:rounded-2xl">
+        <div className="bg-slate-950 px-1 py-3 sm:p-7">
           <div className="mb-3 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-2 text-xs font-semibold leading-5 text-blue-100 sm:mb-5 sm:px-4 sm:py-3 sm:text-sm">
             Preencha os cards disponíveis para sua rotina operacional. Os
             módulos aparecem conforme as permissões atribuídas ao seu perfil.
