@@ -156,7 +156,7 @@ export default function AdminLayout() {
   useEffect(() => {
     let cancelado = false;
     api
-      .post("/auth/refresh")
+      .get("/auth/me")
       .then((response) => {
         if (cancelado || !response.data?.usuario) return;
         const usuarioAtualizado = response.data.usuario;
@@ -164,7 +164,6 @@ export default function AdminLayout() {
         const proximoUsuario = JSON.stringify(usuarioAtualizado);
         if (usuarioCache !== proximoUsuario) {
           localStorage.setItem("usuario", proximoUsuario);
-          window.location.reload();
         }
       })
       .catch(() => {

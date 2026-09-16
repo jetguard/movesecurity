@@ -114,7 +114,7 @@ export default function ControleOperacional() {
     let ativo = true;
 
     api
-      .post("/auth/refresh", {})
+      .get("/auth/me")
       .then((resposta) => {
         if (!ativo || !resposta.data?.usuario) return;
         localStorage.setItem("usuario", JSON.stringify(resposta.data.usuario));

@@ -1474,6 +1474,66 @@ export async function renovarSessao(req: Request, res: Response) {
   }
 }
 
+export async function sessaoAtual(req: AuthRequest, res: Response) {
+  try {
+    if (!req.usuarioId) {
+      return res.status(401).json({ error: "Sessão não autenticada" });
+    }
+
+    const usuario = await prisma.usuario.findUnique({
+      where: { id: req.usuarioId },
+      select: {
+        id: true,
+        nome: true,
+        apelido: true,
+        fotoPerfil: true,
+        email: true,
+        perfilAcesso: true,
+        validadorOperacional: true,
+        mediadorOperacional: true,
+        equipe: true,
+        unidade: true,
+        unidadesPermitidas: true,
+        statusUsuario: true,
+        deveAlterarSenha: true,
+        pinOperacionalHash: true,
+      },
+    });
+
+    if (!usuario || usuario.statusUsuario !== "ATIVO") {
+      return res.status(401).json({ error: "Sessão expirada" });
+    }
+
+    const permissoesAcoes = await permissoesPerfil(usuario.perfilAcesso);
+    const permissoesModulos = permissoesAcoes.map((permissao) => permissao.modulo);
+
+    return res.json({
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        apelido: usuario.apelido,
+        fotoPerfil: usuario.fotoPerfil,
+        email: usuario.email,
+        perfilAcesso: usuario.perfilAcesso,
+        validadorOperacional: Boolean(usuario.validadorOperacional),
+        mediadorOperacional: Boolean(usuario.mediadorOperacional),
+        permissoesModulos,
+        permissoesAcoes,
+        equipe: usuario.equipe,
+        unidade: usuario.unidade,
+        unidadesPermitidas: normalizarUnidadesPermitidas(
+          usuario.unidadesPermitidas,
+          usuario.unidade,
+        ),
+        deveAlterarSenha: usuario.deveAlterarSenha,
+        possuiPinOperacional: Boolean(usuario.pinOperacionalHash),
+      },
+    });
+  } catch (error) {
+    return res.status(401).json({ error: "Erro ao consultar sessão" });
+  }
+}
+
 export function emitirCsrf(req: Request, res: Response) {
   const csrfToken = aplicarCookieCsrf(req, res);
   return res.json({ csrfToken });

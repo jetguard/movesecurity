@@ -12,6 +12,7 @@ import {
   configuracaoSsoPublica,
   iniciarSso,
   callbackSso,
+  sessaoAtual,
 } from "../controllers/auth.controller";
 import { acessoTotal, autenticarUsuario, autorizarPerfis } from "../middlewares/auth";
 
@@ -24,6 +25,7 @@ router.get("/sso/config", configuracaoSsoPublica);
 router.get("/sso/iniciar", iniciarSso);
 router.get("/sso/callback", callbackSso);
 router.post("/refresh", renovarSessao);
+router.get("/me", autenticarUsuario, sessaoAtual);
 router.get("/csrf", emitirCsrf);
 router.post("/alterar-senha", autenticarUsuario, alterarSenhaObrigatoria);
 router.post("/desbloquear-sessao", autenticarUsuario, desbloquearSessao);
