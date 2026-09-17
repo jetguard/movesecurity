@@ -77,6 +77,7 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
       investigacoesBi,
       scanner,
       operacionais,
+      vigilanciaBi,
       solicitacoes,
       cameras,
       cameraEventos,
@@ -190,6 +191,19 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         },
         orderBy: { dataReferencia: "desc" },
         take: 2000,
+      }),
+      prisma.operacaoIndicadorRegistro.findMany({
+        where: {
+          unidade: { in: unidadesPermitidas },
+          modulo: "operacao_vigilancia",
+          statusValidacao: "Validado",
+        },
+        include: {
+          criadoPor: { select: { nome: true, apelido: true } },
+          validadoPor: { select: { nome: true, apelido: true } },
+        },
+        orderBy: { dataReferencia: "desc" },
+        take: 5000,
       }),
       prisma.solicitacaoImagem.findMany({
         where: { unidade, excluidoEm: null },
@@ -386,6 +400,24 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         },
       },
       vigilancia: {
+        unidades: unidadesPermitidas,
+        registros: vigilanciaBi.map((item) => ({
+          id: item.id,
+          unidade: item.unidade,
+          dataReferencia: item.dataReferencia,
+          criadoPor: item.criadoPor?.apelido || item.criadoPor?.nome || "Não informado",
+          validadoPor: item.validadoPor?.apelido || item.validadoPor?.nome || "Não informado",
+          efetivoPrevisto: numero(dados(item).efetivoPrevisto),
+          efetivoPresente: numero(dados(item).efetivoPresente),
+          postosDescobertos: numero(dados(item).postosDescobertos),
+          coberturas: numero(dados(item).coberturas),
+          servicosExtras: numero(dados(item).servicosExtras),
+          horasPostoDescoberto: numero(dados(item).horasPostoDescoberto),
+          rondas: numero(dados(item).rondas),
+          desviosRonda: numero(dados(item).desviosRonda),
+          desviosTratados: numero(dados(item).desviosTratados),
+          ocorrencias: String(dados(item).ocorrencias || ""),
+        })),
         cards: [
           { titulo: "Efetivo previsto", valor: somarDados(vigilancia, "efetivoPrevisto") },
           { titulo: "Efetivo presente", valor: somarDados(vigilancia, "efetivoPresente") },

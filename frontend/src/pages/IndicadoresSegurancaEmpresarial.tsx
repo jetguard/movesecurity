@@ -82,6 +82,29 @@ type BlocoCamerasCftv = BlocoIndicadores & {
   cameras?: CameraCftvRegistro[];
 };
 
+type VigilanciaRegistro = {
+  id: number;
+  unidade: string;
+  dataReferencia: string;
+  criadoPor: string;
+  validadoPor: string;
+  efetivoPrevisto: number;
+  efetivoPresente: number;
+  postosDescobertos: number;
+  coberturas: number;
+  servicosExtras: number;
+  horasPostoDescoberto: number;
+  rondas: number;
+  desviosRonda: number;
+  desviosTratados: number;
+  ocorrencias: string;
+};
+
+type BlocoVigilancia = BlocoIndicadores & {
+  unidades?: string[];
+  registros?: VigilanciaRegistro[];
+};
+
 type DadosIndicadores = {
   atualizadoEm: string;
   unidade: string;
@@ -89,7 +112,7 @@ type DadosIndicadores = {
   scanner: BlocoIndicadores;
   ocr: BlocoIndicadores;
   entradaSaida: BlocoIndicadores;
-  vigilancia: BlocoIndicadores;
+  vigilancia: BlocoVigilancia;
   balanca: BlocoIndicadores;
   acesso: BlocoIndicadores;
   motoristas: BlocoIndicadores;
@@ -372,6 +395,9 @@ export default function IndicadoresSegurancaEmpresarial() {
     campo: "status" | "tipoCamera" | "tecnologia" | "areaMonitorada" | "id";
     valor: string;
   } | null>(null);
+  const [filtroUnidadeVigilancia, setFiltroUnidadeVigilancia] = useState("Todos");
+  const [filtroMesVigilancia, setFiltroMesVigilancia] = useState("Todos");
+  const [registroVigilanciaSelecionado, setRegistroVigilanciaSelecionado] = useState<number | null>(null);
 
   async function carregarIndicadores() {
     try {
@@ -488,6 +514,52 @@ export default function IndicadoresSegurancaEmpresarial() {
   const disponibilidadeCftv = camerasFiltradas.length
     ? ((camerasConectadasBi / camerasFiltradas.length) * 100).toFixed(1).replace(".", ",")
     : "0,0";
+  const vigilanciaBi = dados?.vigilancia.registros || [];
+  const unidadesVigilancia = dados?.vigilancia.unidades?.length
+    ? dados.vigilancia.unidades
+    : Array.from(new Set(vigilanciaBi.map((item) => item.unidade))).sort();
+  const mesesVigilancia = Array.from(new Set(vigilanciaBi.map((item) => chaveMesAno(item.dataReferencia))))
+    .filter(Boolean)
+    .sort()
+    .reverse();
+  const vigilanciaFiltradaBase = vigilanciaBi.filter((item) => {
+    if (filtroUnidadeVigilancia !== "Todos" && item.unidade !== filtroUnidadeVigilancia) return false;
+    if (filtroMesVigilancia !== "Todos" && chaveMesAno(item.dataReferencia) !== filtroMesVigilancia) return false;
+    return true;
+  });
+  const vigilanciaFiltrada = registroVigilanciaSelecionado
+    ? vigilanciaFiltradaBase.filter((item) => item.id === registroVigilanciaSelecionado)
+    : vigilanciaFiltradaBase;
+  const somarVigilancia = (campo: keyof VigilanciaRegistro) =>
+    vigilanciaFiltrada.reduce((total, item) => total + Number(item[campo] || 0), 0);
+  const efetivoPrevistoVigilancia = somarVigilancia("efetivoPrevisto");
+  const efetivoPresenteVigilancia = somarVigilancia("efetivoPresente");
+  const coberturaVigilancia = efetivoPrevistoVigilancia
+    ? ((efetivoPresenteVigilancia / efetivoPrevistoVigilancia) * 100).toFixed(1).replace(".", ",")
+    : "0,0";
+  const serieRondasVigilancia = Array.from(
+    vigilanciaFiltrada.reduce((mapa, item) => {
+      const chave = chaveMesAno(item.dataReferencia);
+      mapa.set(chave, (mapa.get(chave) || 0) + item.rondas);
+      return mapa;
+    }, new Map<string, number>()),
+  )
+    .map(([chave, valor]) => ({ label: `${mesCurto(chave)}/${chave.slice(2, 4)}`, valor, chave }))
+    .sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
+  const indicadoresVigilancia = [
+    { label: "Efetivo previsto", valor: efetivoPrevistoVigilancia },
+    { label: "Efetivo presente", valor: efetivoPresenteVigilancia },
+    { label: "Coberturas", valor: somarVigilancia("coberturas") },
+    { label: "Rondas", valor: somarVigilancia("rondas") },
+    { label: "Desvios em ronda", valor: somarVigilancia("desviosRonda") },
+    { label: "Desvios tratados", valor: somarVigilancia("desviosTratados") },
+  ];
+  const postosPorUnidadeVigilancia = Array.from(
+    vigilanciaFiltrada.reduce((mapa, item) => {
+      mapa.set(item.unidade, (mapa.get(item.unidade) || 0) + item.postosDescobertos);
+      return mapa;
+    }, new Map<string, number>()),
+  ).map(([label, valor]) => ({ label, valor })).sort((a, b) => b.valor - a.valor);
 
   function limparFiltrosBi() {
     setFiltroUnidade("Todos");
@@ -499,6 +571,12 @@ export default function IndicadoresSegurancaEmpresarial() {
   function limparFiltrosCftv() {
     setFiltroUnidadeCftv("Todos");
     setFiltroCftv(null);
+  }
+
+  function limparFiltrosVigilancia() {
+    setFiltroUnidadeVigilancia("Todos");
+    setFiltroMesVigilancia("Todos");
+    setRegistroVigilanciaSelecionado(null);
   }
 
   const renderOcorrenciasEventosBi = () => (
@@ -644,7 +722,16 @@ export default function IndicadoresSegurancaEmpresarial() {
               </thead>
               <tbody>
                 {registrosOcorrenciasFiltrados.map((item) => (
-                  <tr key={item.id} className="align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-blue-500/10">
+                  <tr
+                    key={item.id}
+                    onClick={() => setFiltroGrafico({ campo: "id", valor: item.id })}
+                    className={`cursor-pointer align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-blue-500/10 ${
+                      filtroGrafico?.campo === "id" && filtroGrafico.valor === item.id
+                        ? "bg-blue-500/20 ring-1 ring-inset ring-blue-400"
+                        : ""
+                    }`}
+                    title="Clique para filtrar por este registro"
+                  >
                     <td className="border-b border-slate-700 px-2 py-2 font-bold text-sky-300">
                       {item.codigo}
                     </td>
@@ -796,7 +883,16 @@ export default function IndicadoresSegurancaEmpresarial() {
                 </thead>
                 <tbody>
                   {camerasFiltradas.map((camera) => (
-                    <tr key={camera.id} className="align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-blue-500/10">
+                    <tr
+                      key={camera.id}
+                      onClick={() => setFiltroCftv({ campo: "id", valor: String(camera.id) })}
+                      className={`cursor-pointer align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-blue-500/10 ${
+                        filtroCftv?.campo === "id" && filtroCftv.valor === String(camera.id)
+                          ? "bg-blue-500/20 ring-1 ring-inset ring-blue-400"
+                          : ""
+                      }`}
+                      title="Clique para filtrar por esta câmera"
+                    >
                       <td className="border-b border-slate-700 px-2 py-2 font-bold text-sky-300">
                         {camera.numeroCamera}
                         {camera.nomeCamera && <span className="ml-1 font-normal text-slate-400">{camera.nomeCamera}</span>}
@@ -857,6 +953,129 @@ export default function IndicadoresSegurancaEmpresarial() {
       </div>
     );
   };
+
+  const renderVigilanciaBi = () => (
+    <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <BiCard titulo="Efetivo previsto" valor={efetivoPrevistoVigilancia} />
+        <BiCard titulo="Efetivo presente" valor={efetivoPresenteVigilancia} />
+        <BiCard titulo="Cobertura operacional" valor={`${coberturaVigilancia}%`} />
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Unidade</span>
+          <select
+            value={filtroUnidadeVigilancia}
+            onChange={(event) => {
+              setFiltroUnidadeVigilancia(event.target.value);
+              setRegistroVigilanciaSelecionado(null);
+            }}
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option>Todos</option>
+            {unidadesVigilancia.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Mês / Ano</span>
+          <select
+            value={filtroMesVigilancia}
+            onChange={(event) => {
+              setFiltroMesVigilancia(event.target.value);
+              setRegistroVigilanciaSelecionado(null);
+            }}
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option>Todos</option>
+            {mesesVigilancia.map((item) => (
+              <option key={item} value={item}>{rotuloMesAno(item)}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {(registroVigilanciaSelecionado || filtroUnidadeVigilancia !== "Todos" || filtroMesVigilancia !== "Todos") && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-200">
+          <span>
+            {registroVigilanciaSelecionado
+              ? `Exibindo o lançamento #${registroVigilanciaSelecionado}`
+              : "Filtros de vigilância ativos"}
+          </span>
+          <button
+            type="button"
+            onClick={limparFiltrosVigilancia}
+            className="inline-flex items-center gap-1 rounded-md border border-blue-400/40 bg-slate-900 px-2 py-1 text-blue-200 shadow-sm hover:bg-slate-800"
+          >
+            <X size={14} />
+            Limpar filtros
+          </button>
+        </div>
+      )}
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-[1.2fr_1fr_0.8fr]">
+        <BiPanel titulo={registroVigilanciaSelecionado ? "Indicadores do lançamento selecionado" : "Indicadores operacionais"}>
+          <BarrasHorizontais itens={indicadoresVigilancia} onSelect={() => undefined} cor="bg-blue-500" />
+        </BiPanel>
+        <BiPanel titulo="Rondas realizadas por mês">
+          <BarrasVerticais itens={serieRondasVigilancia} onSelect={() => undefined} />
+        </BiPanel>
+        <BiPanel titulo="Postos descobertos por unidade">
+          <BarrasHorizontais itens={postosPorUnidadeVigilancia} onSelect={() => undefined} cor="bg-amber-500" />
+        </BiPanel>
+      </div>
+
+      <div className="mt-3">
+        <BiPanel titulo="Lançamentos validados da Vigilância Patrimonial" className="min-h-[320px]">
+          <p className="mb-2 text-[11px] text-slate-400">
+            Selecione uma linha para atualizar todos os indicadores com os dados daquele lançamento.
+          </p>
+          <div className="max-h-[300px] overflow-auto pr-1">
+            <table className="w-full min-w-[1120px] border-collapse text-left text-[11px] text-slate-300">
+              <thead className="sticky top-0 z-10 bg-slate-800 text-slate-100 shadow-sm">
+                <tr>
+                  {["Data", "Unidade", "Responsável", "Previsto", "Presente", "Postos descobertos", "Coberturas", "Rondas", "Desvios", "Tratados", "Ocorrências", "Validado por"].map((coluna) => (
+                    <th key={coluna} className="border-b border-blue-500/40 px-2 py-2 font-semibold">{coluna}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {vigilanciaFiltradaBase.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => setRegistroVigilanciaSelecionado((atual) => atual === item.id ? null : item.id)}
+                    className={`cursor-pointer align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-blue-500/10 ${
+                      registroVigilanciaSelecionado === item.id
+                        ? "bg-blue-500/20 ring-1 ring-inset ring-blue-400"
+                        : ""
+                    }`}
+                    title="Clique para atualizar os gráficos com este lançamento"
+                  >
+                    <td className="border-b border-slate-700 px-2 py-2 font-bold text-sky-300">{formatarDataCurta(item.dataReferencia)}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.unidade}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.criadoPor}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.efetivoPrevisto}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.efetivoPresente}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.postosDescobertos}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.coberturas}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.rondas}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.desviosRonda}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.desviosTratados}</td>
+                    <td className="max-w-[260px] border-b border-slate-700 px-2 py-2">{item.ocorrencias || "-"}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.validadoPor}</td>
+                  </tr>
+                ))}
+                {vigilanciaFiltradaBase.length === 0 && (
+                  <tr>
+                    <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-400">
+                      Nenhum lançamento validado encontrado para os filtros selecionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </BiPanel>
+      </div>
+    </div>
+  );
 
   const conteudo = (
     <div
@@ -958,6 +1177,8 @@ export default function IndicadoresSegurancaEmpresarial() {
         renderOcorrenciasEventosBi()
       ) : abaAtiva === "camerasCftv" ? (
         renderCamerasCftvBi()
+      ) : abaAtiva === "vigilancia" ? (
+        renderVigilanciaBi()
       ) : (
         <>
           <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
