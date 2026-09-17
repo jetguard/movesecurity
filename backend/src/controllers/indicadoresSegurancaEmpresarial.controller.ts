@@ -198,20 +198,26 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         take: 2000,
       }),
       prisma.cameraMonitoramento.findMany({
-        where: { unidade, statusCadastro: "Ativa" },
+        where: { unidade: { in: unidadesPermitidas }, statusCadastro: "Ativa" },
         select: {
           id: true,
+          numeroCamera: true,
+          nomeCamera: true,
+          numeroServidor: true,
+          unidade: true,
           status: true,
           tipoCamera: true,
           tecnologia: true,
+          localInstalado: true,
           areaMonitorada: true,
           totalFalhas: true,
           totalIndisponibilidade: true,
           desconectadaDesde: true,
         },
+        orderBy: [{ unidade: "asc" }, { numeroCamera: "asc" }],
       }),
       prisma.cameraEventoStatus.findMany({
-        where: { unidade },
+        where: { unidade: { in: unidadesPermitidas } },
         select: { statusNovo: true, iniciadoEm: true, encerradoEm: true, camera: { select: { areaMonitorada: true } } },
         orderBy: { iniciadoEm: "desc" },
         take: 2000,
@@ -461,6 +467,8 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         },
       },
       camerasCftv: {
+        unidades: unidadesPermitidas,
+        cameras,
         cards: [
           { titulo: "Câmeras cadastradas", valor: cameras.length },
           { titulo: "Conectadas", valor: camerasConectadas.length },
