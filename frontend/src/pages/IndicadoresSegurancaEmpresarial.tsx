@@ -225,9 +225,9 @@ function contarPor<T>(lista: T[], seletor: (item: T) => string | null | undefine
 
 function BiCard({ titulo, valor }: { titulo: string; valor: string | number }) {
   return (
-    <div className="rounded-[18px] bg-white px-4 py-3 text-center shadow-[0_10px_24px_rgba(15,23,42,0.22)]">
-      <p className="text-xs font-semibold text-slate-600">{titulo}</p>
-      <p className="mt-1 text-3xl font-black text-slate-950">{valor}</p>
+    <div className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
+      <p className="text-xs font-semibold text-slate-300">{titulo}</p>
+      <p className="mt-1 text-3xl font-black text-white">{valor}</p>
     </div>
   );
 }
@@ -243,9 +243,9 @@ function BiPanel({
 }) {
   return (
     <div
-      className={`rounded-[18px] bg-white p-3 text-slate-950 shadow-[0_10px_24px_rgba(15,23,42,0.20)] ${className}`}
+      className={`rounded-lg border border-slate-700 bg-slate-900 p-3 text-slate-100 shadow-[0_12px_28px_rgba(0,0,0,0.24)] ${className}`}
     >
-      <h3 className="mb-2 text-center text-sm font-semibold text-slate-700">
+      <h3 className="mb-2 text-center text-sm font-bold text-white">
         {titulo}
       </h3>
       {children}
@@ -271,18 +271,18 @@ function BarrasVerticais({
           type="button"
           onClick={() => onSelect(item)}
           className={`flex min-w-14 flex-1 flex-col items-center justify-end rounded-lg px-1 transition ${
-            ativo === item.label ? "bg-blue-50 ring-2 ring-blue-500" : "hover:bg-slate-50"
+            ativo === item.label ? "bg-blue-500/15 ring-2 ring-blue-400" : "hover:bg-slate-800"
           }`}
           title={`Filtrar por ${item.label}`}
         >
-          <span className="mb-1 text-[10px] font-bold text-slate-700">
+          <span className="mb-1 text-[10px] font-bold text-slate-100">
             {item.valor}
           </span>
           <span
-            className="w-full rounded-t-sm bg-[#94c8f4]"
+            className="w-full rounded-t-sm bg-gradient-to-t from-blue-600 to-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
             style={{ height: `${Math.max(8, (item.valor / maior) * 104)}px` }}
           />
-          <span className="mt-1 line-clamp-1 text-[10px] text-slate-600">
+          <span className="mt-1 line-clamp-1 text-[10px] text-slate-300">
             {item.label}
           </span>
         </button>
@@ -311,20 +311,20 @@ function BarrasHorizontais({
           type="button"
           onClick={() => onSelect(item.label)}
           className={`grid w-full grid-cols-[minmax(80px,1fr)_minmax(40px,1.2fr)_32px] items-center gap-2 rounded-lg px-1 py-0.5 text-left transition ${
-            ativo === item.label ? "bg-blue-50 ring-1 ring-blue-500" : "hover:bg-slate-50"
+            ativo === item.label ? "bg-blue-500/15 ring-1 ring-blue-400" : "hover:bg-slate-800"
           }`}
           title={`Filtrar por ${item.label}`}
         >
-          <span className="line-clamp-1 text-[10px] text-slate-700">
+          <span className="line-clamp-1 text-[10px] text-slate-300">
             {item.label}
           </span>
-          <span className="h-5 rounded-sm bg-slate-100">
+          <span className="h-5 rounded-sm bg-slate-800">
             <span
               className={`block h-full rounded-sm ${cor}`}
               style={{ width: `${Math.max(7, (item.valor / maior) * 100)}%` }}
             />
           </span>
-          <span className="text-right text-[10px] font-bold text-slate-700">
+          <span className="text-right text-[10px] font-bold text-slate-100">
             {item.valor}
           </span>
         </button>
@@ -446,11 +446,11 @@ export default function IndicadoresSegurancaEmpresarial() {
   }
 
   const renderOcorrenciasEventosBi = () => (
-    <div className="rounded-[24px] bg-[#f5f5f4] p-3 text-slate-950 shadow-2xl">
+    <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
       <div className="grid gap-3 xl:grid-cols-[1.1fr_1fr_1fr_1fr]">
         <BiCard titulo="Total de Registros" valor={registrosOcorrenciasFiltrados.length} />
-        <label className="rounded-[18px] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.18)]">
-          <span className="mb-2 block text-center text-sm font-semibold text-slate-700">
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">
             Unidade
           </span>
           <select
@@ -459,7 +459,7 @@ export default function IndicadoresSegurancaEmpresarial() {
               setFiltroUnidade(event.target.value);
               setFiltroGrafico(null);
             }}
-            className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm text-slate-700"
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
           >
             <option>Todos</option>
             {unidadesBi.map((item) => (
@@ -467,8 +467,8 @@ export default function IndicadoresSegurancaEmpresarial() {
             ))}
           </select>
         </label>
-        <label className="rounded-[18px] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.18)]">
-          <span className="mb-2 block text-center text-sm font-semibold text-slate-700">
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">
             Tipo do Registro
           </span>
           <select
@@ -477,7 +477,7 @@ export default function IndicadoresSegurancaEmpresarial() {
               setFiltroTipoRegistro(event.target.value);
               setFiltroGrafico(null);
             }}
-            className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm text-slate-700"
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
           >
             <option>Todos</option>
             <option>RE</option>
@@ -485,8 +485,8 @@ export default function IndicadoresSegurancaEmpresarial() {
             <option>RI</option>
           </select>
         </label>
-        <label className="rounded-[18px] bg-white p-3 shadow-[0_10px_24px_rgba(15,23,42,0.18)]">
-          <span className="mb-2 block text-center text-sm font-semibold text-slate-700">
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">
             Mês / Ano
           </span>
           <select
@@ -495,7 +495,7 @@ export default function IndicadoresSegurancaEmpresarial() {
               setFiltroMesAno(event.target.value);
               setFiltroGrafico(null);
             }}
-            className="h-10 w-full rounded border border-slate-200 bg-white px-3 text-sm text-slate-700"
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
           >
             <option>Todos</option>
             {mesesBi.map((item) => (
@@ -508,7 +508,7 @@ export default function IndicadoresSegurancaEmpresarial() {
       </div>
 
       {(filtroGrafico || filtroUnidade !== "Todos" || filtroTipoRegistro !== "Todos" || filtroMesAno !== "Todos") && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-800">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-blue-500/40 bg-blue-500/10 px-3 py-2 text-xs font-bold text-blue-200">
           <span>
             Filtros ativos
             {filtroGrafico ? `: ${String(filtroGrafico.valor)}` : ""}
@@ -516,7 +516,7 @@ export default function IndicadoresSegurancaEmpresarial() {
           <button
             type="button"
             onClick={limparFiltrosBi}
-            className="inline-flex items-center gap-1 rounded-lg bg-white px-2 py-1 text-blue-700 shadow-sm"
+            className="inline-flex items-center gap-1 rounded-md border border-blue-400/40 bg-slate-900 px-2 py-1 text-blue-200 shadow-sm hover:bg-slate-800"
           >
             <X size={14} />
             Limpar filtros
@@ -565,8 +565,8 @@ export default function IndicadoresSegurancaEmpresarial() {
       <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_0.38fr]">
         <BiPanel titulo="Registros gerados" className="min-h-[265px]">
           <div className="max-h-[248px] overflow-auto pr-1">
-            <table className="min-w-[980px] w-full border-collapse text-left text-[11px] text-slate-700">
-              <thead className="sticky top-0 z-10 bg-white text-slate-700 shadow-sm">
+            <table className="min-w-[980px] w-full border-collapse text-left text-[11px] text-slate-300">
+              <thead className="sticky top-0 z-10 bg-slate-800 text-slate-100 shadow-sm">
                 <tr>
                   {[
                     "Nº",
@@ -580,7 +580,7 @@ export default function IndicadoresSegurancaEmpresarial() {
                     "Status",
                     "Dias",
                   ].map((coluna) => (
-                    <th key={coluna} className="border-b border-blue-200 px-2 py-2 font-semibold">
+                    <th key={coluna} className="border-b border-blue-500/40 px-2 py-2 font-semibold">
                       {coluna}
                     </th>
                   ))}
@@ -588,19 +588,19 @@ export default function IndicadoresSegurancaEmpresarial() {
               </thead>
               <tbody>
                 {registrosOcorrenciasFiltrados.map((item) => (
-                  <tr key={item.id} className="align-top hover:bg-blue-50/60">
-                    <td className="border-b border-slate-100 px-2 py-2 font-bold text-blue-700">
+                  <tr key={item.id} className="align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-blue-500/10">
+                    <td className="border-b border-slate-700 px-2 py-2 font-bold text-sky-300">
                       {item.codigo}
                     </td>
-                    <td className="border-b border-slate-100 px-2 py-2">{item.tipo}</td>
-                    <td className="border-b border-slate-100 px-2 py-2">{item.unidade}</td>
-                    <td className="border-b border-slate-100 px-2 py-2">{item.resumo}</td>
-                    <td className="border-b border-slate-100 px-2 py-2">{formatarDataCurta(item.data)}</td>
-                    <td className="border-b border-slate-100 px-2 py-2">{item.acoesTomadas}</td>
-                    <td className="border-b border-slate-100 px-2 py-2">{item.responsavelTratativas || "-"}</td>
-                    <td className="border-b border-slate-100 px-2 py-2">{formatarDataCurta(item.dataResolucao)}</td>
-                    <td className="border-b border-slate-100 px-2 py-2">{item.status}</td>
-                    <td className="border-b border-slate-100 px-2 py-2 text-right">{item.diasParaResolucao ?? "-"}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 font-semibold text-white">{item.tipo}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.unidade}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.resumo}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{formatarDataCurta(item.data)}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.acoesTomadas}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.responsavelTratativas || "-"}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{formatarDataCurta(item.dataResolucao)}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.status}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.diasParaResolucao ?? "-"}</td>
                   </tr>
                 ))}
               </tbody>
