@@ -46,12 +46,35 @@ function textosPrincipais(registros: Array<{ dadosJson?: string | null }>, chave
   return agruparPor(registros, (item) => String(dados(item)[chave] || "")).slice(0, 8);
 }
 
+function diasAte(data?: Date | null) {
+  if (!data) return null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const alvo = new Date(data);
+  alvo.setHours(0, 0, 0, 0);
+  return Math.round((alvo.getTime() - hoje.getTime()) / 86400000);
+}
+
+function resumir(texto?: string | null, limite = 280) {
+  const limpo = String(texto || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!limpo) return "Sem resumo informado";
+  return limpo.length > limite ? `${limpo.slice(0, limite).trim()}...` : limpo;
+}
+
 export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Response) {
   try {
     const unidade = req.unidadeAtiva || req.usuarioUnidade || "GJA-T1";
+    const unidadesPermitidas = req.unidadesPermitidas?.length
+      ? req.unidadesPermitidas
+      : [unidade];
     const [
       ocorrencias,
       eventos,
+      ocorrenciasBi,
+      eventosBi,
+      investigacoesBi,
       scanner,
       operacionais,
       solicitacoes,
@@ -69,6 +92,81 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         select: { status: true, natureza: true, subNatureza: true, local: true, createdAt: true },
         orderBy: { createdAt: "desc" },
         take: 2000,
+      }),
+      prisma.ocorrencia.findMany({
+        where: { unidade: { in: unidadesPermitidas } },
+        select: {
+          id: true,
+          codigo: true,
+          assunto: true,
+          unidade: true,
+          natureza: true,
+          subNatureza: true,
+          local: true,
+          status: true,
+          dataOcorrencia: true,
+          relatoSeguranca: true,
+          acoesTomadas: true,
+          createdAt: true,
+          analise: {
+            select: {
+              responsavel: { select: { nome: true, apelido: true } },
+              concluidoEm: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { dataOcorrencia: "desc" },
+        take: 5000,
+      }),
+      prisma.evento.findMany({
+        where: { unidade: { in: unidadesPermitidas } },
+        select: {
+          id: true,
+          codigo: true,
+          assunto: true,
+          unidade: true,
+          natureza: true,
+          subNatureza: true,
+          local: true,
+          status: true,
+          dataEvento: true,
+          relatoSeguranca: true,
+          acoesTomadas: true,
+          createdAt: true,
+          analise: {
+            select: {
+              responsavel: { select: { nome: true, apelido: true } },
+              concluidoEm: true,
+              status: true,
+            },
+          },
+        },
+        orderBy: { dataEvento: "desc" },
+        take: 5000,
+      }),
+      prisma.investigacao.findMany({
+        where: { unidade: { in: unidadesPermitidas } },
+        select: {
+          id: true,
+          codigo: true,
+          numeroOcorrencia: true,
+          titulo: true,
+          assunto: true,
+          unidade: true,
+          natureza: true,
+          subNatureza: true,
+          local: true,
+          status: true,
+          dataOcorrencia: true,
+          descricao: true,
+          descricaoInvestigacao: true,
+          conclusaoFatos: true,
+          updatedAt: true,
+          responsavel: { select: { nome: true, apelido: true } },
+        },
+        orderBy: { dataOcorrencia: "desc" },
+        take: 5000,
       }),
       prisma.scannerPassagem.findMany({
         where: { unidade },
@@ -121,6 +219,65 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
     ]);
 
     const todosRelatorios = [...ocorrencias, ...eventos];
+    const registrosOcorrenciasEventos = [
+      ...ocorrenciasBi.map((item) => ({
+        id: `RO-${item.id}`,
+        registroId: item.id,
+        tipo: "RO",
+        codigo: item.codigo,
+        unidade: item.unidade,
+        resumo: resumir(item.relatoSeguranca || item.assunto),
+        assunto: item.assunto,
+        local: item.local,
+        natureza: item.natureza,
+        subNatureza: item.subNatureza,
+        data: item.dataOcorrencia,
+        acoesTomadas: resumir(item.acoesTomadas, 220),
+        responsavelTratativas:
+          item.analise?.responsavel?.apelido || item.analise?.responsavel?.nome || "",
+        dataResolucao: item.analise?.concluidoEm || null,
+        status: item.analise?.status || item.status,
+        diasParaResolucao: diasAte(item.analise?.concluidoEm),
+      })),
+      ...eventosBi.map((item) => ({
+        id: `RE-${item.id}`,
+        registroId: item.id,
+        tipo: "RE",
+        codigo: item.codigo,
+        unidade: item.unidade,
+        resumo: resumir(item.relatoSeguranca || item.assunto),
+        assunto: item.assunto,
+        local: item.local,
+        natureza: item.natureza,
+        subNatureza: item.subNatureza,
+        data: item.dataEvento,
+        acoesTomadas: resumir(item.acoesTomadas, 220),
+        responsavelTratativas:
+          item.analise?.responsavel?.apelido || item.analise?.responsavel?.nome || "",
+        dataResolucao: item.analise?.concluidoEm || null,
+        status: item.analise?.status || item.status,
+        diasParaResolucao: diasAte(item.analise?.concluidoEm),
+      })),
+      ...investigacoesBi.map((item) => ({
+        id: `RI-${item.id}`,
+        registroId: item.id,
+        tipo: "RI",
+        codigo: item.codigo || item.numeroOcorrencia || `RI-${item.id}`,
+        unidade: item.unidade,
+        resumo: resumir(item.descricaoInvestigacao || item.descricao || item.assunto),
+        assunto: item.titulo || item.assunto,
+        local: item.local,
+        natureza: item.natureza,
+        subNatureza: item.subNatureza,
+        data: item.dataOcorrencia,
+        acoesTomadas: resumir(item.conclusaoFatos, 220),
+        responsavelTratativas:
+          item.responsavel?.apelido || item.responsavel?.nome || "",
+        dataResolucao: item.updatedAt || null,
+        status: item.status,
+        diasParaResolucao: null,
+      })),
+    ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     const totalScanner = scanner.reduce((total, item) => total + item.total, 0);
     const falhasScanner = scanner.reduce(
       (total, item) => total + item.leituraComFalha + item.insatisfatoria + item.falhasEquipamento,
@@ -179,6 +336,8 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
           locais: agruparPor(todosRelatorios, (item) => item.local).slice(0, 8),
           status: agruparPor(todosRelatorios, (item) => item.status).slice(0, 8),
         },
+        unidades: unidadesPermitidas,
+        registros: registrosOcorrenciasEventos,
       },
       scanner: {
         cards: [
