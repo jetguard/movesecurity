@@ -7,6 +7,17 @@ function numero(valor: unknown) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function moedaNumero(valor: unknown) {
+  const texto = String(valor || "0")
+    .replace(/R\$/gi, "")
+    .replace(/\s/g, "");
+  const normalizado = texto.includes(",")
+    ? texto.replace(/\./g, "").replace(",", ".")
+    : texto.replace(/[^0-9.-]/g, "");
+  const parsed = Number(normalizado);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
 function dados(registro: { dadosJson?: string | null }) {
   try {
     return registro.dadosJson ? JSON.parse(registro.dadosJson) : {};
@@ -111,9 +122,14 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
           createdAt: true,
           analise: {
             select: {
+              id: true,
               responsavel: { select: { nome: true, apelido: true } },
               concluidoEm: true,
               status: true,
+              houveDanoPrejuizo: true,
+              tipoImpactoFinanceiro: true,
+              valorPrejuizo: true,
+              valorRecuperado: true,
             },
           },
         },
@@ -137,9 +153,14 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
           createdAt: true,
           analise: {
             select: {
+              id: true,
               responsavel: { select: { nome: true, apelido: true } },
               concluidoEm: true,
               status: true,
+              houveDanoPrejuizo: true,
+              tipoImpactoFinanceiro: true,
+              valorPrejuizo: true,
+              valorRecuperado: true,
             },
           },
         },
@@ -258,6 +279,11 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         dataResolucao: item.analise?.concluidoEm || null,
         status: item.analise?.status || item.status,
         diasParaResolucao: diasAte(item.analise?.concluidoEm),
+        analisado: Boolean(item.analise?.id),
+        impactoFinanceiro: item.analise?.houveDanoPrejuizo || "Não informado",
+        tipoImpactoFinanceiro: item.analise?.tipoImpactoFinanceiro || "Não informado",
+        valorPrejuizo: moedaNumero(item.analise?.valorPrejuizo),
+        valorRecuperado: moedaNumero(item.analise?.valorRecuperado),
       })),
       ...eventosBi.map((item) => ({
         id: `RE-${item.id}`,
@@ -277,6 +303,11 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         dataResolucao: item.analise?.concluidoEm || null,
         status: item.analise?.status || item.status,
         diasParaResolucao: diasAte(item.analise?.concluidoEm),
+        analisado: Boolean(item.analise?.id),
+        impactoFinanceiro: item.analise?.houveDanoPrejuizo || "Não informado",
+        tipoImpactoFinanceiro: item.analise?.tipoImpactoFinanceiro || "Não informado",
+        valorPrejuizo: moedaNumero(item.analise?.valorPrejuizo),
+        valorRecuperado: moedaNumero(item.analise?.valorRecuperado),
       })),
       ...investigacoesBi.map((item) => ({
         id: `RI-${item.id}`,
@@ -296,6 +327,11 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         dataResolucao: item.updatedAt || null,
         status: item.status,
         diasParaResolucao: null,
+        analisado: false,
+        impactoFinanceiro: "Não se aplica",
+        tipoImpactoFinanceiro: "Não se aplica",
+        valorPrejuizo: 0,
+        valorRecuperado: 0,
       })),
     ].sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
     const totalScanner = scanner.reduce((total, item) => total + item.total, 0);
@@ -358,6 +394,14 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         },
         unidades: unidadesPermitidas,
         registros: registrosOcorrenciasEventos,
+      },
+      valores: {
+        cards: [],
+        rankings: {},
+        unidades: unidadesPermitidas,
+        registros: registrosOcorrenciasEventos.filter(
+          (item) => item.analisado && item.tipo !== "RI",
+        ),
       },
       scanner: {
         cards: [

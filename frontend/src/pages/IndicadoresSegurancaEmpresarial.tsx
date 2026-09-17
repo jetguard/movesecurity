@@ -10,6 +10,7 @@ import {
   ScanLine,
   ShieldCheck,
   ClipboardCheck,
+  CircleDollarSign,
   Shield,
   TrendingUp,
   Truck,
@@ -54,6 +55,11 @@ type RegistroOcorrenciaEvento = {
   dataResolucao?: string | null;
   status: string;
   diasParaResolucao?: number | null;
+  analisado: boolean;
+  impactoFinanceiro: string;
+  tipoImpactoFinanceiro: string;
+  valorPrejuizo: number;
+  valorRecuperado: number;
 };
 
 type BlocoOcorrenciasEventos = BlocoIndicadores & {
@@ -109,6 +115,7 @@ type DadosIndicadores = {
   atualizadoEm: string;
   unidade: string;
   ocorrenciasEventos: BlocoOcorrenciasEventos;
+  valores: BlocoOcorrenciasEventos;
   scanner: BlocoIndicadores;
   ocr: BlocoIndicadores;
   entradaSaida: BlocoIndicadores;
@@ -136,6 +143,13 @@ const abas: AbaIndicador[] = [
     subtitulo: "Indicadores gerais do dashboard operacional",
     icone: ShieldCheck,
     cor: "from-blue-500 to-cyan-400",
+  },
+  {
+    id: "valores",
+    titulo: "Valores",
+    subtitulo: "Perdas, prejuízos e valores recuperados",
+    icone: CircleDollarSign,
+    cor: "from-emerald-500 to-cyan-400",
   },
   {
     id: "scanner",
@@ -232,6 +246,14 @@ function formatarDataCurta(valor?: string | null) {
   return new Intl.DateTimeFormat("pt-BR").format(new Date(valor));
 }
 
+function formatarMoeda(valor: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  }).format(Number(valor || 0));
+}
+
 function chaveMesAno(valor?: string) {
   if (!valor) return "";
   const data = new Date(valor);
@@ -301,10 +323,14 @@ function BarrasVerticais({
   itens,
   ativo,
   onSelect,
+  formatarValor = (valor) => String(valor),
+  cor = "bg-gradient-to-t from-blue-600 to-cyan-300",
 }: {
   itens: RankingItem[];
   ativo?: string;
   onSelect: (item: RankingItem) => void;
+  formatarValor?: (valor: number) => string;
+  cor?: string;
 }) {
   const maior = Math.max(...itens.map((item) => item.valor), 1);
   return (
@@ -320,10 +346,10 @@ function BarrasVerticais({
           title={`Filtrar por ${item.label}`}
         >
           <span className="mb-1 text-[10px] font-bold text-slate-100">
-            {item.valor}
+            {formatarValor(item.valor)}
           </span>
           <span
-            className="bi-bar-vertical-enter w-full rounded-t-sm bg-gradient-to-t from-blue-600 to-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
+            className={`bi-bar-vertical-enter w-full rounded-t-sm shadow-[0_0_12px_rgba(56,189,248,0.25)] ${cor}`}
             style={{ height: `${Math.max(8, (item.valor / maior) * 104)}px` }}
           />
           <span className="mt-1 line-clamp-1 text-[10px] text-slate-300">
@@ -390,6 +416,9 @@ export default function IndicadoresSegurancaEmpresarial() {
     campo: keyof RegistroOcorrenciaEvento | "mesAno";
     valor: string;
   } | null>(null);
+  const [filtroUnidadeValores, setFiltroUnidadeValores] = useState("Todos");
+  const [filtroMesValores, setFiltroMesValores] = useState("Todos");
+  const [registroValorSelecionado, setRegistroValorSelecionado] = useState<string | null>(null);
   const [filtroUnidadeCftv, setFiltroUnidadeCftv] = useState("Todos");
   const [filtroCftv, setFiltroCftv] = useState<{
     campo: "status" | "tipoCamera" | "tecnologia" | "areaMonitorada" | "id";
@@ -489,6 +518,36 @@ export default function IndicadoresSegurancaEmpresarial() {
   const rankingStatus = contarPor(registrosOcorrenciasFiltrados, (item) => item.status);
   const rankingNatureza = contarPor(registrosOcorrenciasFiltrados, (item) => item.natureza).slice(0, 12);
   const rankingSubNatureza = contarPor(registrosOcorrenciasFiltrados, (item) => item.subNatureza).slice(0, 12);
+  const valoresBi = dados?.valores?.registros || [];
+  const unidadesValores = dados?.valores?.unidades?.length
+    ? dados.valores.unidades
+    : Array.from(new Set(valoresBi.map((item) => item.unidade))).sort();
+  const mesesValores = Array.from(new Set(valoresBi.map((item) => chaveMesAno(item.data))))
+    .filter(Boolean)
+    .sort()
+    .reverse();
+  const valoresFiltradosBase = valoresBi.filter((item) => {
+    if (filtroUnidadeValores !== "Todos" && item.unidade !== filtroUnidadeValores) return false;
+    if (filtroMesValores !== "Todos" && chaveMesAno(item.data) !== filtroMesValores) return false;
+    return true;
+  });
+  const valoresFiltrados = registroValorSelecionado
+    ? valoresFiltradosBase.filter((item) => item.id === registroValorSelecionado)
+    : valoresFiltradosBase;
+  const totalPrejuizo = valoresFiltrados.reduce((total, item) => total + item.valorPrejuizo, 0);
+  const totalRecuperado = valoresFiltrados.reduce((total, item) => total + item.valorRecuperado, 0);
+  const serieFinanceira = (campo: "valorPrejuizo" | "valorRecuperado") =>
+    Array.from(
+      valoresFiltrados.reduce((mapa, item) => {
+        const chave = chaveMesAno(item.data);
+        mapa.set(chave, (mapa.get(chave) || 0) + item[campo]);
+        return mapa;
+      }, new Map<string, number>()),
+    )
+      .map(([chave, valor]) => ({ label: `${mesCurto(chave)}/${chave.slice(2, 4)}`, valor, chave }))
+      .sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
+  const serieValoresRecuperados = serieFinanceira("valorRecuperado");
+  const serieValoresPerdidos = serieFinanceira("valorPrejuizo");
   const camerasBi = dados?.camerasCftv.cameras || [];
   const unidadesCftv = dados?.camerasCftv.unidades?.length
     ? dados.camerasCftv.unidades
@@ -568,6 +627,12 @@ export default function IndicadoresSegurancaEmpresarial() {
     setFiltroGrafico(null);
   }
 
+  function limparFiltrosValores() {
+    setFiltroUnidadeValores("Todos");
+    setFiltroMesValores("Todos");
+    setRegistroValorSelecionado(null);
+  }
+
   function limparFiltrosCftv() {
     setFiltroUnidadeCftv("Todos");
     setFiltroCftv(null);
@@ -578,6 +643,129 @@ export default function IndicadoresSegurancaEmpresarial() {
     setFiltroMesVigilancia("Todos");
     setRegistroVigilanciaSelecionado(null);
   }
+
+  const renderValoresBi = () => (
+    <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <BiCard titulo="Valor recuperado" valor={formatarMoeda(totalRecuperado)} />
+        <BiCard titulo="Valor de perda / prejuízo" valor={formatarMoeda(totalPrejuizo)} />
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Unidade</span>
+          <select
+            value={filtroUnidadeValores}
+            onChange={(event) => {
+              setFiltroUnidadeValores(event.target.value);
+              setRegistroValorSelecionado(null);
+            }}
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option>Todos</option>
+            {unidadesValores.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Mês / Ano</span>
+          <select
+            value={filtroMesValores}
+            onChange={(event) => {
+              setFiltroMesValores(event.target.value);
+              setRegistroValorSelecionado(null);
+            }}
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+          >
+            <option>Todos</option>
+            {mesesValores.map((item) => (
+              <option key={item} value={item}>{rotuloMesAno(item)}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {(registroValorSelecionado || filtroUnidadeValores !== "Todos" || filtroMesValores !== "Todos") && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200">
+          <span>{registroValorSelecionado ? `Exibindo o registro ${registroValorSelecionado}` : "Filtros financeiros ativos"}</span>
+          <button
+            type="button"
+            onClick={limparFiltrosValores}
+            className="inline-flex items-center gap-1 rounded-md border border-emerald-400/40 bg-slate-900 px-2 py-1 text-emerald-200 shadow-sm hover:bg-slate-800"
+          >
+            <X size={14} />
+            Limpar filtros
+          </button>
+        </div>
+      )}
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-2">
+        <BiPanel titulo="Valores recuperados por período">
+          <BarrasVerticais
+            itens={serieValoresRecuperados}
+            onSelect={() => undefined}
+            formatarValor={formatarMoeda}
+            cor="bg-gradient-to-t from-emerald-600 to-emerald-300"
+          />
+        </BiPanel>
+        <BiPanel titulo="Perdas e prejuízos por período">
+          <BarrasVerticais
+            itens={serieValoresPerdidos}
+            onSelect={() => undefined}
+            formatarValor={formatarMoeda}
+            cor="bg-gradient-to-t from-red-600 to-orange-300"
+          />
+        </BiPanel>
+      </div>
+
+      <div className="mt-3">
+        <BiPanel titulo="Valores analisados em ocorrências e eventos" className="min-h-[300px]">
+          <p className="mb-2 text-[11px] text-slate-400">
+            Selecione uma linha para visualizar os valores daquele registro nos cards e gráficos.
+          </p>
+          <div className="max-h-[280px] overflow-auto pr-1">
+            <table className="w-full min-w-[1100px] border-collapse text-left text-[11px] text-slate-300">
+              <thead className="sticky top-0 z-10 bg-slate-800 text-slate-100 shadow-sm">
+                <tr>
+                  {["Unidade", "Data resolução", "Nº", "Identificação", "Status", "Tema", "Tipo", "Impacto", "Perda / Prejuízo", "Valor recuperado"].map((coluna) => (
+                    <th key={coluna} className="border-b border-emerald-500/40 px-2 py-2 font-semibold">{coluna}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {valoresFiltradosBase.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => setRegistroValorSelecionado((atual) => atual === item.id ? null : item.id)}
+                    className={`cursor-pointer align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-emerald-500/10 ${
+                      registroValorSelecionado === item.id
+                        ? "bg-emerald-500/15 ring-1 ring-inset ring-emerald-400"
+                        : ""
+                    }`}
+                    title="Clique para atualizar os gráficos com este registro"
+                  >
+                    <td className="border-b border-slate-700 px-2 py-2">{item.unidade}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{formatarDataCurta(item.dataResolucao)}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 font-bold text-sky-300">{item.codigo}</td>
+                    <td className="max-w-[280px] border-b border-slate-700 px-2 py-2">{item.assunto}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.status}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.natureza}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 font-bold text-white">{item.tipo}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.impactoFinanceiro}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right font-bold text-red-300">{formatarMoeda(item.valorPrejuizo)}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right font-bold text-emerald-300">{formatarMoeda(item.valorRecuperado)}</td>
+                  </tr>
+                ))}
+                {valoresFiltradosBase.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="px-4 py-10 text-center text-sm text-slate-400">
+                      Nenhuma análise financeira encontrada para os filtros selecionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </BiPanel>
+      </div>
+    </div>
+  );
 
   const renderOcorrenciasEventosBi = () => (
     <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
@@ -1175,6 +1363,8 @@ export default function IndicadoresSegurancaEmpresarial() {
         </div>
       ) : abaAtiva === "ocorrenciasEventos" ? (
         renderOcorrenciasEventosBi()
+      ) : abaAtiva === "valores" ? (
+        renderValoresBi()
       ) : abaAtiva === "camerasCftv" ? (
         renderCamerasCftvBi()
       ) : abaAtiva === "vigilancia" ? (
