@@ -1487,7 +1487,7 @@ export default function IndicadoresSegurancaEmpresarial() {
         estendido ? "fixed inset-0 z-[80] overflow-y-auto p-4 sm:p-6" : "rounded-3xl border border-slate-800 p-4 shadow-2xl sm:p-6"
       }`}
     >
-      <div className="mb-5 flex flex-col gap-4 border-b border-slate-800 pb-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mb-5 flex flex-col gap-4 border-b border-slate-800 pb-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex items-center gap-4">
           <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${aba.cor} shadow-lg`}>
             <IconeAba size={28} />
@@ -1505,14 +1505,38 @@ export default function IndicadoresSegurancaEmpresarial() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-2">
+        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[560px]">
+          <label className="flex w-full items-center gap-3 rounded-xl border border-blue-400/40 bg-blue-500/10 p-3 shadow-lg shadow-slate-950/30 transition hover:border-blue-400">
+            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${aba.cor} shadow-lg`}>
+              <IconeAba size={22} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-300">
+                Visualizando
+              </span>
+              <span className="block truncate text-sm font-black text-white">{aba.titulo}</span>
+              <span className="block truncate text-xs text-slate-400">{aba.subtitulo}</span>
+            </span>
+            <select
+              aria-label="Selecionar painel de indicadores"
+              value={abaAtiva}
+              onChange={(event) => setAbaAtiva(event.target.value as AbaIndicador["id"])}
+              className="h-11 min-w-[190px] rounded-lg border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 max-sm:min-w-0 max-sm:w-[42%]"
+            >
+              {abas.map((item) => (
+                <option key={item.id} value={item.id}>{item.titulo}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="flex flex-wrap items-center justify-end gap-3">
+          <div className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
               Unidade
             </p>
             <p className="text-sm font-black text-white">{dados?.unidade || "--"}</p>
           </div>
-          <div className="rounded-2xl border border-slate-700 bg-slate-900/70 px-4 py-2">
+          <div className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
               Atualizado
             </p>
@@ -1521,7 +1545,7 @@ export default function IndicadoresSegurancaEmpresarial() {
           <button
             type="button"
             onClick={carregarIndicadores}
-            className="inline-flex h-11 items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900 px-4 text-sm font-bold text-slate-100 transition hover:border-blue-400 hover:bg-blue-600"
+            className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-bold text-slate-100 transition hover:border-blue-400 hover:bg-blue-600"
           >
             <RefreshCw size={16} />
             Atualizar
@@ -1529,39 +1553,13 @@ export default function IndicadoresSegurancaEmpresarial() {
           <button
             type="button"
             onClick={() => setEstendido((valor) => !valor)}
-            className="inline-flex h-11 items-center gap-2 rounded-2xl bg-blue-600 px-4 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
+            className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
           >
             {estendido ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
             {estendido ? "Sair da tela estendida" : "Estender tela"}
           </button>
+          </div>
         </div>
-      </div>
-
-      <div className="mb-5 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:thin]">
-        {abas.map((item) => {
-          const Icone = item.icone;
-          const ativo = item.id === abaAtiva;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setAbaAtiva(item.id)}
-              className={`flex min-w-[220px] items-center gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                ativo
-                  ? "border-blue-400 bg-blue-600/20 text-white"
-                  : "border-slate-800 bg-slate-900/70 text-slate-300 hover:border-slate-600"
-              }`}
-            >
-              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${item.cor}`}>
-                <Icone size={20} />
-              </span>
-              <span>
-                <span className="block text-sm font-black">{item.titulo}</span>
-                <span className="block text-xs text-slate-400">{item.subtitulo}</span>
-              </span>
-            </button>
-          );
-        })}
       </div>
 
       {erro && (
