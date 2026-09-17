@@ -96,6 +96,7 @@ type VigilanciaRegistro = {
   validadoPor: string;
   efetivoPrevisto: number;
   efetivoPresente: number;
+  faltas: number;
   postosDescobertos: number;
   coberturas: number;
   servicosExtras: number;
@@ -104,6 +105,26 @@ type VigilanciaRegistro = {
   desviosRonda: number;
   desviosTratados: number;
   ocorrencias: string;
+};
+
+type EquipeScannerRegistro = {
+  id: number;
+  unidade: string;
+  dataReferencia: string;
+  criadoPor: string;
+  validadoPor: string;
+  efetivoPrevisto: number;
+  efetivoPresente: number;
+  faltas: number;
+  atrasoMinutos: number;
+  atrasoInicio: string;
+  atrasoFim: string;
+  observacoes: string;
+};
+
+type BlocoEquipeScanner = BlocoIndicadores & {
+  unidades?: string[];
+  registros?: EquipeScannerRegistro[];
 };
 
 type BlocoVigilancia = BlocoIndicadores & {
@@ -117,6 +138,7 @@ type DadosIndicadores = {
   ocorrenciasEventos: BlocoOcorrenciasEventos;
   valores: BlocoOcorrenciasEventos;
   scanner: BlocoIndicadores;
+  equipeScanner: BlocoEquipeScanner;
   ocr: BlocoIndicadores;
   entradaSaida: BlocoIndicadores;
   vigilancia: BlocoVigilancia;
@@ -157,6 +179,13 @@ const abas: AbaIndicador[] = [
     subtitulo: "Passagens, falhas, suspeitas e disponibilidade",
     icone: ScanLine,
     cor: "from-emerald-500 to-lime-400",
+  },
+  {
+    id: "equipeScanner",
+    titulo: "Equipe Scanner",
+    subtitulo: "Cobertura, faltas e atrasos da equipe",
+    icone: Users,
+    cor: "from-emerald-600 to-teal-400",
   },
   {
     id: "ocr",
@@ -252,6 +281,13 @@ function formatarMoeda(valor: number) {
     currency: "BRL",
     minimumFractionDigits: 2,
   }).format(Number(valor || 0));
+}
+
+function formatarMinutosIndicador(valor: number) {
+  const total = Math.max(0, Math.round(valor || 0));
+  const horas = Math.floor(total / 60);
+  const minutos = total % 60;
+  return horas ? `${horas}h ${String(minutos).padStart(2, "0")}min` : `${minutos}min`;
 }
 
 function chaveMesAno(valor?: string) {
@@ -427,6 +463,9 @@ export default function IndicadoresSegurancaEmpresarial() {
   const [filtroUnidadeVigilancia, setFiltroUnidadeVigilancia] = useState("Todos");
   const [filtroMesVigilancia, setFiltroMesVigilancia] = useState("Todos");
   const [registroVigilanciaSelecionado, setRegistroVigilanciaSelecionado] = useState<number | null>(null);
+  const [filtroUnidadeEquipeScanner, setFiltroUnidadeEquipeScanner] = useState("Todos");
+  const [filtroMesEquipeScanner, setFiltroMesEquipeScanner] = useState("Todos");
+  const [registroEquipeScannerSelecionado, setRegistroEquipeScannerSelecionado] = useState<number | null>(null);
 
   async function carregarIndicadores() {
     try {
@@ -593,6 +632,7 @@ export default function IndicadoresSegurancaEmpresarial() {
     vigilanciaFiltrada.reduce((total, item) => total + Number(item[campo] || 0), 0);
   const efetivoPrevistoVigilancia = somarVigilancia("efetivoPrevisto");
   const efetivoPresenteVigilancia = somarVigilancia("efetivoPresente");
+  const faltasVigilancia = somarVigilancia("faltas");
   const coberturaVigilancia = efetivoPrevistoVigilancia
     ? ((efetivoPresenteVigilancia / efetivoPrevistoVigilancia) * 100).toFixed(1).replace(".", ",")
     : "0,0";
@@ -606,8 +646,8 @@ export default function IndicadoresSegurancaEmpresarial() {
     .map(([chave, valor]) => ({ label: `${mesCurto(chave)}/${chave.slice(2, 4)}`, valor, chave }))
     .sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
   const indicadoresVigilancia = [
-    { label: "Efetivo previsto", valor: efetivoPrevistoVigilancia },
-    { label: "Efetivo presente", valor: efetivoPresenteVigilancia },
+    { label: "Faltas", valor: faltasVigilancia },
+    { label: "Postos descobertos", valor: somarVigilancia("postosDescobertos") },
     { label: "Coberturas", valor: somarVigilancia("coberturas") },
     { label: "Rondas", valor: somarVigilancia("rondas") },
     { label: "Desvios em ronda", valor: somarVigilancia("desviosRonda") },
@@ -616,6 +656,52 @@ export default function IndicadoresSegurancaEmpresarial() {
   const postosPorUnidadeVigilancia = Array.from(
     vigilanciaFiltrada.reduce((mapa, item) => {
       mapa.set(item.unidade, (mapa.get(item.unidade) || 0) + item.postosDescobertos);
+      return mapa;
+    }, new Map<string, number>()),
+  ).map(([label, valor]) => ({ label, valor })).sort((a, b) => b.valor - a.valor);
+  const equipeScannerBi = dados?.equipeScanner?.registros || [];
+  const unidadesEquipeScanner = dados?.equipeScanner?.unidades?.length
+    ? dados.equipeScanner.unidades
+    : Array.from(new Set(equipeScannerBi.map((item) => item.unidade))).sort();
+  const mesesEquipeScanner = Array.from(new Set(equipeScannerBi.map((item) => chaveMesAno(item.dataReferencia))))
+    .filter(Boolean)
+    .sort()
+    .reverse();
+  const equipeScannerFiltradaBase = equipeScannerBi.filter((item) => {
+    if (filtroUnidadeEquipeScanner !== "Todos" && item.unidade !== filtroUnidadeEquipeScanner) return false;
+    if (filtroMesEquipeScanner !== "Todos" && chaveMesAno(item.dataReferencia) !== filtroMesEquipeScanner) return false;
+    return true;
+  });
+  const equipeScannerFiltrada = registroEquipeScannerSelecionado
+    ? equipeScannerFiltradaBase.filter((item) => item.id === registroEquipeScannerSelecionado)
+    : equipeScannerFiltradaBase;
+  const somarEquipeScanner = (campo: keyof EquipeScannerRegistro) =>
+    equipeScannerFiltrada.reduce((total, item) => total + Number(item[campo] || 0), 0);
+  const previstoEquipeScanner = somarEquipeScanner("efetivoPrevisto");
+  const presenteEquipeScanner = somarEquipeScanner("efetivoPresente");
+  const faltasEquipeScanner = somarEquipeScanner("faltas");
+  const atrasoEquipeScanner = somarEquipeScanner("atrasoMinutos");
+  const coberturaEquipeScanner = previstoEquipeScanner
+    ? ((presenteEquipeScanner / previstoEquipeScanner) * 100).toFixed(1).replace(".", ",")
+    : "0,0";
+  const diasComAtrasoEquipeScanner = equipeScannerFiltrada.filter((item) => item.atrasoMinutos > 0).length;
+  const indicadoresEquipeScanner = [
+    { label: "Faltas", valor: faltasEquipeScanner },
+    { label: "Dias com atraso", valor: diasComAtrasoEquipeScanner },
+    { label: "Minutos de atraso", valor: atrasoEquipeScanner },
+  ];
+  const serieFaltasEquipeScanner = Array.from(
+    equipeScannerFiltrada.reduce((mapa, item) => {
+      const chave = chaveMesAno(item.dataReferencia);
+      mapa.set(chave, (mapa.get(chave) || 0) + item.faltas);
+      return mapa;
+    }, new Map<string, number>()),
+  )
+    .map(([chave, valor]) => ({ label: `${mesCurto(chave)}/${chave.slice(2, 4)}`, valor, chave }))
+    .sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
+  const faltasPorUnidadeEquipeScanner = Array.from(
+    equipeScannerFiltrada.reduce((mapa, item) => {
+      mapa.set(item.unidade, (mapa.get(item.unidade) || 0) + item.faltas);
       return mapa;
     }, new Map<string, number>()),
   ).map(([label, valor]) => ({ label, valor })).sort((a, b) => b.valor - a.valor);
@@ -642,6 +728,12 @@ export default function IndicadoresSegurancaEmpresarial() {
     setFiltroUnidadeVigilancia("Todos");
     setFiltroMesVigilancia("Todos");
     setRegistroVigilanciaSelecionado(null);
+  }
+
+  function limparFiltrosEquipeScanner() {
+    setFiltroUnidadeEquipeScanner("Todos");
+    setFiltroMesEquipeScanner("Todos");
+    setRegistroEquipeScannerSelecionado(null);
   }
 
   const renderValoresBi = () => (
@@ -1145,8 +1237,8 @@ export default function IndicadoresSegurancaEmpresarial() {
   const renderVigilanciaBi = () => (
     <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-        <BiCard titulo="Efetivo previsto" valor={efetivoPrevistoVigilancia} />
-        <BiCard titulo="Efetivo presente" valor={efetivoPresenteVigilancia} />
+        <BiCard titulo="Total de faltas" valor={faltasVigilancia} />
+        <BiCard titulo="Rondas realizadas" valor={somarVigilancia("rondas")} />
         <BiCard titulo="Cobertura operacional" valor={`${coberturaVigilancia}%`} />
         <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
           <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Unidade</span>
@@ -1265,6 +1357,130 @@ export default function IndicadoresSegurancaEmpresarial() {
     </div>
   );
 
+  const renderEquipeScannerBi = () => (
+    <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <BiCard titulo="Total de faltas" valor={faltasEquipeScanner} />
+        <BiCard titulo="Cobertura da equipe" valor={`${coberturaEquipeScanner}%`} />
+        <BiCard titulo="Tempo total em atraso" valor={formatarMinutosIndicador(atrasoEquipeScanner)} />
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Unidade</span>
+          <select
+            value={filtroUnidadeEquipeScanner}
+            onChange={(event) => {
+              setFiltroUnidadeEquipeScanner(event.target.value);
+              setRegistroEquipeScannerSelecionado(null);
+            }}
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
+          >
+            <option>Todos</option>
+            {unidadesEquipeScanner.map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
+          <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Mês / Ano</span>
+          <select
+            value={filtroMesEquipeScanner}
+            onChange={(event) => {
+              setFiltroMesEquipeScanner(event.target.value);
+              setRegistroEquipeScannerSelecionado(null);
+            }}
+            className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/20"
+          >
+            <option>Todos</option>
+            {mesesEquipeScanner.map((item) => (
+              <option key={item} value={item}>{rotuloMesAno(item)}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {(registroEquipeScannerSelecionado || filtroUnidadeEquipeScanner !== "Todos" || filtroMesEquipeScanner !== "Todos") && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200">
+          <span>
+            {registroEquipeScannerSelecionado
+              ? `Exibindo o lançamento #${registroEquipeScannerSelecionado}`
+              : "Filtros da Equipe Scanner ativos"}
+          </span>
+          <button
+            type="button"
+            onClick={limparFiltrosEquipeScanner}
+            className="inline-flex items-center gap-1 rounded-md border border-emerald-400/40 bg-slate-900 px-2 py-1 text-emerald-200 shadow-sm hover:bg-slate-800"
+          >
+            <X size={14} />
+            Limpar filtros
+          </button>
+        </div>
+      )}
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-[1fr_1.2fr_0.8fr]">
+        <BiPanel titulo={registroEquipeScannerSelecionado ? "Indicadores do lançamento selecionado" : "Indicadores da equipe"}>
+          <BarrasHorizontais itens={indicadoresEquipeScanner} onSelect={() => undefined} cor="bg-emerald-500" />
+        </BiPanel>
+        <BiPanel titulo="Faltas registradas por mês">
+          <BarrasVerticais
+            itens={serieFaltasEquipeScanner}
+            onSelect={() => undefined}
+            cor="bg-gradient-to-t from-rose-600 to-orange-300"
+          />
+        </BiPanel>
+        <BiPanel titulo="Faltas por unidade">
+          <BarrasHorizontais itens={faltasPorUnidadeEquipeScanner} onSelect={() => undefined} cor="bg-rose-500" />
+        </BiPanel>
+      </div>
+
+      <div className="mt-3">
+        <BiPanel titulo="Lançamentos validados da Equipe Scanner" className="min-h-[320px]">
+          <p className="mb-2 text-[11px] text-slate-400">
+            Selecione uma linha para atualizar os indicadores com os dados daquele lançamento.
+          </p>
+          <div className="max-h-[300px] overflow-auto pr-1">
+            <table className="w-full min-w-[1050px] border-collapse text-left text-[11px] text-slate-300">
+              <thead className="sticky top-0 z-10 bg-slate-800 text-slate-100 shadow-sm">
+                <tr>
+                  {["Data", "Unidade", "Responsável", "Previsto", "Presente", "Faltas", "Atraso", "Observações", "Validado por"].map((coluna) => (
+                    <th key={coluna} className="border-b border-emerald-500/40 px-2 py-2 font-semibold">{coluna}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {equipeScannerFiltradaBase.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => setRegistroEquipeScannerSelecionado((atual) => atual === item.id ? null : item.id)}
+                    className={`cursor-pointer align-top odd:bg-slate-900 even:bg-slate-800/45 hover:bg-emerald-500/10 ${
+                      registroEquipeScannerSelecionado === item.id
+                        ? "bg-emerald-500/15 ring-1 ring-inset ring-emerald-400"
+                        : ""
+                    }`}
+                    title="Clique para atualizar os gráficos com este lançamento"
+                  >
+                    <td className="border-b border-slate-700 px-2 py-2 font-bold text-emerald-300">{formatarDataCurta(item.dataReferencia)}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.unidade}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.criadoPor}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.efetivoPrevisto}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.efetivoPresente}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right font-bold text-rose-300">{item.faltas}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-amber-300">{formatarMinutosIndicador(item.atrasoMinutos)}</td>
+                    <td className="max-w-[300px] border-b border-slate-700 px-2 py-2">{item.observacoes || "-"}</td>
+                    <td className="border-b border-slate-700 px-2 py-2">{item.validadoPor}</td>
+                  </tr>
+                ))}
+                {equipeScannerFiltradaBase.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="px-4 py-10 text-center text-sm text-slate-400">
+                      Nenhum lançamento validado encontrado para os filtros selecionados.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </BiPanel>
+      </div>
+    </div>
+  );
+
   const conteudo = (
     <div
       className={`min-h-screen bg-slate-950 text-white ${
@@ -1365,6 +1581,8 @@ export default function IndicadoresSegurancaEmpresarial() {
         renderOcorrenciasEventosBi()
       ) : abaAtiva === "valores" ? (
         renderValoresBi()
+      ) : abaAtiva === "equipeScanner" ? (
+        renderEquipeScannerBi()
       ) : abaAtiva === "camerasCftv" ? (
         renderCamerasCftvBi()
       ) : abaAtiva === "vigilancia" ? (

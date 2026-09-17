@@ -89,6 +89,7 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
       scanner,
       operacionais,
       vigilanciaBi,
+      equipeScannerBi,
       solicitacoes,
       cameras,
       cameraEventos,
@@ -217,6 +218,19 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         where: {
           unidade: { in: unidadesPermitidas },
           modulo: "operacao_vigilancia",
+          statusValidacao: "Validado",
+        },
+        include: {
+          criadoPor: { select: { nome: true, apelido: true } },
+          validadoPor: { select: { nome: true, apelido: true } },
+        },
+        orderBy: { dataReferencia: "desc" },
+        take: 5000,
+      }),
+      prisma.operacaoIndicadorRegistro.findMany({
+        where: {
+          unidade: { in: unidadesPermitidas },
+          modulo: "operacao_equipe_scanner",
           statusValidacao: "Validado",
         },
         include: {
@@ -453,6 +467,7 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
           validadoPor: item.validadoPor?.apelido || item.validadoPor?.nome || "Não informado",
           efetivoPrevisto: numero(dados(item).efetivoPrevisto),
           efetivoPresente: numero(dados(item).efetivoPresente),
+          faltas: numero(dados(item).faltas),
           postosDescobertos: numero(dados(item).postosDescobertos),
           coberturas: numero(dados(item).coberturas),
           servicosExtras: numero(dados(item).servicosExtras),
@@ -473,6 +488,25 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         rankings: {
           ocorrencias: textosPrincipais(vigilancia, "ocorrencias"),
         },
+      },
+      equipeScanner: {
+        unidades: unidadesPermitidas,
+        registros: equipeScannerBi.map((item) => ({
+          id: item.id,
+          unidade: item.unidade,
+          dataReferencia: item.dataReferencia,
+          criadoPor: item.criadoPor?.apelido || item.criadoPor?.nome || "Não informado",
+          validadoPor: item.validadoPor?.apelido || item.validadoPor?.nome || "Não informado",
+          efetivoPrevisto: numero(dados(item).efetivoPrevisto),
+          efetivoPresente: numero(dados(item).efetivoPresente),
+          faltas: numero(dados(item).faltas),
+          atrasoMinutos: numero(dados(item).atrasoMinutos),
+          atrasoInicio: String(dados(item).atrasoInicio || ""),
+          atrasoFim: String(dados(item).atrasoFim || ""),
+          observacoes: String(dados(item).observacoes || ""),
+        })),
+        cards: [],
+        rankings: {},
       },
       balanca: {
         cards: [
