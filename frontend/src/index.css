@@ -46,6 +46,81 @@
 }
 
 @layer utilities {
+  @keyframes bi-tab-enter {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes bi-panel-enter {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  @keyframes bi-bar-horizontal-enter {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+
+  @keyframes bi-bar-vertical-enter {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+
+  @keyframes bi-donut-enter {
+    from {
+      opacity: 0;
+      transform: rotate(-35deg) scale(0.72);
+    }
+    to {
+      opacity: 1;
+      transform: rotate(0) scale(1);
+    }
+  }
+
+  .bi-tab-enter {
+    animation: bi-tab-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .bi-panel-enter {
+    animation: bi-panel-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .bi-bar-horizontal-enter {
+    transform-origin: left center;
+    animation: bi-bar-horizontal-enter 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .bi-bar-vertical-enter {
+    transform-origin: center bottom;
+    animation: bi-bar-vertical-enter 720ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .bi-donut-enter {
+    animation: bi-donut-enter 680ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bi-tab-enter,
+    .bi-panel-enter,
+    .bi-bar-horizontal-enter,
+    .bi-bar-vertical-enter,
+    .bi-donut-enter {
+      animation: none;
+    }
+  }
+
   .input-dark {
     width: 100%;
     border-radius: 0.5rem;

@@ -246,7 +246,7 @@ function contarPor<T>(lista: T[], seletor: (item: T) => string | null | undefine
 
 function BiCard({ titulo, valor }: { titulo: string; valor: string | number }) {
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
+    <div className="bi-panel-enter rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-center shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
       <p className="text-xs font-semibold text-slate-300">{titulo}</p>
       <p className="mt-1 text-3xl font-black text-white">{valor}</p>
     </div>
@@ -264,7 +264,7 @@ function BiPanel({
 }) {
   return (
     <div
-      className={`rounded-lg border border-slate-700 bg-slate-900 p-3 text-slate-100 shadow-[0_12px_28px_rgba(0,0,0,0.24)] ${className}`}
+      className={`bi-panel-enter rounded-lg border border-slate-700 bg-slate-900 p-3 text-slate-100 shadow-[0_12px_28px_rgba(0,0,0,0.24)] ${className}`}
     >
       <h3 className="mb-2 text-center text-sm font-bold text-white">
         {titulo}
@@ -300,7 +300,7 @@ function BarrasVerticais({
             {item.valor}
           </span>
           <span
-            className="w-full rounded-t-sm bg-gradient-to-t from-blue-600 to-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
+            className="bi-bar-vertical-enter w-full rounded-t-sm bg-gradient-to-t from-blue-600 to-cyan-300 shadow-[0_0_12px_rgba(56,189,248,0.25)]"
             style={{ height: `${Math.max(8, (item.valor / maior) * 104)}px` }}
           />
           <span className="mt-1 line-clamp-1 text-[10px] text-slate-300">
@@ -341,7 +341,7 @@ function BarrasHorizontais({
           </span>
           <span className="h-5 rounded-sm bg-slate-800">
             <span
-              className={`block h-full rounded-sm ${cor}`}
+              className={`bi-bar-horizontal-enter block h-full rounded-sm ${cor}`}
               style={{ width: `${Math.max(7, (item.valor / maior) * 100)}%` }}
             />
           </span>
@@ -728,7 +728,7 @@ export default function IndicadoresSegurancaEmpresarial() {
               <button
                 type="button"
                 onClick={() => setFiltroCftv(null)}
-                className="relative h-28 w-28 shrink-0 rounded-full shadow-[0_0_24px_rgba(34,197,94,0.15)]"
+                className="bi-donut-enter relative h-28 w-28 shrink-0 rounded-full shadow-[0_0_24px_rgba(34,197,94,0.15)]"
                 style={{
                   background: `conic-gradient(#22c55e 0 ${percentualConectadas}%, #ef4444 ${percentualConectadas}% 100%)`,
                 }}
@@ -947,6 +947,7 @@ export default function IndicadoresSegurancaEmpresarial() {
         </div>
       )}
 
+      <div key={abaAtiva} className="bi-tab-enter">
       {carregando ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
@@ -963,7 +964,7 @@ export default function IndicadoresSegurancaEmpresarial() {
             {(bloco?.cards || []).map((card) => (
               <div
                 key={card.titulo}
-                className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/30"
+                className="bi-panel-enter rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/30"
               >
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">
@@ -981,7 +982,7 @@ export default function IndicadoresSegurancaEmpresarial() {
             {rankings.map(([titulo, itens]) => (
               <div
                 key={titulo}
-                className="rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/30"
+                className="bi-panel-enter rounded-2xl border border-slate-800 bg-slate-900/80 p-4 shadow-lg shadow-slate-950/30"
               >
                 <div className="mb-4 flex items-center justify-between gap-3">
                   <div>
@@ -1013,7 +1014,7 @@ export default function IndicadoresSegurancaEmpresarial() {
                           </div>
                           <div className="h-2 overflow-hidden rounded-full bg-slate-800">
                             <div
-                              className={`h-full rounded-full bg-gradient-to-r ${aba.cor}`}
+                              className={`bi-bar-horizontal-enter h-full rounded-full bg-gradient-to-r ${aba.cor}`}
                               style={{ width: `${largura}%` }}
                             />
                           </div>
@@ -1027,6 +1028,7 @@ export default function IndicadoresSegurancaEmpresarial() {
           </div>
         </>
       )}
+      </div>
     </div>
   );
 
