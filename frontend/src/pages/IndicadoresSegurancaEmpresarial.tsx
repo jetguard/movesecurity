@@ -1484,81 +1484,72 @@ export default function IndicadoresSegurancaEmpresarial() {
   const conteudo = (
     <div
       className={`min-h-screen bg-slate-950 text-white ${
-        estendido ? "fixed inset-0 z-[80] overflow-y-auto p-4 sm:p-6" : "rounded-3xl border border-slate-800 p-4 shadow-2xl sm:p-6"
+        estendido ? "fixed inset-0 z-[80] flex flex-col overflow-hidden p-3" : "rounded-3xl border border-slate-800 p-4 shadow-2xl sm:p-6"
       }`}
     >
-      <div className="mb-5 flex flex-col gap-4 border-b border-slate-800 pb-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-center gap-4">
-          <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br ${aba.cor} shadow-lg`}>
-            <IconeAba size={28} />
+      <div className={`grid shrink-0 items-center gap-4 border-b border-slate-800 lg:grid-cols-[minmax(300px,1fr)_minmax(420px,560px)_auto] ${estendido ? "mb-3 pb-3" : "mb-5 pb-5"}`}>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${aba.cor} shadow-lg`}>
+            <IconeAba size={24} />
           </div>
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.32em] text-blue-300">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.28em] text-blue-300">
               Segurança empresarial
             </p>
-            <h1 className="text-2xl font-black text-white sm:text-3xl">
+            <h1 className="truncate text-xl font-black text-white sm:text-2xl">
               Indicadores Segurança Empresarial
             </h1>
-            <p className="text-sm text-slate-300">
+            <p className="truncate text-xs text-slate-300">
               Painel consolidado para acompanhamento contínuo do setor.
             </p>
           </div>
         </div>
 
-        <div className="flex w-full flex-col gap-3 lg:w-auto lg:min-w-[560px]">
-          <label className="flex w-full items-center gap-3 rounded-xl border border-blue-400/40 bg-blue-500/10 p-3 shadow-lg shadow-slate-950/30 transition hover:border-blue-400">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${aba.cor} shadow-lg`}>
-              <IconeAba size={22} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-blue-300">
-                Visualizando
-              </span>
-              <span className="block truncate text-sm font-black text-white">{aba.titulo}</span>
-              <span className="block truncate text-xs text-slate-400">{aba.subtitulo}</span>
-            </span>
-            <select
-              aria-label="Selecionar painel de indicadores"
-              value={abaAtiva}
-              onChange={(event) => setAbaAtiva(event.target.value as AbaIndicador["id"])}
-              className="h-11 min-w-[190px] rounded-lg border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 max-sm:min-w-0 max-sm:w-[42%]"
-            >
-              {abas.map((item) => (
-                <option key={item.id} value={item.id}>{item.titulo}</option>
-              ))}
-            </select>
-          </label>
+        <label className="flex w-full items-center gap-3 rounded-xl border border-blue-400/40 bg-blue-500/10 p-2.5 shadow-lg shadow-slate-950/30 transition hover:border-blue-400">
+          <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${aba.cor} shadow-lg`}>
+            <IconeAba size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[9px] font-black uppercase tracking-[0.2em] text-blue-300">Visualizando</span>
+            <span className="block truncate text-sm font-black text-white">{aba.titulo}</span>
+          </span>
+          <select
+            aria-label="Selecionar painel de indicadores"
+            value={abaAtiva}
+            onChange={(event) => setAbaAtiva(event.target.value as AbaIndicador["id"])}
+            className="h-10 min-w-[190px] rounded-lg border border-slate-600 bg-slate-950 px-3 text-sm font-bold text-white outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 max-sm:min-w-0 max-sm:w-[46%]"
+          >
+            {abas.map((item) => (
+              <option key={item.id} value={item.id}>{item.titulo}</option>
+            ))}
+          </select>
+        </label>
 
-          <div className="flex flex-wrap items-center justify-end gap-3">
-          <div className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2">
-            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
-              Unidade
-            </p>
-            <p className="text-sm font-black text-white">{dados?.unidade || "--"}</p>
-          </div>
-          <div className="rounded-xl border border-slate-700 bg-slate-900/70 px-4 py-2">
+        <div className="flex items-center justify-end gap-2">
+          <div className="hidden rounded-xl border border-slate-700 bg-slate-900/70 px-3 py-2 xl:block">
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-400">
               Atualizado
             </p>
-            <p className="text-sm font-black text-white">{formatarData(dados?.atualizadoEm)}</p>
+            <p className="whitespace-nowrap text-xs font-black text-white">{formatarData(dados?.atualizadoEm)}</p>
           </div>
           <button
             type="button"
             onClick={carregarIndicadores}
-            className="inline-flex h-11 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 text-sm font-bold text-slate-100 transition hover:border-blue-400 hover:bg-blue-600"
+            className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3 text-sm font-bold text-slate-100 transition hover:border-blue-400 hover:bg-blue-600"
+            title="Atualizar indicadores"
           >
             <RefreshCw size={16} />
-            Atualizar
+            <span className="hidden 2xl:inline">Atualizar</span>
           </button>
           <button
             type="button"
             onClick={() => setEstendido((valor) => !valor)}
-            className="inline-flex h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
+            aria-label={estendido ? "Sair da tela estendida" : "Estender tela"}
+            title={estendido ? "Sair da tela estendida" : "Estender tela"}
           >
-            {estendido ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-            {estendido ? "Sair da tela estendida" : "Estender tela"}
+            {estendido ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
           </button>
-          </div>
         </div>
       </div>
 
@@ -1568,7 +1559,7 @@ export default function IndicadoresSegurancaEmpresarial() {
         </div>
       )}
 
-      <div key={abaAtiva} className="bi-tab-enter">
+      <div key={abaAtiva} className={`bi-tab-enter ${estendido ? "min-h-0 flex-1 overflow-auto" : ""}`}>
       {carregando ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
