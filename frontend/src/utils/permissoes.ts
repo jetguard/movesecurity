@@ -49,6 +49,10 @@ export type PermissaoModulo = {
 export const MODULOS_ACESSO = [
   { chave: "dashboard", nome: "Dashboard" },
   { chave: "indicadores_seguranca_empresarial", nome: "Indicadores Segurança Empresarial" },
+  { chave: "financeiro", nome: "Financeiro" },
+  { chave: "financeiro_fornecedores", nome: "Fornecedores" },
+  { chave: "financeiro_contas", nome: "Contas contábeis" },
+  { chave: "financeiro_indicadores", nome: "Indicadores financeiros" },
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },

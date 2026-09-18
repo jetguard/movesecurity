@@ -36,6 +36,7 @@ import indicadoresSegurancaEmpresarialRoutes from "./routes/indicadoresSeguranca
 import planejamentoRoutes from "./routes/planejamento.routes";
 import quadraSegurancaRoutes from "./routes/quadraSeguranca.routes";
 import operacaoRoutes from "./routes/operacao.routes";
+import financeiroRoutes from "./routes/financeiro.routes";
 import publicRelatorioRoutes from "./routes/publicRelatorio.routes";
 import sistemaRoutes from "./routes/sistema.routes";
 import sugestaoMelhoriaRoutes from "./routes/sugestaoMelhoria.routes";
@@ -202,6 +203,7 @@ app.use("/api/indicadores-seguranca-empresarial", indicadoresSegurancaEmpresaria
 app.use("/api/planejamento", planejamentoRoutes);
 app.use("/api/quadra-seguranca", quadraSegurancaRoutes);
 app.use("/api/operacao", operacaoRoutes);
+app.use("/api/financeiro", financeiroRoutes);
 app.use("/api/sistema", sistemaRoutes);
 app.use("/api/sugestoes-melhoria", sugestaoMelhoriaRoutes);
 app.use("/api/sessoes", sessaoRoutes);

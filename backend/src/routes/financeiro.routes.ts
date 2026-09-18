@@ -1,0 +1,15 @@
+import { Router } from "express";
+import { autenticarUsuario } from "../middlewares/auth";
+import { excluirConta, excluirFornecedor, listarContas, listarFornecedores, resumoFinanceiro, salvarConta, salvarFornecedor } from "../controllers/financeiro.controller";
+const router = Router();
+router.use(autenticarUsuario);
+router.get("/fornecedores", listarFornecedores);
+router.post("/fornecedores", salvarFornecedor);
+router.put("/fornecedores/:id", salvarFornecedor);
+router.delete("/fornecedores/:id", excluirFornecedor);
+router.get("/contas", listarContas);
+router.post("/contas", salvarConta);
+router.put("/contas/:id", salvarConta);
+router.delete("/contas/:id", excluirConta);
+router.get("/resumo", resumoFinanceiro);
+export default router;

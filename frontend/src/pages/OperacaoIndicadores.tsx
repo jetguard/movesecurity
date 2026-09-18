@@ -68,6 +68,7 @@ type Formulario = {
 };
 
 type LocalOperacional = { id: number; nome: string; status?: string };
+type FornecedorOperacional = { id: number; nomeEmpresa: string; servicos: Array<{ tipoServico: string; turno?: string; valorDiario?: string | number }> };
 
 function numero(valor: unknown) {
   const parsed = Number(valor || 0);
@@ -211,6 +212,9 @@ function normalizarDadosModulo(modulo: string, dadosForm: Record<string, string>
         dadosNormalizados.atrasoFim,
       ),
     );
+    dadosNormalizados.descontoFinanceiro = String(
+      numero(dadosNormalizados.descontoVigilante) + numero(dadosNormalizados.descontoControlador),
+    );
   }
   if (modulo === "operacao_filas") {
     let intervalos: Array<{ inicio: string; fim: string }> = [];
@@ -250,6 +254,8 @@ const modulos: Record<string, ModuloConfig> = {
     subtitulo: "Auditoria de veículos, contêineres, lacres e divergências operacionais.",
     destaque: "from-blue-600 to-cyan-500",
     campos: [
+      { chave: "fornecedorId", label: "Empresa de vigilância", tipo: "text" },
+      { chave: "fornecedorNome", label: "Empresa", tipo: "text" },
       { chave: "totalProcessos", label: "Total de processos auditáveis" },
       { chave: "veiculosAuditados", label: "Veículos auditados" },
       { chave: "conteineresFotoCompleta", label: "Contêineres com registro fotográfico completo" },
@@ -296,6 +302,12 @@ const modulos: Record<string, ModuloConfig> = {
       { chave: "efetivoPrevisto", label: "Efetivo previsto" },
       { chave: "efetivoPresente", label: "Efetivo presente" },
       { chave: "faltas", label: "Faltas", calculado: true },
+      { chave: "faltasVigilante", label: "Faltas de vigilantes" },
+      { chave: "faltasControlador", label: "Faltas de controladores de acesso" },
+      { chave: "turnoFaltas", label: "Turno das faltas", tipo: "text" },
+      { chave: "descontoVigilante", label: "Desconto vigilantes", calculado: true },
+      { chave: "descontoControlador", label: "Desconto controladores", calculado: true },
+      { chave: "descontoFinanceiro", label: "Desconto total", calculado: true },
       { chave: "mencionarAtraso", label: "Mencionar atraso", tipo: "text" },
       { chave: "colaboradorAtraso", label: "Colaborador em atraso", tipo: "text" },
       { chave: "atrasoInicio", label: "Início do atraso", tipo: "datetime" },
@@ -603,6 +615,7 @@ export default function OperacaoIndicadores() {
   const [validando, setValidando] = useState(false);
   const [confirmarEnvioVazio, setConfirmarEnvioVazio] = useState(false);
   const [locais, setLocais] = useState<LocalOperacional[]>([]);
+  const [fornecedores, setFornecedores] = useState<FornecedorOperacional[]>([]);
   const [form, setForm] = useState<Formulario>(() =>
     config ? formularioInicial(config) : { dataReferencia: dataInput(), dados: {} },
   );
@@ -643,6 +656,16 @@ export default function OperacaoIndicadores() {
     setModalAberto(false);
     carregar();
   }, [config?.chave]);
+
+  useEffect(() => {
+    if (config?.chave !== "operacao_vigilancia") return;
+    api.get("/financeiro/fornecedores", { params: { ativos: true } }).then((r) => setFornecedores(r.data || [])).catch(() => setFornecedores([]));
+  }, [config?.chave]);
+
+  function selecionarFornecedor(valor: string) {
+    const selecionado = fornecedores.find((item) => String(item.id) === valor);
+    setForm((atual) => ({ ...atual, dados: normalizarDadosModulo(config.chave, { ...atual.dados, fornecedorId: valor, fornecedorNome: selecionado?.nomeEmpresa || "" }) }));
+  }
 
   useEffect(() => {
     if (config?.chave !== "operacao_filas") return;
@@ -715,6 +738,13 @@ export default function OperacaoIndicadores() {
             ? valor
             : valor.replace(/\D/g, ""),
       };
+      if (config?.chave === "operacao_vigilancia") {
+        const fornecedor = fornecedores.find((item) => String(item.id) === proximosDados.fornecedorId);
+        const turno = proximosDados.turnoFaltas || "DIURNO";
+        const diaria = (termo: string) => Number(fornecedor?.servicos.find((item) => item.tipoServico.toLowerCase().includes(termo) && (!item.turno || item.turno === turno || item.turno === "AMBOS"))?.valorDiario || 0);
+        proximosDados.descontoVigilante = String(numero(proximosDados.faltasVigilante) * diaria("vigilante"));
+        proximosDados.descontoControlador = String(numero(proximosDados.faltasControlador) * diaria("controlador"));
+      }
       return {
         ...atual,
         dados: normalizarDadosModulo(config?.chave || "", proximosDados),
@@ -1259,6 +1289,7 @@ export default function OperacaoIndicadores() {
                       "atrasoFim",
                       "atrasoMinutos",
                       "intervalosFila",
+                      "fornecedorId", "fornecedorNome", "faltasVigilante", "faltasControlador", "turnoFaltas", "descontoVigilante", "descontoControlador", "descontoFinanceiro",
                     ].includes(campo.chave),
                 )
                 .map((campo) => (
@@ -1323,7 +1354,14 @@ export default function OperacaoIndicadores() {
               ))}
 
               {config.chave === "operacao_vigilancia" && (
-                <div className="space-y-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 md:col-span-2">
+                <div className="space-y-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/5 p-4 md:col-span-2">
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">Empresa de vigilância<select required className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 text-white" value={form.dados.fornecedorId || ""} onChange={(e)=>selecionarFornecedor(e.target.value)}><option value="">Selecione</option>{fornecedores.map(f=><option key={f.id} value={f.id}>{f.nomeEmpresa}</option>)}</select></label>
+                    <label className="space-y-2 text-sm font-bold text-slate-200">Turno<select required className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 text-white" value={form.dados.turnoFaltas || "DIURNO"} onChange={(e)=>atualizarCampo(config.campos.find(c=>c.chave==="turnoFaltas")!,e.target.value)}><option>DIURNO</option><option>NOTURNO</option></select></label>
+                    <div />
+                    {([['faltasVigilante','Faltas de vigilantes'],['faltasControlador','Faltas de controladores de acesso']] as const).map(([chave,label])=><label key={chave} className="space-y-2 text-sm font-bold text-slate-200">{label}<input type="number" min="0" required className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 text-white" value={form.dados[chave]||""} onChange={(e)=>atualizarCampo(config.campos.find(c=>c.chave===chave)!,e.target.value)}/></label>)}
+                    <div className="rounded-xl bg-slate-950 p-3 text-sm">Desconto estimado: <strong className="text-rose-300">{new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(numero(form.dados.descontoFinanceiro))}</strong></div>
+                  </div>
                   <label className="flex items-center justify-between gap-3 text-sm font-bold text-slate-200">
                     <span className="inline-flex items-center gap-2"><AlertTriangle size={16} className="text-amber-300" />Mencionar atraso</span>
                     <input type="checkbox" checked={form.dados.mencionarAtraso === "true"} onChange={(event) => atualizarAtrasoVigilancia(event.target.checked)} className="h-4 w-4" />

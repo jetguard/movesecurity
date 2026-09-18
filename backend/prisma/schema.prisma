@@ -1250,6 +1250,55 @@ model PassagemTurnoPosto {
   passagem PassagemTurno @relation(fields: [passagemId], references: [id], onDelete: Cascade)
 }
 
+model FornecedorFinanceiro {
+  id           Int      @id @default(autoincrement())
+  unidade      String
+  nomeEmpresa  String
+  tipoServico  String
+  valorMensal  Decimal  @default(0) @db.Decimal(14, 2)
+  status       String   @default("ATIVO")
+  criadoPorId  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  servicos     FornecedorFinanceiroServico[]
+
+  @@index([unidade, status])
+  @@unique([unidade, nomeEmpresa])
+}
+
+model FornecedorFinanceiroServico {
+  id             Int      @id @default(autoincrement())
+  fornecedorId   Int
+  tipoServico    String
+  modalidade     String
+  turno          String?
+  valor          Decimal  @default(0) @db.Decimal(14, 2)
+  valorDiario    Decimal? @db.Decimal(14, 2)
+  horasJornada   Decimal? @db.Decimal(6, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  fornecedor     FornecedorFinanceiro @relation(fields: [fornecedorId], references: [id], onDelete: Cascade)
+
+  @@index([fornecedorId])
+}
+
+model ContaContabilFinanceira {
+  id           Int      @id @default(autoincrement())
+  unidade      String
+  nome         String
+  categoria    String
+  ano          Int
+  valorOrcado  Decimal  @default(0) @db.Decimal(14, 2)
+  observacoes  String?
+  status       String   @default("ATIVO")
+  criadoPorId  Int?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([unidade, nome, ano])
+  @@index([unidade, ano, status])
+}
+
 model ScannerPassagem {
   id                  Int      @id @default(autoincrement())
   data                DateTime

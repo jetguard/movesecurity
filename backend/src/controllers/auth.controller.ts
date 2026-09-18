@@ -196,6 +196,10 @@ function perfilSessaoUnica(perfil?: string) {
 const TODOS_MODULOS_ACESSO = [
   "dashboard",
   "indicadores_seguranca_empresarial",
+  "financeiro",
+  "financeiro_fornecedores",
+  "financeiro_contas",
+  "financeiro_indicadores",
   "relatorios",
   "documentos",
   "treinamentos",

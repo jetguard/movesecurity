@@ -34,6 +34,7 @@ import {
   Lightbulb,
   Lock,
   Wrench,
+  CircleDollarSign,
 } from "lucide-react";
 import { api } from "../services/api";
 import {
@@ -58,6 +59,7 @@ export default function AdminLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [relatoriosOpen, setRelatoriosOpen] = useState(true);
   const [operacaoOpen, setOperacaoOpen] = useState(true);
+  const [financeiroOpen, setFinanceiroOpen] = useState(true);
   const [solicitacoesOpen, setSolicitacoesOpen] = useState(true);
   const [treinamentosOpen, setTreinamentosOpen] = useState(true);
   const [gestaoAvancadaOpen, setGestaoAvancadaOpen] = useState(true);
@@ -761,6 +763,9 @@ export default function AdminLayout() {
                   )}
                 </>
               )}
+
+              {(temModulo("financeiro") || temModulo("financeiro_fornecedores") || temModulo("financeiro_contas") || temModulo("financeiro_indicadores")) && <button onClick={() => setFinanceiroOpen(!financeiroOpen)} className="flex h-11 items-center rounded-xl px-3 text-slate-300 transition-colors duration-100 hover:bg-slate-800 hover:text-white sm:px-4"><div className="flex items-center gap-3"><CircleDollarSign size={20} className="shrink-0"/><span className={menuText}>Financeiro</span></div><span className={menuToggle}>{financeiroOpen ? "-" : "+"}</span></button>}
+              {(temModulo("financeiro") || temModulo("financeiro_fornecedores") || temModulo("financeiro_contas") || temModulo("financeiro_indicadores")) && financeiroOpen && <div className={submenuClass}><Link to="/financeiro" className={subItem}><CircleDollarSign size={16} />Fornecedores e orçamento</Link></div>}
 
               {podeVerOperacaoMenu && <button
                 onClick={() => setOperacaoOpen(!operacaoOpen)}

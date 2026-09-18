@@ -155,6 +155,9 @@ function modulosDaRota(req: AuthRequest) {
   if (rota.startsWith("/api/usuarios")) return ["usuarios"];
   if (rota.startsWith("/api/auth")) return undefined;
   if (rota.startsWith("/api/indicadores-seguranca-empresarial")) return ["indicadores_seguranca_empresarial"];
+  if (rota.startsWith("/api/financeiro/fornecedores")) return ["financeiro_fornecedores", "financeiro"];
+  if (rota.startsWith("/api/financeiro/contas")) return ["financeiro_contas", "financeiro"];
+  if (rota.startsWith("/api/financeiro/resumo")) return ["financeiro_indicadores", "financeiro"];
   if (rota.startsWith("/api/treinamentos-visitantes")) return ["treinamentos_visitantes"];
   if (
     rota.startsWith("/api/treinamentos-dinamicos/anexo") ||
@@ -421,6 +424,10 @@ export const PERFIS = {
 export const MODULOS_ACESSO = [
   { chave: "dashboard", nome: "Dashboard" },
   { chave: "indicadores_seguranca_empresarial", nome: "Indicadores Segurança Empresarial" },
+  { chave: "financeiro", nome: "Financeiro" },
+  { chave: "financeiro_fornecedores", nome: "Fornecedores" },
+  { chave: "financeiro_contas", nome: "Contas contábeis" },
+  { chave: "financeiro_indicadores", nome: "Indicadores financeiros" },
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },
