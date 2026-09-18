@@ -539,6 +539,7 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
           { titulo: "Absenteísmo", valor: `${percentual(somarDados(vigilancia, "faltas"), somarDados(vigilancia, "efetivoPrevisto"))}%` },
           { titulo: "Rondas realizadas", valor: somarDados(vigilancia, "rondas") },
           { titulo: "Anormalidades nas rondas", valor: somarDados(vigilancia, "anormalidadesRondas") },
+          { titulo: "Tempo de posto descoberto", valor: minutos(somarDados(vigilancia, "horasPostoDescoberto") * 60) },
           { titulo: "Desvios tratados", valor: `${percentual(somarDados(vigilancia, "desviosTratados"), somarDados(vigilancia, "desviosRonda"))}%` },
         ],
         rankings: {

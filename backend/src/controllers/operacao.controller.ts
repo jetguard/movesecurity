@@ -169,18 +169,38 @@ function dadosOperacaoIndicador(body: any, modulo?: string) {
       ? Math.round((fim.getTime() - inicio.getTime()) / 60000)
       : 0;
     const faltas = Math.max(0, Number(dados.efetivoPrevisto || 0) - Number(dados.efetivoPresente || 0));
-    const faltasSemCobertura = Math.max(0, faltas - Number(dados.coberturas || 0));
-    const faltasVigilante = Math.max(0, Number(dados.faltasVigilante || 0));
-    const faltasControlador = Math.max(0, Number(dados.faltasControlador || 0));
-    const totalDetalhado = faltasVigilante + faltasControlador;
-    const jornadaVigilante = Math.max(0, Number(dados.jornadaVigilante || 12));
-    const jornadaControlador = Math.max(0, Number(dados.jornadaControlador || 12));
-    const jornadaMedia = totalDetalhado
-      ? ((faltasVigilante * jornadaVigilante) + (faltasControlador * jornadaControlador)) / totalDetalhado
-      : 12;
+    let coberturasPostos: Array<{ turno: string; coberturaEm: string }> = [];
+    try {
+      const lista = JSON.parse(String(dados.coberturasPostosJson || "[]"));
+      coberturasPostos = Array.isArray(lista) ? lista : [];
+    } catch {
+      coberturasPostos = [];
+    }
+    coberturasPostos = Array.from({ length: faltas }, (_, indice) =>
+      coberturasPostos[indice] || { turno: "DIURNO", coberturaEm: "" },
+    );
+    const minutosFaltas = coberturasPostos.reduce((total, item) => {
+      if (!item.coberturaEm) return total + 720;
+      const cobertura = new Date(item.coberturaEm);
+      if (Number.isNaN(cobertura.getTime())) return total + 720;
+      const inicioTurno = new Date(cobertura);
+      if (item.turno === "NOTURNO") {
+        if (cobertura.getHours() < 7) inicioTurno.setDate(inicioTurno.getDate() - 1);
+        inicioTurno.setHours(19, 0, 0, 0);
+      } else {
+        inicioTurno.setHours(7, 0, 0, 0);
+      }
+      const diferenca = Math.round((cobertura.getTime() - inicioTurno.getTime()) / 60000);
+      return total + Math.min(720, Math.max(0, diferenca));
+    }, 0);
+    const minutosDescobertos = minutosFaltas + atrasoMinutos;
     dados.faltas = faltas;
     dados.atrasoMinutos = atrasoMinutos;
-    dados.horasPostoDescoberto = Number(((faltasSemCobertura * jornadaMedia) + (atrasoMinutos / 60)).toFixed(2));
+    dados.coberturasPostosJson = JSON.stringify(coberturasPostos);
+    dados.postosDescobertos = faltas;
+    dados.coberturas = coberturasPostos.filter((item) => item.coberturaEm).length;
+    dados.postoDescobertoMinutos = minutosDescobertos;
+    dados.horasPostoDescoberto = Number((minutosDescobertos / 60).toFixed(2));
   }
   return {
     dataReferencia: body.dataReferencia ? new Date(body.dataReferencia) : new Date(),

@@ -722,6 +722,7 @@ export default function IndicadoresSegurancaEmpresarial() {
   const efetivoPrevistoVigilancia = somarVigilancia("efetivoPrevisto");
   const efetivoPresenteVigilancia = somarVigilancia("efetivoPresente");
   const faltasVigilancia = somarVigilancia("faltas");
+  const horasPostoDescobertoVigilancia = somarVigilancia("horasPostoDescoberto");
   const coberturaVigilancia = efetivoPrevistoVigilancia
     ? ((efetivoPresenteVigilancia / efetivoPrevistoVigilancia) * 100).toFixed(1).replace(".", ",")
     : "0,0";
@@ -729,6 +730,15 @@ export default function IndicadoresSegurancaEmpresarial() {
     vigilanciaFiltrada.reduce((mapa, item) => {
       const chave = chaveMesAno(item.dataReferencia);
       mapa.set(chave, (mapa.get(chave) || 0) + item.rondas);
+      return mapa;
+    }, new Map<string, number>()),
+  )
+    .map(([chave, valor]) => ({ label: `${mesCurto(chave)}/${chave.slice(2, 4)}`, valor, chave }))
+    .sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
+  const seriePostoDescobertoVigilancia = Array.from(
+    vigilanciaFiltrada.reduce((mapa, item) => {
+      const chave = chaveMesAno(item.dataReferencia);
+      mapa.set(chave, (mapa.get(chave) || 0) + (item.horasPostoDescoberto * 60));
       return mapa;
     }, new Map<string, number>()),
   )
@@ -1365,8 +1375,9 @@ export default function IndicadoresSegurancaEmpresarial() {
 
   const renderVigilanciaBi = () => (
     <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-7">
         <BiCard titulo="Total de faltas" valor={faltasVigilancia} />
+        <BiCard titulo="Tempo de posto descoberto" valor={formatarMinutosIndicador(horasPostoDescobertoVigilancia * 60)} />
         <BiCard titulo="Rondas realizadas" valor={somarVigilancia("rondas")} />
         <BiCard titulo="Anormalidades" valor={somarVigilancia("anormalidadesRondas")} />
         <BiCard titulo="Cobertura operacional" valor={`${coberturaVigilancia}%`} />
@@ -1420,7 +1431,7 @@ export default function IndicadoresSegurancaEmpresarial() {
         </div>
       )}
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-[1.2fr_1fr_0.8fr]">
+      <div className="mt-3 grid gap-3 xl:grid-cols-4">
         <BiPanel titulo={registroVigilanciaSelecionado ? "Indicadores do lançamento selecionado" : "Indicadores operacionais"}>
           <BarrasHorizontais itens={indicadoresVigilancia} onSelect={() => undefined} cor="bg-blue-500" />
         </BiPanel>
@@ -1429,6 +1440,9 @@ export default function IndicadoresSegurancaEmpresarial() {
         </BiPanel>
         <BiPanel titulo="Postos descobertos por unidade">
           <BarrasHorizontais itens={postosPorUnidadeVigilancia} onSelect={() => undefined} cor="bg-amber-500" />
+        </BiPanel>
+        <BiPanel titulo="Tempo descoberto por mês">
+          <BarrasVerticais itens={seriePostoDescobertoVigilancia} formatarValor={formatarMinutosIndicador} onSelect={() => undefined} cor="bg-gradient-to-t from-rose-600 to-amber-300" />
         </BiPanel>
       </div>
 
@@ -1441,7 +1455,7 @@ export default function IndicadoresSegurancaEmpresarial() {
             <table className="w-full min-w-[1120px] border-collapse text-left text-[11px] text-slate-300">
               <thead className="sticky top-0 z-10 bg-slate-800 text-slate-100 shadow-sm">
                 <tr>
-                  {["Data", "Unidade", "Responsável", "Previsto", "Presente", "Faltas", "Atraso (min)", "Postos descobertos", "Coberturas", "Rondas", "Anormalidades", "Desvios", "Tratados", "Ocorrências", "Validado por"].map((coluna) => (
+                  {["Data", "Unidade", "Responsável", "Previsto", "Presente", "Faltas", "Atraso (min)", "Postos descobertos", "Coberturas", "Tempo descoberto", "Rondas", "Anormalidades", "Desvios", "Tratados", "Ocorrências", "Validado por"].map((coluna) => (
                     <th key={coluna} className="border-b border-blue-500/40 px-2 py-2 font-semibold">{coluna}</th>
                   ))}
                 </tr>
@@ -1467,6 +1481,7 @@ export default function IndicadoresSegurancaEmpresarial() {
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.atrasoMinutos}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.postosDescobertos}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.coberturas}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right font-bold text-amber-300">{formatarMinutosIndicador(item.horasPostoDescoberto * 60)}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.rondas}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right font-bold text-amber-300">{item.anormalidadesRondas}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.desviosRonda}</td>
@@ -1477,7 +1492,7 @@ export default function IndicadoresSegurancaEmpresarial() {
                 ))}
                 {vigilanciaFiltradaBase.length === 0 && (
                   <tr>
-                    <td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-400">
+                    <td colSpan={16} className="px-4 py-10 text-center text-sm text-slate-400">
                       Nenhum lançamento validado encontrado para os filtros selecionados.
                     </td>
                   </tr>

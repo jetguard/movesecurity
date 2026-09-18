@@ -202,6 +202,24 @@ function calcularMinutosEntre(inicio?: string, fim?: string) {
   return Math.round(diferenca / 60000);
 }
 
+type CoberturaPosto = { turno: "DIURNO" | "NOTURNO"; coberturaEm: string };
+
+function minutosPostoDescoberto(item: CoberturaPosto) {
+  if (!item.coberturaEm) return 720;
+  const cobertura = new Date(item.coberturaEm);
+  if (Number.isNaN(cobertura.getTime())) return 720;
+  const inicio = new Date(cobertura);
+  if (item.turno === "DIURNO") {
+    inicio.setHours(7, 0, 0, 0);
+  } else if (cobertura.getHours() < 7) {
+    inicio.setDate(inicio.getDate() - 1);
+    inicio.setHours(19, 0, 0, 0);
+  } else {
+    inicio.setHours(19, 0, 0, 0);
+  }
+  return Math.min(720, Math.max(0, Math.round((cobertura.getTime() - inicio.getTime()) / 60000)));
+}
+
 function normalizarDadosModulo(modulo: string, dadosForm: Record<string, string>) {
   const dadosNormalizados = { ...dadosForm };
   if (modulo === "operacao_vigilancia") {
@@ -218,23 +236,26 @@ function normalizarDadosModulo(modulo: string, dadosForm: Record<string, string>
         dadosNormalizados.atrasoFim,
       ),
     );
-    const faltasSemCobertura = Math.max(
-      0,
-      numero(dadosNormalizados.faltas) - numero(dadosNormalizados.coberturas),
+    let coberturasPostos: CoberturaPosto[] = [];
+    try {
+      const lista = JSON.parse(dadosNormalizados.coberturasPostosJson || "[]");
+      coberturasPostos = Array.isArray(lista) ? lista : [];
+    } catch {
+      coberturasPostos = [];
+    }
+    coberturasPostos = Array.from(
+      { length: numero(dadosNormalizados.faltas) },
+      (_, indice) => coberturasPostos[indice] || { turno: "DIURNO", coberturaEm: "" },
     );
-    const faltasVigilante = numero(dadosNormalizados.faltasVigilante);
-    const faltasControlador = numero(dadosNormalizados.faltasControlador);
-    const faltasDetalhadas = faltasVigilante + faltasControlador;
-    const jornadaVigilante = numeroDecimal(dadosNormalizados.jornadaVigilante) || 12;
-    const jornadaControlador = numeroDecimal(dadosNormalizados.jornadaControlador) || 12;
-    const jornadaMedia = faltasDetalhadas
-      ? ((faltasVigilante * jornadaVigilante) + (faltasControlador * jornadaControlador)) / faltasDetalhadas
-      : 12;
-    const horasDescobertas =
-      (faltasSemCobertura * jornadaMedia) +
-      (numero(dadosNormalizados.atrasoMinutos) / 60);
+    dadosNormalizados.coberturasPostosJson = JSON.stringify(coberturasPostos);
+    dadosNormalizados.postosDescobertos = String(coberturasPostos.length);
+    dadosNormalizados.coberturas = String(coberturasPostos.filter((item) => item.coberturaEm).length);
+    const minutosDescobertos =
+      coberturasPostos.reduce((total, item) => total + minutosPostoDescoberto(item), 0) +
+      numero(dadosNormalizados.atrasoMinutos);
+    dadosNormalizados.postoDescobertoMinutos = String(minutosDescobertos);
     dadosNormalizados.horasPostoDescoberto = String(
-      Number(horasDescobertas.toFixed(2)),
+      Number((minutosDescobertos / 60).toFixed(2)),
     );
     dadosNormalizados.descontoFinanceiro = String(
       numero(dadosNormalizados.descontoVigilante) + numero(dadosNormalizados.descontoControlador),
@@ -337,8 +358,8 @@ const modulos: Record<string, ModuloConfig> = {
       { chave: "atrasoInicio", label: "Início do atraso", tipo: "datetime" },
       { chave: "atrasoFim", label: "Fim do atraso", tipo: "datetime" },
       { chave: "atrasoMinutos", label: "Tempo de atraso", calculado: true },
-      { chave: "postosDescobertos", label: "Postos descobertos" },
-      { chave: "coberturas", label: "Coberturas realizadas" },
+      { chave: "postosDescobertos", label: "Postos descobertos", calculado: true },
+      { chave: "coberturas", label: "Coberturas realizadas", calculado: true },
       { chave: "servicosExtras", label: "Serviços extras" },
       { chave: "horasPostoDescoberto", label: "Tempo de posto descoberto", calculado: true },
       { chave: "rondas", label: "Rondas realizadas" },
@@ -800,6 +821,32 @@ export default function OperacaoIndicadores() {
     } catch {
       return [];
     }
+  }
+
+  function coberturasPostos() {
+    try {
+      const lista = JSON.parse(form.dados.coberturasPostosJson || "[]");
+      return Array.isArray(lista) ? lista as CoberturaPosto[] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function atualizarCoberturaPosto(
+    indice: number,
+    chave: keyof CoberturaPosto,
+    valor: string,
+  ) {
+    const lista = coberturasPostos().map((item, itemIndice) =>
+      itemIndice === indice ? { ...item, [chave]: valor } : item,
+    );
+    setForm((atual) => ({
+      ...atual,
+      dados: normalizarDadosModulo(config.chave, {
+        ...atual.dados,
+        coberturasPostosJson: JSON.stringify(lista),
+      }),
+    }));
   }
 
   function atualizarQuantidadeFilas(valor: string) {
@@ -1341,6 +1388,7 @@ export default function OperacaoIndicadores() {
                       "atrasoFim",
                       "atrasoMinutos",
                       "intervalosFila",
+                      "coberturasPostosJson",
                       "fornecedorId", "fornecedorNome", "faltasVigilante", "faltasControlador", "turnoFaltas", "descontoVigilante", "descontoControlador", "descontoFinanceiro",
                     ].includes(campo.chave),
                 )
@@ -1416,6 +1464,29 @@ export default function OperacaoIndicadores() {
                     {([['faltasVigilante','Faltas de vigilantes'],['faltasControlador','Faltas de controladores de acesso']] as const).map(([chave,label])=><label key={chave} className="space-y-2 text-sm font-bold text-slate-200">{label}<input type="number" min="0" required className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 text-white" value={form.dados[chave]||""} onChange={(e)=>atualizarCampo(config.campos.find(c=>c.chave===chave)!,e.target.value)}/></label>)}
                     <div className="rounded-xl bg-slate-950 p-3 text-sm">Desconto estimado: <strong className="text-rose-300">{new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(numero(form.dados.descontoFinanceiro))}</strong></div>
                   </div>}
+                  {coberturasPostos().length > 0 && (
+                    <div className="space-y-3 rounded-2xl border border-blue-400/25 bg-slate-950/70 p-4">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-200">Cobertura das faltas</p>
+                        <p className="mt-1 text-xs text-slate-400">Sem horário de cobertura, o posto contabiliza 12 horas descoberto.</p>
+                      </div>
+                      {coberturasPostos().map((item, indice) => (
+                        <div key={indice} className="grid gap-3 rounded-2xl border border-slate-700 bg-slate-900/80 p-3 md:grid-cols-2">
+                          <p className="text-sm font-black text-white md:col-span-2">Falta {indice + 1}</p>
+                          <label className="space-y-2 text-sm font-bold text-slate-200">Turno
+                            <select value={item.turno} onChange={(event) => atualizarCoberturaPosto(indice, "turno", event.target.value)} className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 text-white">
+                              <option value="DIURNO">Diurno · 07h às 19h</option>
+                              <option value="NOTURNO">Noturno · 19h às 07h</option>
+                            </select>
+                          </label>
+                          <label className="space-y-2 text-sm font-bold text-slate-200">Chegada da cobertura <span className="font-normal text-slate-500">(opcional)</span>
+                            <input type="datetime-local" value={item.coberturaEm || ""} onChange={(event) => atualizarCoberturaPosto(indice, "coberturaEm", event.target.value)} className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-950 px-4 font-normal text-white [color-scheme:dark]" />
+                          </label>
+                          <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 px-3 py-2 text-sm md:col-span-2">Tempo descoberto nesta falta: <strong className="text-blue-200">{minutos(minutosPostoDescoberto(item))}</strong></div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <label className="flex items-center justify-between gap-3 text-sm font-bold text-slate-200">
                     <span className="inline-flex items-center gap-2"><AlertTriangle size={16} className="text-amber-300" />Mencionar atraso</span>
                     <input type="checkbox" checked={form.dados.mencionarAtraso === "true"} onChange={(event) => atualizarAtrasoVigilancia(event.target.checked)} className="h-4 w-4" />
