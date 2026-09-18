@@ -6,6 +6,8 @@ import {
   Image as ImageIcon,
   Maximize2,
   Minimize2,
+  Pause,
+  Play,
   RefreshCw,
   ScanLine,
   ShieldCheck,
@@ -448,6 +450,7 @@ export default function IndicadoresSegurancaEmpresarial() {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [estendido, setEstendido] = useState(false);
+  const [reproducaoAutomatica, setReproducaoAutomatica] = useState(false);
   const [filtroUnidade, setFiltroUnidade] = useState("Todos");
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("Todos");
   const [filtroMesAno, setFiltroMesAno] = useState("Todos");
@@ -520,6 +523,17 @@ export default function IndicadoresSegurancaEmpresarial() {
     document.body.classList.toggle("overflow-hidden", estendido);
     return () => document.body.classList.remove("overflow-hidden");
   }, [estendido]);
+
+  useEffect(() => {
+    if (!reproducaoAutomatica) return;
+    const intervalo = window.setInterval(() => {
+      setAbaAtiva((atual) => {
+        const indiceAtual = abas.findIndex((item) => item.id === atual);
+        return abas[(indiceAtual + 1) % abas.length].id;
+      });
+    }, 15000);
+    return () => window.clearInterval(intervalo);
+  }, [reproducaoAutomatica, abaAtiva]);
 
   const aba = abas.find((item) => item.id === abaAtiva) || abas[0];
   const bloco = dados?.[aba.id];
@@ -1548,6 +1562,19 @@ export default function IndicadoresSegurancaEmpresarial() {
           >
             <RefreshCw size={16} />
             <span className="hidden 2xl:inline">Atualizar</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setReproducaoAutomatica((valor) => !valor)}
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-xl border text-white shadow-lg transition ${
+              reproducaoAutomatica
+                ? "border-amber-400/50 bg-amber-500 hover:bg-amber-400"
+                : "border-emerald-400/40 bg-emerald-600 hover:bg-emerald-500"
+            }`}
+            aria-label={reproducaoAutomatica ? "Pausar apresentação" : "Iniciar apresentação"}
+            title={reproducaoAutomatica ? "Pausar apresentação automática" : "Iniciar apresentação automática"}
+          >
+            {reproducaoAutomatica ? <Pause size={18} /> : <Play size={18} />}
           </button>
           <button
             type="button"
