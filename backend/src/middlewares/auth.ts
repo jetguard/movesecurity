@@ -158,6 +158,7 @@ function modulosDaRota(req: AuthRequest) {
   if (rota.startsWith("/api/financeiro/fornecedores")) return ["financeiro_fornecedores", "financeiro"];
   if (rota.startsWith("/api/financeiro/contas")) return ["financeiro_contas", "financeiro"];
   if (rota.startsWith("/api/financeiro/resumo")) return ["financeiro_indicadores", "financeiro"];
+  if (rota.startsWith("/api/financeiro/requisicoes")) return ["financeiro_compras", "financeiro"];
   if (rota.startsWith("/api/treinamentos-visitantes")) return ["treinamentos_visitantes"];
   if (
     rota.startsWith("/api/treinamentos-dinamicos/anexo") ||
@@ -428,6 +429,7 @@ export const MODULOS_ACESSO = [
   { chave: "financeiro_fornecedores", nome: "Fornecedores" },
   { chave: "financeiro_contas", nome: "Contas contábeis" },
   { chave: "financeiro_indicadores", nome: "Indicadores financeiros" },
+  { chave: "financeiro_compras", nome: "Requisições de compras" },
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },

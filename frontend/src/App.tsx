@@ -12,6 +12,7 @@ const IndicadoresSegurancaEmpresarial = lazyWithReload(
   () => import("./pages/IndicadoresSegurancaEmpresarial"),
 );
 const Financeiro = lazyWithReload(() => import("./pages/Financeiro"));
+const RequisicoesCompras = lazyWithReload(() => import("./pages/RequisicoesCompras"));
 const Ocorrencias = lazyWithReload(
   () => import("./pages/Relatórios/Ocorrencias"),
 );
@@ -231,6 +232,7 @@ export default function App() {
               }
             />
             <Route path="financeiro" element={<Financeiro />} />
+            <Route path="financeiro/requisicoes" element={<RequisicoesCompras />} />
             <Route path="ocorrencias" element={<Ocorrencias />} />
             <Route path="investigacao" element={<Investigacao />} />
             <Route path="eventos" element={<Eventos />} />

@@ -200,6 +200,7 @@ const TODOS_MODULOS_ACESSO = [
   "financeiro_fornecedores",
   "financeiro_contas",
   "financeiro_indicadores",
+  "financeiro_compras",
   "relatorios",
   "documentos",
   "treinamentos",

@@ -1298,9 +1298,37 @@ model ContaContabilFinanceira {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   fornecedores FornecedorFinanceiro[]
+  requisicoesCompra RequisicaoCompra[]
 
   @@unique([unidade, nome, ano])
   @@index([unidade, ano, status])
+}
+
+model RequisicaoCompra {
+  id                     Int      @id @default(autoincrement())
+  unidade                String
+  contaContabilId        Int
+  item                   String
+  quantidade             Int
+  valorMinimo            Decimal  @default(0) @db.Decimal(14, 2)
+  valorMaximo            Decimal  @default(0) @db.Decimal(14, 2)
+  dataPrazo              DateTime
+  finalidade             String
+  fornecedorSugerido     String?
+  contatoFornecedor      String?
+  numeroRequisicao       String?
+  numeroPedidoSap        String?
+  dataAprovacaoRequisicao DateTime?
+  dataAprovacaoPedido    DateTime?
+  valorConcluido         Decimal? @db.Decimal(14, 2)
+  status                 String   @default("PENDENTE")
+  criadoPorId            Int?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  contaContabil          ContaContabilFinanceira @relation(fields: [contaContabilId], references: [id], onDelete: Restrict)
+
+  @@index([unidade, status])
+  @@index([contaContabilId])
 }
 
 model ScannerPassagem {

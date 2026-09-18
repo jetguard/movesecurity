@@ -53,6 +53,7 @@ export const MODULOS_ACESSO = [
   { chave: "financeiro_fornecedores", nome: "Fornecedores" },
   { chave: "financeiro_contas", nome: "Contas contábeis" },
   { chave: "financeiro_indicadores", nome: "Indicadores financeiros" },
+  { chave: "financeiro_compras", nome: "Requisições de compras" },
   { chave: "relatorios", nome: "Relatórios" },
   { chave: "documentos", nome: "Central de documentos" },
   { chave: "treinamentos", nome: "Treinamentos" },
