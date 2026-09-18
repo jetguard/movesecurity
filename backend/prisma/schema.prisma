@@ -1256,13 +1256,16 @@ model FornecedorFinanceiro {
   nomeEmpresa  String
   tipoServico  String
   valorMensal  Decimal  @default(0) @db.Decimal(14, 2)
+  contaContabilId Int?
   status       String   @default("ATIVO")
   criadoPorId  Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   servicos     FornecedorFinanceiroServico[]
+  contaContabil ContaContabilFinanceira? @relation(fields: [contaContabilId], references: [id], onDelete: SetNull)
 
   @@index([unidade, status])
+  @@index([contaContabilId])
   @@unique([unidade, nomeEmpresa])
 }
 
@@ -1294,6 +1297,7 @@ model ContaContabilFinanceira {
   criadoPorId  Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  fornecedores FornecedorFinanceiro[]
 
   @@unique([unidade, nome, ano])
   @@index([unidade, ano, status])

@@ -10,7 +10,7 @@ const dinheiro = (valor: unknown) => {
 export async function listarFornecedores(req: AuthRequest, res: Response) {
   const fornecedores = await prisma.fornecedorFinanceiro.findMany({
     where: { unidade: req.unidadeAtiva, ...(req.query.ativos === "true" ? { status: "ATIVO" } : {}) },
-    include: { servicos: { orderBy: { id: "asc" } } },
+    include: { servicos: { orderBy: { id: "asc" } }, contaContabil: true },
     orderBy: { nomeEmpresa: "asc" },
   });
   return res.json(fornecedores);
@@ -20,11 +20,19 @@ export async function salvarFornecedor(req: AuthRequest, res: Response) {
   const nomeEmpresa = String(req.body.nomeEmpresa || "").trim();
   if (!nomeEmpresa) return res.status(400).json({ error: "Informe o nome da empresa." });
   const servicos = Array.isArray(req.body.servicos) ? req.body.servicos : [];
+  const contaContabilId = req.body.contaContabilId ? Number(req.body.contaContabilId) : null;
+  if (contaContabilId) {
+    const conta = await prisma.contaContabilFinanceira.findFirst({
+      where: { id: contaContabilId, unidade: req.unidadeAtiva, status: "ATIVO" },
+    });
+    if (!conta) return res.status(400).json({ error: "Conta contábil inválida para esta unidade." });
+  }
   const data = {
     unidade: req.unidadeAtiva || "GJA-T1",
     nomeEmpresa,
     tipoServico: String(req.body.tipoServico || "Outros"),
     valorMensal: dinheiro(req.body.valorMensal),
+    contaContabilId,
     status: String(req.body.status || "ATIVO"),
     criadoPorId: req.usuarioId,
     servicos: {
@@ -42,9 +50,9 @@ export async function salvarFornecedor(req: AuthRequest, res: Response) {
   const fornecedor = id
     ? await prisma.$transaction(async (tx) => {
         await tx.fornecedorFinanceiroServico.deleteMany({ where: { fornecedorId: id } });
-        return tx.fornecedorFinanceiro.update({ where: { id, unidade: req.unidadeAtiva }, data, include: { servicos: true } });
+        return tx.fornecedorFinanceiro.update({ where: { id, unidade: req.unidadeAtiva }, data, include: { servicos: true, contaContabil: true } });
       })
-    : await prisma.fornecedorFinanceiro.create({ data, include: { servicos: true } });
+    : await prisma.fornecedorFinanceiro.create({ data, include: { servicos: true, contaContabil: true } });
   return res.status(id ? 200 : 201).json(fornecedor);
 }
 
