@@ -160,8 +160,28 @@ function podeValidarModuloOperacional(req: AuthRequest, modulo: string) {
   return podeAcessarModuloOperacional(req, modulo, "indicadores");
 }
 
-function dadosOperacaoIndicador(body: any) {
-  const dados = body?.dados && typeof body.dados === "object" ? body.dados : {};
+function dadosOperacaoIndicador(body: any, modulo?: string) {
+  const dados = body?.dados && typeof body.dados === "object" ? { ...body.dados } : {};
+  if (modulo === "operacao_vigilancia") {
+    const inicio = dados.atrasoInicio ? new Date(dados.atrasoInicio) : null;
+    const fim = dados.atrasoFim ? new Date(dados.atrasoFim) : null;
+    const atrasoMinutos = inicio && fim && fim > inicio
+      ? Math.round((fim.getTime() - inicio.getTime()) / 60000)
+      : 0;
+    const faltas = Math.max(0, Number(dados.efetivoPrevisto || 0) - Number(dados.efetivoPresente || 0));
+    const faltasSemCobertura = Math.max(0, faltas - Number(dados.coberturas || 0));
+    const faltasVigilante = Math.max(0, Number(dados.faltasVigilante || 0));
+    const faltasControlador = Math.max(0, Number(dados.faltasControlador || 0));
+    const totalDetalhado = faltasVigilante + faltasControlador;
+    const jornadaVigilante = Math.max(0, Number(dados.jornadaVigilante || 12));
+    const jornadaControlador = Math.max(0, Number(dados.jornadaControlador || 12));
+    const jornadaMedia = totalDetalhado
+      ? ((faltasVigilante * jornadaVigilante) + (faltasControlador * jornadaControlador)) / totalDetalhado
+      : 12;
+    dados.faltas = faltas;
+    dados.atrasoMinutos = atrasoMinutos;
+    dados.horasPostoDescoberto = Number(((faltasSemCobertura * jornadaMedia) + (atrasoMinutos / 60)).toFixed(2));
+  }
   return {
     dataReferencia: body.dataReferencia ? new Date(body.dataReferencia) : new Date(),
     dadosJson: JSON.stringify(dados),
@@ -581,7 +601,7 @@ export async function criarOperacaoIndicador(req: AuthRequest, res: Response) {
     }
 
     const unidade = req.unidadeAtiva || req.usuarioUnidade || "Geral";
-    const dados = dadosOperacaoIndicador(req.body);
+    const dados = dadosOperacaoIndicador(req.body, modulo);
     if (!req.usuarioValidadorOperacional) {
       const jaExiste = await prisma.operacaoIndicadorRegistro.findFirst({
         where: {
@@ -649,7 +669,7 @@ export async function atualizarOperacaoIndicador(req: AuthRequest, res: Response
     if (!anterior)
       return res.status(404).json({ error: "Registro operacional não encontrado." });
 
-    const dados = dadosOperacaoIndicador(req.body);
+    const dados = dadosOperacaoIndicador(req.body, modulo);
     if (!req.usuarioValidadorOperacional) {
       const duplicado = await prisma.operacaoIndicadorRegistro.findFirst({
         where: {

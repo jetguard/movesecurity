@@ -69,12 +69,17 @@ type Formulario = {
 };
 
 type LocalOperacional = { id: number; nome: string; status?: string };
-type FornecedorOperacional = { id: number; nomeEmpresa: string; servicos: Array<{ tipoServico: string; turno?: string; valorDiario?: string | number }> };
+type FornecedorOperacional = { id: number; nomeEmpresa: string; servicos: Array<{ tipoServico: string; turno?: string; valorDiario?: string | number; horasJornada?: string | number }> };
 
 function numero(valor: unknown) {
   const parsed = Number(valor || 0);
   if (!Number.isFinite(parsed) || parsed < 0) return 0;
   return Math.trunc(parsed);
+}
+
+function numeroDecimal(valor: unknown) {
+  const parsed = Number(valor || 0);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
 function numeroParaInput(valor: unknown) {
@@ -213,6 +218,24 @@ function normalizarDadosModulo(modulo: string, dadosForm: Record<string, string>
         dadosNormalizados.atrasoFim,
       ),
     );
+    const faltasSemCobertura = Math.max(
+      0,
+      numero(dadosNormalizados.faltas) - numero(dadosNormalizados.coberturas),
+    );
+    const faltasVigilante = numero(dadosNormalizados.faltasVigilante);
+    const faltasControlador = numero(dadosNormalizados.faltasControlador);
+    const faltasDetalhadas = faltasVigilante + faltasControlador;
+    const jornadaVigilante = numeroDecimal(dadosNormalizados.jornadaVigilante) || 12;
+    const jornadaControlador = numeroDecimal(dadosNormalizados.jornadaControlador) || 12;
+    const jornadaMedia = faltasDetalhadas
+      ? ((faltasVigilante * jornadaVigilante) + (faltasControlador * jornadaControlador)) / faltasDetalhadas
+      : 12;
+    const horasDescobertas =
+      (faltasSemCobertura * jornadaMedia) +
+      (numero(dadosNormalizados.atrasoMinutos) / 60);
+    dadosNormalizados.horasPostoDescoberto = String(
+      Number(horasDescobertas.toFixed(2)),
+    );
     dadosNormalizados.descontoFinanceiro = String(
       numero(dadosNormalizados.descontoVigilante) + numero(dadosNormalizados.descontoControlador),
     );
@@ -317,7 +340,7 @@ const modulos: Record<string, ModuloConfig> = {
       { chave: "postosDescobertos", label: "Postos descobertos" },
       { chave: "coberturas", label: "Coberturas realizadas" },
       { chave: "servicosExtras", label: "Serviços extras" },
-      { chave: "horasPostoDescoberto", label: "Horas de posto descoberto" },
+      { chave: "horasPostoDescoberto", label: "Tempo de posto descoberto", calculado: true },
       { chave: "rondas", label: "Rondas realizadas" },
       { chave: "anormalidadesRondas", label: "Anormalidades constatadas nas rondas" },
       { chave: "desviosRonda", label: "Desvios em ronda" },
@@ -665,7 +688,21 @@ export default function OperacaoIndicadores() {
 
   function selecionarFornecedor(valor: string) {
     const selecionado = fornecedores.find((item) => String(item.id) === valor);
-    setForm((atual) => ({ ...atual, dados: normalizarDadosModulo(config.chave, { ...atual.dados, fornecedorId: valor, fornecedorNome: selecionado?.nomeEmpresa || "" }) }));
+    const turno = form.dados.turnoFaltas || "DIURNO";
+    const servico = (termo: string) => selecionado?.servicos.find((item) =>
+      item.tipoServico.toLowerCase().includes(termo) &&
+      (!item.turno || item.turno === turno || item.turno === "AMBOS"),
+    );
+    setForm((atual) => ({
+      ...atual,
+      dados: normalizarDadosModulo(config.chave, {
+        ...atual.dados,
+        fornecedorId: valor,
+        fornecedorNome: selecionado?.nomeEmpresa || "",
+        jornadaVigilante: String(servico("vigilante")?.horasJornada || 12),
+        jornadaControlador: String(servico("controlador")?.horasJornada || 12),
+      }),
+    }));
   }
 
   useEffect(() => {
@@ -742,7 +779,10 @@ export default function OperacaoIndicadores() {
       if (config?.chave === "operacao_vigilancia") {
         const fornecedor = fornecedores.find((item) => String(item.id) === proximosDados.fornecedorId);
         const turno = proximosDados.turnoFaltas || "DIURNO";
-        const diaria = (termo: string) => Number(fornecedor?.servicos.find((item) => item.tipoServico.toLowerCase().includes(termo) && (!item.turno || item.turno === turno || item.turno === "AMBOS"))?.valorDiario || 0);
+        const servico = (termo: string) => fornecedor?.servicos.find((item) => item.tipoServico.toLowerCase().includes(termo) && (!item.turno || item.turno === turno || item.turno === "AMBOS"));
+        const diaria = (termo: string) => Number(servico(termo)?.valorDiario || 0);
+        proximosDados.jornadaVigilante = String(servico("vigilante")?.horasJornada || 12);
+        proximosDados.jornadaControlador = String(servico("controlador")?.horasJornada || 12);
         proximosDados.descontoVigilante = String(numero(proximosDados.faltasVigilante) * diaria("vigilante"));
         proximosDados.descontoControlador = String(numero(proximosDados.faltasControlador) * diaria("controlador"));
       }
@@ -1327,6 +1367,8 @@ export default function OperacaoIndicadores() {
                         ? intervalosFila().length
                           ? minutos(numero(form.dados[campo.chave]))
                           : ""
+                        : campo.chave === "horasPostoDescoberto"
+                          ? minutos(Math.round(numeroDecimal(form.dados[campo.chave]) * 60))
                         : form.dados[campo.chave] || ""}
                     </div>
                   ) : campo.tipo === "select" ? (
