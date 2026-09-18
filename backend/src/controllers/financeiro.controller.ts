@@ -3,7 +3,11 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
 
 const dinheiro = (valor: unknown) => {
-  const numero = Number(String(valor ?? 0).replace(",", "."));
+  const texto = String(valor ?? 0).replace(/R\$|\s/g, "");
+  const normalizado = texto.includes(",")
+    ? texto.replace(/\./g, "").replace(",", ".")
+    : texto;
+  const numero = Number(normalizado);
   return Number.isFinite(numero) && numero >= 0 ? numero : 0;
 };
 
