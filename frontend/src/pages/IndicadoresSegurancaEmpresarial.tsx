@@ -97,11 +97,14 @@ type VigilanciaRegistro = {
   efetivoPrevisto: number;
   efetivoPresente: number;
   faltas: number;
+  atrasoMinutos: number;
+  colaboradorAtraso: string;
   postosDescobertos: number;
   coberturas: number;
   servicosExtras: number;
   horasPostoDescoberto: number;
   rondas: number;
+  anormalidadesRondas: number;
   desviosRonda: number;
   desviosTratados: number;
   ocorrencias: string;
@@ -650,6 +653,7 @@ export default function IndicadoresSegurancaEmpresarial() {
     { label: "Postos descobertos", valor: somarVigilancia("postosDescobertos") },
     { label: "Coberturas", valor: somarVigilancia("coberturas") },
     { label: "Rondas", valor: somarVigilancia("rondas") },
+    { label: "Anormalidades nas rondas", valor: somarVigilancia("anormalidadesRondas") },
     { label: "Desvios em ronda", valor: somarVigilancia("desviosRonda") },
     { label: "Desvios tratados", valor: somarVigilancia("desviosTratados") },
   ];
@@ -1236,9 +1240,10 @@ export default function IndicadoresSegurancaEmpresarial() {
 
   const renderVigilanciaBi = () => (
     <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <BiCard titulo="Total de faltas" valor={faltasVigilancia} />
         <BiCard titulo="Rondas realizadas" valor={somarVigilancia("rondas")} />
+        <BiCard titulo="Anormalidades" valor={somarVigilancia("anormalidadesRondas")} />
         <BiCard titulo="Cobertura operacional" valor={`${coberturaVigilancia}%`} />
         <label className="rounded-lg border border-slate-700 bg-slate-900 p-3 shadow-[0_12px_28px_rgba(0,0,0,0.24)]">
           <span className="mb-2 block text-center text-sm font-semibold text-slate-200">Unidade</span>
@@ -1311,7 +1316,7 @@ export default function IndicadoresSegurancaEmpresarial() {
             <table className="w-full min-w-[1120px] border-collapse text-left text-[11px] text-slate-300">
               <thead className="sticky top-0 z-10 bg-slate-800 text-slate-100 shadow-sm">
                 <tr>
-                  {["Data", "Unidade", "Responsável", "Previsto", "Presente", "Postos descobertos", "Coberturas", "Rondas", "Desvios", "Tratados", "Ocorrências", "Validado por"].map((coluna) => (
+                  {["Data", "Unidade", "Responsável", "Previsto", "Presente", "Faltas", "Atraso (min)", "Postos descobertos", "Coberturas", "Rondas", "Anormalidades", "Desvios", "Tratados", "Ocorrências", "Validado por"].map((coluna) => (
                     <th key={coluna} className="border-b border-blue-500/40 px-2 py-2 font-semibold">{coluna}</th>
                   ))}
                 </tr>
@@ -1333,9 +1338,12 @@ export default function IndicadoresSegurancaEmpresarial() {
                     <td className="border-b border-slate-700 px-2 py-2">{item.criadoPor}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.efetivoPrevisto}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.efetivoPresente}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right font-bold text-rose-300">{item.faltas}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right">{item.atrasoMinutos}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.postosDescobertos}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.coberturas}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.rondas}</td>
+                    <td className="border-b border-slate-700 px-2 py-2 text-right font-bold text-amber-300">{item.anormalidadesRondas}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.desviosRonda}</td>
                     <td className="border-b border-slate-700 px-2 py-2 text-right">{item.desviosTratados}</td>
                     <td className="max-w-[260px] border-b border-slate-700 px-2 py-2">{item.ocorrencias || "-"}</td>
@@ -1344,7 +1352,7 @@ export default function IndicadoresSegurancaEmpresarial() {
                 ))}
                 {vigilanciaFiltradaBase.length === 0 && (
                   <tr>
-                    <td colSpan={12} className="px-4 py-10 text-center text-sm text-slate-400">
+                    <td colSpan={15} className="px-4 py-10 text-center text-sm text-slate-400">
                       Nenhum lançamento validado encontrado para os filtros selecionados.
                     </td>
                   </tr>

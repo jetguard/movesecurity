@@ -16,7 +16,7 @@ import { api } from "../services/api";
 import { podeNoModulo, usuarioValidadorOperacional } from "../utils/permissoes";
 import { solicitarPinOperacional } from "../utils/pinPrompt";
 
-type CampoTipo = "number" | "text" | "textarea" | "datetime";
+type CampoTipo = "number" | "text" | "textarea" | "datetime" | "select";
 
 type CampoConfig = {
   chave: string;
@@ -66,6 +66,8 @@ type Formulario = {
   dataReferencia: string;
   dados: Record<string, string>;
 };
+
+type LocalOperacional = { id: number; nome: string; status?: string };
 
 function numero(valor: unknown) {
   const parsed = Number(valor || 0);
@@ -122,6 +124,25 @@ function formatarDataHora(data: string) {
 }
 
 function formatarValorCampo(campo: CampoConfig, valor: unknown) {
+  if (campo.chave === "intervalosFila") {
+    try {
+      const intervalos = JSON.parse(String(valor || "[]")) as Array<{
+        inicio: string;
+        fim: string;
+      }>;
+      return intervalos
+        .map(
+          (item, indice) =>
+            `${indice + 1}. ${formatarDataHora(item.inicio)} até ${formatarDataHora(item.fim)}`,
+        )
+        .join("\n") || "-";
+    } catch {
+      return "-";
+    }
+  }
+  if (campo.chave === "mencionarAtraso") {
+    return String(valor) === "true" ? "Sim" : "Não";
+  }
   if (campo.chave === "tempoTotalImpactoMin") {
     return minutos(numero(valor));
   }
@@ -176,11 +197,33 @@ function calcularMinutosEntre(inicio?: string, fim?: string) {
 
 function normalizarDadosModulo(modulo: string, dadosForm: Record<string, string>) {
   const dadosNormalizados = { ...dadosForm };
-  if (modulo === "operacao_filas") {
-    dadosNormalizados.tempoTotalImpactoMin = String(
+  if (modulo === "operacao_vigilancia") {
+    dadosNormalizados.faltas = String(
+      Math.max(
+        0,
+        numero(dadosNormalizados.efetivoPrevisto) -
+          numero(dadosNormalizados.efetivoPresente),
+      ),
+    );
+    dadosNormalizados.atrasoMinutos = String(
       calcularMinutosEntre(
-        dadosNormalizados.horarioInicioFila,
-        dadosNormalizados.horarioNormalizado,
+        dadosNormalizados.atrasoInicio,
+        dadosNormalizados.atrasoFim,
+      ),
+    );
+  }
+  if (modulo === "operacao_filas") {
+    let intervalos: Array<{ inicio: string; fim: string }> = [];
+    try {
+      intervalos = JSON.parse(dadosNormalizados.intervalosFila || "[]");
+    } catch {
+      intervalos = [];
+    }
+    dadosNormalizados.tempoTotalImpactoMin = String(
+      intervalos.reduce(
+        (total, intervalo) =>
+          total + calcularMinutosEntre(intervalo.inicio, intervalo.fim),
+        0,
       ),
     );
     dadosNormalizados.tempoMedioEvento = String(
@@ -252,13 +295,18 @@ const modulos: Record<string, ModuloConfig> = {
     campos: [
       { chave: "efetivoPrevisto", label: "Efetivo previsto" },
       { chave: "efetivoPresente", label: "Efetivo presente" },
-      { chave: "faltas", label: "Faltas" },
-      { chave: "atrasos", label: "Atrasos" },
+      { chave: "faltas", label: "Faltas", calculado: true },
+      { chave: "mencionarAtraso", label: "Mencionar atraso", tipo: "text" },
+      { chave: "colaboradorAtraso", label: "Colaborador em atraso", tipo: "text" },
+      { chave: "atrasoInicio", label: "Início do atraso", tipo: "datetime" },
+      { chave: "atrasoFim", label: "Fim do atraso", tipo: "datetime" },
+      { chave: "atrasoMinutos", label: "Tempo de atraso", calculado: true },
       { chave: "postosDescobertos", label: "Postos descobertos" },
       { chave: "coberturas", label: "Coberturas realizadas" },
       { chave: "servicosExtras", label: "Serviços extras" },
       { chave: "horasPostoDescoberto", label: "Horas de posto descoberto" },
       { chave: "rondas", label: "Rondas realizadas" },
+      { chave: "anormalidadesRondas", label: "Anormalidades constatadas nas rondas" },
       { chave: "desviosRonda", label: "Desvios em ronda" },
       { chave: "desviosTratados", label: "Desvios tratados no prazo" },
       { chave: "ocorrencias", label: "Principais ocorrências", tipo: "textarea" },
@@ -452,13 +500,12 @@ const modulos: Record<string, ModuloConfig> = {
     destaque: "from-red-600 to-orange-500",
     campos: [
       { chave: "eventosFila", label: "Quantidade de eventos de fila" },
-      { chave: "horarioInicioFila", label: "Horário de início", tipo: "datetime" },
-      { chave: "horarioNormalizado", label: "Horário normalizado", tipo: "datetime" },
+      { chave: "intervalosFila", label: "Períodos das filas", tipo: "text" },
       { chave: "tempoTotalImpactoMin", label: "Tempo total de impacto", calculado: true },
       { chave: "veiculosImpactados", label: "Veículos/pessoas impactadas" },
       { chave: "contingencias", label: "Contingências acionadas" },
       { chave: "reincidencias", label: "Reincidências" },
-      { chave: "areaResponsavel", label: "Área responsável", tipo: "text" },
+      { chave: "areaResponsavel", label: "Área responsável", tipo: "select" },
       { chave: "motivoFila", label: "Principais causas / sistema ou equipamento envolvido / plano de ação", tipo: "textarea" },
     ],
     indicadores: [
@@ -555,6 +602,7 @@ export default function OperacaoIndicadores() {
     useState<RegistroOperacional | null>(null);
   const [validando, setValidando] = useState(false);
   const [confirmarEnvioVazio, setConfirmarEnvioVazio] = useState(false);
+  const [locais, setLocais] = useState<LocalOperacional[]>([]);
   const [form, setForm] = useState<Formulario>(() =>
     config ? formularioInicial(config) : { dataReferencia: dataInput(), dados: {} },
   );
@@ -596,6 +644,14 @@ export default function OperacaoIndicadores() {
     carregar();
   }, [config?.chave]);
 
+  useEffect(() => {
+    if (config?.chave !== "operacao_filas") return;
+    api
+      .get("/locais", { params: { status: "ativo" } })
+      .then((resposta) => setLocais(resposta.data || []))
+      .catch(() => setLocais([]));
+  }, [config?.chave]);
+
   const registrosValidados = useMemo(
     () => registros.filter((registro) => statusValidacaoEfetivo(registro) === "Validado"),
     [registros],
@@ -618,18 +674,33 @@ export default function OperacaoIndicadores() {
     if (!config) return;
     const valores = dados(registro);
     setEditando(registro);
+    const dadosFormulario = Object.fromEntries(
+      config.campos.map((campo) => [
+        campo.chave,
+        campo.tipo === "datetime"
+          ? dataHoraInput(String(valores[campo.chave] || ""))
+          : campo.tipo === "text" || campo.tipo === "textarea" || campo.tipo === "select" || campo.calculado
+            ? String(valores[campo.chave] ?? "")
+            : numeroParaInput(valores[campo.chave]),
+      ]),
+    );
+    if (
+      config.chave === "operacao_filas" &&
+      !dadosFormulario.intervalosFila &&
+      valores.horarioInicioFila &&
+      valores.horarioNormalizado
+    ) {
+      dadosFormulario.intervalosFila = JSON.stringify([
+        {
+          inicio: dataHoraInput(String(valores.horarioInicioFila)),
+          fim: dataHoraInput(String(valores.horarioNormalizado)),
+        },
+      ]);
+      dadosFormulario.eventosFila = "1";
+    }
     setForm({
       dataReferencia: dataInput(registro.dataReferencia),
-      dados: Object.fromEntries(
-        config.campos.map((campo) => [
-          campo.chave,
-          campo.tipo === "datetime"
-            ? dataHoraInput(String(valores[campo.chave] || ""))
-            : campo.tipo === "text" || campo.tipo === "textarea" || campo.calculado
-              ? String(valores[campo.chave] ?? "")
-              : numeroParaInput(valores[campo.chave]),
-        ]),
-      ),
+      dados: normalizarDadosModulo(config.chave, dadosFormulario),
     });
     setModalAberto(true);
   }
@@ -640,7 +711,7 @@ export default function OperacaoIndicadores() {
       const proximosDados = {
         ...atual.dados,
         [campo.chave]:
-          campo.tipo === "textarea" || campo.tipo === "text" || campo.tipo === "datetime"
+          campo.tipo === "textarea" || campo.tipo === "text" || campo.tipo === "datetime" || campo.tipo === "select"
             ? valor
             : valor.replace(/\D/g, ""),
       };
@@ -649,6 +720,62 @@ export default function OperacaoIndicadores() {
         dados: normalizarDadosModulo(config?.chave || "", proximosDados),
       };
     });
+  }
+
+  function intervalosFila() {
+    try {
+      const intervalos = JSON.parse(form.dados.intervalosFila || "[]");
+      return Array.isArray(intervalos) ? intervalos : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function atualizarQuantidadeFilas(valor: string) {
+    const quantidade = Math.max(0, numero(valor));
+    const atuais = intervalosFila();
+    atualizarCampo(
+      config.campos.find((campo) => campo.chave === "eventosFila")!,
+      valor,
+    );
+    setForm((atual) => ({
+      ...atual,
+      dados: normalizarDadosModulo(config.chave, {
+        ...atual.dados,
+        eventosFila: valor.replace(/\D/g, ""),
+        intervalosFila: JSON.stringify(
+          Array.from({ length: quantidade }, (_, indice) =>
+            atuais[indice] || { inicio: "", fim: "" },
+          ),
+        ),
+      }),
+    }));
+  }
+
+  function atualizarIntervaloFila(indice: number, chave: "inicio" | "fim", valor: string) {
+    const intervalos = intervalosFila().map((item: any, itemIndice: number) =>
+      itemIndice === indice ? { ...item, [chave]: valor } : item,
+    );
+    setForm((atual) => ({
+      ...atual,
+      dados: normalizarDadosModulo(config.chave, {
+        ...atual.dados,
+        intervalosFila: JSON.stringify(intervalos),
+      }),
+    }));
+  }
+
+  function atualizarAtrasoVigilancia(ativo: boolean) {
+    setForm((atual) => ({
+      ...atual,
+      dados: normalizarDadosModulo(config.chave, {
+        ...atual.dados,
+        mencionarAtraso: String(ativo),
+        colaboradorAtraso: ativo ? atual.dados.colaboradorAtraso || "" : "",
+        atrasoInicio: ativo ? atual.dados.atrasoInicio || "" : "",
+        atrasoFim: ativo ? atual.dados.atrasoFim || "" : "",
+      }),
+    }));
   }
 
   async function enviarFormulario() {
@@ -1118,7 +1245,19 @@ export default function OperacaoIndicadores() {
                 />
               </label>
 
-              {config.campos.map((campo) => (
+              {config.campos
+                .filter(
+                  (campo) =>
+                    ![
+                      "mencionarAtraso",
+                      "colaboradorAtraso",
+                      "atrasoInicio",
+                      "atrasoFim",
+                      "atrasoMinutos",
+                      "intervalosFila",
+                    ].includes(campo.chave),
+                )
+                .map((campo) => (
                 <label
                   key={campo.chave}
                   className={`space-y-2 text-sm font-bold text-slate-200 ${
@@ -1138,11 +1277,27 @@ export default function OperacaoIndicadores() {
                   ) : campo.calculado ? (
                     <div className="flex h-12 w-full items-center rounded-2xl border border-blue-500/30 bg-blue-500/10 px-4 font-black text-blue-100">
                       {campo.chave === "tempoTotalImpactoMin"
-                        ? form.dados.horarioInicioFila && form.dados.horarioNormalizado
+                        ? intervalosFila().length
                           ? minutos(numero(form.dados[campo.chave]))
                           : ""
                         : form.dados[campo.chave] || ""}
                     </div>
+                  ) : campo.tipo === "select" ? (
+                    <select
+                      value={form.dados[campo.chave] || ""}
+                      onChange={(event) =>
+                        config.chave === "operacao_filas" && campo.chave === "eventosFila"
+                          ? atualizarQuantidadeFilas(event.target.value)
+                          : atualizarCampo(campo, event.target.value)
+                      }
+                      required
+                      className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
+                    >
+                      <option value="">Selecione um local</option>
+                      {locais.map((local) => (
+                        <option key={local.id} value={local.nome}>{local.nome}</option>
+                      ))}
+                    </select>
                   ) : (
                     <input
                       type={
@@ -1162,6 +1317,50 @@ export default function OperacaoIndicadores() {
                   )}
                 </label>
               ))}
+
+              {config.chave === "operacao_vigilancia" && (
+                <div className="space-y-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 md:col-span-2">
+                  <label className="flex items-center justify-between gap-3 text-sm font-bold text-slate-200">
+                    <span className="inline-flex items-center gap-2"><AlertTriangle size={16} className="text-amber-300" />Mencionar atraso</span>
+                    <input type="checkbox" checked={form.dados.mencionarAtraso === "true"} onChange={(event) => atualizarAtrasoVigilancia(event.target.checked)} className="h-4 w-4" />
+                  </label>
+                  {form.dados.mencionarAtraso === "true" && (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
+                        Colaborador em atraso
+                        <input type="text" required value={form.dados.colaboradorAtraso || ""} onChange={(event) => atualizarCampo(config.campos.find((campo) => campo.chave === "colaboradorAtraso")!, event.target.value)} className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none focus:border-blue-400" />
+                      </label>
+                      {(["atrasoInicio", "atrasoFim"] as const).map((chave) => (
+                        <label key={chave} className="space-y-2 text-sm font-bold text-slate-200">
+                          {chave === "atrasoInicio" ? "Início do atraso" : "Fim do atraso"}
+                          <input type="datetime-local" required value={form.dados[chave] || ""} min={chave === "atrasoFim" ? form.dados.atrasoInicio || undefined : undefined} onChange={(event) => atualizarCampo(config.campos.find((campo) => campo.chave === chave)!, event.target.value)} className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none [color-scheme:dark] focus:border-blue-400" />
+                        </label>
+                      ))}
+                      <div className="rounded-2xl border border-amber-400/25 bg-slate-950 px-4 py-3 md:col-span-2">
+                        <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-200">Tempo total do atraso</p>
+                        <p className="mt-1 text-xl font-black text-white">{minutos(numero(form.dados.atrasoMinutos))}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {config.chave === "operacao_filas" && (
+                <div className="space-y-3 rounded-2xl border border-rose-400/25 bg-rose-400/5 p-4 md:col-span-2">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-rose-200">Períodos de impacto</p>
+                  {intervalosFila().map((intervalo: any, indice: number) => (
+                    <div key={indice} className="grid gap-3 rounded-2xl border border-slate-700 bg-slate-950/70 p-3 md:grid-cols-2">
+                      <p className="text-sm font-black text-white md:col-span-2">Fila {indice + 1}</p>
+                      {(["inicio", "fim"] as const).map((chave) => (
+                        <label key={chave} className="space-y-2 text-sm font-bold text-slate-200">
+                          {chave === "inicio" ? "Horário de início" : "Horário normalizado"}
+                          <input type="datetime-local" required value={intervalo[chave] || ""} min={chave === "fim" ? intervalo.inicio || undefined : undefined} onChange={(event) => atualizarIntervaloFila(indice, chave, event.target.value)} className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none [color-scheme:dark] focus:border-rose-400" />
+                        </label>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="flex flex-col-reverse gap-3 border-t border-slate-800 bg-slate-900/60 p-5 sm:flex-row sm:justify-end">

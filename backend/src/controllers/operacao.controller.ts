@@ -235,11 +235,30 @@ function dadosScannerPassagem(body: any) {
   const containersInspecao = numeroInteiroNaoNegativo(body.containersInspecao);
   const aberturasSuspeita = numeroInteiroNaoNegativo(body.aberturasSuspeita);
   const registrarIndisponibilidade = Boolean(body.registrarIndisponibilidade);
-  const indisponibilidadeInicio = registrarIndisponibilidade
-    ? dataOpcional(body.indisponibilidadeInicio)
+  const intervalosRecebidos = Array.isArray(body.indisponibilidades)
+    ? body.indisponibilidades
+    : body.indisponibilidadeInicio && body.indisponibilidadeFim
+      ? [{ inicio: body.indisponibilidadeInicio, fim: body.indisponibilidadeFim }]
+      : [];
+  const indisponibilidades = registrarIndisponibilidade
+    ? intervalosRecebidos.map((intervalo: any, indice: number) => {
+        const inicio = dataOpcional(intervalo?.inicio);
+        const fim = dataOpcional(intervalo?.fim);
+        if (!inicio || !fim || fim <= inicio) {
+          throw new Error(`Informe corretamente o início e o fim da indisponibilidade ${indice + 1}.`);
+        }
+        return {
+          inicio: inicio.toISOString(),
+          fim: fim.toISOString(),
+          minutos: minutosEntre(inicio, fim),
+        };
+      })
+    : [];
+  const indisponibilidadeInicio = indisponibilidades[0]
+    ? new Date(indisponibilidades[0].inicio)
     : null;
-  const indisponibilidadeFim = registrarIndisponibilidade
-    ? dataOpcional(body.indisponibilidadeFim)
+  const indisponibilidadeFim = indisponibilidades[0]
+    ? new Date(indisponibilidades[0].fim)
     : null;
 
   return {
@@ -256,10 +275,14 @@ function dadosScannerPassagem(body: any) {
     tiposSuspeita: textoOpcional(body.tiposSuspeita),
     indisponibilidadeInicio,
     indisponibilidadeFim,
-    indisponibilidadeMinutos: minutosEntre(
-      indisponibilidadeInicio,
-      indisponibilidadeFim,
+    indisponibilidadeMinutos: indisponibilidades.reduce(
+      (total: number, intervalo: { minutos: number }) => total + intervalo.minutos,
+      0,
     ),
+    quantidadeIndisponibilidades: indisponibilidades.length,
+    indisponibilidadesJson: indisponibilidades.length
+      ? JSON.stringify(indisponibilidades)
+      : null,
     acoesContingencia: textoOpcional(body.acoesContingencia),
     total:
       leituraComFalha + leituraSatisfatoria + insatisfatoria + falhasEquipamento,

@@ -8,6 +8,7 @@ import {
   Clock,
   Edit3,
   Filter,
+  Hash,
   Plus,
   ScanLine,
   TrendingUp,
@@ -36,6 +37,8 @@ type ScannerPassagem = {
   indisponibilidadeInicio?: string | null;
   indisponibilidadeFim?: string | null;
   indisponibilidadeMinutos: number;
+  quantidadeIndisponibilidades?: number;
+  indisponibilidadesJson?: string | null;
   acoesContingencia?: string | null;
   total: number;
   createdAt: string;
@@ -66,8 +69,8 @@ type ScannerForm = {
   aberturasSuspeita: string;
   tiposSuspeita: string;
   registrarIndisponibilidade: boolean;
-  indisponibilidadeInicio: string;
-  indisponibilidadeFim: string;
+  quantidadeIndisponibilidades: string;
+  indisponibilidades: Array<{ inicio: string; fim: string }>;
   acoesContingencia: string;
 };
 
@@ -102,6 +105,7 @@ type EquipeScannerForm = {
   atrasoInicio: string;
   atrasoFim: string;
   atrasoMinutos: string;
+  colaboradorAtraso: string;
   observacoes: string;
 };
 
@@ -231,8 +235,8 @@ function formVazio(): ScannerForm {
     aberturasSuspeita: "",
     tiposSuspeita: "",
     registrarIndisponibilidade: false,
-    indisponibilidadeInicio: "",
-    indisponibilidadeFim: "",
+    quantidadeIndisponibilidades: "",
+    indisponibilidades: [],
     acoesContingencia: "",
   };
 }
@@ -247,6 +251,7 @@ function equipeFormVazio(): EquipeScannerForm {
     atrasoInicio: "",
     atrasoFim: "",
     atrasoMinutos: "",
+    colaboradorAtraso: "",
     observacoes: "",
   };
 }
@@ -283,6 +288,26 @@ function dadosEquipe(registro: EquipeScannerRegistro) {
   } catch {
     return {};
   }
+}
+
+function intervalosIndisponibilidade(registro: ScannerPassagem) {
+  try {
+    const intervalos = JSON.parse(registro.indisponibilidadesJson || "[]");
+    if (Array.isArray(intervalos) && intervalos.length) {
+      return intervalos.map((item) => ({
+        inicio: String(item.inicio || "").slice(0, 16),
+        fim: String(item.fim || "").slice(0, 16),
+      }));
+    }
+  } catch {
+    // Mantém compatibilidade com lançamentos anteriores.
+  }
+  return registro.indisponibilidadeInicio && registro.indisponibilidadeFim
+    ? [{
+        inicio: registro.indisponibilidadeInicio.slice(0, 16),
+        fim: registro.indisponibilidadeFim.slice(0, 16),
+      }]
+    : [];
 }
 
 function minutosEntreHoras(inicio: string, fim: string) {
@@ -785,6 +810,7 @@ export default function Scanner() {
   }
 
   function abrirEdicao(registro: ScannerPassagem) {
+    const indisponibilidades = intervalosIndisponibilidade(registro);
     setEditando(registro);
     setForm({
       data: dataInput(registro.data),
@@ -798,13 +824,11 @@ export default function Scanner() {
       containersInspecao: numeroParaInput(registro.containersInspecao),
       aberturasSuspeita: numeroParaInput(registro.aberturasSuspeita),
       tiposSuspeita: registro.tiposSuspeita || "",
-      registrarIndisponibilidade: Boolean(registro.indisponibilidadeInicio),
-      indisponibilidadeInicio: registro.indisponibilidadeInicio
-        ? registro.indisponibilidadeInicio.slice(0, 16)
+      registrarIndisponibilidade: indisponibilidades.length > 0,
+      quantidadeIndisponibilidades: indisponibilidades.length
+        ? String(indisponibilidades.length)
         : "",
-      indisponibilidadeFim: registro.indisponibilidadeFim
-        ? registro.indisponibilidadeFim.slice(0, 16)
-        : "",
+      indisponibilidades,
       acoesContingencia: registro.acoesContingencia || "",
     });
     setModalAberto(true);
@@ -812,16 +836,19 @@ export default function Scanner() {
 
   function abrirEdicaoEquipe(registro: EquipeScannerRegistro) {
     const dados = dadosEquipe(registro);
+    const efetivoPrevisto = numero(dados.efetivoPrevisto || 0);
+    const efetivoPresente = numero(dados.efetivoPresente || 0);
     setEditandoEquipe(registro);
     setEquipeForm({
       dataReferencia: dataInput(registro.dataReferencia),
-      efetivoPrevisto: numeroParaInput(dados.efetivoPrevisto),
-      efetivoPresente: numeroParaInput(dados.efetivoPresente),
-      faltas: numeroParaInput(dados.faltas),
+      efetivoPrevisto: numeroParaInput(efetivoPrevisto),
+      efetivoPresente: numeroParaInput(efetivoPresente),
+      faltas: String(Math.max(0, efetivoPrevisto - efetivoPresente)),
       mencionarAtraso: Boolean(dados.mencionarAtraso),
       atrasoInicio: String(dados.atrasoInicio || ""),
       atrasoFim: String(dados.atrasoFim || ""),
       atrasoMinutos: numeroParaInput(dados.atrasoMinutos),
+      colaboradorAtraso: String(dados.colaboradorAtraso || ""),
       observacoes: String(dados.observacoes || ""),
     });
     setModalEquipeAberto(true);
@@ -834,8 +861,6 @@ export default function Scanner() {
         campo === "scanner" ||
         campo === "data" ||
         campo === "tiposSuspeita" ||
-        campo === "indisponibilidadeInicio" ||
-        campo === "indisponibilidadeFim" ||
         campo === "acoesContingencia"
           ? valor
           : valor.replace(/\D/g, ""),
@@ -846,8 +871,32 @@ export default function Scanner() {
     setForm((atual) => ({
       ...atual,
       registrarIndisponibilidade: valor,
-      indisponibilidadeInicio: valor ? atual.indisponibilidadeInicio : "",
-      indisponibilidadeFim: valor ? atual.indisponibilidadeFim : "",
+      quantidadeIndisponibilidades: valor ? atual.quantidadeIndisponibilidades : "",
+      indisponibilidades: valor ? atual.indisponibilidades : [],
+    }));
+  }
+
+  function atualizarQuantidadeIndisponibilidades(valor: string) {
+    const quantidade = Math.max(0, numero(valor));
+    setForm((atual) => ({
+      ...atual,
+      quantidadeIndisponibilidades: valor.replace(/\D/g, ""),
+      indisponibilidades: Array.from({ length: quantidade }, (_, indice) =>
+        atual.indisponibilidades[indice] || { inicio: "", fim: "" },
+      ),
+    }));
+  }
+
+  function atualizarIndisponibilidade(
+    indice: number,
+    campo: "inicio" | "fim",
+    valor: string,
+  ) {
+    setForm((atual) => ({
+      ...atual,
+      indisponibilidades: atual.indisponibilidades.map((item, itemIndice) =>
+        itemIndice === indice ? { ...item, [campo]: valor } : item,
+      ),
     }));
   }
 
@@ -858,9 +907,20 @@ export default function Scanner() {
         campo === "dataReferencia" ||
         campo === "atrasoInicio" ||
         campo === "atrasoFim" ||
-        campo === "observacoes"
+        campo === "observacoes" || campo === "colaboradorAtraso"
           ? valor
           : valor.replace(/\D/g, ""),
+      ...(campo === "efetivoPrevisto" || campo === "efetivoPresente"
+        ? {
+            faltas: String(
+              Math.max(
+                0,
+                numero(campo === "efetivoPrevisto" ? valor : atual.efetivoPrevisto) -
+                  numero(campo === "efetivoPresente" ? valor : atual.efetivoPresente),
+              ),
+            ),
+          }
+        : {}),
     }));
   }
 
@@ -871,6 +931,7 @@ export default function Scanner() {
       atrasoInicio: valor ? atual.atrasoInicio : "",
       atrasoFim: valor ? atual.atrasoFim : "",
       atrasoMinutos: valor ? atual.atrasoMinutos : "",
+      colaboradorAtraso: valor ? atual.colaboradorAtraso : "",
     }));
   }
 
@@ -891,12 +952,9 @@ export default function Scanner() {
         aberturasSuspeita: numero(form.aberturasSuspeita),
         tiposSuspeita: form.tiposSuspeita,
         registrarIndisponibilidade: form.registrarIndisponibilidade,
-        indisponibilidadeInicio: form.registrarIndisponibilidade
-          ? form.indisponibilidadeInicio
-          : "",
-        indisponibilidadeFim: form.registrarIndisponibilidade
-          ? form.indisponibilidadeFim
-          : "",
+        indisponibilidades: form.registrarIndisponibilidade
+          ? form.indisponibilidades
+          : [],
         acoesContingencia: form.acoesContingencia,
       };
 
@@ -972,6 +1030,9 @@ export default function Scanner() {
           atrasoInicio: equipeForm.mencionarAtraso ? equipeForm.atrasoInicio : "",
           atrasoFim: equipeForm.mencionarAtraso ? equipeForm.atrasoFim : "",
           atrasoMinutos,
+          colaboradorAtraso: equipeForm.mencionarAtraso
+            ? equipeForm.colaboradorAtraso
+            : "",
           observacoes: equipeForm.observacoes,
         },
       };
@@ -1839,25 +1900,24 @@ export default function Scanner() {
               </label>
 
               {form.registrarIndisponibilidade && (
-                <>
+                <div className="grid gap-3 rounded-2xl border border-amber-400/25 bg-amber-400/5 p-4 md:col-span-2 md:grid-cols-2">
                   <CampoScannerInput
-                    icon={<Clock size={16} />}
-                    label="Início da indisponibilidade"
-                    type="datetime-local"
-                    value={form.indisponibilidadeInicio}
-                    onChange={(valor) =>
-                      atualizarCampo("indisponibilidadeInicio", valor)
-                    }
+                    icon={<Hash size={16} />}
+                    label="Quantidade de indisponibilidades"
+                    type="number"
+                    min="1"
+                    value={form.quantidadeIndisponibilidades}
+                    onChange={atualizarQuantidadeIndisponibilidades}
                   />
-                  <CampoScannerInput
-                    icon={<Clock size={16} />}
-                    label="Fim da indisponibilidade"
-                    type="datetime-local"
-                    value={form.indisponibilidadeFim}
-                    min={form.indisponibilidadeInicio || undefined}
-                    onChange={(valor) => atualizarCampo("indisponibilidadeFim", valor)}
-                  />
-                </>
+                  <div className="hidden md:block" />
+                  {form.indisponibilidades.map((intervalo, indice) => (
+                    <div key={indice} className="grid gap-3 rounded-2xl border border-slate-700 bg-slate-950/70 p-3 md:col-span-2 md:grid-cols-2">
+                      <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-200 md:col-span-2">Indisponibilidade {indice + 1}</p>
+                      <CampoScannerInput icon={<Clock size={16} />} label="Início" type="datetime-local" value={intervalo.inicio} onChange={(valor) => atualizarIndisponibilidade(indice, "inicio", valor)} />
+                      <CampoScannerInput icon={<Clock size={16} />} label="Fim" type="datetime-local" value={intervalo.fim} min={intervalo.inicio || undefined} onChange={(valor) => atualizarIndisponibilidade(indice, "fim", valor)} />
+                    </div>
+                  ))}
+                </div>
               )}
 
               <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">
@@ -2371,7 +2431,8 @@ export default function Scanner() {
                 label="Faltas"
                 type="number"
                 value={equipeForm.faltas}
-                onChange={(valor) => atualizarEquipeCampo("faltas", valor)}
+                onChange={() => undefined}
+                readOnly
               />
 
               <label className="flex items-center justify-between gap-3 rounded-2xl border border-slate-700 bg-slate-900/80 px-4 py-3 text-sm font-bold text-slate-200 sm:col-span-2">
@@ -2389,6 +2450,10 @@ export default function Scanner() {
 
               {equipeForm.mencionarAtraso && (
                 <>
+                  <label className="space-y-2 text-sm font-bold text-slate-200 sm:col-span-2">
+                    <span className="inline-flex items-center gap-2"><Users size={16} className="text-emerald-300" />Colaborador em atraso</span>
+                    <input type="text" value={equipeForm.colaboradorAtraso} onChange={(event) => atualizarEquipeCampo("colaboradorAtraso", event.target.value)} required className="h-11 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10" />
+                  </label>
                   <CampoEquipe
                     icon={<Clock size={16} />}
                     label="Início do atraso"
@@ -2515,12 +2580,14 @@ function CampoEquipe({
   type,
   value,
   onChange,
+  readOnly = false,
 }: {
   icon: React.ReactNode;
   label: string;
   type: "date" | "number" | "time";
   value: string;
   onChange: (value: string) => void;
+  readOnly?: boolean;
 }) {
   return (
     <label className="space-y-2 text-sm font-bold text-slate-200">
@@ -2534,8 +2601,9 @@ function CampoEquipe({
         step={type === "number" ? "1" : undefined}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        readOnly={readOnly}
         required
-        className="h-11 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition [color-scheme:dark] placeholder:text-slate-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
+        className={`h-11 w-full rounded-2xl border border-slate-700 px-4 font-normal text-white outline-none transition [color-scheme:dark] placeholder:text-slate-500 focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 ${readOnly ? "cursor-not-allowed bg-slate-800 text-slate-300" : "bg-slate-900"}`}
       />
     </label>
   );

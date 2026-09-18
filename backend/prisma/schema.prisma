@@ -1266,6 +1266,8 @@ model ScannerPassagem {
   indisponibilidadeInicio DateTime?
   indisponibilidadeFim    DateTime?
   indisponibilidadeMinutos Int     @default(0)
+  quantidadeIndisponibilidades Int @default(0)
+  indisponibilidadesJson String?
   acoesContingencia   String?
   total               Int      @default(0)
   unidade             String
