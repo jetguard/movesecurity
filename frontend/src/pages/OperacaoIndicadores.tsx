@@ -1355,13 +1355,13 @@ export default function OperacaoIndicadores() {
 
               {config.chave === "operacao_vigilancia" && (
                 <div className="space-y-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/5 p-4 md:col-span-2">
-                  <div className="grid gap-3 md:grid-cols-2">
+                  {validadorOperacional && <div className="grid gap-3 md:grid-cols-2">
                     <label className="space-y-2 text-sm font-bold text-slate-200 md:col-span-2">Empresa de vigilância<select required className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 text-white" value={form.dados.fornecedorId || ""} onChange={(e)=>selecionarFornecedor(e.target.value)}><option value="">Selecione</option>{fornecedores.map(f=><option key={f.id} value={f.id}>{f.nomeEmpresa}</option>)}</select></label>
                     <label className="space-y-2 text-sm font-bold text-slate-200">Turno<select required className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 text-white" value={form.dados.turnoFaltas || "DIURNO"} onChange={(e)=>atualizarCampo(config.campos.find(c=>c.chave==="turnoFaltas")!,e.target.value)}><option>DIURNO</option><option>NOTURNO</option></select></label>
                     <div />
                     {([['faltasVigilante','Faltas de vigilantes'],['faltasControlador','Faltas de controladores de acesso']] as const).map(([chave,label])=><label key={chave} className="space-y-2 text-sm font-bold text-slate-200">{label}<input type="number" min="0" required className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 text-white" value={form.dados[chave]||""} onChange={(e)=>atualizarCampo(config.campos.find(c=>c.chave===chave)!,e.target.value)}/></label>)}
                     <div className="rounded-xl bg-slate-950 p-3 text-sm">Desconto estimado: <strong className="text-rose-300">{new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(numero(form.dados.descontoFinanceiro))}</strong></div>
-                  </div>
+                  </div>}
                   <label className="flex items-center justify-between gap-3 text-sm font-bold text-slate-200">
                     <span className="inline-flex items-center gap-2"><AlertTriangle size={16} className="text-amber-300" />Mencionar atraso</span>
                     <input type="checkbox" checked={form.dados.mencionarAtraso === "true"} onChange={(event) => atualizarAtrasoVigilancia(event.target.checked)} className="h-4 w-4" />
