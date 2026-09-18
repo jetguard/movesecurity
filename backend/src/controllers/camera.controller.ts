@@ -7,6 +7,7 @@ import { prisma } from "../lib/prisma";
 import { AuthRequest, PERFIS } from "../middlewares/auth";
 import { registrarLog } from "../services/auditoria.service";
 import { emitirRealtime } from "../services/realtime.service";
+import { enviarEmail } from "../services/email.service";
 import {
   assinarDocumento,
   criarUrlValidacaoAssinatura,
@@ -69,6 +70,92 @@ function formatarIndisponibilidade(minutosTotais: number) {
 
 function dataPt(data?: Date | null) {
   return data ? data.toLocaleString("pt-BR") : "Nao informado";
+}
+
+function escaparHtml(valor: unknown) {
+  return String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function notificarManutencaoCameraDesconectada(
+  camera: {
+    numeroCamera: string;
+    nomeCamera?: string | null;
+    numeroServidor: string;
+    unidade: string;
+    localInstalado: string;
+    areaMonitorada: string;
+  },
+  desconectadaEm: Date,
+) {
+  try {
+    const destinatarios = await prisma.usuario.findMany({
+      where: {
+        manutencaoCftv: true,
+        statusUsuario: "ATIVO",
+        somenteCadastro: false,
+        OR: [
+          { unidade: camera.unidade },
+          { unidadesPermitidas: { contains: `"${camera.unidade}"` } },
+        ],
+      },
+      select: { nome: true, email: true },
+    });
+    if (!destinatarios.length) return;
+
+    const horario = desconectadaEm.toLocaleString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      dateStyle: "short",
+      timeStyle: "short",
+    });
+    const identificacao = camera.nomeCamera
+      ? `${camera.numeroCamera} - ${camera.nomeCamera}`
+      : camera.numeroCamera;
+
+    await Promise.allSettled(
+      destinatarios.map((destinatario) =>
+        enviarEmail({
+          to: destinatario.email,
+          subject: `[CFTV] Câmera ${identificacao} desconectada`,
+          text: [
+            `Olá, ${destinatario.nome}.`,
+            "Uma câmera foi registrada como desconectada no MoveSecurity.",
+            `Câmera: ${identificacao}`,
+            `Unidade: ${camera.unidade}`,
+            `Servidor: ${camera.numeroServidor}`,
+            `Local instalado: ${camera.localInstalado}`,
+            `Área monitorada: ${camera.areaMonitorada}`,
+            `Horário da desconexão: ${horario}`,
+          ].join("\n"),
+          html: `
+            <div style="font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#0f172a">
+              <div style="background:#0f172a;color:#fff;padding:22px;border-radius:10px 10px 0 0">
+                <div style="font-size:12px;letter-spacing:2px;color:#7dd3fc;font-weight:700">MOVESECURITY · ALERTA CFTV</div>
+                <h1 style="font-size:22px;margin:8px 0 0">Câmera desconectada</h1>
+              </div>
+              <div style="border:1px solid #cbd5e1;border-top:0;padding:22px;border-radius:0 0 10px 10px">
+                <p>Olá, <strong>${escaparHtml(destinatario.nome)}</strong>.</p>
+                <p>Uma câmera foi registrada como desconectada e requer acompanhamento da equipe de Manutenção/CFTV.</p>
+                <table style="width:100%;border-collapse:collapse;margin-top:18px">
+                  <tr><td style="padding:8px;background:#f1f5f9"><strong>Câmera</strong></td><td style="padding:8px;background:#f8fafc">${escaparHtml(identificacao)}</td></tr>
+                  <tr><td style="padding:8px;background:#f1f5f9"><strong>Unidade</strong></td><td style="padding:8px;background:#f8fafc">${escaparHtml(camera.unidade)}</td></tr>
+                  <tr><td style="padding:8px;background:#f1f5f9"><strong>Servidor</strong></td><td style="padding:8px;background:#f8fafc">${escaparHtml(camera.numeroServidor)}</td></tr>
+                  <tr><td style="padding:8px;background:#f1f5f9"><strong>Local</strong></td><td style="padding:8px;background:#f8fafc">${escaparHtml(camera.localInstalado)}</td></tr>
+                  <tr><td style="padding:8px;background:#f1f5f9"><strong>Área monitorada</strong></td><td style="padding:8px;background:#f8fafc">${escaparHtml(camera.areaMonitorada)}</td></tr>
+                  <tr><td style="padding:8px;background:#fee2e2;color:#991b1b"><strong>Desconectada em</strong></td><td style="padding:8px;background:#fff1f2;color:#991b1b"><strong>${escaparHtml(horario)}</strong></td></tr>
+                </table>
+              </div>
+            </div>`,
+        }),
+      ),
+    );
+  } catch (error) {
+    console.error("Erro ao notificar equipe de Manutenção/CFTV:", error);
+  }
 }
 
 function textoPdf(valor?: string | number | null) {
@@ -314,6 +401,7 @@ export async function registrarMudancaStatus(params: {
       link: "/cameras",
       payload: { cameraId: camera.id, numeroCamera: camera.numeroCamera },
     });
+    await notificarManutencaoCameraDesconectada(camera, agora);
     return;
   }
 
@@ -519,6 +607,10 @@ export async function criarCamera(req: AuthRequest, res: Response) {
         unidade: camera.unidade,
         payload: { cameraId: camera.id, numeroCamera: camera.numeroCamera },
       });
+      await notificarManutencaoCameraDesconectada(
+        camera,
+        camera.desconectadaDesde || new Date(),
+      );
     }
 
     await registrarLog({

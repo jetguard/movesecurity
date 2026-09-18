@@ -1,0 +1,2 @@
+ALTER TABLE "Usuario"
+ADD COLUMN "manutencaoCftv" BOOLEAN NOT NULL DEFAULT false;

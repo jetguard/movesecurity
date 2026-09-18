@@ -37,6 +37,7 @@ type Usuario = {
   perfilAcesso: string;
   validadorOperacional?: boolean;
   mediadorOperacional?: boolean;
+  manutencaoCftv?: boolean;
   statusUsuario: string;
   possuiPinOperacional?: boolean;
   ultimoAcesso?: string | null;
@@ -93,6 +94,7 @@ const vazio = {
   perfilAcesso: "",
   validadorOperacional: false,
   mediadorOperacional: false,
+  manutencaoCftv: false,
   statusUsuario: "ATIVO",
   senha: "",
   confirmarSenha: "",
@@ -366,6 +368,7 @@ export default function Usuarios() {
       perfilAcesso: usuario.perfilAcesso,
       validadorOperacional: Boolean(usuario.validadorOperacional),
       mediadorOperacional: Boolean(usuario.mediadorOperacional),
+      manutencaoCftv: Boolean(usuario.manutencaoCftv),
       statusUsuario: usuario.statusUsuario,
       senha: "",
       confirmarSenha: "",
@@ -925,6 +928,23 @@ export default function Usuarios() {
                           </strong>
                           Visualiza os cards sem pendência e pode criar/editar
                           formulários operacionais sem limite diário.
+                        </span>
+                      </label>
+                      <label className="flex items-start gap-3 rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm text-slate-700">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={Boolean(formulario.manutencaoCftv)}
+                          onChange={(e) =>
+                            atualizarCampo("manutencaoCftv", e.target.checked)
+                          }
+                        />
+                        <span>
+                          <strong className="block text-slate-900">
+                            Manutenção/CFTV
+                          </strong>
+                          Recebe por e-mail os alertas de câmeras desconectadas
+                          nas unidades permitidas.
                         </span>
                       </label>
                       <label className="flex items-start gap-3 rounded-lg border border-blue-100 bg-white px-3 py-2 text-sm text-slate-700">

@@ -42,6 +42,7 @@ const selectUsuario = {
   perfilAcesso: true,
   validadorOperacional: true,
   mediadorOperacional: true,
+  manutencaoCftv: true,
   statusUsuario: true,
   deveAlterarSenha: true,
   bloqueioAutomaticoSessao: true,
@@ -621,6 +622,7 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
       perfilAcesso,
       validadorOperacional,
       mediadorOperacional,
+      manutencaoCftv,
       senha,
       confirmarSenha,
       terceirizado,
@@ -715,6 +717,8 @@ export async function criarUsuario(req: AuthRequest, res: Response) {
           req.usuarioPerfil === "SUPER_ADMIN" && Boolean(validadorOperacional),
         mediadorOperacional:
           req.usuarioPerfil === "SUPER_ADMIN" && Boolean(mediadorOperacional),
+        manutencaoCftv:
+          req.usuarioPerfil === "SUPER_ADMIN" && Boolean(manutencaoCftv),
         statusUsuario: cadastroSemAcesso ? "INATIVO" : "ATIVO",
         deveAlterarSenha: !cadastroSemAcesso,
         somenteCadastro: cadastroSemAcesso,
@@ -779,6 +783,7 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
       perfilAcesso,
       validadorOperacional,
       mediadorOperacional,
+      manutencaoCftv,
       statusUsuario,
       terceirizado,
       somenteCadastro,
@@ -852,6 +857,10 @@ export async function atualizarUsuario(req: AuthRequest, res: Response) {
           req.usuarioPerfil === "SUPER_ADMIN"
             ? Boolean(mediadorOperacional)
             : usuarioAnterior.mediadorOperacional,
+        manutencaoCftv:
+          req.usuarioPerfil === "SUPER_ADMIN"
+            ? Boolean(manutencaoCftv)
+            : usuarioAnterior.manutencaoCftv,
         statusUsuario: cadastroSemAcesso
           ? "INATIVO"
           : validarStatus(statusUsuario),

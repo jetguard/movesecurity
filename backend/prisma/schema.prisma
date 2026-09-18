@@ -27,6 +27,7 @@ model Usuario {
   perfilAcesso               String    @default("USUARIO")
   validadorOperacional       Boolean   @default(false)
   mediadorOperacional        Boolean   @default(false)
+  manutencaoCftv             Boolean   @default(false)
   statusUsuario              String    @default("ATIVO")
   deveAlterarSenha           Boolean   @default(true)
   bloqueioAutomaticoSessao   Boolean   @default(true)
