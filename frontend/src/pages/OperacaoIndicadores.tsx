@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeft,
   BarChart3,
   CalendarDays,
   Edit3,
@@ -911,16 +912,27 @@ export default function OperacaoIndicadores() {
                 <p className="mt-1 max-w-3xl text-sm text-slate-300">{config.subtitulo}</p>
               </div>
             </div>
-            {podeCriar && (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={abrirNovo}
-                className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
+                onClick={() => navigate("/controle-operacional")}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-700 bg-slate-800 text-slate-100 shadow-lg transition hover:border-blue-400 hover:bg-slate-700"
+                aria-label="Voltar ao Controle Operacional"
+                title="Voltar ao Controle Operacional"
               >
-                <Plus size={18} />
-                Novo lançamento
+                <ArrowLeft size={19} />
               </button>
-            )}
+              {podeCriar && (
+                <button
+                  type="button"
+                  onClick={abrirNovo}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-black text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
+                >
+                  <Plus size={18} />
+                  Novo lançamento
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </section>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Activity,
+  ArrowLeft,
   BarChart3,
   CalendarDays,
   ChevronDown,
@@ -1114,26 +1115,37 @@ export default function Scanner() {
           </p>
         </div>
 
-        {abaAtiva === "passagens" && podeCriar && (
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={abrirNovo}
-            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
+            onClick={() => navigate("/controle-operacional")}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-700 bg-slate-900 text-slate-100 shadow-lg transition hover:border-blue-400 hover:bg-slate-800"
+            aria-label="Voltar ao Controle Operacional"
+            title="Voltar ao Controle Operacional"
           >
-            <Plus size={18} />
-            Novo lançamento
+            <ArrowLeft size={19} />
           </button>
-        )}
-        {abaAtiva === "equipe" && podeCriarEquipe && (
-          <button
-            type="button"
-            onClick={abrirNovaEquipe}
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-500"
-          >
-            <Plus size={18} />
-            Novo lançamento
-          </button>
-        )}
+          {abaAtiva === "passagens" && podeCriar && (
+            <button
+              type="button"
+              onClick={abrirNovo}
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-950/30 transition hover:bg-blue-500"
+            >
+              <Plus size={18} />
+              Novo lançamento
+            </button>
+          )}
+          {abaAtiva === "equipe" && podeCriarEquipe && (
+            <button
+              type="button"
+              onClick={abrirNovaEquipe}
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-950/30 transition hover:bg-emerald-500"
+            >
+              <Plus size={18} />
+              Novo lançamento
+            </button>
+          )}
+        </div>
       </div>
 
       <div className={`grid gap-2 rounded-2xl border border-slate-800 bg-slate-950/70 p-2 ${podeVerEquipe ? "grid-cols-2" : "grid-cols-1"}`}>
