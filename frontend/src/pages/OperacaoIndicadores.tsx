@@ -733,23 +733,27 @@ export default function OperacaoIndicadores() {
 
   function atualizarQuantidadeFilas(valor: string) {
     const quantidade = Math.max(0, numero(valor));
-    const atuais = intervalosFila();
-    atualizarCampo(
-      config.campos.find((campo) => campo.chave === "eventosFila")!,
-      valor,
-    );
-    setForm((atual) => ({
-      ...atual,
-      dados: normalizarDadosModulo(config.chave, {
-        ...atual.dados,
-        eventosFila: valor.replace(/\D/g, ""),
-        intervalosFila: JSON.stringify(
-          Array.from({ length: quantidade }, (_, indice) =>
-            atuais[indice] || { inicio: "", fim: "" },
+    setForm((atual) => {
+      let atuais: Array<{ inicio: string; fim: string }> = [];
+      try {
+        const intervalos = JSON.parse(atual.dados.intervalosFila || "[]");
+        atuais = Array.isArray(intervalos) ? intervalos : [];
+      } catch {
+        atuais = [];
+      }
+      return {
+        ...atual,
+        dados: normalizarDadosModulo(config.chave, {
+          ...atual.dados,
+          eventosFila: valor.replace(/\D/g, ""),
+          intervalosFila: JSON.stringify(
+            Array.from({ length: quantidade }, (_, indice) =>
+              atuais[indice] || { inicio: "", fim: "" },
+            ),
           ),
-        ),
-      }),
-    }));
+        }),
+      };
+    });
   }
 
   function atualizarIntervaloFila(indice: number, chave: "inicio" | "fim", valor: string) {
@@ -1285,11 +1289,7 @@ export default function OperacaoIndicadores() {
                   ) : campo.tipo === "select" ? (
                     <select
                       value={form.dados[campo.chave] || ""}
-                      onChange={(event) =>
-                        config.chave === "operacao_filas" && campo.chave === "eventosFila"
-                          ? atualizarQuantidadeFilas(event.target.value)
-                          : atualizarCampo(campo, event.target.value)
-                      }
+                      onChange={(event) => atualizarCampo(campo, event.target.value)}
                       required
                       className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
                     >
@@ -1310,7 +1310,11 @@ export default function OperacaoIndicadores() {
                       min={campoNumerico(campo) ? 0 : undefined}
                       step={campoNumerico(campo) ? 1 : undefined}
                       value={form.dados[campo.chave] || ""}
-                      onChange={(event) => atualizarCampo(campo, event.target.value)}
+                      onChange={(event) =>
+                        config.chave === "operacao_filas" && campo.chave === "eventosFila"
+                          ? atualizarQuantidadeFilas(event.target.value)
+                          : atualizarCampo(campo, event.target.value)
+                      }
                       required={campoNumerico(campo)}
                       className="h-12 w-full rounded-2xl border border-slate-700 bg-slate-900 px-4 font-normal text-white outline-none transition placeholder:text-slate-500 focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10"
                     />
