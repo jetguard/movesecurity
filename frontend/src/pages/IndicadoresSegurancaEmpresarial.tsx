@@ -90,6 +90,24 @@ type BlocoCamerasCftv = BlocoIndicadores & {
   cameras?: CameraCftvRegistro[];
 };
 
+type ContaFinanceiraRegistro = {
+  id: number; unidade: string; nome: string; ano: number; valorOrcado: number;
+  contratadoMensal: number; fornecedores: number;
+};
+
+type RequisicaoFinanceiraRegistro = {
+  id: number; unidade: string; contaContabilId: number; contaContabil: string; ano: number;
+  item: string; quantidade: number; valorMinimo: number; valorMaximo: number;
+  valorConcluido: number; dataPrazo: string; status: string; fornecedorSugerido?: string | null;
+  numeroRequisicao?: string | null; numeroPedidoSap?: string | null; createdAt: string; updatedAt: string;
+};
+
+type BlocoFinanceiro = BlocoIndicadores & {
+  unidades?: string[];
+  contas?: ContaFinanceiraRegistro[];
+  requisicoes?: RequisicaoFinanceiraRegistro[];
+};
+
 type VigilanciaRegistro = {
   id: number;
   unidade: string;
@@ -142,6 +160,7 @@ type DadosIndicadores = {
   unidade: string;
   ocorrenciasEventos: BlocoOcorrenciasEventos;
   valores: BlocoOcorrenciasEventos;
+  financeiro: BlocoFinanceiro;
   scanner: BlocoIndicadores;
   equipeScanner: BlocoEquipeScanner;
   ocr: BlocoIndicadores;
@@ -177,6 +196,13 @@ const abas: AbaIndicador[] = [
     subtitulo: "Perdas, prejuízos e valores recuperados",
     icone: CircleDollarSign,
     cor: "from-emerald-500 to-cyan-400",
+  },
+  {
+    id: "financeiro",
+    titulo: "Financeiro",
+    subtitulo: "Orçamento, contratos e execução por conta contábil",
+    icone: CircleDollarSign,
+    cor: "from-emerald-600 to-teal-400",
   },
   {
     id: "scanner",
@@ -461,6 +487,13 @@ export default function IndicadoresSegurancaEmpresarial() {
   const [filtroUnidadeValores, setFiltroUnidadeValores] = useState("Todos");
   const [filtroMesValores, setFiltroMesValores] = useState("Todos");
   const [registroValorSelecionado, setRegistroValorSelecionado] = useState<string | null>(null);
+  const [filtroUnidadeFinanceiro, setFiltroUnidadeFinanceiro] = useState("Todos");
+  const [filtroAnoFinanceiro, setFiltroAnoFinanceiro] = useState(String(new Date().getFullYear()));
+  const [filtroStatusFinanceiro, setFiltroStatusFinanceiro] = useState("Todos");
+  const [filtroGraficoFinanceiro, setFiltroGraficoFinanceiro] = useState<{
+    campo: "conta" | "status" | "mes";
+    valor: string;
+  } | null>(null);
   const [filtroUnidadeCftv, setFiltroUnidadeCftv] = useState("Todos");
   const [filtroCftv, setFiltroCftv] = useState<{
     campo: "status" | "tipoCamera" | "tecnologia" | "areaMonitorada" | "id";
@@ -604,6 +637,45 @@ export default function IndicadoresSegurancaEmpresarial() {
       .sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
   const serieValoresRecuperados = serieFinanceira("valorRecuperado");
   const serieValoresPerdidos = serieFinanceira("valorPrejuizo");
+  const contasFinanceiras = dados?.financeiro?.contas || [];
+  const requisicoesFinanceiras = dados?.financeiro?.requisicoes || [];
+  const unidadesFinanceiras = dados?.financeiro?.unidades?.length
+    ? dados.financeiro.unidades
+    : Array.from(new Set(contasFinanceiras.map((item) => item.unidade))).sort();
+  const anosFinanceiros = Array.from(new Set(contasFinanceiras.map((item) => item.ano))).sort((a, b) => b - a);
+  const anoFinanceiro = Number(filtroAnoFinanceiro || new Date().getFullYear());
+  const contasFinanceirasBase = contasFinanceiras.filter((item) => {
+    if (filtroUnidadeFinanceiro !== "Todos" && item.unidade !== filtroUnidadeFinanceiro) return false;
+    return item.ano === anoFinanceiro;
+  });
+  const contaSelecionada = filtroGraficoFinanceiro?.campo === "conta" ? filtroGraficoFinanceiro.valor : null;
+  const contasFinanceirasFiltradas = contaSelecionada
+    ? contasFinanceirasBase.filter((item) => item.nome === contaSelecionada)
+    : contasFinanceirasBase;
+  const idsContasFinanceiras = new Set(contasFinanceirasFiltradas.map((item) => item.id));
+  const requisicoesFinanceirasBase = requisicoesFinanceiras.filter((item) => {
+    if (!idsContasFinanceiras.has(item.contaContabilId)) return false;
+    if (filtroStatusFinanceiro !== "Todos" && item.status !== filtroStatusFinanceiro) return false;
+    if (filtroGraficoFinanceiro?.campo === "status" && item.status !== filtroGraficoFinanceiro.valor) return false;
+    if (filtroGraficoFinanceiro?.campo === "mes" && chaveMesAno(item.updatedAt) !== filtroGraficoFinanceiro.valor) return false;
+    return true;
+  });
+  const orcamentoFinanceiro = contasFinanceirasFiltradas.reduce((total, item) => total + item.valorOrcado, 0);
+  const contratadoMensalFinanceiro = contasFinanceirasFiltradas.reduce((total, item) => total + item.contratadoMensal, 0);
+  const comprasConcluidasFinanceiro = requisicoesFinanceirasBase.filter((item) => item.status === "CONCLUIDO");
+  const realizadoFinanceiro = comprasConcluidasFinanceiro.reduce((total, item) => total + item.valorConcluido, 0);
+  const saldoFinanceiro = orcamentoFinanceiro - realizadoFinanceiro;
+  const execucaoFinanceira = orcamentoFinanceiro ? (realizadoFinanceiro / orcamentoFinanceiro) * 100 : 0;
+  const rankingContasFinanceiras = contasFinanceirasBase.map((conta) => ({
+    label: conta.nome,
+    valor: requisicoesFinanceiras.filter((item) => item.contaContabilId === conta.id && item.status === "CONCLUIDO").reduce((total, item) => total + item.valorConcluido, 0),
+  })).sort((a, b) => b.valor - a.valor);
+  const rankingStatusFinanceiro = contarPor(requisicoesFinanceirasBase, (item) => item.status);
+  const serieMensalFinanceira = Array.from(comprasConcluidasFinanceiro.reduce((mapa, item) => {
+    const chave = chaveMesAno(item.updatedAt);
+    mapa.set(chave, (mapa.get(chave) || 0) + item.valorConcluido);
+    return mapa;
+  }, new Map<string, number>())).map(([chave, valor]) => ({ label: `${mesCurto(chave)}/${chave.slice(2, 4)}`, valor, chave })).sort((a, b) => String(a.chave).localeCompare(String(b.chave)));
   const camerasBi = dados?.camerasCftv.cameras || [];
   const unidadesCftv = dados?.camerasCftv.unidades?.length
     ? dados.camerasCftv.unidades
@@ -735,6 +807,13 @@ export default function IndicadoresSegurancaEmpresarial() {
     setFiltroUnidadeValores("Todos");
     setFiltroMesValores("Todos");
     setRegistroValorSelecionado(null);
+  }
+
+  function limparFiltrosFinanceiro() {
+    setFiltroUnidadeFinanceiro("Todos");
+    setFiltroAnoFinanceiro(String(new Date().getFullYear()));
+    setFiltroStatusFinanceiro("Todos");
+    setFiltroGraficoFinanceiro(null);
   }
 
   function limparFiltrosCftv() {
@@ -873,6 +952,38 @@ export default function IndicadoresSegurancaEmpresarial() {
             </table>
           </div>
         </BiPanel>
+      </div>
+    </div>
+  );
+
+  const renderFinanceiroBi = () => (
+    <div className="rounded-xl border border-slate-700 bg-slate-950/80 p-3 text-slate-100 shadow-2xl">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3"><span className="mb-2 block text-center text-sm font-semibold">Unidade</span><select value={filtroUnidadeFinanceiro} onChange={(event) => { setFiltroUnidadeFinanceiro(event.target.value); setFiltroGraficoFinanceiro(null); }} className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white"><option>Todos</option>{unidadesFinanceiras.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3"><span className="mb-2 block text-center text-sm font-semibold">Exercício</span><select value={filtroAnoFinanceiro} onChange={(event) => { setFiltroAnoFinanceiro(event.target.value); setFiltroGraficoFinanceiro(null); }} className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white">{anosFinanceiros.map((item) => <option key={item}>{item}</option>)}</select></label>
+        <label className="rounded-lg border border-slate-700 bg-slate-900 p-3"><span className="mb-2 block text-center text-sm font-semibold">Status da compra</span><select value={filtroStatusFinanceiro} onChange={(event) => { setFiltroStatusFinanceiro(event.target.value); setFiltroGraficoFinanceiro(null); }} className="h-10 w-full rounded-md border border-slate-600 bg-slate-950 px-3 text-sm text-white"><option>Todos</option>{Array.from(new Set(requisicoesFinanceiras.map((item) => item.status))).sort().map((item) => <option key={item} value={item}>{item.replaceAll("_", " ")}</option>)}</select></label>
+        <BiCard titulo="Contas contábeis" valor={contasFinanceirasFiltradas.length} />
+      </div>
+
+      {(filtroUnidadeFinanceiro !== "Todos" || filtroStatusFinanceiro !== "Todos" || filtroGraficoFinanceiro) && <div className="mt-3 flex items-center justify-between rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-200"><span>Filtros financeiros ativos{filtroGraficoFinanceiro ? `: ${filtroGraficoFinanceiro.valor.replaceAll("_", " ")}` : ""}</span><button type="button" onClick={limparFiltrosFinanceiro} className="inline-flex items-center gap-1 rounded-md border border-emerald-400/40 bg-slate-900 px-2 py-1"><X size={14} />Limpar filtros</button></div>}
+
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <BiCard titulo="Orçamento anual" valor={formatarMoeda(orcamentoFinanceiro)} />
+        <BiCard titulo="Contratado mensal" valor={formatarMoeda(contratadoMensalFinanceiro)} />
+        <BiCard titulo="Compras concluídas" valor={formatarMoeda(realizadoFinanceiro)} />
+        <BiCard titulo="Saldo disponível" valor={formatarMoeda(saldoFinanceiro)} />
+        <BiCard titulo="Execução do orçamento" valor={`${execucaoFinanceira.toFixed(1).replace(".", ",")}%`} />
+      </div>
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-3">
+        <BiPanel titulo="Realizado por conta contábil"><BarrasVerticais itens={rankingContasFinanceiras} ativo={contaSelecionada || undefined} formatarValor={formatarMoeda} onSelect={(item) => setFiltroGraficoFinanceiro(filtroGraficoFinanceiro?.campo === "conta" && filtroGraficoFinanceiro.valor === item.label ? null : { campo: "conta", valor: item.label })} cor="bg-gradient-to-t from-emerald-600 to-cyan-300" /></BiPanel>
+        <BiPanel titulo="Compras concluídas por mês"><BarrasVerticais itens={serieMensalFinanceira} ativo={filtroGraficoFinanceiro?.campo === "mes" ? serieMensalFinanceira.find((item) => item.chave === filtroGraficoFinanceiro.valor)?.label : undefined} formatarValor={formatarMoeda} onSelect={(item) => setFiltroGraficoFinanceiro(item.chave ? { campo: "mes", valor: item.chave } : null)} cor="bg-gradient-to-t from-blue-600 to-emerald-300" /></BiPanel>
+        <BiPanel titulo="Status das requisições"><BarrasHorizontais itens={rankingStatusFinanceiro.map((item) => ({ ...item, label: item.label.replaceAll("_", " ") }))} ativo={filtroGraficoFinanceiro?.campo === "status" ? filtroGraficoFinanceiro.valor.replaceAll("_", " ") : undefined} onSelect={(valor) => setFiltroGraficoFinanceiro({ campo: "status", valor: valor.replaceAll(" ", "_") })} cor="bg-emerald-500" /></BiPanel>
+      </div>
+
+      <div className="mt-3 grid gap-3 xl:grid-cols-[0.7fr_1.3fr]">
+        <BiPanel titulo="Execução das contas" className="min-h-[270px]"><div className="max-h-[250px] overflow-auto"><table className="w-full min-w-[560px] text-left text-[11px]"><thead className="sticky top-0 bg-slate-800"><tr><th className="p-2">Conta</th><th className="p-2">Unidade</th><th className="p-2 text-right">Orçado</th><th className="p-2 text-right">Realizado</th><th className="p-2 text-right">Saldo</th></tr></thead><tbody>{contasFinanceirasBase.map((conta) => { const realizado = requisicoesFinanceiras.filter((item) => item.contaContabilId === conta.id && item.status === "CONCLUIDO").reduce((total, item) => total + item.valorConcluido, 0); return <tr key={conta.id} onClick={() => setFiltroGraficoFinanceiro({ campo: "conta", valor: conta.nome })} className={`cursor-pointer border-t border-slate-700 hover:bg-emerald-500/10 ${contaSelecionada === conta.nome ? "bg-emerald-500/15" : ""}`}><td className="p-2 font-bold text-emerald-300">{conta.nome}</td><td className="p-2">{conta.unidade}</td><td className="p-2 text-right">{formatarMoeda(conta.valorOrcado)}</td><td className="p-2 text-right">{formatarMoeda(realizado)}</td><td className="p-2 text-right">{formatarMoeda(conta.valorOrcado - realizado)}</td></tr>; })}</tbody></table></div></BiPanel>
+        <BiPanel titulo="Requisições de compras" className="min-h-[270px]"><div className="max-h-[250px] overflow-auto"><table className="w-full min-w-[900px] text-left text-[11px]"><thead className="sticky top-0 bg-slate-800"><tr><th className="p-2">Item</th><th className="p-2">Conta</th><th className="p-2">Unidade</th><th className="p-2">Prazo</th><th className="p-2">Status</th><th className="p-2">Requisição</th><th className="p-2">Pedido SAP</th><th className="p-2 text-right">Estimado</th><th className="p-2 text-right">Final</th></tr></thead><tbody>{requisicoesFinanceirasBase.map((item) => <tr key={item.id} onClick={() => setFiltroGraficoFinanceiro({ campo: "conta", valor: item.contaContabil })} className="cursor-pointer border-t border-slate-700 odd:bg-slate-900 even:bg-slate-800/40 hover:bg-blue-500/10"><td className="p-2 font-bold text-white">{item.item}</td><td className="p-2 text-emerald-300">{item.contaContabil}</td><td className="p-2">{item.unidade}</td><td className="p-2">{formatarDataCurta(item.dataPrazo)}</td><td className="p-2">{item.status.replaceAll("_", " ")}</td><td className="p-2">{item.numeroRequisicao || "-"}</td><td className="p-2">{item.numeroPedidoSap || "-"}</td><td className="p-2 text-right">{formatarMoeda(item.valorMaximo)}</td><td className="p-2 text-right font-bold text-emerald-300">{item.status === "CONCLUIDO" ? formatarMoeda(item.valorConcluido) : "-"}</td></tr>)}</tbody></table></div></BiPanel>
       </div>
     </div>
   );
@@ -1605,6 +1716,8 @@ export default function IndicadoresSegurancaEmpresarial() {
         renderOcorrenciasEventosBi()
       ) : abaAtiva === "valores" ? (
         renderValoresBi()
+      ) : abaAtiva === "financeiro" ? (
+        renderFinanceiroBi()
       ) : abaAtiva === "equipeScanner" ? (
         renderEquipeScannerBi()
       ) : abaAtiva === "camerasCftv" ? (

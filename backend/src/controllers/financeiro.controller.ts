@@ -1,6 +1,18 @@
 import { Response } from "express";
 import { prisma } from "../lib/prisma";
 import { AuthRequest } from "../middlewares/auth";
+import { emitirRealtime } from "../services/realtime.service";
+
+function emitirAtualizacaoFinanceira(unidade: string, origem: string) {
+  emitirRealtime({
+    tipo: "indicadores_seguranca_atualizados",
+    titulo: "Indicadores financeiros atualizados",
+    mensagem: "Os dados financeiros do painel empresarial foram atualizados.",
+    severidade: "baixa",
+    unidade,
+    payload: { origem },
+  });
+}
 
 const dinheiro = (valor: unknown) => {
   const texto = String(valor ?? 0).replace(/R\$|\s/g, "");
@@ -64,11 +76,13 @@ export async function salvarRequisicao(req: AuthRequest, res: Response) {
   const requisicao = id
     ? await prisma.requisicaoCompra.update({ where: { id, unidade: req.unidadeAtiva }, data, include: { contaContabil: true } })
     : await prisma.requisicaoCompra.create({ data, include: { contaContabil: true } });
+  emitirAtualizacaoFinanceira(data.unidade, id ? "requisicao_compra_atualizada" : "requisicao_compra_criada");
   return res.status(id ? 200 : 201).json(requisicao);
 }
 
 export async function excluirRequisicao(req: AuthRequest, res: Response) {
   await prisma.requisicaoCompra.delete({ where: { id: Number(req.params.id), unidade: req.unidadeAtiva } });
+  emitirAtualizacaoFinanceira(req.unidadeAtiva || "GJA-T1", "requisicao_compra_excluida");
   return res.status(204).send();
 }
 
@@ -118,11 +132,13 @@ export async function salvarFornecedor(req: AuthRequest, res: Response) {
         return tx.fornecedorFinanceiro.update({ where: { id, unidade: req.unidadeAtiva }, data, include: { servicos: true, contaContabil: true } });
       })
     : await prisma.fornecedorFinanceiro.create({ data, include: { servicos: true, contaContabil: true } });
+  emitirAtualizacaoFinanceira(data.unidade, id ? "fornecedor_atualizado" : "fornecedor_criado");
   return res.status(id ? 200 : 201).json(fornecedor);
 }
 
 export async function excluirFornecedor(req: AuthRequest, res: Response) {
   await prisma.fornecedorFinanceiro.delete({ where: { id: Number(req.params.id), unidade: req.unidadeAtiva } });
+  emitirAtualizacaoFinanceira(req.unidadeAtiva || "GJA-T1", "fornecedor_excluido");
   return res.status(204).send();
 }
 
@@ -146,11 +162,13 @@ export async function salvarConta(req: AuthRequest, res: Response) {
   const conta = id
     ? await prisma.contaContabilFinanceira.update({ where: { id, unidade: req.unidadeAtiva }, data })
     : await prisma.contaContabilFinanceira.create({ data });
+  emitirAtualizacaoFinanceira(data.unidade, id ? "conta_contabil_atualizada" : "conta_contabil_criada");
   return res.status(id ? 200 : 201).json(conta);
 }
 
 export async function excluirConta(req: AuthRequest, res: Response) {
   await prisma.contaContabilFinanceira.delete({ where: { id: Number(req.params.id), unidade: req.unidadeAtiva } });
+  emitirAtualizacaoFinanceira(req.unidadeAtiva || "GJA-T1", "conta_contabil_excluida");
   return res.status(204).send();
 }
 

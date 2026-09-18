@@ -93,6 +93,9 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
       solicitacoes,
       cameras,
       cameraEventos,
+      contasFinanceiras,
+      requisicoesCompra,
+      fornecedoresFinanceiros,
     ] = await Promise.all([
       prisma.ocorrencia.findMany({
         where: { unidade },
@@ -271,6 +274,20 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         orderBy: { iniciadoEm: "desc" },
         take: 2000,
       }),
+      prisma.contaContabilFinanceira.findMany({
+        where: { unidade: { in: unidadesPermitidas }, status: "ATIVO" },
+        orderBy: [{ ano: "desc" }, { nome: "asc" }],
+      }),
+      prisma.requisicaoCompra.findMany({
+        where: { unidade: { in: unidadesPermitidas } },
+        include: { contaContabil: { select: { nome: true, ano: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 5000,
+      }),
+      prisma.fornecedorFinanceiro.findMany({
+        where: { unidade: { in: unidadesPermitidas }, status: "ATIVO" },
+        select: { unidade: true, nomeEmpresa: true, valorMensal: true, contaContabilId: true },
+      }),
     ]);
 
     const todosRelatorios = [...ocorrencias, ...eventos];
@@ -416,6 +433,41 @@ export async function indicadoresSegurancaEmpresarial(req: AuthRequest, res: Res
         registros: registrosOcorrenciasEventos.filter(
           (item) => item.analisado && item.tipo !== "RI",
         ),
+      },
+      financeiro: {
+        cards: [],
+        rankings: {},
+        unidades: unidadesPermitidas,
+        contas: contasFinanceiras.map((conta) => ({
+          id: conta.id,
+          unidade: conta.unidade,
+          nome: conta.nome,
+          ano: conta.ano,
+          valorOrcado: Number(conta.valorOrcado),
+          contratadoMensal: fornecedoresFinanceiros
+            .filter((fornecedor) => fornecedor.contaContabilId === conta.id)
+            .reduce((total, fornecedor) => total + Number(fornecedor.valorMensal), 0),
+          fornecedores: fornecedoresFinanceiros.filter((fornecedor) => fornecedor.contaContabilId === conta.id).length,
+        })),
+        requisicoes: requisicoesCompra.map((requisicao) => ({
+          id: requisicao.id,
+          unidade: requisicao.unidade,
+          contaContabilId: requisicao.contaContabilId,
+          contaContabil: requisicao.contaContabil.nome,
+          ano: requisicao.contaContabil.ano,
+          item: requisicao.item,
+          quantidade: requisicao.quantidade,
+          valorMinimo: Number(requisicao.valorMinimo),
+          valorMaximo: Number(requisicao.valorMaximo),
+          valorConcluido: Number(requisicao.valorConcluido || 0),
+          dataPrazo: requisicao.dataPrazo,
+          status: requisicao.status,
+          fornecedorSugerido: requisicao.fornecedorSugerido,
+          numeroRequisicao: requisicao.numeroRequisicao,
+          numeroPedidoSap: requisicao.numeroPedidoSap,
+          createdAt: requisicao.createdAt,
+          updatedAt: requisicao.updatedAt,
+        })),
       },
       scanner: {
         cards: [
