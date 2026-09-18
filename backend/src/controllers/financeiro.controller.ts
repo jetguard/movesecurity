@@ -105,7 +105,7 @@ export async function salvarFornecedor(req: AuthRequest, res: Response) {
         tipoServico: String(item.tipoServico || "").trim(),
         modalidade: String(item.modalidade || "SERVICO"),
         turno: item.turno ? String(item.turno) : null,
-        valor: dinheiro(item.valor),
+        valor: item.modalidade === "PESSOA" ? dinheiro(item.valorDiario) : dinheiro(item.valor),
         valorDiario: item.modalidade === "PESSOA" ? dinheiro(item.valorDiario) : null,
         horasJornada: item.modalidade === "PESSOA" ? dinheiro(item.horasJornada || 8) : null,
       })),
