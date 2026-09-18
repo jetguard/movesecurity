@@ -138,7 +138,7 @@ export async function salvarConta(req: AuthRequest, res: Response) {
   if (!nome) return res.status(400).json({ error: "Informe o nome da conta contábil." });
   const data = {
     unidade: req.unidadeAtiva || "GJA-T1", nome,
-    categoria: String(req.body.categoria || "Outros"), ano: Number(req.body.ano || new Date().getFullYear()),
+    categoria: "Conta contábil", ano: Number(req.body.ano || new Date().getFullYear()),
     valorOrcado: dinheiro(req.body.valorOrcado), observacoes: String(req.body.observacoes || "") || null,
     status: String(req.body.status || "ATIVO"), criadoPorId: req.usuarioId,
   };
